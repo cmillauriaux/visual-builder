@@ -1,0 +1,71 @@
+extends RefCounted
+
+const SequenceScript = preload("res://src/models/sequence.gd")
+
+var uuid: String = ""
+var scene_name: String = ""
+var position: Vector2 = Vector2.ZERO
+var sequences: Array = []  # Array[Sequence]
+var connections: Array = []  # Array[Dictionary] — {"from": uuid, "to": uuid}
+
+func _init():
+	uuid = _generate_uuid()
+
+static func _generate_uuid() -> String:
+	var chars = "abcdef0123456789"
+	var result = ""
+	for i in range(8):
+		result += chars[randi() % chars.length()]
+	result += "-"
+	for i in range(4):
+		result += chars[randi() % chars.length()]
+	result += "-4"
+	for i in range(3):
+		result += chars[randi() % chars.length()]
+	result += "-"
+	for i in range(4):
+		result += chars[randi() % chars.length()]
+	result += "-"
+	for i in range(12):
+		result += chars[randi() % chars.length()]
+	return result
+
+func find_sequence(seq_uuid: String):
+	for seq in sequences:
+		if seq.uuid == seq_uuid:
+			return seq
+	return null
+
+func to_dict() -> Dictionary:
+	var seq_arr := []
+	for seq in sequences:
+		seq_arr.append(seq.to_dict())
+
+	var conn_arr := []
+	for conn in connections:
+		conn_arr.append(conn)
+
+	return {
+		"uuid": uuid,
+		"name": scene_name,
+		"sequences": seq_arr,
+		"connections": conn_arr,
+	}
+
+static func from_dict(d: Dictionary):
+	var script = load("res://src/models/scene_data.gd")
+	var scene = script.new()
+	scene.uuid = d.get("uuid", scene.uuid)
+	scene.scene_name = d.get("name", "")
+	if d.has("position"):
+		scene.position = Vector2(d["position"].get("x", 0), d["position"].get("y", 0))
+
+	if d.has("sequences"):
+		for seq_dict in d["sequences"]:
+			scene.sequences.append(SequenceScript.from_dict(seq_dict))
+
+	if d.has("connections"):
+		for conn in d["connections"]:
+			scene.connections.append(conn)
+
+	return scene

@@ -1,0 +1,121 @@
+extends GutTest
+
+const Chapter = preload("res://src/models/chapter.gd")
+const Story = preload("res://src/models/story.gd")
+
+# Tests pour le modèle Story
+
+func test_create_story():
+	var story = Story.new()
+	story.title = "Mon Histoire"
+	story.author = "Auteur"
+	assert_eq(story.title, "Mon Histoire")
+	assert_eq(story.author, "Auteur")
+
+func test_default_values():
+	var story = Story.new()
+	assert_eq(story.title, "")
+	assert_eq(story.author, "")
+	assert_eq(story.description, "")
+	assert_eq(story.version, "1.0.0")
+	assert_ne(story.created_at, "", "created_at doit être auto-généré")
+	assert_ne(story.updated_at, "", "updated_at doit être auto-généré")
+	assert_eq(story.chapters.size(), 0)
+	assert_eq(story.connections.size(), 0)
+
+func test_add_chapter():
+	var story = Story.new()
+	var ch = Chapter.new()
+	ch.chapter_name = "Chapitre 1"
+	story.chapters.append(ch)
+	assert_eq(story.chapters.size(), 1)
+
+func test_add_connection():
+	var story = Story.new()
+	story.connections.append({"from": "abc-123", "to": "def-456"})
+	assert_eq(story.connections.size(), 1)
+
+func test_to_dict():
+	var story = Story.new()
+	story.title = "Mon Histoire"
+	story.author = "Auteur"
+	story.description = "Une aventure"
+	story.version = "1.0.0"
+	story.created_at = "2026-02-21T10:00:00Z"
+	story.updated_at = "2026-02-21T15:30:00Z"
+
+	var ch = Chapter.new()
+	ch.uuid = "abc-123"
+	ch.chapter_name = "Chapitre 1"
+	ch.position = Vector2(100, 200)
+	story.chapters.append(ch)
+	story.connections.append({"from": "abc-123", "to": "def-456"})
+
+	var d = story.to_dict()
+	assert_eq(d["title"], "Mon Histoire")
+	assert_eq(d["author"], "Auteur")
+	assert_eq(d["description"], "Une aventure")
+	assert_eq(d["version"], "1.0.0")
+	assert_eq(d["created_at"], "2026-02-21T10:00:00Z")
+	assert_eq(d["updated_at"], "2026-02-21T15:30:00Z")
+	assert_eq(d["chapters"].size(), 1)
+	assert_eq(d["chapters"][0]["uuid"], "abc-123")
+	assert_eq(d["connections"].size(), 1)
+
+func test_from_dict():
+	var d = {
+		"title": "Mon Histoire",
+		"author": "Auteur",
+		"description": "Une aventure",
+		"version": "1.0.0",
+		"created_at": "2026-02-21T10:00:00Z",
+		"updated_at": "2026-02-21T15:30:00Z",
+		"chapters": [
+			{"uuid": "abc-123", "name": "Chapitre 1", "position": {"x": 100, "y": 200}}
+		],
+		"connections": [
+			{"from": "abc-123", "to": "def-456"}
+		]
+	}
+	var story = Story.from_dict(d)
+	assert_eq(story.title, "Mon Histoire")
+	assert_eq(story.author, "Auteur")
+	assert_eq(story.description, "Une aventure")
+	assert_eq(story.version, "1.0.0")
+	assert_eq(story.chapters.size(), 1)
+	assert_eq(story.chapters[0].uuid, "abc-123")
+	assert_eq(story.connections.size(), 1)
+
+func test_from_dict_minimal():
+	var d = {"title": "Test", "author": "Moi"}
+	var story = Story.from_dict(d)
+	assert_eq(story.title, "Test")
+	assert_eq(story.author, "Moi")
+	assert_eq(story.description, "")
+	assert_eq(story.version, "1.0.0")
+	assert_eq(story.chapters.size(), 0)
+	assert_eq(story.connections.size(), 0)
+
+func test_update_modified_date():
+	var story = Story.new()
+	var old_date = story.updated_at
+	story.touch()
+	assert_ne(story.updated_at, "", "updated_at ne doit pas être vide après touch()")
+
+func test_find_chapter_by_uuid():
+	var story = Story.new()
+	var ch1 = Chapter.new()
+	ch1.uuid = "abc-123"
+	ch1.chapter_name = "Premier"
+	var ch2 = Chapter.new()
+	ch2.uuid = "def-456"
+	ch2.chapter_name = "Deuxième"
+	story.chapters.append(ch1)
+	story.chapters.append(ch2)
+	var found = story.find_chapter("def-456")
+	assert_not_null(found)
+	assert_eq(found.chapter_name, "Deuxième")
+
+func test_find_chapter_not_found():
+	var story = Story.new()
+	assert_null(story.find_chapter("nonexistent"))

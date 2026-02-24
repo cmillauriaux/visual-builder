@@ -1,0 +1,150 @@
+extends GutTest
+
+const Consequence = preload("res://src/models/consequence.gd")
+const Dialogue = preload("res://src/models/dialogue.gd")
+const Foreground = preload("res://src/models/foreground.gd")
+const Ending = preload("res://src/models/ending.gd")
+const Sequence = preload("res://src/models/sequence.gd")
+
+# Tests pour le modèle Sequence
+
+func test_create_sequence():
+	var seq = Sequence.new()
+	seq.seq_name = "Exploration"
+	assert_eq(seq.seq_name, "Exploration")
+
+func test_default_values():
+	var seq = Sequence.new()
+	assert_ne(seq.uuid, "", "UUID doit être généré automatiquement")
+	assert_eq(seq.seq_name, "")
+	assert_eq(seq.position, Vector2.ZERO)
+	assert_eq(seq.background, "")
+	assert_eq(seq.foregrounds.size(), 0)
+	assert_eq(seq.dialogues.size(), 0)
+	assert_null(seq.ending)
+
+func test_uuid_is_unique():
+	var s1 = Sequence.new()
+	var s2 = Sequence.new()
+	assert_ne(s1.uuid, s2.uuid)
+
+func test_add_foreground():
+	var seq = Sequence.new()
+	var fg = Foreground.new()
+	fg.fg_name = "Héros"
+	seq.foregrounds.append(fg)
+	assert_eq(seq.foregrounds.size(), 1)
+	assert_eq(seq.foregrounds[0].fg_name, "Héros")
+
+func test_add_dialogue():
+	var seq = Sequence.new()
+	var d = Dialogue.new()
+	d.character = "Héros"
+	d.text = "Où suis-je ?"
+	seq.dialogues.append(d)
+	assert_eq(seq.dialogues.size(), 1)
+	assert_eq(seq.dialogues[0].character, "Héros")
+
+func test_set_ending():
+	var seq = Sequence.new()
+	var e = Ending.new()
+	e.type = "auto_redirect"
+	e.auto_consequence = Consequence.new()
+	e.auto_consequence.type = "to_be_continued"
+	seq.ending = e
+	assert_eq(seq.ending.type, "auto_redirect")
+
+func test_to_dict():
+	var seq = Sequence.new()
+	seq.uuid = "seq-001"
+	seq.seq_name = "Exploration"
+	seq.position = Vector2(100, 200)
+	seq.background = "foret.png"
+
+	var fg = Foreground.new()
+	fg.uuid = "fg-001"
+	fg.fg_name = "Héros"
+	fg.image = "personnage-a.png"
+	fg.z_order = 1
+	seq.foregrounds.append(fg)
+
+	var d = Dialogue.new()
+	d.character = "Héros"
+	d.text = "Où suis-je ?"
+	seq.dialogues.append(d)
+
+	var e = Ending.new()
+	e.type = "auto_redirect"
+	e.auto_consequence = Consequence.new()
+	e.auto_consequence.type = "to_be_continued"
+	seq.ending = e
+
+	var dict = seq.to_dict()
+	assert_eq(dict["uuid"], "seq-001")
+	assert_eq(dict["name"], "Exploration")
+	assert_eq(dict["position"]["x"], 100.0)
+	assert_eq(dict["position"]["y"], 200.0)
+	assert_eq(dict["background"], "foret.png")
+	assert_eq(dict["foregrounds"].size(), 1)
+	assert_eq(dict["dialogues"].size(), 1)
+	assert_eq(dict["ending"]["type"], "auto_redirect")
+
+func test_from_dict():
+	var dict = {
+		"uuid": "seq-001",
+		"name": "Exploration",
+		"position": {"x": 100, "y": 200},
+		"background": "foret.png",
+		"foregrounds": [
+			{
+				"uuid": "fg-001",
+				"name": "Héros",
+				"image": "personnage-a.png",
+				"z_order": 1,
+				"opacity": 1.0,
+				"flip_h": false,
+				"flip_v": false,
+				"scale": 1.0,
+				"anchor_bg": {"x": 0.5, "y": 0.8},
+				"anchor_fg": {"x": 0.5, "y": 1.0}
+			}
+		],
+		"dialogues": [
+			{"character": "Héros", "text": "Où suis-je ?"}
+		],
+		"ending": {
+			"type": "auto_redirect",
+			"consequence": {"type": "to_be_continued"}
+		}
+	}
+	var seq = Sequence.from_dict(dict)
+	assert_eq(seq.uuid, "seq-001")
+	assert_eq(seq.seq_name, "Exploration")
+	assert_eq(seq.position, Vector2(100, 200))
+	assert_eq(seq.background, "foret.png")
+	assert_eq(seq.foregrounds.size(), 1)
+	assert_eq(seq.foregrounds[0].fg_name, "Héros")
+	assert_eq(seq.dialogues.size(), 1)
+	assert_eq(seq.dialogues[0].character, "Héros")
+	assert_eq(seq.ending.type, "auto_redirect")
+
+func test_from_dict_minimal():
+	var dict = {"uuid": "seq-002", "name": "Vide", "position": {"x": 0, "y": 0}}
+	var seq = Sequence.from_dict(dict)
+	assert_eq(seq.uuid, "seq-002")
+	assert_eq(seq.seq_name, "Vide")
+	assert_eq(seq.foregrounds.size(), 0)
+	assert_eq(seq.dialogues.size(), 0)
+	assert_null(seq.ending)
+
+func test_dialogues_order_preserved():
+	var seq = Sequence.new()
+	for i in range(5):
+		var d = Dialogue.new()
+		d.character = "Personnage"
+		d.text = "Ligne %d" % i
+		seq.dialogues.append(d)
+	var dict = seq.to_dict()
+	var restored = Sequence.from_dict(dict)
+	for i in range(5):
+		assert_eq(restored.dialogues[i].text, "Ligne %d" % i)

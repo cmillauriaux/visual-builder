@@ -288,59 +288,59 @@ Accessible depuis l'éditeur visuel de séquence (panneau latéral ou onglet).
 
 ### Gestion des histoires
 
-- [ ] L'utilisateur peut créer une nouvelle histoire avec titre, auteur, description, et la structure de dossiers est correctement générée
-- [ ] L'utilisateur peut charger une histoire existante depuis un dossier et retrouver toutes les données
-- [ ] La sauvegarde écrit tous les fichiers YAML modifiés et met à jour la date de modification
-- [ ] Le format YAML est conforme aux exemples de la spec et peut être relu sans perte de données
+- [x] L'utilisateur peut créer une nouvelle histoire avec titre, auteur, description, et la structure de dossiers est correctement générée
+- [x] L'utilisateur peut charger une histoire existante depuis un dossier et retrouver toutes les données
+- [x] La sauvegarde écrit tous les fichiers YAML modifiés et met à jour la date de modification
+- [x] Le format YAML est conforme aux exemples de la spec et peut être relu sans perte de données
 
 ### Vue Chapitres
 
-- [ ] Les chapitres sont affichés comme des noeuds dans un graphe 2D
-- [ ] L'utilisateur peut créer, renommer et supprimer un chapitre
-- [ ] Les noeuds sont déplaçables par drag & drop
-- [ ] Les connexions entre chapitres sont affichées avec des flèches directionnelles
-- [ ] L'utilisateur peut connecter deux chapitres par drag entre ports
-- [ ] Le double-clic sur un chapitre ouvre la vue Scènes correspondante
+- [x] Les chapitres sont affichés comme des noeuds dans un graphe 2D
+- [x] L'utilisateur peut créer, renommer et supprimer un chapitre
+- [x] Les noeuds sont déplaçables par drag & drop
+- [x] Les connexions entre chapitres sont affichées avec des flèches directionnelles
+- [x] L'utilisateur peut connecter deux chapitres par drag entre ports
+- [x] Le double-clic sur un chapitre ouvre la vue Scènes correspondante
 
 ### Vue Scènes
 
-- [ ] Le fil d'Ariane affiche `Histoire > Chapitre X` et permet de remonter
-- [ ] Les scènes sont affichées comme des noeuds avec les mêmes interactions que les chapitres
-- [ ] Le double-clic sur une scène ouvre la vue Séquences correspondante
+- [x] Le fil d'Ariane affiche `Histoire > Chapitre X` et permet de remonter
+- [x] Les scènes sont affichées comme des noeuds avec les mêmes interactions que les chapitres
+- [x] Le double-clic sur une scène ouvre la vue Séquences correspondante
 
 ### Vue Séquences
 
-- [ ] Le fil d'Ariane affiche `Histoire > Chapitre X > Scène Y`
-- [ ] Les séquences sont affichées comme des noeuds avec les mêmes interactions
-- [ ] Le double-clic sur une séquence ouvre l'éditeur visuel de séquence
+- [x] Le fil d'Ariane affiche `Histoire > Chapitre X > Scène Y`
+- [x] Les séquences sont affichées comme des noeuds avec les mêmes interactions
+- [x] Le double-clic sur une séquence ouvre l'éditeur visuel de séquence
 
 ### Éditeur visuel de séquence
 
-- [ ] Le background est affiché et l'utilisateur peut zoomer et le déplacer
-- [ ] Les foregrounds sont affichés par-dessus le background, positionnés selon leurs ancres
-- [ ] L'utilisateur peut ajouter, positionner, redimensionner et supprimer des foregrounds
-- [ ] Les propriétés d'un foreground (nom, z-order, opacité, flip H/V) sont modifiables
-- [ ] Le système d'ancrage point-à-point fonctionne : le foreground reste ancré au même point du background quel que soit le ratio/taille de la fenêtre
-- [ ] L'utilisateur peut changer le background de la séquence
+- [x] Le background est affiché et l'utilisateur peut zoomer et le déplacer
+- [x] Les foregrounds sont affichés par-dessus le background, positionnés selon leurs ancres
+- [x] L'utilisateur peut ajouter, positionner, redimensionner et supprimer des foregrounds
+- [x] Les propriétés d'un foreground (nom, z-order, opacité, flip H/V) sont modifiables
+- [x] Le système d'ancrage point-à-point fonctionne : le foreground reste ancré au même point du background quel que soit le ratio/taille de la fenêtre
+- [x] L'utilisateur peut changer le background de la séquence
 
 ### Dialogues
 
-- [ ] L'utilisateur peut ajouter un dialogue (nom de personnage + texte)
-- [ ] L'utilisateur peut modifier et supprimer un dialogue
-- [ ] L'utilisateur peut réordonner les dialogues par drag & drop
-- [ ] Les dialogues sont sauvegardés dans l'ordre défini
+- [x] L'utilisateur peut ajouter un dialogue (nom de personnage + texte)
+- [x] L'utilisateur peut modifier et supprimer un dialogue
+- [x] L'utilisateur peut réordonner les dialogues par drag & drop
+- [x] Les dialogues sont sauvegardés dans l'ordre défini
 
 ### Terminaison de séquence
 
-- [ ] L'utilisateur peut choisir entre mode "Choix" et mode "Redirection automatique"
-- [ ] En mode Choix, l'utilisateur peut ajouter de 1 à 8 choix avec texte et conséquence
-- [ ] Chaque conséquence peut être : redirection séquence, redirection scène, redirection chapitre, game over, ou to be continued
-- [ ] En mode Redirection automatique, une unique conséquence est configurable
-- [ ] Le champ `conditions` est présent dans le YAML pour chaque choix (vide par défaut, usage futur)
+- [x] L'utilisateur peut choisir entre mode "Choix" et mode "Redirection automatique"
+- [x] En mode Choix, l'utilisateur peut ajouter de 1 à 8 choix avec texte et conséquence
+- [x] Chaque conséquence peut être : redirection séquence, redirection scène, redirection chapitre, game over, ou to be continued
+- [x] En mode Redirection automatique, une unique conséquence est configurable
+- [x] Le champ `conditions` est présent dans le YAML pour chaque choix (vide par défaut, usage futur)
 
 ### Persistance
 
-- [ ] La structure de dossiers respecte le format spécifié (story.yaml, chapters/<uuid>/chapter.yaml, scenes/<uuid>.yaml, assets/)
-- [ ] Tous les éléments utilisent des UUID générés automatiquement
-- [ ] Les images sont référencées par chemin relatif depuis les dossiers assets/
-- [ ] Un cycle complet créer → sauvegarder → fermer → charger → vérifier fonctionne sans perte
+- [x] La structure de dossiers respecte le format spécifié (story.yaml, chapters/<uuid>/chapter.yaml, scenes/<uuid>.yaml, assets/)
+- [x] Tous les éléments utilisent des UUID générés automatiquement
+- [x] Les images sont référencées par chemin relatif depuis les dossiers assets/
+- [x] Un cycle complet créer → sauvegarder → fermer → charger → vérifier fonctionne sans perte

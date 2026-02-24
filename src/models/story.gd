@@ -1,0 +1,70 @@
+extends RefCounted
+
+const ChapterScript = preload("res://src/models/chapter.gd")
+
+var title: String = ""
+var author: String = ""
+var description: String = ""
+var version: String = "1.0.0"
+var created_at: String = ""
+var updated_at: String = ""
+var chapters: Array = []  # Array[Chapter]
+var connections: Array = []  # Array[Dictionary] — {"from": uuid, "to": uuid}
+
+func _init():
+	var now = _iso_now()
+	created_at = now
+	updated_at = now
+
+func touch():
+	updated_at = _iso_now()
+
+func find_chapter(chapter_uuid: String):
+	for ch in chapters:
+		if ch.uuid == chapter_uuid:
+			return ch
+	return null
+
+func to_dict() -> Dictionary:
+	var ch_arr := []
+	for ch in chapters:
+		ch_arr.append(ch.to_dict_header())
+
+	var conn_arr := []
+	for conn in connections:
+		conn_arr.append(conn)
+
+	return {
+		"title": title,
+		"author": author,
+		"description": description,
+		"version": version,
+		"created_at": created_at,
+		"updated_at": updated_at,
+		"chapters": ch_arr,
+		"connections": conn_arr,
+	}
+
+static func from_dict(d: Dictionary):
+	var script = load("res://src/models/story.gd")
+	var story = script.new()
+	story.title = d.get("title", "")
+	story.author = d.get("author", "")
+	story.description = d.get("description", "")
+	story.version = d.get("version", "1.0.0")
+	story.created_at = d.get("created_at", story.created_at)
+	story.updated_at = d.get("updated_at", story.updated_at)
+
+	if d.has("chapters"):
+		for ch_dict in d["chapters"]:
+			story.chapters.append(ChapterScript.from_dict_header(ch_dict))
+
+	if d.has("connections"):
+		for conn in d["connections"]:
+			story.connections.append(conn)
+
+	return story
+
+static func _iso_now() -> String:
+	var dt = Time.get_datetime_dict_from_system(true)
+	return "%04d-%02d-%02dT%02d:%02d:%02dZ" % [dt["year"], dt["month"], dt["day"], dt["hour"], dt["minute"], dt["second"]]

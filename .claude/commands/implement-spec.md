@@ -77,21 +77,24 @@ Pour chaque composant du plan, applique strictement le cycle Red-Green-Refactor 
 - Relance les tests pour vérifier que rien n'est cassé
 - Passe au composant suivant
 
-### Étape 2 — Cocher les critères d'acceptation
+### Étape 2 — Validation des critères d'acceptation
 
-Après chaque cycle TDD, vérifie si un ou plusieurs critères d'acceptation sont satisfaits :
+Après chaque cycle TDD (ou groupe de cycles liés), lance la commande `/check-requirements-acceptance` sur la spec en cours pour :
 
-1. Relis le fichier de spec
-2. Pour chaque critère satisfait, remplace `- [ ]` par `- [x]` dans le fichier de spec
-3. Continue jusqu'à ce que tous les critères soient cochés
+1. Vérifier concrètement quels critères sont satisfaits (tests verts + inspection du code)
+2. Cocher automatiquement les critères satisfaits (`- [ ]` → `- [x]`)
+3. Décocher les critères qui ne sont plus satisfaits (`- [x]` → `- [ ]`)
+4. Obtenir un rapport clair de l'avancement
+
+Continue les cycles TDD jusqu'à ce que le rapport de `/check-requirements-acceptance` indique que tous les critères sont satisfaits (ou que les critères restants nécessitent une action manuelle).
 
 ### Étape 3 — Rapport final
 
-Une fois tous les critères cochés :
+Une fois tous les critères cochés (ou identifiés comme nécessitant une action manuelle) :
 
-1. Lance la suite de tests complète et affiche le résultat
-2. Compte le nombre de tests écrits
-3. Liste les critères d'acceptation cochés vs non cochés
+1. Lance une dernière fois `/check-requirements-acceptance` sur la spec pour confirmer l'état final
+2. Lance la suite de tests complète et affiche le résultat
+3. Compte le nombre de tests écrits
 4. Si des critères ne peuvent pas être cochés (ex: nécessitent une interaction manuelle), explique pourquoi et propose un plan
 
 ## Règles
