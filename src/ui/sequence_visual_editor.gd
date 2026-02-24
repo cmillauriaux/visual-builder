@@ -25,6 +25,10 @@ var _drag_start_wrapper_pos: Vector2 = Vector2.ZERO
 var _resize_start_pos: Vector2 = Vector2.ZERO
 var _resize_start_scale: float = 1.0
 
+# --- Context menu ---
+var _context_menu: PopupMenu = null
+var _context_menu_uuid: String = ""
+
 signal foreground_selected(uuid: String)
 signal foreground_deselected()
 
@@ -45,6 +49,12 @@ func _ready() -> void:
 	_fg_container.name = "ForegroundContainer"
 	_fg_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_canvas.add_child(_fg_container)
+
+	_context_menu = PopupMenu.new()
+	_context_menu.name = "ForegroundContextMenu"
+	_context_menu.add_item("Supprimer", 0)
+	_context_menu.id_pressed.connect(_on_context_menu_id_pressed)
+	add_child(_context_menu)
 
 	_apply_transform()
 
@@ -254,6 +264,11 @@ func _on_fg_gui_input(event: InputEvent, uuid: String) -> void:
 		return
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
+		if mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed:
+			_select_foreground(uuid)
+			_show_context_menu(uuid, mb.global_position)
+			accept_event()
+			return
 		if mb.button_index == MOUSE_BUTTON_LEFT:
 			if mb.pressed:
 				_select_foreground(uuid)
@@ -309,6 +324,20 @@ func _on_resize_handle_input(event: InputEvent, uuid: String) -> void:
 			fg.scale = maxf(0.1, _resize_start_scale + delta_x / base_width)
 			_update_foreground_visuals()
 		accept_event()
+
+# --- Context menu ---
+
+func _show_context_menu(uuid: String, global_pos: Vector2) -> void:
+	_context_menu_uuid = uuid
+	_context_menu.position = Vector2i(global_pos)
+	_context_menu.popup()
+
+func _on_context_menu_id_pressed(id: int) -> void:
+	if id == 0:  # Supprimer
+		if _context_menu_uuid != "":
+			remove_foreground(_context_menu_uuid)
+			_deselect_foreground()
+			_context_menu_uuid = ""
 
 # --- Data controller (existing API, unchanged) ---
 

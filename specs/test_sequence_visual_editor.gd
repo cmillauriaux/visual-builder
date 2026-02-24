@@ -195,3 +195,36 @@ func test_deselect_foreground():
 	_editor._select_foreground(uuid)
 	_editor._deselect_foreground()
 	assert_eq(_editor._selected_fg_uuid, "")
+
+# --- Context menu (right-click delete) ---
+
+func test_context_menu_created():
+	assert_not_null(_editor._context_menu)
+	assert_eq(_editor._context_menu.item_count, 1)
+	assert_eq(_editor._context_menu.get_item_text(0), "Supprimer")
+
+func test_show_context_menu_sets_uuid():
+	_editor.load_sequence(_sequence)
+	_editor.add_foreground("Hero", "hero.png")
+	var uuid = _sequence.foregrounds[0].uuid
+	_editor._show_context_menu(uuid, Vector2(100, 100))
+	assert_eq(_editor._context_menu_uuid, uuid)
+
+func test_context_menu_delete_removes_foreground():
+	_editor.load_sequence(_sequence)
+	_editor.add_foreground("Hero", "hero.png")
+	var uuid = _sequence.foregrounds[0].uuid
+	_editor._show_context_menu(uuid, Vector2(100, 100))
+	_editor._on_context_menu_id_pressed(0)
+	assert_eq(_sequence.foregrounds.size(), 0)
+	assert_eq(_editor._selected_fg_uuid, "")
+
+func test_context_menu_delete_correct_foreground():
+	_editor.load_sequence(_sequence)
+	_editor.add_foreground("A", "a.png")
+	_editor.add_foreground("B", "b.png")
+	var uuid_a = _sequence.foregrounds[0].uuid
+	_editor._show_context_menu(uuid_a, Vector2(100, 100))
+	_editor._on_context_menu_id_pressed(0)
+	assert_eq(_sequence.foregrounds.size(), 1)
+	assert_eq(_sequence.foregrounds[0].fg_name, "B")

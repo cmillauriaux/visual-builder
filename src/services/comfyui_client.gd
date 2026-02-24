@@ -1,0 +1,430 @@
+extends Node
+
+## Client HTTP pour ComfyUI. Gère upload, prompt, polling et download.
+
+const ComfyUIConfig = preload("res://src/services/comfyui_config.gd")
+
+signal generation_completed(image: Image)
+signal generation_failed(error: String)
+signal generation_progress(status: String)
+
+var _generating: bool = false
+var _prompt_id: String = ""
+var _config: RefCounted = null
+var _poll_timer: Timer = null
+var _cancelled: bool = false
+
+# --- Workflow template (Flux 2 Klein + BiRefNet) ---
+# Reproduit exactement Edit_Image_Transparent_API.json
+# Paramètres dynamiques : 76.inputs.image, 75:74.inputs.text, 75:73.inputs.noise_seed
+
+const WORKFLOW_TEMPLATE: Dictionary = {
+	"9": {
+		"class_type": "SaveImage",
+		"inputs": {
+			"filename_prefix": "Flux2-Klein",
+			"images": ["100", 0]
+		}
+	},
+	"76": {
+		"class_type": "LoadImage",
+		"inputs": {
+			"image": ""
+		}
+	},
+	"81": {
+		"class_type": "LoadImage",
+		"inputs": {
+			"image": "comfy_logo_blue.png"
+		}
+	},
+	"100": {
+		"class_type": "BiRefNetRMBG",
+		"inputs": {
+			"model": "BiRefNet-general",
+			"mask_blur": 0,
+			"mask_offset": 0,
+			"invert_output": false,
+			"refine_foreground": true,
+			"background": "Alpha",
+			"background_color": "#222222",
+			"image": ["75:65", 0]
+		}
+	},
+	"75:61": {
+		"class_type": "KSamplerSelect",
+		"inputs": {
+			"sampler_name": "euler"
+		}
+	},
+	"75:64": {
+		"class_type": "SamplerCustomAdvanced",
+		"inputs": {
+			"noise": ["75:73", 0],
+			"guider": ["75:63", 0],
+			"sampler": ["75:61", 0],
+			"sigmas": ["75:62", 0],
+			"latent_image": ["75:66", 0]
+		}
+	},
+	"75:65": {
+		"class_type": "VAEDecode",
+		"inputs": {
+			"samples": ["75:64", 0],
+			"vae": ["75:72", 0]
+		}
+	},
+	"75:73": {
+		"class_type": "RandomNoise",
+		"inputs": {
+			"noise_seed": 0
+		}
+	},
+	"75:70": {
+		"class_type": "UNETLoader",
+		"inputs": {
+			"unet_name": "flux-2-klein-9b-fp8.safetensors",
+			"weight_dtype": "default"
+		}
+	},
+	"75:71": {
+		"class_type": "CLIPLoader",
+		"inputs": {
+			"clip_name": "qwen_3_8b_fp8mixed.safetensors",
+			"type": "flux2",
+			"device": "default"
+		}
+	},
+	"75:72": {
+		"class_type": "VAELoader",
+		"inputs": {
+			"vae_name": "flux2-vae.safetensors"
+		}
+	},
+	"75:66": {
+		"class_type": "EmptyFlux2LatentImage",
+		"inputs": {
+			"width": ["75:81", 0],
+			"height": ["75:81", 1],
+			"batch_size": 1
+		}
+	},
+	"75:80": {
+		"class_type": "ImageScaleToTotalPixels",
+		"inputs": {
+			"upscale_method": "nearest-exact",
+			"megapixels": 1,
+			"resolution_steps": 1,
+			"image": ["76", 0]
+		}
+	},
+	"75:63": {
+		"class_type": "CFGGuider",
+		"inputs": {
+			"cfg": 1,
+			"model": ["75:70", 0],
+			"positive": ["75:79:77", 0],
+			"negative": ["75:79:76", 0]
+		}
+	},
+	"75:62": {
+		"class_type": "Flux2Scheduler",
+		"inputs": {
+			"steps": 4,
+			"width": ["75:81", 0],
+			"height": ["75:81", 1]
+		}
+	},
+	"75:74": {
+		"class_type": "CLIPTextEncode",
+		"inputs": {
+			"text": "",
+			"clip": ["75:71", 0]
+		}
+	},
+	"75:81": {
+		"class_type": "GetImageSize",
+		"inputs": {
+			"image": ["75:80", 0]
+		}
+	},
+	"75:79:76": {
+		"class_type": "ReferenceLatent",
+		"inputs": {
+			"conditioning": ["75:82", 0],
+			"latent": ["75:79:78", 0]
+		}
+	},
+	"75:79:78": {
+		"class_type": "VAEEncode",
+		"inputs": {
+			"pixels": ["75:80", 0],
+			"vae": ["75:72", 0]
+		}
+	},
+	"75:79:77": {
+		"class_type": "ReferenceLatent",
+		"inputs": {
+			"conditioning": ["75:74", 0],
+			"latent": ["75:79:78", 0]
+		}
+	},
+	"75:82": {
+		"class_type": "ConditioningZeroOut",
+		"inputs": {
+			"conditioning": ["75:74", 0]
+		}
+	}
+}
+
+func is_generating() -> bool:
+	return _generating
+
+# --- Build workflow with dynamic parameters ---
+
+func build_workflow(filename: String, prompt_text: String, seed: int) -> Dictionary:
+	var wf = WORKFLOW_TEMPLATE.duplicate(true)
+	wf["76"]["inputs"]["image"] = filename
+	wf["75:74"]["inputs"]["text"] = prompt_text
+	wf["75:73"]["inputs"]["noise_seed"] = seed
+	return wf
+
+# --- Multipart body builder ---
+
+func build_multipart_body(filename: String, file_bytes: PackedByteArray) -> Array:
+	var boundary = "----GodotBoundary" + str(randi())
+
+	var body = PackedByteArray()
+
+	# File part
+	var file_header = "--%s\r\nContent-Disposition: form-data; name=\"image\"; filename=\"%s\"\r\nContent-Type: image/png\r\n\r\n" % [boundary, filename]
+	body.append_array(file_header.to_utf8_buffer())
+	body.append_array(file_bytes)
+	body.append_array("\r\n".to_utf8_buffer())
+
+	# Closing boundary
+	var closing = "--%s--\r\n" % boundary
+	body.append_array(closing.to_utf8_buffer())
+
+	return [body, boundary]
+
+# --- Parse responses ---
+
+func parse_prompt_response(json_str: String) -> String:
+	if json_str.is_empty():
+		return ""
+	var json = JSON.new()
+	var err = json.parse(json_str)
+	if err != OK:
+		return ""
+	var data = json.data
+	if data is Dictionary and data.has("prompt_id"):
+		return data["prompt_id"]
+	return ""
+
+func parse_history_response(json_str: String, prompt_id: String) -> Dictionary:
+	var json = JSON.new()
+	var err = json.parse(json_str)
+	if err != OK:
+		return {"status": "error"}
+	var data = json.data
+	if not data is Dictionary or not data.has(prompt_id):
+		return {"status": "pending"}
+	var entry = data[prompt_id]
+	if not entry is Dictionary:
+		return {"status": "error"}
+	# Check if still running via status field (when present)
+	if entry.has("status"):
+		var status_info = entry["status"]
+		if status_info is Dictionary and not status_info.get("completed", false):
+			return {"status": "pending"}
+	if not entry.has("outputs"):
+		return {"status": "error"}
+	# Find the output node with images
+	var outputs = entry["outputs"]
+	for node_id in outputs:
+		var node_output = outputs[node_id]
+		if node_output is Dictionary and node_output.has("images"):
+			var images = node_output["images"]
+			if images is Array and images.size() > 0:
+				return {"status": "completed", "filename": images[0]["filename"]}
+	return {"status": "error"}
+
+# --- Full generation flow ---
+
+func generate(config: RefCounted, source_image_path: String, prompt_text: String) -> void:
+	if _generating:
+		generation_failed.emit("Une génération est déjà en cours")
+		return
+
+	_generating = true
+	_cancelled = false
+	_config = config
+
+	generation_progress.emit("Chargement de l'image source...")
+
+	# Load source image file bytes
+	var file = FileAccess.open(source_image_path, FileAccess.READ)
+	if file == null:
+		_generating = false
+		generation_failed.emit("Impossible d'ouvrir l'image : " + source_image_path)
+		return
+
+	var file_bytes = file.get_buffer(file.get_length())
+	file.close()
+
+	var filename = source_image_path.get_file()
+
+	# Step 1: Upload
+	generation_progress.emit("Upload de l'image vers ComfyUI...")
+	_do_upload(filename, file_bytes, prompt_text)
+
+func _do_upload(filename: String, file_bytes: PackedByteArray, prompt_text: String) -> void:
+	var multipart = build_multipart_body(filename, file_bytes)
+	var body_bytes: PackedByteArray = multipart[0]
+	var boundary: String = multipart[1]
+
+	var http = HTTPRequest.new()
+	add_child(http)
+
+	var url = _config.get_full_url("/upload/image")
+	var headers: Array = ["Content-Type: multipart/form-data; boundary=" + boundary]
+	for h in _config.get_auth_headers():
+		headers.append(h)
+
+	http.request_completed.connect(func(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray):
+		http.queue_free()
+		if _cancelled:
+			_generating = false
+			return
+		if result != HTTPRequest.RESULT_SUCCESS or code != 200:
+			_generating = false
+			generation_failed.emit("Erreur upload (code %d, result %d)" % [code, result])
+			return
+		generation_progress.emit("Image uploadée. Lancement du workflow...")
+		_do_prompt(filename, prompt_text)
+	)
+
+	http.request_raw(url, PackedStringArray(headers), HTTPClient.METHOD_POST, body_bytes)
+
+func _do_prompt(filename: String, prompt_text: String) -> void:
+	var seed = randi()
+	var workflow = build_workflow(filename, prompt_text, seed)
+	var payload = JSON.stringify({"prompt": workflow})
+
+	var http = HTTPRequest.new()
+	add_child(http)
+
+	var url = _config.get_full_url("/prompt")
+	var headers: Array = ["Content-Type: application/json"]
+	for h in _config.get_auth_headers():
+		headers.append(h)
+
+	http.request_completed.connect(func(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray):
+		http.queue_free()
+		if _cancelled:
+			_generating = false
+			return
+		if result != HTTPRequest.RESULT_SUCCESS or code != 200:
+			_generating = false
+			var response_str = body.get_string_from_utf8()
+			generation_failed.emit("Erreur prompt (code %d) : %s" % [code, response_str.left(200)])
+			return
+		var response_str = body.get_string_from_utf8()
+		_prompt_id = parse_prompt_response(response_str)
+		if _prompt_id.is_empty():
+			_generating = false
+			generation_failed.emit("Réponse invalide du serveur (pas de prompt_id)")
+			return
+		generation_progress.emit("Génération en cours...")
+		_start_polling()
+	)
+
+	http.request(url, PackedStringArray(headers), HTTPClient.METHOD_POST, payload)
+
+func _start_polling() -> void:
+	_poll_timer = Timer.new()
+	_poll_timer.wait_time = 1.5
+	_poll_timer.timeout.connect(_poll_history)
+	add_child(_poll_timer)
+	_poll_timer.start()
+
+func _poll_history() -> void:
+	if _cancelled:
+		_stop_polling()
+		_generating = false
+		return
+
+	var http = HTTPRequest.new()
+	add_child(http)
+
+	var url = _config.get_full_url("/history/" + _prompt_id)
+	var headers: Array = []
+	for h in _config.get_auth_headers():
+		headers.append(h)
+
+	http.request_completed.connect(func(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray):
+		http.queue_free()
+		if _cancelled:
+			_stop_polling()
+			_generating = false
+			return
+		if result != HTTPRequest.RESULT_SUCCESS or code != 200:
+			return  # Retry on next poll
+		var response_str = body.get_string_from_utf8()
+		var parsed = parse_history_response(response_str, _prompt_id)
+		if parsed["status"] == "completed":
+			_stop_polling()
+			generation_progress.emit("Téléchargement du résultat...")
+			_do_download(parsed["filename"])
+		elif parsed["status"] == "error":
+			_stop_polling()
+			_generating = false
+			generation_failed.emit("Erreur dans le workflow ComfyUI")
+	)
+
+	http.request(url, PackedStringArray(headers))
+
+func _stop_polling() -> void:
+	if _poll_timer != null:
+		_poll_timer.stop()
+		_poll_timer.queue_free()
+		_poll_timer = null
+
+func _do_download(filename: String) -> void:
+	var http = HTTPRequest.new()
+	add_child(http)
+
+	var url = _config.get_full_url("/view?filename=" + filename.uri_encode() + "&type=output")
+	var headers: Array = []
+	for h in _config.get_auth_headers():
+		headers.append(h)
+
+	http.request_completed.connect(func(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray):
+		http.queue_free()
+		_generating = false
+		if _cancelled:
+			return
+		if result != HTTPRequest.RESULT_SUCCESS or code != 200:
+			generation_failed.emit("Erreur téléchargement (code %d)" % code)
+			return
+		var image = Image.new()
+		var err = image.load_png_from_buffer(body)
+		if err != OK:
+			err = image.load_jpg_from_buffer(body)
+		if err != OK:
+			err = image.load_webp_from_buffer(body)
+		if err != OK:
+			generation_failed.emit("Impossible de décoder l'image reçue")
+			return
+		generation_completed.emit(image)
+	)
+
+	http.request(url, PackedStringArray(headers))
+
+func cancel() -> void:
+	_cancelled = true
+	if _generating:
+		_stop_polling()
+		_generating = false
+		generation_progress.emit("Génération annulée")

@@ -19,6 +19,8 @@ const DialogueListPanelScript = preload("res://src/ui/dialogue_list_panel.gd")
 const EndingEditorScript = preload("res://src/ui/ending_editor.gd")
 const TransitionPanelScript = preload("res://src/ui/transition_panel.gd")
 const ForegroundTransitionScript = preload("res://src/ui/foreground_transition.gd")
+const AIGenerateDialogScript = preload("res://src/ui/ai_generate_dialog.gd")
+const ComfyUIConfigScript = preload("res://src/services/comfyui_config.gd")
 
 var _editor_main: Control
 var _breadcrumb: HBoxContainer
@@ -29,6 +31,8 @@ var _sequence_editor_panel: VBoxContainer
 var _sequence_toolbar: HBoxContainer
 var _import_bg_button: Button
 var _add_fg_button: Button
+var _ai_generate_btn: Button
+var _ai_generate_dialog: Window
 var _play_button: Button
 var _stop_button: Button
 var _sequence_content: HSplitContainer
@@ -145,6 +149,11 @@ func _ready() -> void:
 	_add_fg_button.text = "+ Foreground"
 	_add_fg_button.pressed.connect(_on_add_foreground_pressed)
 	_sequence_toolbar.add_child(_add_fg_button)
+
+	_ai_generate_btn = Button.new()
+	_ai_generate_btn.text = "IA Foreground"
+	_ai_generate_btn.pressed.connect(_on_ai_generate_pressed)
+	_sequence_toolbar.add_child(_ai_generate_btn)
 
 	var toolbar_spacer = Control.new()
 	toolbar_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -296,6 +305,46 @@ func _on_fg_file_selected(path: String) -> void:
 	_sequence_editor_ctrl.add_foreground_to_current("", path)
 	_update_preview_for_dialogue(idx)
 
+func _on_ai_generate_pressed() -> void:
+	if _sequence_editor_ctrl.get_selected_dialogue_index() < 0:
+		var seq = _sequence_editor_ctrl.get_sequence()
+		if seq and seq.dialogues.size() > 0:
+			_sequence_editor_ctrl.select_dialogue(0)
+		else:
+			return
+
+	if _ai_generate_dialog == null:
+		_ai_generate_dialog = Window.new()
+		_ai_generate_dialog.set_script(AIGenerateDialogScript)
+		_ai_generate_dialog.foreground_accepted.connect(_on_ai_fg_accepted)
+		add_child(_ai_generate_dialog)
+
+	var config = ComfyUIConfigScript.new()
+	config.load_from()
+
+	# Pre-fill source image if a foreground is selected
+	var source_path = ""
+	if _visual_editor._selected_fg_uuid != "":
+		var idx = _sequence_editor_ctrl.get_selected_dialogue_index()
+		if idx >= 0:
+			var fgs = _sequence_editor_ctrl.get_effective_foregrounds(idx)
+			for fg in fgs:
+				if fg.uuid == _visual_editor._selected_fg_uuid:
+					source_path = fg.image
+					break
+
+	_ai_generate_dialog.setup(config, source_path)
+	if _editor_main._story:
+		_ai_generate_dialog.set_story_name(_editor_main._story.title.to_lower().replace(" ", "_"))
+	_ai_generate_dialog.popup_centered()
+
+func _on_ai_fg_accepted(image_path: String) -> void:
+	var idx = _sequence_editor_ctrl.get_selected_dialogue_index()
+	if idx < 0:
+		return
+	_sequence_editor_ctrl.add_foreground_to_current("", image_path)
+	_update_preview_for_dialogue(idx)
+
 func _on_add_dialogue_pressed() -> void:
 	_sequence_editor_ctrl.add_dialogue("", "")
 	_rebuild_dialogue_list()
@@ -345,7 +394,9 @@ func _apply_foreground_transitions(transitions: Array) -> void:
 		var target = _visual_editor.get_foreground_node(t["uuid"]) if _visual_editor.has_method("get_foreground_node") else null
 		if target == null:
 			continue
-		if t["action"] == "fade_in":
+		if t["action"] == "crossfade":
+			_foreground_transition.apply_tween_crossfade(target, t["old_image"], t["duration"])
+		elif t["action"] == "fade_in":
 			_foreground_transition.apply_tween_fade_in(target, t["duration"])
 		elif t["action"] == "fade_out":
 			_foreground_transition.apply_tween_fade_out(target, t["duration"])
