@@ -106,6 +106,33 @@ func test_apply_fade_out():
 	_transition.apply_instant_fade_out(target)
 	assert_eq(target.modulate.a, 0.0)
 
+func test_crossfade_tween_clone_above_target():
+	# Le clone de l'ancienne image doit être placé AU-DESSUS du target
+	# et fade out pendant que la nouvelle image est visible en dessous
+	var container = Control.new()
+	add_child_autofree(container)
+
+	var target = TextureRect.new()
+	container.add_child(target)
+
+	var tween = _transition.apply_tween_crossfade(target, "", 1.0)
+	assert_not_null(tween, "Le tween doit être créé")
+
+	# Le clone doit être un enfant du container
+	assert_eq(container.get_child_count(), 2, "Le container doit avoir 2 enfants (target + clone)")
+
+	var clone = container.get_child(1)
+	assert_eq(clone.name, "CrossfadeClone", "Le clone doit être au-dessus du target")
+	assert_eq(target.get_index(), 0, "Le target doit être en dessous du clone")
+
+	# Le clone commence opaque (il va fade out)
+	assert_eq(clone.modulate.a, 1.0, "Le clone commence opaque")
+	# Le target est opaque (visible sous le clone qui fade out)
+	assert_eq(target.modulate.a, 1.0, "Le target est opaque")
+
+	tween.kill()
+	clone.queue_free()
+
 # --- Helper ---
 
 func _make_fg(uuid: String, image: String, trans_type: String, trans_dur: float):

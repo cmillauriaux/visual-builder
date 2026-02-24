@@ -200,8 +200,10 @@ func test_deselect_foreground():
 
 func test_context_menu_created():
 	assert_not_null(_editor._context_menu)
-	assert_eq(_editor._context_menu.item_count, 1)
+	assert_eq(_editor._context_menu.item_count, 3)
 	assert_eq(_editor._context_menu.get_item_text(0), "Supprimer")
+	assert_eq(_editor._context_menu.get_item_text(1), "Copier les paramètres")
+	assert_eq(_editor._context_menu.get_item_text(2), "Coller les paramètres")
 
 func test_show_context_menu_sets_uuid():
 	_editor.load_sequence(_sequence)

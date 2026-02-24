@@ -63,15 +63,16 @@ func apply_tween_fade_in(target: Control, duration: float) -> Tween:
 	tween.tween_property(target, "modulate:a", 1.0, duration)
 	return tween
 
-func apply_tween_fade_out(target: Control, duration: float) -> Tween:
+func apply_tween_fade_out(target: Control, duration: float, free_on_complete: bool = false) -> Tween:
 	target.modulate.a = 1.0
 	var tween = target.create_tween()
 	tween.tween_property(target, "modulate:a", 0.0, duration)
+	if free_on_complete:
+		tween.tween_callback(target.queue_free)
 	return tween
 
-## Crossfade : crée un clone de l'ancienne image au-dessus du target,
-## puis fait disparaître le clone pendant que le target apparaît.
-## old_image_path est le chemin de l'ancienne image à afficher dans le clone.
+## Crossfade : crée un clone de l'ancienne image AU-DESSUS du target,
+## l'ancienne fade out pendant que la nouvelle fade in simultanément.
 func apply_tween_crossfade(target: Control, old_image_path: String, duration: float) -> Tween:
 	var parent = target.get_parent()
 	if parent == null:
@@ -90,17 +91,22 @@ func apply_tween_crossfade(target: Control, old_image_path: String, duration: fl
 	var tex = _load_texture(old_image_path)
 	if tex:
 		old_clone.texture = tex
-	parent.add_child(old_clone)
 
-	# Nouvelle image : fade in de 0 → 1
-	target.modulate.a = 0.0
+	# Insérer le clone AU-DESSUS du target (juste après dans l'arbre)
+	var target_idx = target.get_index()
+	parent.add_child(old_clone)
+	parent.move_child(old_clone, target_idx + 1)
+
+	# L'ancienne image (clone) commence opaque et fade out
+	old_clone.modulate.a = 1.0
+	# La nouvelle image (target) commence opaque aussi (visible sous le clone)
+	target.modulate.a = 1.0
 	var tween = target.create_tween()
 	tween.set_parallel(true)
-	tween.tween_property(target, "modulate:a", 1.0, duration)
-	# Ancienne image : fade out de 1 → 0
 	tween.tween_property(old_clone, "modulate:a", 0.0, duration)
-	# Supprimer le clone après la transition
-	tween.chain().tween_callback(old_clone.queue_free)
+	tween.set_parallel(false)
+	# Supprimer le clone une fois la transition terminée
+	tween.tween_callback(old_clone.queue_free)
 	return tween
 
 func _load_texture(path: String):

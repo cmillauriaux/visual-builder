@@ -4,16 +4,27 @@ extends Control
 ## Fournit à la fois le contrôleur data et la couche visuelle (zoom/pan, background, foregrounds interactifs).
 
 const ForegroundScript = preload("res://src/models/foreground.gd")
+const PlacementGridScript = preload("res://src/ui/placement_grid.gd")
+const ForegroundClipboardScript = preload("res://src/ui/foreground_clipboard.gd")
 
 var _sequence = null
 
 # --- Visual layer ---
 var _canvas: Control
 var _bg_rect: TextureRect
+var _grid_overlay: Control
 var _fg_container: Control
 var _zoom: float = 1.0
 var _pan_offset: Vector2 = Vector2.ZERO
 var _is_panning: bool = false
+
+# --- Grid & Snapping ---
+var _placement_grid = PlacementGridScript.new()
+var _grid_visible: bool = false
+var _snap_enabled: bool = false
+
+# --- Foreground clipboard ---
+var _fg_clipboard = ForegroundClipboardScript.new()
 
 # --- Foreground interaction ---
 var _fg_visual_map: Dictionary = {}   # uuid → Control wrapper
@@ -45,6 +56,13 @@ func _ready() -> void:
 	_bg_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_canvas.add_child(_bg_rect)
 
+	_grid_overlay = Control.new()
+	_grid_overlay.name = "GridOverlay"
+	_grid_overlay.visible = false
+	_grid_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_grid_overlay.draw.connect(_on_grid_draw)
+	_canvas.add_child(_grid_overlay)
+
 	_fg_container = Control.new()
 	_fg_container.name = "ForegroundContainer"
 	_fg_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -53,7 +71,10 @@ func _ready() -> void:
 	_context_menu = PopupMenu.new()
 	_context_menu.name = "ForegroundContextMenu"
 	_context_menu.add_item("Supprimer", 0)
+	_context_menu.add_item("Copier les paramètres", 1)
+	_context_menu.add_item("Coller les paramètres", 2)
 	_context_menu.id_pressed.connect(_on_context_menu_id_pressed)
+	_update_context_menu_state()
 	add_child(_context_menu)
 
 	_apply_transform()
@@ -113,6 +134,7 @@ func _update_visual() -> void:
 		return
 	if _sequence == null or _sequence.background == "":
 		_bg_rect.visible = false
+		_update_grid_overlay()
 		return
 	var tex = _load_texture(_sequence.background)
 	if tex:
@@ -120,6 +142,7 @@ func _update_visual() -> void:
 		_bg_rect.visible = true
 	else:
 		_bg_rect.visible = false
+	_update_grid_overlay()
 
 func _load_texture(path: String):
 	if path == "":
@@ -137,6 +160,9 @@ func _load_texture(path: String):
 	return ImageTexture.create_from_image(img)
 
 # --- Foreground visuals ---
+
+## UUIDs dont l'opacité est gérée par une transition en cours (ne pas écraser)
+var _transitioning_uuids: Array = []
 
 func _update_foreground_visuals() -> void:
 	if _fg_container == null:
@@ -232,8 +258,9 @@ func _update_single_fg_visual(fg) -> void:
 	var fg_size = wrapper.size
 	wrapper.position = fg.anchor_bg * bg_size - fg.anchor_fg * fg_size
 
-	# Opacity
-	wrapper.modulate.a = fg.opacity
+	# Opacity — ne pas écraser si une transition gère l'alpha
+	if fg.uuid not in _transitioning_uuids:
+		wrapper.modulate.a = fg.opacity
 
 	# Selection border
 	var border: ColorRect = wrapper.get_node("SelectionBorder")
@@ -279,6 +306,9 @@ func _on_fg_gui_input(event: InputEvent, uuid: String) -> void:
 					_drag_start_wrapper_pos = wrapper.position
 				accept_event()
 			else:
+				if _dragging_fg:
+					_apply_snap_to_foreground(uuid)
+					_update_foreground_visuals()
 				_dragging_fg = false
 	elif event is InputEventMouseMotion and _dragging_fg and _selected_fg_uuid == uuid:
 		var mm := event as InputEventMouseMotion
@@ -329,8 +359,16 @@ func _on_resize_handle_input(event: InputEvent, uuid: String) -> void:
 
 func _show_context_menu(uuid: String, global_pos: Vector2) -> void:
 	_context_menu_uuid = uuid
+	_update_context_menu_state()
 	_context_menu.position = Vector2i(global_pos)
 	_context_menu.popup()
+
+func _update_context_menu_state() -> void:
+	if _context_menu == null:
+		return
+	var paste_idx = _context_menu.get_item_index(2)
+	if paste_idx >= 0:
+		_context_menu.set_item_disabled(paste_idx, not _fg_clipboard.has_data())
 
 func _on_context_menu_id_pressed(id: int) -> void:
 	if id == 0:  # Supprimer
@@ -338,6 +376,71 @@ func _on_context_menu_id_pressed(id: int) -> void:
 			remove_foreground(_context_menu_uuid)
 			_deselect_foreground()
 			_context_menu_uuid = ""
+	elif id == 1:  # Copier les paramètres
+		if _context_menu_uuid != "":
+			_copy_foreground_params(_context_menu_uuid)
+	elif id == 2:  # Coller les paramètres
+		if _context_menu_uuid != "":
+			_paste_foreground_params(_context_menu_uuid)
+
+# --- Grid ---
+
+func set_grid_visible(visible: bool) -> void:
+	_grid_visible = visible
+	_update_grid_overlay()
+
+func _update_grid_overlay() -> void:
+	if _grid_overlay == null:
+		return
+	var has_bg = _bg_rect != null and _bg_rect.visible and _bg_rect.texture != null
+	_grid_overlay.visible = _grid_visible and has_bg
+	if _grid_overlay.visible:
+		var bg_size = _bg_rect.texture.get_size()
+		_grid_overlay.size = bg_size
+		_grid_overlay.queue_redraw()
+
+func _on_grid_draw() -> void:
+	if not _grid_overlay.visible:
+		return
+	var bg_size = _grid_overlay.size
+	var color = Color(1.0, 1.0, 1.0, 0.25)
+	var h_lines = _placement_grid.get_horizontal_lines(bg_size)
+	var v_lines = _placement_grid.get_vertical_lines(bg_size)
+	for y in h_lines:
+		_grid_overlay.draw_line(Vector2(0, y), Vector2(bg_size.x, y), color, 1.0)
+	for x in v_lines:
+		_grid_overlay.draw_line(Vector2(x, 0), Vector2(x, bg_size.y), color, 1.0)
+
+# --- Snapping ---
+
+func set_snap_enabled(enabled: bool) -> void:
+	_snap_enabled = enabled
+
+func _apply_snap_to_foreground(uuid: String) -> void:
+	if not _snap_enabled:
+		return
+	var fg = find_foreground(uuid)
+	if fg == null:
+		return
+	var bg_size = Vector2(1920, 1080)
+	if _bg_rect and _bg_rect.texture:
+		bg_size = _bg_rect.texture.get_size()
+	fg.anchor_bg = _placement_grid.snap_position(fg.anchor_bg, bg_size)
+
+# --- Foreground clipboard ---
+
+func _copy_foreground_params(uuid: String) -> void:
+	var fg = find_foreground(uuid)
+	if fg == null:
+		return
+	_fg_clipboard.copy_from(fg)
+
+func _paste_foreground_params(uuid: String) -> void:
+	var fg = find_foreground(uuid)
+	if fg == null:
+		return
+	if _fg_clipboard.paste_to(fg):
+		_update_foreground_visuals()
 
 # --- Data controller (existing API, unchanged) ---
 

@@ -155,6 +155,18 @@ func _ready() -> void:
 	_ai_generate_btn.pressed.connect(_on_ai_generate_pressed)
 	_sequence_toolbar.add_child(_ai_generate_btn)
 
+	var grid_toggle = Button.new()
+	grid_toggle.text = "Grille"
+	grid_toggle.toggle_mode = true
+	grid_toggle.toggled.connect(_on_grid_toggled)
+	_sequence_toolbar.add_child(grid_toggle)
+
+	var snap_toggle = Button.new()
+	snap_toggle.text = "Snap"
+	snap_toggle.toggle_mode = true
+	snap_toggle.toggled.connect(_on_snap_toggled)
+	_sequence_toolbar.add_child(snap_toggle)
+
 	var toolbar_spacer = Control.new()
 	toolbar_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_sequence_toolbar.add_child(toolbar_spacer)
@@ -267,6 +279,14 @@ func _ready() -> void:
 
 	_update_view()
 
+# --- Grid & Snap toggles ---
+
+func _on_grid_toggled(toggled_on: bool) -> void:
+	_visual_editor.set_grid_visible(toggled_on)
+
+func _on_snap_toggled(toggled_on: bool) -> void:
+	_visual_editor.set_snap_enabled(toggled_on)
+
 # --- Sequence Editor Actions ---
 
 func _on_import_bg_pressed() -> void:
@@ -378,28 +398,102 @@ func _on_play_dialogue_changed(index: int) -> void:
 	_play_character_label.text = dlg.character
 	_play_text_label.text = dlg.text
 	_play_text_label.visible_characters = 0
-	# Compute and apply foreground transitions
+	# Compute foreground transitions
 	var new_fgs = _sequence_editor_ctrl.get_effective_foregrounds(index)
 	var transitions = _foreground_transition.compute_transitions(_previous_play_foregrounds, new_fgs)
+	print("[TRANSITION] === Dialogue %d ===" % index)
+	for t in transitions:
+		print("[TRANSITION]   action=%s uuid=%s duration=%s" % [t["action"], t["uuid"], t.get("duration", "?")])
 	_previous_play_foregrounds = new_fgs
-	# Update visual preview with effective foregrounds
+
+	# Déterminer s'il y a un remplacement (fade_out + fade_in simultanés = crossfade)
+	var has_fade_out := false
+	var has_fade_in := false
+	var fade_in_duration := 0.5
+	for t in transitions:
+		if t["action"] == "fade_out":
+			has_fade_out = true
+		if t["action"] == "fade_in" or t["action"] == "crossfade":
+			has_fade_in = true
+			fade_in_duration = maxf(fade_in_duration, t["duration"])
+	var is_replacement := has_fade_out and has_fade_in
+	print("[TRANSITION]   is_replacement=%s fade_in_duration=%s" % [is_replacement, fade_in_duration])
+
+	# AVANT de mettre à jour les visuels :
+	# Créer des clones des anciens noeuds pour les fade_out (car _update_preview va les détruire)
+	var fade_out_clones: Array = []
+	for t in transitions:
+		if t["action"] == "fade_out":
+			var old_node = _visual_editor.get_foreground_node(t["uuid"])
+			if old_node and is_instance_valid(old_node):
+				var clone = _create_fade_out_clone(old_node)
+				if clone:
+					fade_out_clones.append(clone)
+					print("[TRANSITION]   clone created for fade_out uuid=%s" % t["uuid"])
+
+	# Mettre à jour les visuels (détruit anciens noeuds, crée nouveaux)
 	_update_preview_for_dialogue(index)
-	# Apply Tween transitions on visual editor foreground nodes
-	_apply_foreground_transitions(transitions)
+
+	# Replacer les clones AU-DESSUS des nouveaux noeuds (ils ont été créés avant)
+	for clone in fade_out_clones:
+		var p = clone.get_parent()
+		if p:
+			p.move_child(clone, p.get_child_count() - 1)
+			print("[TRANSITION]   clone moved to top: %s index=%d" % [clone, clone.get_index()])
+
+	# Appliquer les transitions sur les nouveaux noeuds
+	for t in transitions:
+		if t["action"] == "fade_in" or t["action"] == "crossfade":
+			var target = _visual_editor.get_foreground_node(t["uuid"])
+			if target == null:
+				print("[TRANSITION]   target NULL for uuid=%s" % t["uuid"])
+				continue
+			if is_replacement:
+				# Remplacement : nouvelle image à pleine opacité immédiatement,
+				# le clone de l'ancienne par-dessus va fade out
+				target.modulate.a = 1.0
+				print("[TRANSITION]   replacement: new node at full opacity uuid=%s" % t["uuid"])
+			else:
+				# Pas de remplacement : fade_in normal
+				var tween = _foreground_transition.apply_tween_fade_in(target, t["duration"])
+				print("[TRANSITION]   fade_in STARTED uuid=%s duration=%s" % [t["uuid"], t["duration"]])
+				if tween:
+					var uuid = t["uuid"]
+					_visual_editor._transitioning_uuids.append(uuid)
+					tween.finished.connect(func(): print("[TRANSITION]   fade_in FINISHED uuid=%s" % uuid); _visual_editor._transitioning_uuids.erase(uuid))
+
+	# Appliquer les fade_out sur les clones
+	var fo_duration = fade_in_duration if is_replacement else 0.5
+	for clone in fade_out_clones:
+		print("[TRANSITION]   fade_out STARTED clone=%s duration=%s" % [clone, fo_duration])
+		var fo_tween = _foreground_transition.apply_tween_fade_out(clone, fo_duration, true)
+		if fo_tween:
+			var c = clone
+			fo_tween.finished.connect(func(): print("[TRANSITION]   fade_out FINISHED clone=%s" % c))
+
 	# Highlight in list
 	_highlight_dialogue_in_list(index)
 
-func _apply_foreground_transitions(transitions: Array) -> void:
-	for t in transitions:
-		var target = _visual_editor.get_foreground_node(t["uuid"]) if _visual_editor.has_method("get_foreground_node") else null
-		if target == null:
-			continue
-		if t["action"] == "crossfade":
-			_foreground_transition.apply_tween_crossfade(target, t["old_image"], t["duration"])
-		elif t["action"] == "fade_in":
-			_foreground_transition.apply_tween_fade_in(target, t["duration"])
-		elif t["action"] == "fade_out":
-			_foreground_transition.apply_tween_fade_out(target, t["duration"])
+## Crée un clone visuel d'un noeud foreground pour pouvoir l'animer en fade_out
+## même après que l'original soit détruit par _update_preview_for_dialogue.
+func _create_fade_out_clone(source: Control) -> TextureRect:
+	var fg_container = _visual_editor.get_node_or_null("Canvas/ForegroundContainer")
+	if fg_container == null:
+		return null
+	var tex_node = source.get_node_or_null("Texture")
+	if tex_node == null or not tex_node is TextureRect:
+		return null
+	var clone = TextureRect.new()
+	clone.name = "FadeOutClone"
+	clone.texture = tex_node.texture
+	clone.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	clone.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	clone.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	clone.position = source.position
+	clone.size = source.size
+	clone.modulate = source.modulate
+	fg_container.add_child(clone)
+	return clone
 
 func _on_typewriter_tick() -> void:
 	if not _sequence_editor_ctrl.is_playing():
