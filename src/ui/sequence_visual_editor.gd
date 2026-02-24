@@ -7,16 +7,21 @@ const ForegroundScript = preload("res://src/models/foreground.gd")
 const PlacementGridScript = preload("res://src/ui/placement_grid.gd")
 const ForegroundClipboardScript = preload("res://src/ui/foreground_clipboard.gd")
 
+const DESIGN_RESOLUTION = Vector2(1920, 1080)
+
 var _sequence = null
 
 # --- Visual layer ---
+var _letterbox_bg: ColorRect
 var _canvas: Control
 var _bg_rect: TextureRect
 var _grid_overlay: Control
 var _fg_container: Control
+var _overlay_container: Control
 var _zoom: float = 1.0
 var _pan_offset: Vector2 = Vector2.ZERO
 var _is_panning: bool = false
+var _auto_fit_enabled: bool = true
 
 # --- Grid & Snapping ---
 var _placement_grid = PlacementGridScript.new()
@@ -46,27 +51,47 @@ signal foreground_deselected()
 func _ready() -> void:
 	clip_contents = true
 
+	# Letterbox background — black rect covering entire editor area
+	_letterbox_bg = ColorRect.new()
+	_letterbox_bg.name = "LetterboxBackground"
+	_letterbox_bg.color = Color(0, 0, 0, 1)
+	_letterbox_bg.set_anchors_preset(PRESET_FULL_RECT)
+	_letterbox_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_letterbox_bg)
+
 	_canvas = Control.new()
 	_canvas.name = "Canvas"
+	_canvas.size = DESIGN_RESOLUTION
 	add_child(_canvas)
 
 	_bg_rect = TextureRect.new()
 	_bg_rect.name = "BackgroundRect"
 	_bg_rect.visible = false
 	_bg_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_bg_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_bg_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	_bg_rect.set_anchors_preset(PRESET_FULL_RECT)
 	_canvas.add_child(_bg_rect)
 
 	_grid_overlay = Control.new()
 	_grid_overlay.name = "GridOverlay"
 	_grid_overlay.visible = false
 	_grid_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_grid_overlay.set_anchors_preset(PRESET_FULL_RECT)
 	_grid_overlay.draw.connect(_on_grid_draw)
 	_canvas.add_child(_grid_overlay)
 
 	_fg_container = Control.new()
 	_fg_container.name = "ForegroundContainer"
 	_fg_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fg_container.size = DESIGN_RESOLUTION
 	_canvas.add_child(_fg_container)
+
+	# Overlay container — positioned/sized to match the canvas screen rect
+	_overlay_container = Control.new()
+	_overlay_container.name = "OverlayContainer"
+	_overlay_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_overlay_container)
 
 	_context_menu = PopupMenu.new()
 	_context_menu.name = "ForegroundContextMenu"
@@ -77,7 +102,40 @@ func _ready() -> void:
 	_update_context_menu_state()
 	add_child(_context_menu)
 
+	resized.connect(_on_resized)
 	_apply_transform()
+
+# --- Auto-fit ---
+
+func compute_auto_fit() -> Dictionary:
+	var available = self.size
+	if available.x <= 0 or available.y <= 0:
+		return {"zoom": 1.0, "pan": Vector2.ZERO}
+	var zoom_x = available.x / DESIGN_RESOLUTION.x
+	var zoom_y = available.y / DESIGN_RESOLUTION.y
+	var fit_zoom = minf(zoom_x, zoom_y)
+	var scaled_size = DESIGN_RESOLUTION * fit_zoom
+	var pan = (available - scaled_size) * 0.5
+	return {"zoom": fit_zoom, "pan": pan}
+
+func apply_auto_fit() -> void:
+	if not _auto_fit_enabled:
+		return
+	var result = compute_auto_fit()
+	_zoom = result["zoom"]
+	_pan_offset = result["pan"]
+	_apply_transform()
+
+func reset_view() -> void:
+	_auto_fit_enabled = true
+	apply_auto_fit()
+
+func get_canvas_rect() -> Rect2:
+	return Rect2(_pan_offset, DESIGN_RESOLUTION * _zoom)
+
+func _on_resized() -> void:
+	if _auto_fit_enabled:
+		apply_auto_fit()
 
 # --- Zoom / Pan ---
 
@@ -91,6 +149,8 @@ func _gui_input(event: InputEvent) -> void:
 			_set_zoom(_zoom / 1.1, mb.position)
 			accept_event()
 		elif mb.button_index == MOUSE_BUTTON_MIDDLE:
+			if mb.pressed:
+				_auto_fit_enabled = false
 			_is_panning = mb.pressed
 			accept_event()
 		elif mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
@@ -103,6 +163,7 @@ func _gui_input(event: InputEvent) -> void:
 		accept_event()
 
 func _set_zoom(new_zoom: float, pivot: Vector2 = Vector2.ZERO) -> void:
+	_auto_fit_enabled = false
 	var old_zoom = _zoom
 	_zoom = clampf(new_zoom, 0.1, 5.0)
 	# Zoom towards pivot point
@@ -115,6 +176,11 @@ func _apply_transform() -> void:
 		return
 	_canvas.position = _pan_offset
 	_canvas.scale = Vector2(_zoom, _zoom)
+	# Update overlay container to match canvas screen rect
+	if _overlay_container != null:
+		var rect = get_canvas_rect()
+		_overlay_container.position = rect.position
+		_overlay_container.size = rect.size
 
 # --- Input for Delete key ---
 
@@ -446,8 +512,10 @@ func _paste_foreground_params(uuid: String) -> void:
 
 func load_sequence(sequence) -> void:
 	_sequence = sequence
+	_auto_fit_enabled = true
 	_update_visual()
 	_update_foreground_visuals()
+	call_deferred("apply_auto_fit")
 
 func get_sequence():
 	return _sequence

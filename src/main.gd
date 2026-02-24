@@ -52,6 +52,13 @@ var _create_button: Button
 var _save_button: Button
 var _load_button: Button
 var _content_area: Control
+var _vbox: VBoxContainer
+var _top_bar: HBoxContainer
+var _left_panel: VBoxContainer
+
+# Fullscreen play layer
+var _fullscreen_layer: ColorRect = null
+var _is_play_fullscreen: bool = false
 
 # Top bar play (story/chapter/scene level)
 var _top_play_button: Button
@@ -75,63 +82,63 @@ func _ready() -> void:
 	_sequence_editor_ctrl = Control.new()
 	_sequence_editor_ctrl.set_script(SequenceEditorScript)
 
-	var vbox = VBoxContainer.new()
-	vbox.set_anchors_preset(PRESET_FULL_RECT)
-	add_child(vbox)
+	_vbox = VBoxContainer.new()
+	_vbox.set_anchors_preset(PRESET_FULL_RECT)
+	add_child(_vbox)
 
 	# --- Top Bar ---
-	var top_bar = HBoxContainer.new()
-	vbox.add_child(top_bar)
+	_top_bar = HBoxContainer.new()
+	_vbox.add_child(_top_bar)
 
 	_back_button = Button.new()
 	_back_button.text = "← Retour"
 	_back_button.pressed.connect(_on_back_pressed)
-	top_bar.add_child(_back_button)
+	_top_bar.add_child(_back_button)
 
 	_breadcrumb = HBoxContainer.new()
 	_breadcrumb.set_script(BreadcrumbScript)
 	_breadcrumb.level_clicked.connect(_on_breadcrumb_clicked)
-	top_bar.add_child(_breadcrumb)
+	_top_bar.add_child(_breadcrumb)
 
 	var spacer = Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	top_bar.add_child(spacer)
+	_top_bar.add_child(spacer)
 
 	_top_play_button = Button.new()
 	_top_play_button.text = "▶ Jouer"
 	_top_play_button.visible = false
 	_top_play_button.pressed.connect(_on_top_play_pressed)
-	top_bar.add_child(_top_play_button)
+	_top_bar.add_child(_top_play_button)
 
 	_top_stop_button = Button.new()
 	_top_stop_button.text = "■ Arrêter"
 	_top_stop_button.visible = false
 	_top_stop_button.pressed.connect(_on_top_stop_pressed)
-	top_bar.add_child(_top_stop_button)
+	_top_bar.add_child(_top_stop_button)
 
 	_create_button = Button.new()
 	_create_button.pressed.connect(_on_create_pressed)
-	top_bar.add_child(_create_button)
+	_top_bar.add_child(_create_button)
 
 	_save_button = Button.new()
 	_save_button.text = "Sauvegarder"
 	_save_button.pressed.connect(_on_save_pressed)
-	top_bar.add_child(_save_button)
+	_top_bar.add_child(_save_button)
 
 	_load_button = Button.new()
 	_load_button.text = "Charger une histoire"
 	_load_button.pressed.connect(_on_load_pressed)
-	top_bar.add_child(_load_button)
+	_top_bar.add_child(_load_button)
 
 	var new_story_button = Button.new()
 	new_story_button.text = "Nouvelle histoire"
 	new_story_button.pressed.connect(_on_new_story_pressed)
-	top_bar.add_child(new_story_button)
+	_top_bar.add_child(new_story_button)
 
 	# --- Content Area ---
 	_content_area = Control.new()
 	_content_area.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	vbox.add_child(_content_area)
+	_vbox.add_child(_content_area)
 
 	# Chapter Graph View
 	_chapter_graph_view = GraphEdit.new()
@@ -214,19 +221,19 @@ func _ready() -> void:
 	_sequence_editor_panel.add_child(_sequence_content)
 
 	# Left: Visual Editor + Transition Panel (~65%)
-	var left_panel = VBoxContainer.new()
-	left_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	left_panel.size_flags_stretch_ratio = 1.85  # ~65%
-	_sequence_content.add_child(left_panel)
+	_left_panel = VBoxContainer.new()
+	_left_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_left_panel.size_flags_stretch_ratio = 1.85  # ~65%
+	_sequence_content.add_child(_left_panel)
 
 	_visual_editor = Control.new()
 	_visual_editor.set_script(SequenceVisualEditorScript)
 	_visual_editor.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	left_panel.add_child(_visual_editor)
+	_left_panel.add_child(_visual_editor)
 
 	_transition_panel = VBoxContainer.new()
 	_transition_panel.set_script(TransitionPanelScript)
-	left_panel.add_child(_transition_panel)
+	_left_panel.add_child(_transition_panel)
 
 	# Right: Dialogue Panel (~35%)
 	_dialogue_panel = VBoxContainer.new()
@@ -412,13 +419,16 @@ func _on_add_dialogue_pressed() -> void:
 
 func _on_play_pressed() -> void:
 	_previous_play_foregrounds = []
+	_enter_play_fullscreen()
 	_sequence_editor_ctrl.start_play()
 	if _sequence_editor_ctrl.is_playing():
 		_play_button.visible = false
 		_stop_button.visible = true
 		_play_overlay.visible = true
-		_visual_editor.add_child(_play_overlay)
+		_visual_editor._overlay_container.add_child(_play_overlay)
 		_typewriter_timer.start()
+	else:
+		_exit_play_fullscreen()
 
 func _on_stop_pressed() -> void:
 	if _is_story_play_mode:
@@ -436,6 +446,7 @@ func _on_play_stopped() -> void:
 	if _is_story_play_mode:
 		_story_play_ctrl.on_sequence_finished()
 		return
+	_exit_play_fullscreen()
 
 func _on_play_dialogue_changed(index: int) -> void:
 	var seq = _sequence_editor_ctrl.get_sequence()
@@ -588,6 +599,8 @@ func _on_story_play_sequence_requested(seq) -> void:
 	_chapter_graph_view.visible = false
 	_scene_graph_view.visible = false
 	_sequence_graph_view.visible = false
+	# Enter fullscreen for play
+	_enter_play_fullscreen()
 	# Start sequence play
 	_previous_play_foregrounds = []
 	_sequence_editor_ctrl.start_play()
@@ -595,10 +608,11 @@ func _on_story_play_sequence_requested(seq) -> void:
 		_play_button.visible = false
 		_stop_button.visible = true
 		_play_overlay.visible = true
-		_visual_editor.add_child(_play_overlay)
+		_visual_editor._overlay_container.add_child(_play_overlay)
 		_typewriter_timer.start()
 	else:
 		# Sequence has no dialogues — treat as immediate finish
+		_exit_play_fullscreen()
 		_story_play_ctrl.on_sequence_finished()
 
 func _on_story_play_choice_requested(choices) -> void:
@@ -619,7 +633,7 @@ func _on_story_play_choice_requested(choices) -> void:
 	_choice_overlay.add_child(vbox)
 	_choice_overlay.visible = true
 	if not _choice_overlay.get_parent():
-		_visual_editor.add_child(_choice_overlay)
+		_visual_editor._overlay_container.add_child(_choice_overlay)
 
 func _on_play_choice_selected(index: int) -> void:
 	_hide_choice_overlay()
@@ -653,10 +667,69 @@ func _restore_after_story_play() -> void:
 	_is_story_play_mode = false
 	_top_play_button.visible = false
 	_top_stop_button.visible = false
+	_exit_play_fullscreen()
 	# Navigate back to the return level
 	while _editor_main.get_current_level() != _story_play_return_level and _editor_main.get_current_level() != "none":
 		_editor_main.navigate_back()
 	_refresh_current_view()
+
+# --- Fullscreen play layer ---
+
+func _enter_play_fullscreen() -> void:
+	if _is_play_fullscreen:
+		return
+	_is_play_fullscreen = true
+	# Hide the entire editor UI
+	_vbox.visible = false
+	# Create fullscreen black layer
+	_fullscreen_layer = ColorRect.new()
+	_fullscreen_layer.name = "FullscreenPlayLayer"
+	_fullscreen_layer.color = Color(0, 0, 0, 1)
+	_fullscreen_layer.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
+	_fullscreen_layer.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(_fullscreen_layer)
+	# Reparent visual editor into fullscreen layer — reset all layout
+	_left_panel.remove_child(_visual_editor)
+	_fullscreen_layer.add_child(_visual_editor)
+	_visual_editor.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
+	_visual_editor.size_flags_horizontal = Control.SIZE_FILL
+	_visual_editor.size_flags_vertical = Control.SIZE_FILL
+	# Add floating Stop button
+	var fs_stop = Button.new()
+	fs_stop.name = "FullscreenStopButton"
+	fs_stop.text = "■ Stop"
+	fs_stop.pressed.connect(_on_stop_pressed)
+	fs_stop.set_anchors_and_offsets_preset(PRESET_TOP_RIGHT)
+	fs_stop.offset_left = -80
+	fs_stop.offset_right = -10
+	fs_stop.offset_top = 10
+	fs_stop.offset_bottom = 40
+	_fullscreen_layer.add_child(fs_stop)
+	# Reset view deferred so the editor has time to resize
+	call_deferred("_deferred_reset_view")
+
+func _deferred_reset_view() -> void:
+	if _visual_editor:
+		_visual_editor.reset_view()
+
+func _exit_play_fullscreen() -> void:
+	if not _is_play_fullscreen:
+		return
+	_is_play_fullscreen = false
+	# Reparent visual editor back to left_panel
+	_fullscreen_layer.remove_child(_visual_editor)
+	_left_panel.add_child(_visual_editor)
+	_left_panel.move_child(_visual_editor, 0)
+	# Restore VBoxContainer layout flags (anchors are ignored inside a VBoxContainer)
+	_visual_editor.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_visual_editor.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	# Clean up fullscreen layer
+	_fullscreen_layer.queue_free()
+	_fullscreen_layer = null
+	# Restore the editor UI
+	_vbox.visible = true
+	# Reset view deferred
+	call_deferred("_deferred_reset_view")
 
 func _on_typewriter_tick() -> void:
 	if not _sequence_editor_ctrl.is_playing():
