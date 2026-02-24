@@ -8,6 +8,7 @@ var subtitle: String = ""
 var position: Vector2 = Vector2.ZERO
 var scenes: Array = []  # Array[SceneData]
 var connections: Array = []  # Array[Dictionary] — {"from": uuid, "to": uuid}
+var entry_point_uuid: String = ""
 
 func _init():
 	uuid = _generate_uuid()
@@ -43,6 +44,7 @@ func to_dict_header() -> Dictionary:
 		"name": chapter_name,
 		"subtitle": subtitle,
 		"position": {"x": position.x, "y": position.y},
+		"entry_point": entry_point_uuid,
 	}
 
 func to_dict() -> Dictionary:
@@ -65,6 +67,7 @@ func to_dict() -> Dictionary:
 		"subtitle": subtitle,
 		"scenes": scene_headers,
 		"connections": conn_arr,
+		"entry_point": entry_point_uuid,
 	}
 
 static func from_dict_header(d: Dictionary):
@@ -75,6 +78,7 @@ static func from_dict_header(d: Dictionary):
 	ch.subtitle = d.get("subtitle", "")
 	if d.has("position"):
 		ch.position = Vector2(d["position"].get("x", 0), d["position"].get("y", 0))
+	ch.entry_point_uuid = d.get("entry_point", "")
 	return ch
 
 static func from_dict(d: Dictionary):
@@ -93,5 +97,7 @@ static func from_dict(d: Dictionary):
 	if d.has("connections"):
 		for conn in d["connections"]:
 			ch.connections.append(conn)
+
+	ch.entry_point_uuid = d.get("entry_point", "")
 
 	return ch

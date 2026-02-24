@@ -10,6 +10,7 @@ var created_at: String = ""
 var updated_at: String = ""
 var chapters: Array = []  # Array[Chapter]
 var connections: Array = []  # Array[Dictionary] — {"from": uuid, "to": uuid}
+var entry_point_uuid: String = ""
 
 func _init():
 	var now = _iso_now()
@@ -43,6 +44,7 @@ func to_dict() -> Dictionary:
 		"updated_at": updated_at,
 		"chapters": ch_arr,
 		"connections": conn_arr,
+		"entry_point": entry_point_uuid,
 	}
 
 static func from_dict(d: Dictionary):
@@ -62,6 +64,8 @@ static func from_dict(d: Dictionary):
 	if d.has("connections"):
 		for conn in d["connections"]:
 			story.connections.append(conn)
+
+	story.entry_point_uuid = d.get("entry_point", "")
 
 	return story
 

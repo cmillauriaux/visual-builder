@@ -51,11 +51,11 @@ Chaque noeud de graphe (chapitre, scène, séquence) affiche actuellement le mê
 
 ## Critères d'acceptation
 
-- [ ] CA1 : Les modèles sérialisent/désérialisent correctement `subtitle`
-- [ ] CA2 : Les fichiers sans `subtitle` chargent sans erreur (rétrocompatibilité)
-- [ ] CA3 : `ContentLabel` affiche le sous-titre si défini, sinon le nom
-- [ ] CA4 : Le clic droit sur un noeud affiche le menu "Renommer"
-- [ ] CA5 : Le dialogue de renommage s'ouvre avec les valeurs actuelles pré-remplies
-- [ ] CA6 : La confirmation met à jour le modèle et l'affichage du noeud
-- [ ] CA7 : Le roundtrip save/load préserve les sous-titres
-- [ ] CA8 : Tous les tests GUT passent
+- [x] CA1 : Les modèles sérialisent/désérialisent correctement `subtitle`
+- [x] CA2 : Les fichiers sans `subtitle` chargent sans erreur (rétrocompatibilité)
+- [x] CA3 : `ContentLabel` affiche le sous-titre si défini, sinon le nom
+- [x] CA4 : Le clic droit sur un noeud affiche le menu "Renommer"
+- [x] CA5 : Le dialogue de renommage s'ouvre avec les valeurs actuelles pré-remplies
+- [x] CA6 : La confirmation met à jour le modèle et l'affichage du noeud
+- [x] CA7 : Le roundtrip save/load préserve les sous-titres
+- [x] CA8 : Tous les tests GUT passent

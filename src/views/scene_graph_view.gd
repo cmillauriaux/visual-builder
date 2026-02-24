@@ -7,6 +7,7 @@ const SceneDataScript = preload("res://src/models/scene_data.gd")
 
 signal scene_double_clicked(scene_uuid: String)
 signal scene_rename_requested(scene_uuid: String)
+signal entry_point_changed(uuid: String)
 
 var _chapter = null
 var _node_map: Dictionary = {}  # uuid → GraphNode
@@ -16,6 +17,9 @@ func load_chapter(chapter) -> void:
 	_clear_nodes()
 	for scene in _chapter.scenes:
 		_create_node(scene.uuid, scene.scene_name, scene.position, scene.subtitle)
+	# Marquer le point d'entrée
+	if _chapter.entry_point_uuid != "" and _node_map.has(_chapter.entry_point_uuid):
+		_node_map[_chapter.entry_point_uuid].set_entry_point(true)
 	for conn in _chapter.connections:
 		_connect_nodes(conn["from"], conn["to"])
 	_add_ending_connections()
@@ -68,6 +72,7 @@ func _create_node(uuid: String, item_name: String, pos: Vector2, subtitle: Strin
 	node.setup(uuid, item_name, pos, subtitle)
 	node.double_clicked.connect(_on_node_double_clicked)
 	node.rename_requested.connect(_on_node_rename_requested)
+	node.entry_point_toggled.connect(_on_entry_point_toggled)
 	_node_map[uuid] = node
 
 func _on_node_double_clicked(uuid: String) -> void:
@@ -75,6 +80,15 @@ func _on_node_double_clicked(uuid: String) -> void:
 
 func _on_node_rename_requested(uuid: String) -> void:
 	scene_rename_requested.emit(uuid)
+
+func _on_entry_point_toggled(uuid: String, checked: bool) -> void:
+	if checked:
+		if _chapter.entry_point_uuid != "" and _chapter.entry_point_uuid != uuid and _node_map.has(_chapter.entry_point_uuid):
+			_node_map[_chapter.entry_point_uuid].set_entry_point(false)
+		_chapter.entry_point_uuid = uuid
+	else:
+		_chapter.entry_point_uuid = ""
+	entry_point_changed.emit(_chapter.entry_point_uuid)
 
 func _connect_nodes(from_uuid: String, to_uuid: String) -> void:
 	if _node_map.has(from_uuid) and _node_map.has(to_uuid):

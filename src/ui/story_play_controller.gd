@@ -29,17 +29,17 @@ func start_play_story(story) -> void:
 		return
 	_story = story
 	_user_stopped = false
-	var chapter = _find_first(story.chapters)
+	var chapter = _find_entry(story.chapters, story.entry_point_uuid)
 	if chapter == null:
 		_finish("error")
 		return
 	_current_chapter = chapter
-	var scene = _find_first(chapter.scenes)
+	var scene = _find_entry(chapter.scenes, chapter.entry_point_uuid)
 	if scene == null:
 		_finish("error")
 		return
 	_current_scene = scene
-	var seq = _find_first(scene.sequences)
+	var seq = _find_entry(scene.sequences, scene.entry_point_uuid)
 	if seq == null:
 		_finish("error")
 		return
@@ -53,12 +53,12 @@ func start_play_chapter(story, chapter) -> void:
 	_story = story
 	_current_chapter = chapter
 	_user_stopped = false
-	var scene = _find_first(chapter.scenes)
+	var scene = _find_entry(chapter.scenes, chapter.entry_point_uuid)
 	if scene == null:
 		_finish("error")
 		return
 	_current_scene = scene
-	var seq = _find_first(scene.sequences)
+	var seq = _find_entry(scene.sequences, scene.entry_point_uuid)
 	if seq == null:
 		_finish("error")
 		return
@@ -73,7 +73,7 @@ func start_play_scene(story, chapter, scene) -> void:
 	_current_chapter = chapter
 	_current_scene = scene
 	_user_stopped = false
-	var seq = _find_first(scene.sequences)
+	var seq = _find_entry(scene.sequences, scene.entry_point_uuid)
 	if seq == null:
 		_finish("error")
 		return
@@ -149,7 +149,7 @@ func _resolve_consequence(consequence) -> void:
 				_finish("error")
 				return
 			_current_scene = target_scene
-			var seq = _find_first(target_scene.sequences)
+			var seq = _find_entry(target_scene.sequences, target_scene.entry_point_uuid)
 			if seq == null:
 				_finish("error")
 				return
@@ -162,12 +162,12 @@ func _resolve_consequence(consequence) -> void:
 				_finish("error")
 				return
 			_current_chapter = target_ch
-			var scene = _find_first(target_ch.scenes)
+			var scene = _find_entry(target_ch.scenes, target_ch.entry_point_uuid)
 			if scene == null:
 				_finish("error")
 				return
 			_current_scene = scene
-			var seq = _find_first(scene.sequences)
+			var seq = _find_entry(scene.sequences, scene.entry_point_uuid)
 			if seq == null:
 				_finish("error")
 				return
@@ -188,10 +188,15 @@ func _finish(reason: String) -> void:
 
 # --- Utilitaires ---
 
-## Trouve le premier élément par position.x puis position.y (lecture gauche→droite).
-func _find_first(items: Array):
+## Trouve l'élément d'entrée par UUID explicite, ou fallback par position.
+func _find_entry(items: Array, entry_uuid: String = ""):
 	if items.is_empty():
 		return null
+	if entry_uuid != "":
+		for item in items:
+			if item.uuid == entry_uuid:
+				return item
+	# Fallback : heuristique position gauche→droite, haut→bas
 	var best = items[0]
 	for i in range(1, items.size()):
 		var item = items[i]

@@ -8,6 +8,7 @@ var subtitle: String = ""
 var position: Vector2 = Vector2.ZERO
 var sequences: Array = []  # Array[Sequence]
 var connections: Array = []  # Array[Dictionary] — {"from": uuid, "to": uuid}
+var entry_point_uuid: String = ""
 
 func _init():
 	uuid = _generate_uuid()
@@ -52,6 +53,7 @@ func to_dict() -> Dictionary:
 		"subtitle": subtitle,
 		"sequences": seq_arr,
 		"connections": conn_arr,
+		"entry_point": entry_point_uuid,
 	}
 
 static func from_dict(d: Dictionary):
@@ -70,5 +72,7 @@ static func from_dict(d: Dictionary):
 	if d.has("connections"):
 		for conn in d["connections"]:
 			scene.connections.append(conn)
+
+	scene.entry_point_uuid = d.get("entry_point", "")
 
 	return scene

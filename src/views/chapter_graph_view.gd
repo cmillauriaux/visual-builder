@@ -7,6 +7,7 @@ const ChapterScript = preload("res://src/models/chapter.gd")
 
 signal chapter_double_clicked(chapter_uuid: String)
 signal chapter_rename_requested(chapter_uuid: String)
+signal entry_point_changed(uuid: String)
 
 var _story = null
 var _node_map: Dictionary = {}  # uuid → GraphNode
@@ -16,6 +17,9 @@ func load_story(story) -> void:
 	_clear_nodes()
 	for chapter in _story.chapters:
 		_create_node(chapter.uuid, chapter.chapter_name, chapter.position, chapter.subtitle)
+	# Marquer le point d'entrée
+	if _story.entry_point_uuid != "" and _node_map.has(_story.entry_point_uuid):
+		_node_map[_story.entry_point_uuid].set_entry_point(true)
 	# Restaurer les connexions
 	for conn in _story.connections:
 		_connect_nodes(conn["from"], conn["to"])
@@ -72,6 +76,7 @@ func _create_node(uuid: String, item_name: String, pos: Vector2, subtitle: Strin
 	node.setup(uuid, item_name, pos, subtitle)
 	node.double_clicked.connect(_on_node_double_clicked)
 	node.rename_requested.connect(_on_node_rename_requested)
+	node.entry_point_toggled.connect(_on_entry_point_toggled)
 	_node_map[uuid] = node
 
 func _on_node_double_clicked(uuid: String) -> void:
@@ -79,6 +84,16 @@ func _on_node_double_clicked(uuid: String) -> void:
 
 func _on_node_rename_requested(uuid: String) -> void:
 	chapter_rename_requested.emit(uuid)
+
+func _on_entry_point_toggled(uuid: String, checked: bool) -> void:
+	if checked:
+		# Décocher l'ancien point d'entrée
+		if _story.entry_point_uuid != "" and _story.entry_point_uuid != uuid and _node_map.has(_story.entry_point_uuid):
+			_node_map[_story.entry_point_uuid].set_entry_point(false)
+		_story.entry_point_uuid = uuid
+	else:
+		_story.entry_point_uuid = ""
+	entry_point_changed.emit(_story.entry_point_uuid)
 
 func _connect_nodes(from_uuid: String, to_uuid: String) -> void:
 	if _node_map.has(from_uuid) and _node_map.has(to_uuid):
