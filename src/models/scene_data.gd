@@ -4,6 +4,7 @@ const SequenceScript = preload("res://src/models/sequence.gd")
 
 var uuid: String = ""
 var scene_name: String = ""
+var subtitle: String = ""
 var position: Vector2 = Vector2.ZERO
 var sequences: Array = []  # Array[Sequence]
 var connections: Array = []  # Array[Dictionary] — {"from": uuid, "to": uuid}
@@ -48,6 +49,7 @@ func to_dict() -> Dictionary:
 	return {
 		"uuid": uuid,
 		"name": scene_name,
+		"subtitle": subtitle,
 		"sequences": seq_arr,
 		"connections": conn_arr,
 	}
@@ -57,6 +59,7 @@ static func from_dict(d: Dictionary):
 	var scene = script.new()
 	scene.uuid = d.get("uuid", scene.uuid)
 	scene.scene_name = d.get("name", "")
+	scene.subtitle = d.get("subtitle", "")
 	if d.has("position"):
 		scene.position = Vector2(d["position"].get("x", 0), d["position"].get("y", 0))
 

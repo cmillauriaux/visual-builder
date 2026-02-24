@@ -105,3 +105,56 @@ func test_find_scene_by_uuid():
 func test_find_scene_not_found():
 	var ch = Chapter.new()
 	assert_null(ch.find_scene("nonexistent"))
+
+# --- Tests subtitle ---
+
+func test_subtitle_default_empty():
+	var ch = Chapter.new()
+	assert_eq(ch.subtitle, "")
+
+func test_subtitle_to_dict_header():
+	var ch = Chapter.new()
+	ch.uuid = "abc-123"
+	ch.chapter_name = "Chapitre 1"
+	ch.subtitle = "La forêt maudite"
+	var d = ch.to_dict_header()
+	assert_eq(d["subtitle"], "La forêt maudite")
+
+func test_subtitle_to_dict_full():
+	var ch = Chapter.new()
+	ch.uuid = "abc-123"
+	ch.chapter_name = "Chapitre 1"
+	ch.subtitle = "La forêt maudite"
+	var scene = SceneData.new()
+	scene.uuid = "scene-001"
+	scene.scene_name = "Scène 1"
+	scene.subtitle = "Arrivée"
+	ch.scenes.append(scene)
+	var d = ch.to_dict()
+	assert_eq(d["scenes"][0]["subtitle"], "Arrivée")
+
+func test_subtitle_from_dict_header():
+	var d = {"uuid": "abc-123", "name": "Chapitre 1", "subtitle": "La forêt maudite", "position": {"x": 0, "y": 0}}
+	var ch = Chapter.from_dict_header(d)
+	assert_eq(ch.subtitle, "La forêt maudite")
+
+func test_subtitle_from_dict():
+	var d = {
+		"uuid": "abc-123",
+		"name": "Chapitre 1",
+		"subtitle": "La forêt maudite",
+		"scenes": [],
+		"connections": []
+	}
+	var ch = Chapter.from_dict(d)
+	assert_eq(ch.subtitle, "La forêt maudite")
+
+func test_subtitle_retrocompat_header():
+	var d = {"uuid": "abc-123", "name": "Chapitre 1", "position": {"x": 0, "y": 0}}
+	var ch = Chapter.from_dict_header(d)
+	assert_eq(ch.subtitle, "")
+
+func test_subtitle_retrocompat():
+	var d = {"uuid": "abc-123", "name": "Chapitre 1", "scenes": [], "connections": []}
+	var ch = Chapter.from_dict(d)
+	assert_eq(ch.subtitle, "")

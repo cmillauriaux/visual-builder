@@ -58,6 +58,15 @@ func test_rename_chapter():
 	_view.rename_chapter(ch.uuid, "Nouveau nom")
 	assert_eq(_story.chapters[0].chapter_name, "Nouveau nom")
 
+func test_rename_chapter_with_subtitle():
+	var ch = Chapter.new()
+	ch.chapter_name = "Ancien nom"
+	_story.chapters.append(ch)
+	_view.load_story(_story)
+	_view.rename_chapter(ch.uuid, "Nouveau nom", "La forêt")
+	assert_eq(_story.chapters[0].chapter_name, "Nouveau nom")
+	assert_eq(_story.chapters[0].subtitle, "La forêt")
+
 func test_add_connection():
 	var ch1 = Chapter.new()
 	ch1.chapter_name = "Ch1"
@@ -74,6 +83,24 @@ func test_add_connection():
 func test_get_story():
 	_view.load_story(_story)
 	assert_eq(_view.get_story(), _story)
+
+func test_load_story_with_subtitles():
+	var ch = Chapter.new()
+	ch.chapter_name = "Chapitre 1"
+	ch.subtitle = "Le début"
+	ch.position = Vector2(100, 200)
+	_story.chapters.append(ch)
+	_view.load_story(_story)
+	assert_eq(_view.get_node_count(), 1)
+
+func test_chapter_rename_requested_signal():
+	var ch = Chapter.new()
+	ch.chapter_name = "Chapitre 1"
+	_story.chapters.append(ch)
+	_view.load_story(_story)
+	watch_signals(_view)
+	_view._on_node_rename_requested(ch.uuid)
+	assert_signal_emitted(_view, "chapter_rename_requested")
 
 func test_node_positions_update_model():
 	var ch = Chapter.new()

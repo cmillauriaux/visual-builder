@@ -16,6 +16,18 @@ Godot 4.4 project ("visual-builder") using GL Compatibility renderer (supports w
 /Applications/Godot.app/Contents/MacOS/Godot --path /Users/cedric/projects/perso/visual-builder
 ```
 
+## Exécution des tests GUT
+
+**IMPORTANT** : Le mode headless de Godot ne rend jamais la main après l'exécution des tests. Il faut **systématiquement** utiliser `gtimeout` pour encapsuler toute commande Godot headless.
+
+```bash
+# Lancer tous les tests GUT (timeout de 120s)
+gtimeout 120 /Applications/Godot.app/Contents/MacOS/Godot --headless --path /Users/cedric/projects/perso/visual-builder -s addons/gut/gut_cmdln.gd
+
+# Lancer un fichier de test spécifique
+gtimeout 120 /Applications/Godot.app/Contents/MacOS/Godot --headless --path /Users/cedric/projects/perso/visual-builder -s addons/gut/gut_cmdln.gd -gtest=res://specs/test_example.gd
+```
+
 ## Project Structure
 
 - `project.godot` — Main engine configuration

@@ -21,6 +21,8 @@ const TransitionPanelScript = preload("res://src/ui/transition_panel.gd")
 const ForegroundTransitionScript = preload("res://src/ui/foreground_transition.gd")
 const AIGenerateDialogScript = preload("res://src/ui/ai_generate_dialog.gd")
 const ComfyUIConfigScript = preload("res://src/services/comfyui_config.gd")
+const StoryPlayControllerScript = preload("res://src/ui/story_play_controller.gd")
+const RenameDialogScript = preload("res://src/ui/rename_dialog.gd")
 
 var _editor_main: Control
 var _breadcrumb: HBoxContainer
@@ -50,6 +52,15 @@ var _create_button: Button
 var _save_button: Button
 var _load_button: Button
 var _content_area: Control
+
+# Top bar play (story/chapter/scene level)
+var _top_play_button: Button
+var _top_stop_button: Button
+var _story_play_ctrl: Node
+var _is_story_play_mode: bool = false
+var _story_play_return_level: String = ""
+var _rename_dialog: ConfirmationDialog
+var _choice_overlay: PanelContainer
 
 # Mode Play UI
 var _play_overlay: PanelContainer
@@ -86,6 +97,18 @@ func _ready() -> void:
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top_bar.add_child(spacer)
 
+	_top_play_button = Button.new()
+	_top_play_button.text = "▶ Jouer"
+	_top_play_button.visible = false
+	_top_play_button.pressed.connect(_on_top_play_pressed)
+	top_bar.add_child(_top_play_button)
+
+	_top_stop_button = Button.new()
+	_top_stop_button.text = "■ Arrêter"
+	_top_stop_button.visible = false
+	_top_stop_button.pressed.connect(_on_top_stop_pressed)
+	top_bar.add_child(_top_stop_button)
+
 	_create_button = Button.new()
 	_create_button.pressed.connect(_on_create_pressed)
 	top_bar.add_child(_create_button)
@@ -115,6 +138,7 @@ func _ready() -> void:
 	_chapter_graph_view.set_script(ChapterGraphViewScript)
 	_chapter_graph_view.set_anchors_preset(PRESET_FULL_RECT)
 	_chapter_graph_view.chapter_double_clicked.connect(_on_chapter_double_clicked)
+	_chapter_graph_view.chapter_rename_requested.connect(_on_chapter_rename_requested)
 	_content_area.add_child(_chapter_graph_view)
 
 	# Scene Graph View
@@ -122,6 +146,7 @@ func _ready() -> void:
 	_scene_graph_view.set_script(SceneGraphViewScript)
 	_scene_graph_view.set_anchors_preset(PRESET_FULL_RECT)
 	_scene_graph_view.scene_double_clicked.connect(_on_scene_double_clicked)
+	_scene_graph_view.scene_rename_requested.connect(_on_scene_rename_requested)
 	_content_area.add_child(_scene_graph_view)
 
 	# Sequence Graph View
@@ -129,6 +154,7 @@ func _ready() -> void:
 	_sequence_graph_view.set_script(SequenceGraphViewScript)
 	_sequence_graph_view.set_anchors_preset(PRESET_FULL_RECT)
 	_sequence_graph_view.sequence_double_clicked.connect(_on_sequence_double_clicked)
+	_sequence_graph_view.sequence_rename_requested.connect(_on_sequence_rename_requested)
 	_content_area.add_child(_sequence_graph_view)
 
 	# --- Sequence Editor Panel (VBox: toolbar + content) ---
@@ -268,6 +294,21 @@ func _ready() -> void:
 	_foreground_transition.set_script(ForegroundTransitionScript)
 	add_child(_foreground_transition)
 
+	# Story Play Controller
+	_story_play_ctrl = Node.new()
+	_story_play_ctrl.set_script(StoryPlayControllerScript)
+	_story_play_ctrl.sequence_play_requested.connect(_on_story_play_sequence_requested)
+	_story_play_ctrl.choice_display_requested.connect(_on_story_play_choice_requested)
+	_story_play_ctrl.play_finished.connect(_on_story_play_finished)
+	add_child(_story_play_ctrl)
+
+	# Choice overlay (for story play choices)
+	_choice_overlay = PanelContainer.new()
+	_choice_overlay.visible = false
+	_choice_overlay.set_anchors_preset(PRESET_CENTER)
+	_choice_overlay.custom_minimum_size = Vector2(400, 0)
+	_choice_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+
 	# Signals from sequence editor controller
 	_sequence_editor_ctrl.play_dialogue_changed.connect(_on_play_dialogue_changed)
 	_sequence_editor_ctrl.play_stopped.connect(_on_play_stopped)
@@ -380,6 +421,9 @@ func _on_play_pressed() -> void:
 		_typewriter_timer.start()
 
 func _on_stop_pressed() -> void:
+	if _is_story_play_mode:
+		_stop_story_play()
+		return
 	_sequence_editor_ctrl.stop_play()
 
 func _on_play_stopped() -> void:
@@ -389,6 +433,9 @@ func _on_play_stopped() -> void:
 	_typewriter_timer.stop()
 	if _play_overlay.get_parent():
 		_play_overlay.get_parent().remove_child(_play_overlay)
+	if _is_story_play_mode:
+		_story_play_ctrl.on_sequence_finished()
+		return
 
 func _on_play_dialogue_changed(index: int) -> void:
 	var seq = _sequence_editor_ctrl.get_sequence()
@@ -495,6 +542,122 @@ func _create_fade_out_clone(source: Control) -> TextureRect:
 	fg_container.add_child(clone)
 	return clone
 
+# --- Story Play handlers ---
+
+func _on_top_play_pressed() -> void:
+	var level = _editor_main.get_current_level()
+	_story_play_return_level = level
+	_is_story_play_mode = true
+	_top_play_button.visible = false
+	_top_stop_button.visible = true
+	if level == "chapters":
+		_story_play_ctrl.start_play_story(_editor_main._story)
+	elif level == "scenes":
+		_story_play_ctrl.start_play_chapter(_editor_main._story, _editor_main._current_chapter)
+	elif level == "sequences":
+		_story_play_ctrl.start_play_scene(_editor_main._story, _editor_main._current_chapter, _editor_main._current_scene)
+
+func _on_top_stop_pressed() -> void:
+	_stop_story_play()
+
+func _stop_story_play() -> void:
+	if _sequence_editor_ctrl.is_playing():
+		_is_story_play_mode = false
+		_sequence_editor_ctrl.stop_play()
+	else:
+		_story_play_ctrl.stop_play()
+	_hide_choice_overlay()
+	_restore_after_story_play()
+
+func _on_story_play_sequence_requested(seq) -> void:
+	# Ensure the editor_main navigation state matches the controller's current chapter/scene
+	var ctrl_chapter = _story_play_ctrl.get_current_chapter()
+	var ctrl_scene = _story_play_ctrl.get_current_scene()
+	if ctrl_chapter and _editor_main._current_chapter != ctrl_chapter:
+		_editor_main._current_chapter = ctrl_chapter
+		_editor_main._current_level = "scenes"
+	if ctrl_scene and _editor_main._current_scene != ctrl_scene:
+		_editor_main._current_scene = ctrl_scene
+		_editor_main._current_level = "sequences"
+	_editor_main.navigate_to_sequence(seq.uuid)
+	if _editor_main._current_sequence:
+		_load_sequence_editors(_editor_main._current_sequence)
+	_update_view()
+	_sequence_editor_panel.visible = true
+	# Hide graph views during story play
+	_chapter_graph_view.visible = false
+	_scene_graph_view.visible = false
+	_sequence_graph_view.visible = false
+	# Start sequence play
+	_previous_play_foregrounds = []
+	_sequence_editor_ctrl.start_play()
+	if _sequence_editor_ctrl.is_playing():
+		_play_button.visible = false
+		_stop_button.visible = true
+		_play_overlay.visible = true
+		_visual_editor.add_child(_play_overlay)
+		_typewriter_timer.start()
+	else:
+		# Sequence has no dialogues — treat as immediate finish
+		_story_play_ctrl.on_sequence_finished()
+
+func _on_story_play_choice_requested(choices) -> void:
+	_hide_choice_overlay()
+	var vbox = VBoxContainer.new()
+	vbox.name = "ChoiceVBox"
+	var title_label = Label.new()
+	title_label.text = "Faites votre choix"
+	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title_label.add_theme_font_size_override("font_size", 18)
+	vbox.add_child(title_label)
+	for i in range(choices.size()):
+		var btn = Button.new()
+		btn.text = choices[i].text
+		var idx = i
+		btn.pressed.connect(func(): _on_play_choice_selected(idx))
+		vbox.add_child(btn)
+	_choice_overlay.add_child(vbox)
+	_choice_overlay.visible = true
+	if not _choice_overlay.get_parent():
+		_visual_editor.add_child(_choice_overlay)
+
+func _on_play_choice_selected(index: int) -> void:
+	_hide_choice_overlay()
+	_story_play_ctrl.on_choice_selected(index)
+
+func _hide_choice_overlay() -> void:
+	_choice_overlay.visible = false
+	for child in _choice_overlay.get_children():
+		child.queue_free()
+	if _choice_overlay.get_parent():
+		_choice_overlay.get_parent().remove_child(_choice_overlay)
+
+func _on_story_play_finished(reason: String) -> void:
+	_hide_choice_overlay()
+	_restore_after_story_play()
+	# Show end message
+	var messages = {
+		"game_over": "Fin de la lecture — Game Over",
+		"to_be_continued": "Fin de la lecture — À suivre...",
+		"no_ending": "Fin de la lecture (aucune terminaison configurée)",
+		"error": "Fin de la lecture — Erreur (cible introuvable ou contenu vide)",
+		"stopped": "Lecture arrêtée",
+	}
+	var msg = messages.get(reason, "Fin de la lecture")
+	var dialog = AcceptDialog.new()
+	dialog.dialog_text = msg
+	add_child(dialog)
+	dialog.popup_centered()
+
+func _restore_after_story_play() -> void:
+	_is_story_play_mode = false
+	_top_play_button.visible = false
+	_top_stop_button.visible = false
+	# Navigate back to the return level
+	while _editor_main.get_current_level() != _story_play_return_level and _editor_main.get_current_level() != "none":
+		_editor_main.navigate_back()
+	_refresh_current_view()
+
 func _on_typewriter_tick() -> void:
 	if not _sequence_editor_ctrl.is_playing():
 		_typewriter_timer.stop()
@@ -575,6 +738,9 @@ func _on_create_pressed() -> void:
 		_sequence_graph_view.add_new_sequence(item_name, pos)
 
 func _on_back_pressed() -> void:
+	if _is_story_play_mode:
+		_stop_story_play()
+		return
 	if _sequence_editor_ctrl.is_playing():
 		_sequence_editor_ctrl.stop_play()
 	_editor_main.navigate_back()
@@ -672,6 +838,46 @@ func _on_sequence_double_clicked(sequence_uuid: String) -> void:
 		_load_sequence_editors(_editor_main._current_sequence)
 	_refresh_current_view()
 
+func _on_chapter_rename_requested(uuid: String) -> void:
+	var chapter = _editor_main._story.find_chapter(uuid)
+	if chapter == null:
+		return
+	_open_rename_dialog(uuid, chapter.chapter_name, chapter.subtitle, func(u, n, s):
+		_chapter_graph_view.rename_chapter(u, n, s)
+	)
+
+func _on_scene_rename_requested(uuid: String) -> void:
+	if _editor_main._current_chapter == null:
+		return
+	var scene = _editor_main._current_chapter.find_scene(uuid)
+	if scene == null:
+		return
+	_open_rename_dialog(uuid, scene.scene_name, scene.subtitle, func(u, n, s):
+		_scene_graph_view.rename_scene(u, n, s)
+	)
+
+func _on_sequence_rename_requested(uuid: String) -> void:
+	if _editor_main._current_scene == null:
+		return
+	var seq = _editor_main._current_scene.find_sequence(uuid)
+	if seq == null:
+		return
+	_open_rename_dialog(uuid, seq.seq_name, seq.subtitle, func(u, n, s):
+		_sequence_graph_view.rename_sequence(u, n, s)
+	)
+
+func _open_rename_dialog(uuid: String, current_name: String, current_subtitle: String, callback: Callable) -> void:
+	if _rename_dialog != null and is_instance_valid(_rename_dialog):
+		_rename_dialog.queue_free()
+	_rename_dialog = ConfirmationDialog.new()
+	_rename_dialog.set_script(RenameDialogScript)
+	add_child(_rename_dialog)
+	_rename_dialog.setup(uuid, current_name, current_subtitle)
+	_rename_dialog.rename_confirmed.connect(func(u, n, s):
+		callback.call(u, n, s)
+	)
+	_rename_dialog.popup_centered()
+
 func _on_ending_changed() -> void:
 	_update_ending_connections()
 
@@ -728,3 +934,5 @@ func _update_view() -> void:
 	if _create_button.visible:
 		_create_button.text = _editor_main.get_create_button_label()
 	_breadcrumb.set_path(_editor_main.get_breadcrumb_path())
+	# Top play button visible at graph levels (not during story play)
+	_top_play_button.visible = (level in ["chapters", "scenes", "sequences"]) and not _is_story_play_mode

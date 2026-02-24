@@ -52,6 +52,24 @@ func test_rename_scene():
 	_view.rename_scene(s.uuid, "Nouveau")
 	assert_eq(_chapter.scenes[0].scene_name, "Nouveau")
 
+func test_rename_scene_with_subtitle():
+	var s = SceneData.new()
+	s.scene_name = "Ancien"
+	_chapter.scenes.append(s)
+	_view.load_chapter(_chapter)
+	_view.rename_scene(s.uuid, "Nouveau", "Arrivée")
+	assert_eq(_chapter.scenes[0].scene_name, "Nouveau")
+	assert_eq(_chapter.scenes[0].subtitle, "Arrivée")
+
+func test_scene_rename_requested_signal():
+	var s = SceneData.new()
+	s.scene_name = "Scène 1"
+	_chapter.scenes.append(s)
+	_view.load_chapter(_chapter)
+	watch_signals(_view)
+	_view._on_node_rename_requested(s.uuid)
+	assert_signal_emitted(_view, "scene_rename_requested")
+
 func test_get_chapter():
 	_view.load_chapter(_chapter)
 	assert_eq(_view.get_chapter(), _chapter)

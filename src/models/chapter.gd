@@ -4,6 +4,7 @@ const SceneDataScript = preload("res://src/models/scene_data.gd")
 
 var uuid: String = ""
 var chapter_name: String = ""
+var subtitle: String = ""
 var position: Vector2 = Vector2.ZERO
 var scenes: Array = []  # Array[SceneData]
 var connections: Array = []  # Array[Dictionary] — {"from": uuid, "to": uuid}
@@ -40,6 +41,7 @@ func to_dict_header() -> Dictionary:
 	return {
 		"uuid": uuid,
 		"name": chapter_name,
+		"subtitle": subtitle,
 		"position": {"x": position.x, "y": position.y},
 	}
 
@@ -49,6 +51,7 @@ func to_dict() -> Dictionary:
 		scene_headers.append({
 			"uuid": scene.uuid,
 			"name": scene.scene_name,
+			"subtitle": scene.subtitle,
 			"position": {"x": scene.position.x, "y": scene.position.y},
 		})
 
@@ -59,6 +62,7 @@ func to_dict() -> Dictionary:
 	return {
 		"uuid": uuid,
 		"name": chapter_name,
+		"subtitle": subtitle,
 		"scenes": scene_headers,
 		"connections": conn_arr,
 	}
@@ -68,6 +72,7 @@ static func from_dict_header(d: Dictionary):
 	var ch = script.new()
 	ch.uuid = d.get("uuid", ch.uuid)
 	ch.chapter_name = d.get("name", "")
+	ch.subtitle = d.get("subtitle", "")
 	if d.has("position"):
 		ch.position = Vector2(d["position"].get("x", 0), d["position"].get("y", 0))
 	return ch
@@ -77,6 +82,7 @@ static func from_dict(d: Dictionary):
 	var ch = script.new()
 	ch.uuid = d.get("uuid", ch.uuid)
 	ch.chapter_name = d.get("name", "")
+	ch.subtitle = d.get("subtitle", "")
 	if d.has("position"):
 		ch.position = Vector2(d["position"].get("x", 0), d["position"].get("y", 0))
 

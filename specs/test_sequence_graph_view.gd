@@ -52,6 +52,24 @@ func test_rename_sequence():
 	_view.rename_sequence(s.uuid, "Nouveau")
 	assert_eq(_scene_data.sequences[0].seq_name, "Nouveau")
 
+func test_rename_sequence_with_subtitle():
+	var s = Sequence.new()
+	s.seq_name = "Ancien"
+	_scene_data.sequences.append(s)
+	_view.load_scene(_scene_data)
+	_view.rename_sequence(s.uuid, "Nouveau", "Exploration")
+	assert_eq(_scene_data.sequences[0].seq_name, "Nouveau")
+	assert_eq(_scene_data.sequences[0].subtitle, "Exploration")
+
+func test_sequence_rename_requested_signal():
+	var s = Sequence.new()
+	s.seq_name = "Séq 1"
+	_scene_data.sequences.append(s)
+	_view.load_scene(_scene_data)
+	watch_signals(_view)
+	_view._on_node_rename_requested(s.uuid)
+	assert_signal_emitted(_view, "sequence_rename_requested")
+
 func test_get_scene_data():
 	_view.load_scene(_scene_data)
 	assert_eq(_view.get_scene_data(), _scene_data)

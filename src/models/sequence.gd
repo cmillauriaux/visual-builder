@@ -6,6 +6,7 @@ const EndingScript = preload("res://src/models/ending.gd")
 
 var uuid: String = ""
 var seq_name: String = ""
+var subtitle: String = ""
 var position: Vector2 = Vector2.ZERO
 var background: String = ""
 var foregrounds: Array = []  # Array[Foreground]
@@ -46,6 +47,7 @@ func to_dict() -> Dictionary:
 	var d := {
 		"uuid": uuid,
 		"name": seq_name,
+		"subtitle": subtitle,
 		"position": {"x": position.x, "y": position.y},
 		"background": background,
 		"foregrounds": fg_arr,
@@ -62,6 +64,7 @@ static func from_dict(d: Dictionary):
 	var seq = script.new()
 	seq.uuid = d.get("uuid", seq.uuid)
 	seq.seq_name = d.get("name", "")
+	seq.subtitle = d.get("subtitle", "")
 	if d.has("position"):
 		seq.position = Vector2(d["position"]["x"], d["position"]["y"])
 	seq.background = d.get("background", "")

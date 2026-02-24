@@ -148,3 +148,36 @@ func test_dialogues_order_preserved():
 	var restored = Sequence.from_dict(dict)
 	for i in range(5):
 		assert_eq(restored.dialogues[i].text, "Ligne %d" % i)
+
+# --- Tests subtitle ---
+
+func test_subtitle_default_empty():
+	var seq = Sequence.new()
+	assert_eq(seq.subtitle, "")
+
+func test_subtitle_to_dict():
+	var seq = Sequence.new()
+	seq.uuid = "seq-001"
+	seq.seq_name = "Exploration"
+	seq.subtitle = "Premier pas"
+	seq.position = Vector2(0, 0)
+	var dict = seq.to_dict()
+	assert_eq(dict["subtitle"], "Premier pas")
+
+func test_subtitle_from_dict():
+	var dict = {
+		"uuid": "seq-001",
+		"name": "Exploration",
+		"subtitle": "Premier pas",
+		"position": {"x": 0, "y": 0},
+		"background": "",
+		"foregrounds": [],
+		"dialogues": []
+	}
+	var seq = Sequence.from_dict(dict)
+	assert_eq(seq.subtitle, "Premier pas")
+
+func test_subtitle_retrocompat():
+	var dict = {"uuid": "seq-002", "name": "Vide", "position": {"x": 0, "y": 0}}
+	var seq = Sequence.from_dict(dict)
+	assert_eq(seq.subtitle, "")

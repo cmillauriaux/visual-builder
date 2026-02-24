@@ -107,3 +107,33 @@ func test_find_sequence_not_found():
 	var scene = SceneData.new()
 	var found = scene.find_sequence("nonexistent")
 	assert_null(found)
+
+# --- Tests subtitle ---
+
+func test_subtitle_default_empty():
+	var scene = SceneData.new()
+	assert_eq(scene.subtitle, "")
+
+func test_subtitle_to_dict():
+	var scene = SceneData.new()
+	scene.uuid = "scene-001"
+	scene.scene_name = "Scène 1"
+	scene.subtitle = "Arrivée en forêt"
+	var d = scene.to_dict()
+	assert_eq(d["subtitle"], "Arrivée en forêt")
+
+func test_subtitle_from_dict():
+	var d = {
+		"uuid": "scene-001",
+		"name": "Scène 1",
+		"subtitle": "Arrivée en forêt",
+		"sequences": [],
+		"connections": []
+	}
+	var scene = SceneData.from_dict(d)
+	assert_eq(scene.subtitle, "Arrivée en forêt")
+
+func test_subtitle_retrocompat():
+	var d = {"uuid": "scene-002", "name": "Vide"}
+	var scene = SceneData.from_dict(d)
+	assert_eq(scene.subtitle, "")

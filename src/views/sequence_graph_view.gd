@@ -6,6 +6,7 @@ const GraphNodeItem = preload("res://src/views/graph_node_item.gd")
 const SequenceScript = preload("res://src/models/sequence.gd")
 
 signal sequence_double_clicked(sequence_uuid: String)
+signal sequence_rename_requested(sequence_uuid: String)
 
 var _scene_data = null
 var _node_map: Dictionary = {}  # uuid → GraphNode
@@ -14,7 +15,7 @@ func load_scene(scene_data) -> void:
 	_scene_data = scene_data
 	_clear_nodes()
 	for seq in _scene_data.sequences:
-		_create_node(seq.uuid, seq.seq_name, seq.position)
+		_create_node(seq.uuid, seq.seq_name, seq.position, seq.subtitle)
 	for conn in _scene_data.connections:
 		_connect_nodes(conn["from"], conn["to"])
 	_add_ending_connections()
@@ -30,7 +31,7 @@ func add_new_sequence(seq_name: String, pos: Vector2) -> void:
 	seq.seq_name = seq_name
 	seq.position = pos
 	_scene_data.sequences.append(seq)
-	_create_node(seq.uuid, seq.seq_name, seq.position)
+	_create_node(seq.uuid, seq.seq_name, seq.position, "")
 
 func remove_sequence(uuid: String) -> void:
 	for i in range(_scene_data.sequences.size()):
@@ -42,13 +43,14 @@ func remove_sequence(uuid: String) -> void:
 		_node_map[uuid].queue_free()
 		_node_map.erase(uuid)
 
-func rename_sequence(uuid: String, new_name: String) -> void:
+func rename_sequence(uuid: String, new_name: String, new_subtitle: String = "") -> void:
 	for s in _scene_data.sequences:
 		if s.uuid == uuid:
 			s.seq_name = new_name
+			s.subtitle = new_subtitle
 			break
 	if _node_map.has(uuid):
-		_node_map[uuid].set_item_name(new_name)
+		_node_map[uuid].set_item_name_and_subtitle(new_name, new_subtitle)
 
 func add_sequence_connection(from_uuid: String, to_uuid: String) -> void:
 	_scene_data.connections.append({"from": from_uuid, "to": to_uuid})
@@ -59,16 +61,20 @@ func sync_positions_to_model() -> void:
 		if _node_map.has(s.uuid):
 			s.position = _node_map[s.uuid].get_item_position()
 
-func _create_node(uuid: String, item_name: String, pos: Vector2) -> void:
+func _create_node(uuid: String, item_name: String, pos: Vector2, subtitle: String = "") -> void:
 	var node = GraphNode.new()
 	node.set_script(GraphNodeItem)
 	add_child(node)
-	node.setup(uuid, item_name, pos)
+	node.setup(uuid, item_name, pos, subtitle)
 	node.double_clicked.connect(_on_node_double_clicked)
+	node.rename_requested.connect(_on_node_rename_requested)
 	_node_map[uuid] = node
 
 func _on_node_double_clicked(uuid: String) -> void:
 	sequence_double_clicked.emit(uuid)
+
+func _on_node_rename_requested(uuid: String) -> void:
+	sequence_rename_requested.emit(uuid)
 
 func _connect_nodes(from_uuid: String, to_uuid: String) -> void:
 	if _node_map.has(from_uuid) and _node_map.has(to_uuid):

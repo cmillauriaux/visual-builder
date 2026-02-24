@@ -185,6 +185,29 @@ func test_save_updates_modified_date():
 	var loaded = StorySaver.load_story(_test_dir)
 	assert_ne(loaded.updated_at, "", "updated_at ne doit pas être vide")
 
+# --- Tests subtitle roundtrip ---
+
+func test_subtitle_roundtrip():
+	var story = _create_test_story()
+	story.chapters[0].subtitle = "Le début de l'aventure"
+	story.chapters[0].scenes[0].subtitle = "Arrivée en forêt"
+	story.chapters[0].scenes[0].sequences[0].subtitle = "Exploration initiale"
+	StorySaver.save_story(story, _test_dir)
+	var loaded = StorySaver.load_story(_test_dir)
+	assert_eq(loaded.chapters[0].subtitle, "Le début de l'aventure")
+	assert_eq(loaded.chapters[0].scenes[0].subtitle, "Arrivée en forêt")
+	assert_eq(loaded.chapters[0].scenes[0].sequences[0].subtitle, "Exploration initiale")
+
+func test_subtitle_retrocompat_load():
+	# Simuler un fichier sans subtitle (ancienne version)
+	var story = _create_test_story()
+	StorySaver.save_story(story, _test_dir)
+	var loaded = StorySaver.load_story(_test_dir)
+	# Les subtitles doivent être vides par défaut
+	assert_eq(loaded.chapters[0].subtitle, "")
+	assert_eq(loaded.chapters[0].scenes[0].subtitle, "")
+	assert_eq(loaded.chapters[0].scenes[0].sequences[0].subtitle, "")
+
 # --- Helper ---
 
 func _create_test_story() -> RefCounted:
