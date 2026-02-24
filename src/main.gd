@@ -40,7 +40,7 @@ var _visual_editor: Control
 var _dialogue_panel: VBoxContainer
 var _dialogue_list_container: VBoxContainer
 var _dialogue_editor: Control
-var _ending_editor: Control
+var _ending_editor: VBoxContainer
 var _sequence_editor_ctrl: Control
 var _transition_panel: VBoxContainer
 var _foreground_transition: Node
@@ -226,9 +226,9 @@ func _ready() -> void:
 	_dialogue_panel.add_child(add_dialogue_btn)
 
 	# Ending editor
-	_ending_editor = Control.new()
+	_ending_editor = VBoxContainer.new()
 	_ending_editor.set_script(EndingEditorScript)
-	_ending_editor.custom_minimum_size.y = 150
+	_ending_editor.ending_changed.connect(_on_ending_changed)
 	_dialogue_panel.add_child(_ending_editor)
 
 	# Legacy dialogue editor (kept for API compat)
@@ -672,9 +672,33 @@ func _on_sequence_double_clicked(sequence_uuid: String) -> void:
 		_load_sequence_editors(_editor_main._current_sequence)
 	_refresh_current_view()
 
+func _on_ending_changed() -> void:
+	_update_ending_connections()
+
+func _update_ending_targets() -> void:
+	var sequences: Array = []
+	var scenes: Array = []
+	var chapters: Array = []
+	if _editor_main._current_scene:
+		for seq in _editor_main._current_scene.sequences:
+			sequences.append({"uuid": seq.uuid, "name": seq.seq_name})
+	if _editor_main._current_chapter:
+		for sc in _editor_main._current_chapter.scenes:
+			scenes.append({"uuid": sc.uuid, "name": sc.scene_name})
+	if _editor_main._story:
+		for ch in _editor_main._story.chapters:
+			chapters.append({"uuid": ch.uuid, "name": ch.chapter_name})
+	_ending_editor.set_available_targets(sequences, scenes, chapters)
+
+func _update_ending_connections() -> void:
+	# Refresh the sequence graph view to include ending-based connections
+	if _editor_main._current_scene and _sequence_graph_view:
+		_sequence_graph_view.load_scene(_editor_main._current_scene)
+
 func _load_sequence_editors(seq) -> void:
 	_visual_editor.load_sequence(seq)
 	_dialogue_editor.load_sequence(seq)
+	_update_ending_targets()
 	_ending_editor.load_sequence(seq)
 	_sequence_editor_ctrl.load_sequence(seq)
 	_rebuild_dialogue_list()

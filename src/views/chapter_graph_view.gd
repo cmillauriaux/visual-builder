@@ -18,6 +18,7 @@ func load_story(story) -> void:
 	# Restaurer les connexions
 	for conn in _story.connections:
 		_connect_nodes(conn["from"], conn["to"])
+	_add_ending_connections()
 
 func get_story():
 	return _story
@@ -76,6 +77,32 @@ func _on_node_double_clicked(uuid: String) -> void:
 func _connect_nodes(from_uuid: String, to_uuid: String) -> void:
 	if _node_map.has(from_uuid) and _node_map.has(to_uuid):
 		connect_node(from_uuid, 0, to_uuid, 0)
+
+func _add_ending_connections() -> void:
+	if _story == null:
+		return
+	var existing := {}
+	for conn in _story.connections:
+		existing[conn["from"] + "→" + conn["to"]] = true
+	# Scan all sequences in all scenes of all chapters for redirect_chapter endings
+	for chapter in _story.chapters:
+		for scene in chapter.scenes:
+			for seq in scene.sequences:
+				if seq.ending == null:
+					continue
+				var targets := []
+				if seq.ending.type == "auto_redirect" and seq.ending.auto_consequence:
+					if seq.ending.auto_consequence.type == "redirect_chapter" and seq.ending.auto_consequence.target != "":
+						targets.append(seq.ending.auto_consequence.target)
+				elif seq.ending.type == "choices":
+					for choice in seq.ending.choices:
+						if choice.consequence and choice.consequence.type == "redirect_chapter" and choice.consequence.target != "":
+							targets.append(choice.consequence.target)
+				for target_uuid in targets:
+					var key = chapter.uuid + "→" + target_uuid
+					if not existing.has(key):
+						existing[key] = true
+						_connect_nodes(chapter.uuid, target_uuid)
 
 func _clear_nodes() -> void:
 	for uuid in _node_map:
