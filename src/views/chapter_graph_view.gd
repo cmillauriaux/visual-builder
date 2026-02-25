@@ -128,6 +128,7 @@ func _add_ending_connections() -> void:
 func _clear_nodes() -> void:
 	for uuid in _node_map:
 		if is_instance_valid(_node_map[uuid]):
+			remove_child(_node_map[uuid])
 			_node_map[uuid].queue_free()
 	_node_map.clear()
 	clear_connections()
