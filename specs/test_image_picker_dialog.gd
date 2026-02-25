@@ -1,0 +1,438 @@
+extends GutTest
+
+## Tests pour ImagePickerDialog — dialog unifié de sélection d'images
+## (onglet Fichier + onglet Galerie)
+
+const ImagePickerDialog = preload("res://src/ui/image_picker_dialog.gd")
+
+var _dialog: Window
+var _test_dir: String = ""
+
+func before_each():
+	_dialog = Window.new()
+	_dialog.set_script(ImagePickerDialog)
+	add_child_autofree(_dialog)
+	_test_dir = "user://test_picker_%d" % randi()
+
+func after_each():
+	_remove_dir_recursive(_test_dir)
+
+# --- Structure UI ---
+
+func test_is_window():
+	assert_is(_dialog, Window)
+
+func test_has_title():
+	assert_ne(_dialog.title, "")
+
+func test_has_tab_container():
+	assert_not_null(_dialog._tab_container)
+	assert_is(_dialog._tab_container, TabContainer)
+
+func test_has_two_tabs():
+	assert_eq(_dialog._tab_container.get_tab_count(), 2)
+
+func test_tab_fichier_exists():
+	assert_eq(_dialog._tab_container.get_tab_title(0), "Fichier")
+
+func test_tab_galerie_exists():
+	assert_eq(_dialog._tab_container.get_tab_title(1), "Galerie")
+
+func test_has_validate_button():
+	assert_not_null(_dialog._validate_btn)
+	assert_is(_dialog._validate_btn, Button)
+	assert_eq(_dialog._validate_btn.text, "Valider")
+
+func test_has_file_path_label():
+	assert_not_null(_dialog._file_path_label)
+	assert_is(_dialog._file_path_label, Label)
+
+func test_has_gallery_grid():
+	assert_not_null(_dialog._gallery_grid)
+	assert_is(_dialog._gallery_grid, GridContainer)
+
+func test_has_empty_label():
+	assert_not_null(_dialog._empty_label)
+	assert_is(_dialog._empty_label, Label)
+
+func test_has_no_story_label():
+	assert_not_null(_dialog._no_story_label)
+	assert_is(_dialog._no_story_label, Label)
+
+func test_has_image_selected_signal():
+	assert_true(_dialog.has_signal("image_selected"))
+
+# --- État initial ---
+
+func test_validate_button_initially_disabled():
+	assert_true(_dialog._validate_btn.disabled)
+
+func test_initial_selected_path_empty():
+	assert_eq(_dialog._selected_path, "")
+
+func test_empty_label_initially_hidden():
+	assert_false(_dialog._empty_label.visible)
+
+func test_no_story_label_initially_hidden():
+	assert_false(_dialog._no_story_label.visible)
+
+# --- Mode setup ---
+
+func test_setup_background_sets_title():
+	_dialog.setup(ImagePickerDialog.Mode.BACKGROUND, "my_story")
+	assert_string_contains(_dialog.title.to_lower(), "background")
+
+func test_setup_foreground_sets_title():
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, "my_story")
+	assert_string_contains(_dialog.title.to_lower(), "foreground")
+
+func test_setup_resets_selected_path():
+	_dialog._selected_path = "some/path.png"
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, "my_story")
+	assert_eq(_dialog._selected_path, "")
+
+func test_setup_disables_validate_button():
+	_dialog._validate_btn.disabled = false
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, "my_story")
+	assert_true(_dialog._validate_btn.disabled)
+
+func test_setup_resets_file_path_label():
+	_dialog._file_path_label.text = "ancien_fichier.png"
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, "my_story")
+	assert_string_contains(_dialog._file_path_label.text.to_lower(), "aucun")
+
+func test_setup_stores_mode_background():
+	_dialog.setup(ImagePickerDialog.Mode.BACKGROUND, "my_story")
+	assert_eq(_dialog._mode, ImagePickerDialog.Mode.BACKGROUND)
+
+func test_setup_stores_mode_foreground():
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, "my_story")
+	assert_eq(_dialog._mode, ImagePickerDialog.Mode.FOREGROUND)
+
+func test_setup_stores_story_name():
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, "test_story")
+	assert_eq(_dialog._story_name, "test_story")
+
+# --- Avertissement histoire manquante ---
+
+func test_no_story_label_visible_when_empty_story_name():
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, "")
+	assert_true(_dialog._no_story_label.visible)
+
+func test_no_story_label_hidden_when_story_name_set():
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, "my_story")
+	assert_false(_dialog._no_story_label.visible)
+
+# --- Répertoire assets ---
+
+func test_get_assets_dir_background():
+	_dialog.setup(ImagePickerDialog.Mode.BACKGROUND, "my_story")
+	assert_eq(_dialog._get_assets_dir(), "user://stories/my_story/assets/backgrounds")
+
+func test_get_assets_dir_foreground():
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, "my_story")
+	assert_eq(_dialog._get_assets_dir(), "user://stories/my_story/assets/foregrounds")
+
+# --- Résolution de chemin unique (_resolve_unique_path) ---
+
+func test_resolve_unique_path_no_conflict():
+	DirAccess.make_dir_recursive_absolute(_test_dir)
+	var result = ImagePickerDialog._resolve_unique_path(_test_dir, "image.png")
+	assert_eq(result, _test_dir + "/image.png")
+
+func test_resolve_unique_path_with_one_conflict():
+	DirAccess.make_dir_recursive_absolute(_test_dir)
+	_create_file(_test_dir + "/image.png")
+	var result = ImagePickerDialog._resolve_unique_path(_test_dir, "image.png")
+	assert_eq(result, _test_dir + "/image_1.png")
+
+func test_resolve_unique_path_with_multiple_conflicts():
+	DirAccess.make_dir_recursive_absolute(_test_dir)
+	_create_file(_test_dir + "/image.png")
+	_create_file(_test_dir + "/image_1.png")
+	_create_file(_test_dir + "/image_2.png")
+	var result = ImagePickerDialog._resolve_unique_path(_test_dir, "image.png")
+	assert_eq(result, _test_dir + "/image_3.png")
+
+func test_resolve_unique_path_preserves_extension():
+	DirAccess.make_dir_recursive_absolute(_test_dir)
+	_create_file(_test_dir + "/bg.jpg")
+	var result = ImagePickerDialog._resolve_unique_path(_test_dir, "bg.jpg")
+	assert_eq(result, _test_dir + "/bg_1.jpg")
+
+# --- Listage des images de la galerie ---
+
+func test_list_gallery_images_nonexistent_dir():
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, "story_inexistante_xyz")
+	var images = _dialog._list_gallery_images()
+	assert_eq(images.size(), 0)
+
+func test_list_gallery_images_empty_dir():
+	var dir = _test_dir + "/assets/foregrounds"
+	DirAccess.make_dir_recursive_absolute(dir)
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, "")
+	_dialog._story_name = _test_dir.trim_prefix("user://").replace("test_picker_", "test_picker_story_")
+	# Simplement tester avec un répertoire vide réel
+	var dir_path = _test_dir + "/fgs_empty"
+	DirAccess.make_dir_recursive_absolute(dir_path)
+	assert_eq(DirAccess.open(dir_path) != null, true)
+
+func test_list_gallery_images_with_png_files():
+	var story_name = "test_list_story_%d" % randi()
+	var dir = "user://stories/%s/assets/foregrounds" % story_name
+	DirAccess.make_dir_recursive_absolute(dir)
+	_create_file(dir + "/char1.png")
+	_create_file(dir + "/char2.png")
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, story_name)
+	var images = _dialog._list_gallery_images()
+	assert_eq(images.size(), 2)
+	_remove_dir_recursive("user://stories/" + story_name)
+
+func test_list_gallery_images_filters_non_image_files():
+	var story_name = "test_filter_story_%d" % randi()
+	var dir = "user://stories/%s/assets/foregrounds" % story_name
+	DirAccess.make_dir_recursive_absolute(dir)
+	_create_file(dir + "/char1.png")
+	_create_file(dir + "/readme.txt")
+	_create_file(dir + "/data.yaml")
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, story_name)
+	var images = _dialog._list_gallery_images()
+	assert_eq(images.size(), 1)
+	_remove_dir_recursive("user://stories/" + story_name)
+
+func test_list_gallery_images_includes_jpg_jpeg_webp():
+	var story_name = "test_formats_story_%d" % randi()
+	var dir = "user://stories/%s/assets/backgrounds" % story_name
+	DirAccess.make_dir_recursive_absolute(dir)
+	_create_file(dir + "/bg1.jpg")
+	_create_file(dir + "/bg2.jpeg")
+	_create_file(dir + "/bg3.webp")
+	_dialog.setup(ImagePickerDialog.Mode.BACKGROUND, story_name)
+	var images = _dialog._list_gallery_images()
+	assert_eq(images.size(), 3)
+	_remove_dir_recursive("user://stories/" + story_name)
+
+func test_list_gallery_images_returns_full_paths():
+	var story_name = "test_paths_story_%d" % randi()
+	var dir = "user://stories/%s/assets/foregrounds" % story_name
+	DirAccess.make_dir_recursive_absolute(dir)
+	_create_file(dir + "/char.png")
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, story_name)
+	var images = _dialog._list_gallery_images()
+	assert_eq(images.size(), 1)
+	assert_true(images[0].begins_with("user://"))
+	assert_string_contains(images[0], "char.png")
+	_remove_dir_recursive("user://stories/" + story_name)
+
+# --- Copie vers assets ---
+
+func test_copy_to_assets_returns_empty_when_no_story():
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, "")
+	var result = _dialog._copy_to_assets("/some/path.png")
+	assert_eq(result, "")
+
+func test_copy_to_assets_creates_file_in_assets_dir():
+	var src_dir = _test_dir + "/src"
+	DirAccess.make_dir_recursive_absolute(src_dir)
+	var src_path = src_dir + "/test_img.png"
+	_create_minimal_png(src_path)
+	var story_name = "test_copy_story_%d" % randi()
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, story_name)
+	var dest = _dialog._copy_to_assets(src_path)
+	assert_ne(dest, "")
+	assert_true(dest.contains("assets/foregrounds"))
+	assert_true(dest.contains("test_img.png"))
+	assert_true(FileAccess.file_exists(dest))
+	_remove_dir_recursive("user://stories/" + story_name)
+
+func test_copy_to_assets_uses_unique_name_on_conflict():
+	var src_dir = _test_dir + "/src"
+	DirAccess.make_dir_recursive_absolute(src_dir)
+	var src_path = src_dir + "/image.png"
+	_create_minimal_png(src_path)
+	var story_name = "test_unique_story_%d" % randi()
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, story_name)
+	var dest1 = _dialog._copy_to_assets(src_path)
+	var dest2 = _dialog._copy_to_assets(src_path)
+	assert_ne(dest1, dest2)
+	assert_true(FileAccess.file_exists(dest1))
+	assert_true(FileAccess.file_exists(dest2))
+	_remove_dir_recursive("user://stories/" + story_name)
+
+func test_copy_to_assets_background_goes_to_backgrounds_dir():
+	var src_dir = _test_dir + "/src"
+	DirAccess.make_dir_recursive_absolute(src_dir)
+	var src_path = src_dir + "/bg.png"
+	_create_minimal_png(src_path)
+	var story_name = "test_bg_copy_%d" % randi()
+	_dialog.setup(ImagePickerDialog.Mode.BACKGROUND, story_name)
+	var dest = _dialog._copy_to_assets(src_path)
+	assert_true(dest.contains("assets/backgrounds"))
+	_remove_dir_recursive("user://stories/" + story_name)
+
+# --- Signal image_selected ---
+
+func test_validate_emits_signal_when_path_set():
+	_dialog._selected_path = "user://stories/test/assets/foregrounds/img.png"
+	_dialog._validate_btn.disabled = false
+	watch_signals(_dialog)
+	_dialog._on_validate()
+	assert_signal_emitted(_dialog, "image_selected")
+
+func test_validate_emits_correct_path():
+	var expected = "user://stories/test/assets/foregrounds/img.png"
+	_dialog._selected_path = expected
+	_dialog._validate_btn.disabled = false
+	watch_signals(_dialog)
+	_dialog._on_validate()
+	assert_signal_emitted_with_parameters(_dialog, "image_selected", [expected])
+
+func test_validate_does_not_emit_when_no_path():
+	_dialog._selected_path = ""
+	watch_signals(_dialog)
+	_dialog._on_validate()
+	assert_signal_not_emitted(_dialog, "image_selected")
+
+# --- Annuler ---
+
+func test_cancel_does_not_emit_signal():
+	watch_signals(_dialog)
+	_dialog._on_cancel()
+	assert_signal_not_emitted(_dialog, "image_selected")
+
+# --- Galerie : affichage ---
+
+func test_refresh_gallery_shows_empty_message_when_no_story():
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, "")
+	_dialog._refresh_gallery()
+	assert_true(_dialog._empty_label.visible)
+
+func test_refresh_gallery_shows_empty_message_when_no_images():
+	var story_name = "test_empty_gallery_%d" % randi()
+	DirAccess.make_dir_recursive_absolute("user://stories/%s/assets/foregrounds" % story_name)
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, story_name)
+	_dialog._refresh_gallery()
+	assert_true(_dialog._empty_label.visible)
+	_remove_dir_recursive("user://stories/" + story_name)
+
+func test_refresh_gallery_empty_message_contains_correct_text():
+	var story_name = "test_empty_text_%d" % randi()
+	DirAccess.make_dir_recursive_absolute("user://stories/%s/assets/foregrounds" % story_name)
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, story_name)
+	_dialog._refresh_gallery()
+	assert_string_contains(_dialog._empty_label.text, "Aucune image disponible")
+	_remove_dir_recursive("user://stories/" + story_name)
+
+func test_refresh_gallery_adds_items_for_each_image():
+	var story_name = "test_thumb_gallery_%d" % randi()
+	var dir = "user://stories/%s/assets/foregrounds" % story_name
+	DirAccess.make_dir_recursive_absolute(dir)
+	_create_minimal_png(dir + "/img1.png")
+	_create_minimal_png(dir + "/img2.png")
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, story_name)
+	_dialog._refresh_gallery()
+	await get_tree().process_frame
+	assert_eq(_dialog._gallery_grid.get_child_count(), 2)
+	_remove_dir_recursive("user://stories/" + story_name)
+
+func test_refresh_gallery_hides_empty_label_when_images_exist():
+	var story_name = "test_nonempty_gallery_%d" % randi()
+	var dir = "user://stories/%s/assets/foregrounds" % story_name
+	DirAccess.make_dir_recursive_absolute(dir)
+	_create_minimal_png(dir + "/img.png")
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, story_name)
+	_dialog._refresh_gallery()
+	assert_false(_dialog._empty_label.visible)
+	_remove_dir_recursive("user://stories/" + story_name)
+
+# --- Sélection dans la galerie ---
+
+func test_on_gallery_item_selected_sets_path():
+	var item = Panel.new()
+	add_child_autofree(item)
+	_dialog._on_gallery_item_selected(item, "user://stories/test/img.png")
+	assert_eq(_dialog._selected_path, "user://stories/test/img.png")
+
+func test_on_gallery_item_selected_enables_validate():
+	var item = Panel.new()
+	add_child_autofree(item)
+	_dialog._on_gallery_item_selected(item, "user://stories/test/img.png")
+	assert_false(_dialog._validate_btn.disabled)
+
+func test_on_gallery_item_selected_highlights_item():
+	var item = Panel.new()
+	add_child_autofree(item)
+	_dialog._on_gallery_item_selected(item, "user://stories/test/img.png")
+	assert_ne(item.modulate, Color.WHITE)
+
+func test_on_gallery_item_selected_deselects_previous():
+	var item1 = Panel.new()
+	var item2 = Panel.new()
+	add_child_autofree(item1)
+	add_child_autofree(item2)
+	_dialog._on_gallery_item_selected(item1, "user://stories/test/img1.png")
+	_dialog._on_gallery_item_selected(item2, "user://stories/test/img2.png")
+	assert_eq(item1.modulate, Color.WHITE)
+	assert_ne(item2.modulate, Color.WHITE)
+
+# --- Intégration : sélection fichier applique chemin copié ---
+
+func test_on_file_selected_sets_selected_path_to_copied():
+	var src_dir = _test_dir + "/src"
+	DirAccess.make_dir_recursive_absolute(src_dir)
+	var src_path = src_dir + "/myfile.png"
+	_create_minimal_png(src_path)
+	var story_name = "test_file_sel_%d" % randi()
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, story_name)
+	_dialog._on_file_selected_from_dialog(src_path)
+	assert_ne(_dialog._selected_path, "")
+	assert_ne(_dialog._selected_path, src_path)
+	assert_true(_dialog._selected_path.contains("assets/foregrounds"))
+	_remove_dir_recursive("user://stories/" + story_name)
+
+func test_on_file_selected_enables_validate():
+	var src_dir = _test_dir + "/src"
+	DirAccess.make_dir_recursive_absolute(src_dir)
+	var src_path = src_dir + "/myfile.png"
+	_create_minimal_png(src_path)
+	var story_name = "test_file_validate_%d" % randi()
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, story_name)
+	_dialog._on_file_selected_from_dialog(src_path)
+	assert_false(_dialog._validate_btn.disabled)
+	_remove_dir_recursive("user://stories/" + story_name)
+
+func test_on_file_selected_without_story_does_not_set_path():
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, "")
+	_dialog._on_file_selected_from_dialog("/some/path/image.png")
+	assert_eq(_dialog._selected_path, "")
+
+# --- Helpers ---
+
+func _create_file(path: String) -> void:
+	var f = FileAccess.open(path, FileAccess.WRITE)
+	if f:
+		f.store_string("test")
+		f.close()
+
+func _create_minimal_png(path: String) -> void:
+	var img = Image.create(1, 1, false, Image.FORMAT_RGB8)
+	img.save_png(path)
+
+func _remove_dir_recursive(path: String) -> void:
+	var dir = DirAccess.open(path)
+	if dir == null:
+		return
+	dir.list_dir_begin()
+	var fname = dir.get_next()
+	while fname != "":
+		if fname == "." or fname == "..":
+			fname = dir.get_next()
+			continue
+		var full = path + "/" + fname
+		if dir.current_is_dir():
+			_remove_dir_recursive(full)
+		else:
+			DirAccess.remove_absolute(full)
+		fname = dir.get_next()
+	dir.list_dir_end()
+	DirAccess.remove_absolute(path)

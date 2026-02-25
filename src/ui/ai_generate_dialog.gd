@@ -4,6 +4,7 @@ extends Window
 
 const ComfyUIConfig = preload("res://src/services/comfyui_config.gd")
 const ComfyUIClient = preload("res://src/services/comfyui_client.gd")
+const ImagePickerDialog = preload("res://src/ui/image_picker_dialog.gd")
 
 signal foreground_accepted(image_path: String)
 
@@ -194,17 +195,24 @@ func _set_inputs_enabled(enabled: bool) -> void:
 	_choose_source_btn.disabled = not enabled
 
 func _on_choose_source() -> void:
-	var dialog = FileDialog.new()
-	dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
-	dialog.access = FileDialog.ACCESS_FILESYSTEM
-	dialog.filters = PackedStringArray(["*.png ; PNG", "*.jpg ; JPG", "*.jpeg ; JPEG", "*.webp ; WEBP"])
-	dialog.file_selected.connect(func(path: String):
+	var picker = Window.new()
+	picker.set_script(ImagePickerDialog)
+	add_child(picker)
+	picker.setup(ImagePickerDialog.Mode.FOREGROUND, _story_name)
+	picker.image_selected.connect(func(path: String):
 		_source_image_path = path
 		_source_path_label.text = path.get_file()
+		_load_source_preview(path)
 		_update_generate_button_state()
 	)
-	add_child(dialog)
-	dialog.popup_centered(Vector2i(800, 600))
+	picker.popup_centered()
+
+func _load_source_preview(path: String) -> void:
+	var img = Image.new()
+	if img.load(path) == OK:
+		_source_preview.texture = ImageTexture.create_from_image(img)
+	else:
+		_source_preview.texture = null
 
 func _on_generate_pressed() -> void:
 	# Save config

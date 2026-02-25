@@ -20,6 +20,7 @@ const EndingEditorScript = preload("res://src/ui/ending_editor.gd")
 const TransitionPanelScript = preload("res://src/ui/transition_panel.gd")
 const ForegroundTransitionScript = preload("res://src/ui/foreground_transition.gd")
 const AIGenerateDialogScript = preload("res://src/ui/ai_generate_dialog.gd")
+const ImagePickerDialogScript = preload("res://src/ui/image_picker_dialog.gd")
 const ComfyUIConfigScript = preload("res://src/services/comfyui_config.gd")
 const StoryPlayControllerScript = preload("res://src/ui/story_play_controller.gd")
 const RenameDialogScript = preload("res://src/ui/rename_dialog.gd")
@@ -339,13 +340,7 @@ func _on_snap_toggled(toggled_on: bool) -> void:
 # --- Sequence Editor Actions ---
 
 func _on_import_bg_pressed() -> void:
-	var dialog = FileDialog.new()
-	dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
-	dialog.access = FileDialog.ACCESS_FILESYSTEM
-	dialog.filters = PackedStringArray(["*.png ; PNG", "*.jpg ; JPG", "*.jpeg ; JPEG", "*.webp ; WEBP"])
-	dialog.file_selected.connect(_on_bg_file_selected)
-	add_child(dialog)
-	dialog.popup_centered(Vector2i(800, 600))
+	_open_image_picker(ImagePickerDialogScript.Mode.BACKGROUND, _on_bg_file_selected)
 
 func _on_bg_file_selected(path: String) -> void:
 	_sequence_editor_ctrl.set_background(path)
@@ -359,13 +354,21 @@ func _on_add_foreground_pressed() -> void:
 			_sequence_editor_ctrl.select_dialogue(0)
 		else:
 			return
-	var dialog = FileDialog.new()
-	dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
-	dialog.access = FileDialog.ACCESS_FILESYSTEM
-	dialog.filters = PackedStringArray(["*.png ; PNG", "*.jpg ; JPG", "*.jpeg ; JPEG", "*.webp ; WEBP"])
-	dialog.file_selected.connect(_on_fg_file_selected)
-	add_child(dialog)
-	dialog.popup_centered(Vector2i(800, 600))
+	_open_image_picker(ImagePickerDialogScript.Mode.FOREGROUND, _on_fg_file_selected)
+
+func _open_image_picker(mode: int, on_selected: Callable) -> void:
+	var picker = Window.new()
+	picker.set_script(ImagePickerDialogScript)
+	add_child(picker)
+	var story_name = _get_story_name()
+	picker.setup(mode, story_name)
+	picker.image_selected.connect(on_selected)
+	picker.popup_centered()
+
+func _get_story_name() -> String:
+	if _editor_main._story == null:
+		return ""
+	return _editor_main._story.title.to_lower().replace(" ", "_")
 
 func _on_fg_file_selected(path: String) -> void:
 	var idx = _sequence_editor_ctrl.get_selected_dialogue_index()

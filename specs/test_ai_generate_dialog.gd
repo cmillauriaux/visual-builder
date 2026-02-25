@@ -180,3 +180,33 @@ func test_set_inputs_enabled():
 func test_set_story_name():
 	_dialog.set_story_name("my_story")
 	assert_eq(_dialog._story_name, "my_story")
+
+# --- Source preview loading ---
+
+func test_load_source_preview_with_valid_image():
+	var tmp_dir = "user://test_ai_preview_%d" % randi()
+	DirAccess.make_dir_recursive_absolute(tmp_dir)
+	var img_path = tmp_dir + "/source.png"
+	var img = Image.create(1, 1, false, Image.FORMAT_RGB8)
+	img.save_png(img_path)
+	_dialog._load_source_preview(img_path)
+	assert_not_null(_dialog._source_preview.texture)
+	_remove_dir(tmp_dir)
+
+func test_load_source_preview_with_invalid_path_clears_texture():
+	_dialog._source_preview.texture = ImageTexture.new()
+	_dialog._load_source_preview("user://nonexistent/path.png")
+	assert_null(_dialog._source_preview.texture)
+
+func _remove_dir(path: String) -> void:
+	var dir = DirAccess.open(path)
+	if dir == null:
+		return
+	dir.list_dir_begin()
+	var fname = dir.get_next()
+	while fname != "":
+		if fname != "." and fname != "..":
+			DirAccess.remove_absolute(path + "/" + fname)
+		fname = dir.get_next()
+	dir.list_dir_end()
+	DirAccess.remove_absolute(path)
