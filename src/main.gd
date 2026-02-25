@@ -98,6 +98,7 @@ func _ready() -> void:
 	_breadcrumb = HBoxContainer.new()
 	_breadcrumb.set_script(BreadcrumbScript)
 	_breadcrumb.level_clicked.connect(_on_breadcrumb_clicked)
+	_breadcrumb.story_rename_requested.connect(_on_story_rename_requested)
 	_top_bar.add_child(_breadcrumb)
 
 	var spacer = Control.new()
@@ -819,6 +820,15 @@ func _on_back_pressed() -> void:
 	_editor_main.navigate_back()
 	_refresh_current_view()
 
+func _on_story_rename_requested() -> void:
+	if _editor_main._story == null:
+		return
+	_open_rename_dialog("story", _editor_main._story.title, _editor_main._story.description, func(_u, new_name, new_subtitle):
+		_editor_main._story.title = new_name
+		_editor_main._story.description = new_subtitle
+		_breadcrumb.set_path(_editor_main.get_breadcrumb_path())
+	)
+
 func _on_breadcrumb_clicked(index: int) -> void:
 	var level = _editor_main.get_current_level()
 	if index == 0 and level != "chapters":
@@ -1006,6 +1016,7 @@ func _update_view() -> void:
 	_create_button.visible = _editor_main.is_create_button_visible()
 	if _create_button.visible:
 		_create_button.text = _editor_main.get_create_button_label()
+	_breadcrumb.set_current_level(level)
 	_breadcrumb.set_path(_editor_main.get_breadcrumb_path())
 	# Top play button visible at graph levels (not during story play)
 	_top_play_button.visible = (level in ["chapters", "scenes", "sequences"]) and not _is_story_play_mode

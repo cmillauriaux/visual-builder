@@ -33,12 +33,20 @@ func _init():
 
 	add_child(vbox)
 
+	_name_edit.text_changed.connect(_on_name_text_changed)
 	confirmed.connect(_on_confirmed)
 
 func setup(uuid: String, current_name: String, current_subtitle: String) -> void:
 	_uuid = uuid
 	_name_edit.text = current_name
 	_subtitle_edit.text = current_subtitle
+	_update_ok_button()
+
+func _on_name_text_changed(_new_text: String) -> void:
+	_update_ok_button()
+
+func _update_ok_button() -> void:
+	get_ok_button().disabled = _name_edit.text.strip_edges().is_empty()
 
 func get_uuid() -> String:
 	return _uuid
