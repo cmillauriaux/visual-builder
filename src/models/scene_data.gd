@@ -1,12 +1,14 @@
 extends RefCounted
 
 const SequenceScript = preload("res://src/models/sequence.gd")
+const ConditionScript = preload("res://src/models/condition.gd")
 
 var uuid: String = ""
 var scene_name: String = ""
 var subtitle: String = ""
 var position: Vector2 = Vector2.ZERO
 var sequences: Array = []  # Array[Sequence]
+var conditions: Array = []  # Array[Condition]
 var connections: Array = []  # Array[Dictionary] — {"from": uuid, "to": uuid}
 var entry_point_uuid: String = ""
 
@@ -38,6 +40,12 @@ func find_sequence(seq_uuid: String):
 			return seq
 	return null
 
+func find_condition(cond_uuid: String):
+	for cond in conditions:
+		if cond.uuid == cond_uuid:
+			return cond
+	return null
+
 func to_dict() -> Dictionary:
 	var seq_arr := []
 	for seq in sequences:
@@ -47,11 +55,16 @@ func to_dict() -> Dictionary:
 	for conn in connections:
 		conn_arr.append(conn)
 
+	var cond_arr := []
+	for cond in conditions:
+		cond_arr.append(cond.to_dict())
+
 	return {
 		"uuid": uuid,
 		"name": scene_name,
 		"subtitle": subtitle,
 		"sequences": seq_arr,
+		"conditions": cond_arr,
 		"connections": conn_arr,
 		"entry_point": entry_point_uuid,
 	}
@@ -68,6 +81,10 @@ static func from_dict(d: Dictionary):
 	if d.has("sequences"):
 		for seq_dict in d["sequences"]:
 			scene.sequences.append(SequenceScript.from_dict(seq_dict))
+
+	if d.has("conditions"):
+		for cond_dict in d["conditions"]:
+			scene.conditions.append(ConditionScript.from_dict(cond_dict))
 
 	if d.has("connections"):
 		for conn in d["connections"]:

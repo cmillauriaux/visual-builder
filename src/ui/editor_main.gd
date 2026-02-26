@@ -10,6 +10,7 @@ var _current_level: String = "none"
 var _current_chapter = null
 var _current_scene = null
 var _current_sequence = null
+var _current_condition = null
 
 func get_current_level() -> String:
 	return _current_level
@@ -20,6 +21,7 @@ func open_story(story) -> void:
 	_current_chapter = null
 	_current_scene = null
 	_current_sequence = null
+	_current_condition = null
 
 func navigate_to_chapter(chapter_uuid: String) -> void:
 	if _story == null:
@@ -29,6 +31,7 @@ func navigate_to_chapter(chapter_uuid: String) -> void:
 		_current_level = "scenes"
 		_current_scene = null
 		_current_sequence = null
+		_current_condition = null
 
 func navigate_to_scene(scene_uuid: String) -> void:
 	if _current_chapter == null:
@@ -37,6 +40,7 @@ func navigate_to_scene(scene_uuid: String) -> void:
 	if _current_scene:
 		_current_level = "sequences"
 		_current_sequence = null
+		_current_condition = null
 
 func navigate_to_sequence(sequence_uuid: String) -> void:
 	if _current_scene == null:
@@ -45,9 +49,22 @@ func navigate_to_sequence(sequence_uuid: String) -> void:
 	if seq:
 		_current_level = "sequence_edit"
 		_current_sequence = seq
+		_current_condition = null
+
+func navigate_to_condition(condition_uuid: String) -> void:
+	if _current_scene == null:
+		return
+	var cond = _current_scene.find_condition(condition_uuid)
+	if cond:
+		_current_level = "condition_edit"
+		_current_condition = cond
+		_current_sequence = null
 
 func navigate_back() -> void:
-	if _current_level == "sequence_edit":
+	if _current_level == "condition_edit":
+		_current_level = "sequences"
+		_current_condition = null
+	elif _current_level == "sequence_edit":
 		_current_level = "sequences"
 		_current_sequence = null
 	elif _current_level == "sequences":
@@ -67,6 +84,8 @@ func get_breadcrumb_path() -> Array:
 		path.append(_current_scene.scene_name)
 	if _current_sequence:
 		path.append(_current_sequence.seq_name)
+	if _current_condition:
+		path.append(_current_condition.condition_name)
 	return path
 
 func get_create_button_label() -> String:
@@ -100,3 +119,8 @@ func get_next_item_name() -> String:
 		"sequences":
 			return "Séquence %d" % (_current_scene.sequences.size() + 1)
 	return ""
+
+func get_next_condition_name() -> String:
+	if _current_scene == null:
+		return "Condition 1"
+	return "Condition %d" % (_current_scene.conditions.size() + 1)

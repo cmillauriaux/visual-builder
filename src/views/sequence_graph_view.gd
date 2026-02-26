@@ -4,20 +4,25 @@ extends GraphEdit
 
 const GraphNodeItem = preload("res://src/views/graph_node_item.gd")
 const SequenceScript = preload("res://src/models/sequence.gd")
+const ConditionScript = preload("res://src/models/condition.gd")
 
 const COLOR_TRANSITION = Color.WHITE
 const COLOR_CHOICE = Color(0.0, 0.9, 0.2)
+const COLOR_CONDITION = Color(0.4, 0.6, 1.0)
 const COLOR_BOTH = Color(1.0, 0.85, 0.0)
 const TOOLTIP_HOVER_THRESHOLD = 10.0
 const BEZIER_SAMPLE_COUNT = 20
 
 signal sequence_double_clicked(sequence_uuid: String)
+signal condition_double_clicked(condition_uuid: String)
 signal sequence_rename_requested(sequence_uuid: String)
+signal condition_rename_requested(condition_uuid: String)
 signal entry_point_changed(uuid: String)
 
 var _scene_data = null
 var _node_map: Dictionary = {}  # uuid → GraphNode
-var _connection_type_map: Dictionary = {}  # "from→to" → "transition"|"choice"|"both"
+var _condition_uuids: Dictionary = {}  # uuid → true (pour identifier les nœuds condition)
+var _connection_type_map: Dictionary = {}  # "from→to" → "transition"|"choice"|"condition"|"both"
 
 var _tooltip_panel: PanelContainer
 var _tooltip_label: Label
@@ -86,6 +91,8 @@ func _update_tooltip(mouse_pos: Vector2) -> void:
 			_tooltip_label.text = "Transition automatique"
 		"choice":
 			_tooltip_label.text = "Choix du joueur"
+		"condition":
+			_tooltip_label.text = "Condition"
 		"both":
 			_tooltip_label.text = "Transition et Choix"
 	_tooltip_panel.position = mouse_pos + Vector2(12.0, 12.0)
@@ -97,6 +104,8 @@ func load_scene(scene_data) -> void:
 	_clear_nodes()
 	for seq in _scene_data.sequences:
 		_create_node(seq.uuid, seq.seq_name, seq.position, seq.subtitle)
+	for cond in _scene_data.conditions:
+		_create_condition_node(cond.uuid, cond.condition_name, cond.position, cond.subtitle)
 	if _scene_data.entry_point_uuid != "" and _node_map.has(_scene_data.entry_point_uuid):
 		_node_map[_scene_data.entry_point_uuid].set_entry_point(true)
 	_build_connection_type_map()
@@ -119,6 +128,13 @@ func add_new_sequence(seq_name: String, pos: Vector2) -> void:
 	_scene_data.sequences.append(seq)
 	_create_node(seq.uuid, seq.seq_name, seq.position, "")
 
+func add_new_condition(cond_name: String, pos: Vector2) -> void:
+	var cond = ConditionScript.new()
+	cond.condition_name = cond_name
+	cond.position = pos
+	_scene_data.conditions.append(cond)
+	_create_condition_node(cond.uuid, cond.condition_name, cond.position, "")
+
 func remove_sequence(uuid: String) -> void:
 	for i in range(_scene_data.sequences.size()):
 		if _scene_data.sequences[i].uuid == uuid:
@@ -129,11 +145,31 @@ func remove_sequence(uuid: String) -> void:
 		_node_map[uuid].queue_free()
 		_node_map.erase(uuid)
 
+func remove_condition(uuid: String) -> void:
+	for i in range(_scene_data.conditions.size()):
+		if _scene_data.conditions[i].uuid == uuid:
+			_scene_data.conditions.remove_at(i)
+			break
+	_scene_data.connections = _scene_data.connections.filter(func(c): return c["from"] != uuid and c["to"] != uuid)
+	if _node_map.has(uuid):
+		_node_map[uuid].queue_free()
+		_node_map.erase(uuid)
+	_condition_uuids.erase(uuid)
+
 func rename_sequence(uuid: String, new_name: String, new_subtitle: String = "") -> void:
 	for s in _scene_data.sequences:
 		if s.uuid == uuid:
 			s.seq_name = new_name
 			s.subtitle = new_subtitle
+			break
+	if _node_map.has(uuid):
+		_node_map[uuid].set_item_name_and_subtitle(new_name, new_subtitle)
+
+func rename_condition(uuid: String, new_name: String, new_subtitle: String = "") -> void:
+	for c in _scene_data.conditions:
+		if c.uuid == uuid:
+			c.condition_name = new_name
+			c.subtitle = new_subtitle
 			break
 	if _node_map.has(uuid):
 		_node_map[uuid].set_item_name_and_subtitle(new_name, new_subtitle)
@@ -149,23 +185,34 @@ func sync_positions_to_model() -> void:
 	for s in _scene_data.sequences:
 		if _node_map.has(s.uuid):
 			s.position = _node_map[s.uuid].get_item_position()
+	for c in _scene_data.conditions:
+		if _node_map.has(c.uuid):
+			c.position = _node_map[c.uuid].get_item_position()
 
 func _build_connection_type_map() -> void:
 	_connection_type_map.clear()
 	# Connexions manuelles = transition
 	for conn in _scene_data.connections:
 		_merge_connection_type(conn["from"] + "→" + conn["to"], "transition")
-	# Connexions issues des endings
+	# Connexions issues des endings des séquences
+	var local_redirect_types = ["redirect_sequence", "redirect_condition"]
 	for seq in _scene_data.sequences:
 		if seq.ending == null:
 			continue
 		if seq.ending.type == "auto_redirect" and seq.ending.auto_consequence:
-			if seq.ending.auto_consequence.type == "redirect_sequence" and seq.ending.auto_consequence.target != "":
+			if seq.ending.auto_consequence.type in local_redirect_types and seq.ending.auto_consequence.target != "":
 				_merge_connection_type(seq.uuid + "→" + seq.ending.auto_consequence.target, "transition")
 		elif seq.ending.type == "choices":
 			for choice in seq.ending.choices:
-				if choice.consequence and choice.consequence.type == "redirect_sequence" and choice.consequence.target != "":
+				if choice.consequence and choice.consequence.type in local_redirect_types and choice.consequence.target != "":
 					_merge_connection_type(seq.uuid + "→" + choice.consequence.target, "choice")
+	# Connexions issues des conditions
+	for cond in _scene_data.conditions:
+		for rule in cond.rules:
+			if rule.consequence and rule.consequence.type in local_redirect_types and rule.consequence.target != "":
+				_merge_connection_type(cond.uuid + "→" + rule.consequence.target, "condition")
+		if cond.default_consequence and cond.default_consequence.type in local_redirect_types and cond.default_consequence.target != "":
+			_merge_connection_type(cond.uuid + "→" + cond.default_consequence.target, "condition")
 
 func _merge_connection_type(key: String, new_type: String) -> void:
 	if not _connection_type_map.has(key):
@@ -188,6 +235,7 @@ func _update_node_colors() -> void:
 func _compute_outgoing_color(uuid: String) -> Color:
 	var has_transition = false
 	var has_choice = false
+	var has_condition = false
 	for key in _connection_type_map:
 		if key.begins_with(uuid + "→"):
 			var t = _connection_type_map[key]
@@ -195,15 +243,20 @@ func _compute_outgoing_color(uuid: String) -> Color:
 				has_transition = true
 			if t == "choice" or t == "both":
 				has_choice = true
+			if t == "condition":
+				has_condition = true
 	if has_transition and has_choice:
 		return COLOR_BOTH
 	if has_choice:
 		return COLOR_CHOICE
+	if has_condition:
+		return COLOR_CONDITION
 	return COLOR_TRANSITION
 
 func _compute_incoming_color(uuid: String) -> Color:
 	var has_transition = false
 	var has_choice = false
+	var has_condition = false
 	for key in _connection_type_map:
 		if key.ends_with("→" + uuid):
 			var t = _connection_type_map[key]
@@ -211,10 +264,14 @@ func _compute_incoming_color(uuid: String) -> Color:
 				has_transition = true
 			if t == "choice" or t == "both":
 				has_choice = true
+			if t == "condition":
+				has_condition = true
 	if has_transition and has_choice:
 		return COLOR_BOTH
 	if has_choice:
 		return COLOR_CHOICE
+	if has_condition:
+		return COLOR_CONDITION
 	return COLOR_TRANSITION
 
 func _create_node(uuid: String, item_name: String, pos: Vector2, subtitle: String = "") -> void:
@@ -227,11 +284,37 @@ func _create_node(uuid: String, item_name: String, pos: Vector2, subtitle: Strin
 	node.entry_point_toggled.connect(_on_entry_point_toggled)
 	_node_map[uuid] = node
 
+func _create_condition_node(uuid: String, item_name: String, pos: Vector2, subtitle: String = "") -> void:
+	var node = GraphNode.new()
+	node.set_script(GraphNodeItem)
+	add_child(node)
+	node.setup(uuid, item_name, pos, subtitle)
+	# Couleur distincte pour les nœuds condition
+	var stylebox = StyleBoxFlat.new()
+	stylebox.bg_color = Color(0.25, 0.2, 0.45)
+	stylebox.set_corner_radius_all(4)
+	node.add_theme_stylebox_override("titlebar", stylebox)
+	var stylebox_sel = StyleBoxFlat.new()
+	stylebox_sel.bg_color = Color(0.35, 0.3, 0.55)
+	stylebox_sel.set_corner_radius_all(4)
+	node.add_theme_stylebox_override("titlebar_selected", stylebox_sel)
+	node.double_clicked.connect(_on_condition_double_clicked)
+	node.rename_requested.connect(_on_condition_rename_requested)
+	node.entry_point_toggled.connect(_on_entry_point_toggled)
+	_node_map[uuid] = node
+	_condition_uuids[uuid] = true
+
 func _on_node_double_clicked(uuid: String) -> void:
 	sequence_double_clicked.emit(uuid)
 
+func _on_condition_double_clicked(uuid: String) -> void:
+	condition_double_clicked.emit(uuid)
+
 func _on_node_rename_requested(uuid: String) -> void:
 	sequence_rename_requested.emit(uuid)
+
+func _on_condition_rename_requested(uuid: String) -> void:
+	condition_rename_requested.emit(uuid)
 
 func _on_entry_point_toggled(uuid: String, checked: bool) -> void:
 	if checked:
@@ -252,5 +335,6 @@ func _clear_nodes() -> void:
 			remove_child(_node_map[uuid])
 			_node_map[uuid].queue_free()
 	_node_map.clear()
+	_condition_uuids.clear()
 	_connection_type_map.clear()
 	clear_connections()

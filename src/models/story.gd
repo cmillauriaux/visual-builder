@@ -1,6 +1,7 @@
 extends RefCounted
 
 const ChapterScript = preload("res://src/models/chapter.gd")
+const VariableDefinitionScript = preload("res://src/models/variable_definition.gd")
 
 var title: String = ""
 var author: String = ""
@@ -9,6 +10,7 @@ var version: String = "1.0.0"
 var created_at: String = ""
 var updated_at: String = ""
 var chapters: Array = []  # Array[Chapter]
+var variables: Array = []  # Array[VariableDefinition]
 var connections: Array = []  # Array[Dictionary] — {"from": uuid, "to": uuid}
 var entry_point_uuid: String = ""
 
@@ -26,10 +28,26 @@ func find_chapter(chapter_uuid: String):
 			return ch
 	return null
 
+func find_variable(var_name: String):
+	for v in variables:
+		if v.var_name == var_name:
+			return v
+	return null
+
+func get_variable_names() -> Array:
+	var names := []
+	for v in variables:
+		names.append(v.var_name)
+	return names
+
 func to_dict() -> Dictionary:
 	var ch_arr := []
 	for ch in chapters:
 		ch_arr.append(ch.to_dict_header())
+
+	var var_arr := []
+	for v in variables:
+		var_arr.append(v.to_dict())
 
 	var conn_arr := []
 	for conn in connections:
@@ -43,6 +61,7 @@ func to_dict() -> Dictionary:
 		"created_at": created_at,
 		"updated_at": updated_at,
 		"chapters": ch_arr,
+		"variables": var_arr,
 		"connections": conn_arr,
 		"entry_point": entry_point_uuid,
 	}
@@ -60,6 +79,10 @@ static func from_dict(d: Dictionary):
 	if d.has("chapters"):
 		for ch_dict in d["chapters"]:
 			story.chapters.append(ChapterScript.from_dict_header(ch_dict))
+
+	if d.has("variables"):
+		for var_dict in d["variables"]:
+			story.variables.append(VariableDefinitionScript.from_dict(var_dict))
 
 	if d.has("connections"):
 		for conn in d["connections"]:

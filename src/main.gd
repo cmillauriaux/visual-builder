@@ -24,6 +24,9 @@ const ImagePickerDialogScript = preload("res://src/ui/image_picker_dialog.gd")
 const ComfyUIConfigScript = preload("res://src/services/comfyui_config.gd")
 const StoryPlayControllerScript = preload("res://src/ui/story_play_controller.gd")
 const RenameDialogScript = preload("res://src/ui/rename_dialog.gd")
+const ConditionEditorScript = preload("res://src/ui/condition_editor.gd")
+const ConditionScript = preload("res://src/models/condition.gd")
+const VariablePanelScript = preload("res://src/ui/variable_panel.gd")
 
 var _editor_main: Control
 var _breadcrumb: HBoxContainer
@@ -50,6 +53,7 @@ var _foreground_transition: Node
 var _previous_play_foregrounds: Array = []
 var _back_button: Button
 var _create_button: Button
+var _create_condition_button: Button
 var _save_button: Button
 var _load_button: Button
 var _content_area: Control
@@ -69,6 +73,15 @@ var _is_story_play_mode: bool = false
 var _story_play_return_level: String = ""
 var _rename_dialog: ConfirmationDialog
 var _choice_overlay: PanelContainer
+
+# Condition editor
+var _condition_editor_panel: VBoxContainer
+var _condition_editor: VBoxContainer
+
+# Variable panel
+var _variables_button: Button
+var _variable_panel_popup: PopupPanel
+var _variable_panel: VBoxContainer
 
 # Mode Play UI
 var _play_overlay: PanelContainer
@@ -122,6 +135,26 @@ func _ready() -> void:
 	_create_button.pressed.connect(_on_create_pressed)
 	_top_bar.add_child(_create_button)
 
+	_create_condition_button = Button.new()
+	_create_condition_button.text = "+ Nouvelle condition"
+	_create_condition_button.pressed.connect(_on_create_condition_pressed)
+	_top_bar.add_child(_create_condition_button)
+
+	_variables_button = Button.new()
+	_variables_button.text = "Variables"
+	_variables_button.pressed.connect(_on_variables_pressed)
+	_top_bar.add_child(_variables_button)
+
+	# Variable panel popup
+	_variable_panel_popup = PopupPanel.new()
+	_variable_panel_popup.size = Vector2i(400, 350)
+	add_child(_variable_panel_popup)
+
+	_variable_panel = VBoxContainer.new()
+	_variable_panel.set_script(VariablePanelScript)
+	_variable_panel.variables_changed.connect(_on_variables_changed)
+	_variable_panel_popup.add_child(_variable_panel)
+
 	_save_button = Button.new()
 	_save_button.text = "Sauvegarder"
 	_save_button.pressed.connect(_on_save_pressed)
@@ -164,6 +197,8 @@ func _ready() -> void:
 	_sequence_graph_view.set_anchors_preset(PRESET_FULL_RECT)
 	_sequence_graph_view.sequence_double_clicked.connect(_on_sequence_double_clicked)
 	_sequence_graph_view.sequence_rename_requested.connect(_on_sequence_rename_requested)
+	_sequence_graph_view.condition_double_clicked.connect(_on_condition_double_clicked)
+	_sequence_graph_view.condition_rename_requested.connect(_on_condition_rename_requested)
 	_content_area.add_child(_sequence_graph_view)
 
 	# --- Sequence Editor Panel (VBox: toolbar + content) ---
@@ -265,6 +300,18 @@ func _ready() -> void:
 	_ending_editor.set_script(EndingEditorScript)
 	_ending_editor.ending_changed.connect(_on_ending_changed)
 	_dialogue_panel.add_child(_ending_editor)
+
+	# --- Condition Editor Panel ---
+	_condition_editor_panel = VBoxContainer.new()
+	_condition_editor_panel.set_anchors_preset(PRESET_FULL_RECT)
+	_condition_editor_panel.visible = false
+	_content_area.add_child(_condition_editor_panel)
+
+	_condition_editor = VBoxContainer.new()
+	_condition_editor.set_script(ConditionEditorScript)
+	_condition_editor.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_condition_editor.condition_changed.connect(_on_condition_changed)
+	_condition_editor_panel.add_child(_condition_editor)
 
 	# Legacy dialogue editor (kept for API compat)
 	_dialogue_editor = Control.new()
@@ -837,10 +884,10 @@ func _on_breadcrumb_clicked(index: int) -> void:
 	if index == 0 and level != "chapters":
 		while _editor_main.get_current_level() != "chapters":
 			_editor_main.navigate_back()
-	elif index == 1 and (level == "sequences" or level == "sequence_edit"):
+	elif index == 1 and (level == "sequences" or level == "sequence_edit" or level == "condition_edit"):
 		while _editor_main.get_current_level() != "scenes":
 			_editor_main.navigate_back()
-	elif index == 2 and level == "sequence_edit":
+	elif index == 2 and (level == "sequence_edit" or level == "condition_edit"):
 		_editor_main.navigate_back()
 	_refresh_current_view()
 
@@ -917,6 +964,72 @@ func _on_scene_double_clicked(scene_uuid: String) -> void:
 	_editor_main.navigate_to_scene(scene_uuid)
 	_refresh_current_view()
 
+func _on_create_condition_pressed() -> void:
+	if _editor_main.get_current_level() != "sequences":
+		return
+	var cond_name = _editor_main.get_next_condition_name()
+	var all_items: Array = []
+	all_items.append_array(_editor_main._current_scene.sequences)
+	all_items.append_array(_editor_main._current_scene.conditions)
+	var pos = _editor_main.compute_next_position(all_items)
+	_sequence_graph_view.add_new_condition(cond_name, pos)
+
+func _on_condition_double_clicked(condition_uuid: String) -> void:
+	_sequence_graph_view.sync_positions_to_model()
+	_editor_main.navigate_to_condition(condition_uuid)
+	if _editor_main._current_condition:
+		_load_condition_editor(_editor_main._current_condition)
+	_refresh_current_view()
+
+func _on_condition_rename_requested(uuid: String) -> void:
+	if _editor_main._current_scene == null:
+		return
+	var cond = _editor_main._current_scene.find_condition(uuid)
+	if cond == null:
+		return
+	_open_rename_dialog(uuid, cond.condition_name, cond.subtitle, func(u, n, s):
+		_sequence_graph_view.rename_condition(u, n, s)
+	)
+
+func _on_variables_pressed() -> void:
+	if _editor_main._story == null:
+		return
+	_variable_panel.load_story(_editor_main._story)
+	_variable_panel_popup.popup_centered()
+
+func _on_variables_changed() -> void:
+	# Mettre à jour les noms de variables dans l'ending editor et le condition editor
+	if _editor_main._story:
+		var names = _editor_main._story.get_variable_names()
+		_ending_editor.set_variable_names(names)
+
+func _on_condition_changed() -> void:
+	_update_ending_connections()
+
+func _load_condition_editor(cond) -> void:
+	_update_condition_targets()
+	if _editor_main._story:
+		_condition_editor.set_variable_names(_editor_main._story.get_variable_names())
+	_condition_editor.load_condition(cond)
+
+func _update_condition_targets() -> void:
+	var sequences: Array = []
+	var conditions: Array = []
+	var scenes: Array = []
+	var chapters: Array = []
+	if _editor_main._current_scene:
+		for seq in _editor_main._current_scene.sequences:
+			sequences.append({"uuid": seq.uuid, "name": seq.seq_name})
+		for c in _editor_main._current_scene.conditions:
+			conditions.append({"uuid": c.uuid, "name": c.condition_name})
+	if _editor_main._current_chapter:
+		for sc in _editor_main._current_chapter.scenes:
+			scenes.append({"uuid": sc.uuid, "name": sc.scene_name})
+	if _editor_main._story:
+		for ch in _editor_main._story.chapters:
+			chapters.append({"uuid": ch.uuid, "name": ch.chapter_name})
+	_condition_editor.set_available_targets(sequences, scenes, chapters, conditions)
+
 func _on_sequence_double_clicked(sequence_uuid: String) -> void:
 	_sequence_graph_view.sync_positions_to_model()
 	_editor_main.navigate_to_sequence(sequence_uuid)
@@ -969,18 +1082,21 @@ func _on_ending_changed() -> void:
 
 func _update_ending_targets() -> void:
 	var sequences: Array = []
+	var conditions: Array = []
 	var scenes: Array = []
 	var chapters: Array = []
 	if _editor_main._current_scene:
 		for seq in _editor_main._current_scene.sequences:
 			sequences.append({"uuid": seq.uuid, "name": seq.seq_name})
+		for c in _editor_main._current_scene.conditions:
+			conditions.append({"uuid": c.uuid, "name": c.condition_name})
 	if _editor_main._current_chapter:
 		for sc in _editor_main._current_chapter.scenes:
 			scenes.append({"uuid": sc.uuid, "name": sc.scene_name})
 	if _editor_main._story:
 		for ch in _editor_main._story.chapters:
 			chapters.append({"uuid": ch.uuid, "name": ch.chapter_name})
-	_ending_editor.set_available_targets(sequences, scenes, chapters)
+	_ending_editor.set_available_targets(sequences, scenes, chapters, conditions)
 
 func _update_ending_connections() -> void:
 	# Refresh the sequence graph view to include ending-based connections
@@ -991,6 +1107,8 @@ func _load_sequence_editors(seq) -> void:
 	_visual_editor.load_sequence(seq)
 	_dialogue_editor.load_sequence(seq)
 	_update_ending_targets()
+	if _editor_main._story:
+		_ending_editor.set_variable_names(_editor_main._story.get_variable_names())
 	_ending_editor.load_sequence(seq)
 	_sequence_editor_ctrl.load_sequence(seq)
 	_rebuild_dialogue_list()
@@ -1015,10 +1133,13 @@ func _update_view() -> void:
 	_scene_graph_view.visible = (level == "scenes")
 	_sequence_graph_view.visible = (level == "sequences")
 	_sequence_editor_panel.visible = (level == "sequence_edit")
+	_condition_editor_panel.visible = (level == "condition_edit")
 	_back_button.visible = (level != "chapters" and level != "none")
 	_create_button.visible = _editor_main.is_create_button_visible()
 	if _create_button.visible:
 		_create_button.text = _editor_main.get_create_button_label()
+	_create_condition_button.visible = (level == "sequences")
+	_variables_button.visible = (level in ["chapters", "scenes", "sequences"])
 	_breadcrumb.set_current_level(level)
 	_breadcrumb.set_path(_editor_main.get_breadcrumb_path())
 	# Top play button visible at graph levels (not during story play)

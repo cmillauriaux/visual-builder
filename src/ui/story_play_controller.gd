@@ -15,12 +15,21 @@ var _current_chapter = null
 var _current_scene = null
 var _current_sequence = null
 var _user_stopped: bool = false
+var _variables: Dictionary = {}  # String → Variant
 
 func get_state() -> int:
 	return _state
 
 func is_playing() -> bool:
 	return _state != State.IDLE
+
+# --- Variables ---
+
+func set_variable(key: String, value) -> void:
+	_variables[key] = value
+
+func get_variable(key: String):
+	return _variables.get(key)
 
 # --- Démarrage ---
 
@@ -29,6 +38,8 @@ func start_play_story(story) -> void:
 		return
 	_story = story
 	_user_stopped = false
+	_variables = {}
+	_init_variables_from_story(story)
 	var chapter = _find_entry(story.chapters, story.entry_point_uuid)
 	if chapter == null:
 		_finish("error")
@@ -39,13 +50,7 @@ func start_play_story(story) -> void:
 		_finish("error")
 		return
 	_current_scene = scene
-	var seq = _find_entry(scene.sequences, scene.entry_point_uuid)
-	if seq == null:
-		_finish("error")
-		return
-	_current_sequence = seq
-	_state = State.PLAYING_SEQUENCE
-	sequence_play_requested.emit(seq)
+	_start_scene_entry(scene)
 
 func start_play_chapter(story, chapter) -> void:
 	if story == null or chapter == null:
@@ -53,18 +58,14 @@ func start_play_chapter(story, chapter) -> void:
 	_story = story
 	_current_chapter = chapter
 	_user_stopped = false
+	_variables = {}
+	_init_variables_from_story(story)
 	var scene = _find_entry(chapter.scenes, chapter.entry_point_uuid)
 	if scene == null:
 		_finish("error")
 		return
 	_current_scene = scene
-	var seq = _find_entry(scene.sequences, scene.entry_point_uuid)
-	if seq == null:
-		_finish("error")
-		return
-	_current_sequence = seq
-	_state = State.PLAYING_SEQUENCE
-	sequence_play_requested.emit(seq)
+	_start_scene_entry(scene)
 
 func start_play_scene(story, chapter, scene) -> void:
 	if story == null or chapter == null or scene == null:
@@ -73,13 +74,64 @@ func start_play_scene(story, chapter, scene) -> void:
 	_current_chapter = chapter
 	_current_scene = scene
 	_user_stopped = false
-	var seq = _find_entry(scene.sequences, scene.entry_point_uuid)
-	if seq == null:
+	# Ne pas réinitialiser _variables ici pour permettre la pré-configuration
+	_start_scene_entry(scene)
+
+## Trouve l'entry point d'une scène (séquence ou condition) et démarre le play.
+func _start_scene_entry(scene) -> void:
+	var entry = _find_scene_entry(scene)
+	if entry == null:
 		_finish("error")
 		return
-	_current_sequence = seq
-	_state = State.PLAYING_SEQUENCE
-	sequence_play_requested.emit(seq)
+	_resolve_entry(entry)
+
+## Trouve l'entry point d'une scène en cherchant dans sequences ET conditions.
+func _find_scene_entry(scene):
+	var entry_uuid = scene.entry_point_uuid
+	if entry_uuid != "":
+		# Chercher dans les séquences
+		var seq = scene.find_sequence(entry_uuid)
+		if seq:
+			return seq
+		# Chercher dans les conditions
+		if scene.has_method("find_condition"):
+			var cond = scene.find_condition(entry_uuid)
+			if cond:
+				return cond
+	# Fallback : chercher dans séquences + conditions par position
+	var all_items: Array = []
+	all_items.append_array(scene.sequences)
+	if scene.get("conditions") != null:
+		all_items.append_array(scene.conditions)
+	if all_items.is_empty():
+		return null
+	var best = all_items[0]
+	for i in range(1, all_items.size()):
+		var item = all_items[i]
+		if item.position.x < best.position.x:
+			best = item
+		elif item.position.x == best.position.x and item.position.y < best.position.y:
+			best = item
+	return best
+
+## Résout un entry point : si c'est une séquence, on la joue ; si c'est une condition, on l'évalue.
+func _resolve_entry(entry) -> void:
+	if entry.get("rules") != null:
+		# C'est une condition
+		_evaluate_condition(entry)
+	else:
+		# C'est une séquence
+		_current_sequence = entry
+		_state = State.PLAYING_SEQUENCE
+		sequence_play_requested.emit(entry)
+
+## Évalue une condition et résout la conséquence.
+func _evaluate_condition(condition) -> void:
+	var consequence = condition.evaluate(_variables)
+	if consequence == null:
+		_finish("no_ending")
+		return
+	_resolve_consequence(consequence)
 
 # --- Événements ---
 
@@ -123,6 +175,8 @@ func on_choice_selected(index: int) -> void:
 	if choice.consequence == null:
 		_finish("error")
 		return
+	# Appliquer les effets du choix d'abord, puis ceux de la conséquence
+	_apply_effects(choice.effects)
 	_resolve_consequence(choice.consequence)
 
 func stop_play() -> void:
@@ -134,28 +188,30 @@ func stop_play() -> void:
 # --- Résolution des conséquences ---
 
 func _resolve_consequence(consequence) -> void:
+	_apply_effects(consequence.effects)
 	match consequence.type:
 		"redirect_sequence":
 			var target = _current_scene.find_sequence(consequence.target)
-			if target == null:
-				_finish("error")
+			if target:
+				_current_sequence = target
+				_state = State.PLAYING_SEQUENCE
+				sequence_play_requested.emit(target)
 				return
-			_current_sequence = target
-			_state = State.PLAYING_SEQUENCE
-			sequence_play_requested.emit(target)
+			_finish("error")
+		"redirect_condition":
+			if _current_scene.has_method("find_condition"):
+				var cond = _current_scene.find_condition(consequence.target)
+				if cond:
+					_evaluate_condition(cond)
+					return
+			_finish("error")
 		"redirect_scene":
 			var target_scene = _current_chapter.find_scene(consequence.target)
 			if target_scene == null:
 				_finish("error")
 				return
 			_current_scene = target_scene
-			var seq = _find_entry(target_scene.sequences, target_scene.entry_point_uuid)
-			if seq == null:
-				_finish("error")
-				return
-			_current_sequence = seq
-			_state = State.PLAYING_SEQUENCE
-			sequence_play_requested.emit(seq)
+			_start_scene_entry(target_scene)
 		"redirect_chapter":
 			var target_ch = _story.find_chapter(consequence.target)
 			if target_ch == null:
@@ -167,13 +223,7 @@ func _resolve_consequence(consequence) -> void:
 				_finish("error")
 				return
 			_current_scene = scene
-			var seq = _find_entry(scene.sequences, scene.entry_point_uuid)
-			if seq == null:
-				_finish("error")
-				return
-			_current_sequence = seq
-			_state = State.PLAYING_SEQUENCE
-			sequence_play_requested.emit(seq)
+			_start_scene_entry(scene)
 		"game_over":
 			_finish("game_over")
 		"to_be_continued":
@@ -214,3 +264,15 @@ func get_current_scene():
 
 func get_current_chapter():
 	return _current_chapter
+
+# --- Variables ---
+
+func _init_variables_from_story(story) -> void:
+	if story.get("variables") == null:
+		return
+	for var_def in story.variables:
+		_variables[var_def.var_name] = var_def.initial_value
+
+func _apply_effects(effects: Array) -> void:
+	for effect in effects:
+		effect.apply(_variables)

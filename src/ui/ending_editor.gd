@@ -5,13 +5,19 @@ extends VBoxContainer
 const EndingScript = preload("res://src/models/ending.gd")
 const ConsequenceScript = preload("res://src/models/consequence.gd")
 const ChoiceScript = preload("res://src/models/choice.gd")
+const VariableEffectScript = preload("res://src/models/variable_effect.gd")
+
+const OPERATION_TYPES = ["set", "increment", "decrement", "delete"]
+const OPERATION_LABELS = ["Assigner", "Incrémenter", "Décrémenter", "Supprimer"]
 
 signal ending_changed
 
 var _sequence = null
-var _available_sequences: Array = []  # [{uuid, name}]
+var _available_sequences: Array = []   # [{uuid, name}]
+var _available_conditions: Array = [] # [{uuid, name}]
 var _available_scenes: Array = []     # [{uuid, name}]
 var _available_chapters: Array = []   # [{uuid, name}]
+var _variable_names: Array = []       # [String]
 
 # UI references
 var _mode_none_btn: Button
@@ -24,11 +30,13 @@ var _redirect_target_dropdown: OptionButton
 var _redirect_summary: Label
 var _choices_list: VBoxContainer
 var _add_choice_btn: Button
+var _redirect_effects_list: VBoxContainer
+var _add_redirect_effect_btn: Button
 
 # Consequence type labels
-const CONSEQUENCE_TYPES = ["redirect_sequence", "redirect_scene", "redirect_chapter", "game_over", "to_be_continued"]
-const CONSEQUENCE_LABELS = ["Séquence", "Scène", "Chapitre", "Game Over", "To be continued"]
-const REDIRECT_TYPES = ["redirect_sequence", "redirect_scene", "redirect_chapter"]
+const CONSEQUENCE_TYPES = ["redirect_sequence", "redirect_condition", "redirect_scene", "redirect_chapter", "game_over", "to_be_continued"]
+const CONSEQUENCE_LABELS = ["Séquence", "Condition", "Scène", "Chapitre", "Game Over", "To be continued"]
+const REDIRECT_TYPES = ["redirect_sequence", "redirect_condition", "redirect_scene", "redirect_chapter"]
 
 func _ready() -> void:
 	_build_ui()
@@ -81,6 +89,20 @@ func _build_ui() -> void:
 	_redirect_summary = Label.new()
 	_redirect_summary.text = ""
 	_redirect_container.add_child(_redirect_summary)
+
+	# Redirect effects section
+	var redirect_effects_label = Label.new()
+	redirect_effects_label.text = "Effets sur les variables :"
+	_redirect_container.add_child(redirect_effects_label)
+
+	_redirect_effects_list = VBoxContainer.new()
+	_redirect_effects_list.name = "RedirectEffectsList"
+	_redirect_container.add_child(_redirect_effects_list)
+
+	_add_redirect_effect_btn = Button.new()
+	_add_redirect_effect_btn.text = "+ Ajouter un effet"
+	_add_redirect_effect_btn.pressed.connect(_on_add_redirect_effect_pressed)
+	_redirect_container.add_child(_add_redirect_effect_btn)
 
 	# --- Choices container ---
 	_choices_container = VBoxContainer.new()
@@ -147,8 +169,9 @@ func set_auto_consequence(type: String, target: String) -> void:
 	consequence.target = target
 	_sequence.ending.auto_consequence = consequence
 
-func set_available_targets(sequences: Array, scenes: Array, chapters: Array) -> void:
+func set_available_targets(sequences: Array, scenes: Array, chapters: Array, conditions: Array = []) -> void:
 	_available_sequences = sequences
+	_available_conditions = conditions
 	_available_scenes = scenes
 	_available_chapters = chapters
 	# Refresh dropdowns if already showing
@@ -160,11 +183,100 @@ func set_available_targets(sequences: Array, scenes: Array, chapters: Array) -> 
 func get_available_sequences() -> Array:
 	return _available_sequences
 
+func get_available_conditions() -> Array:
+	return _available_conditions
+
 func get_available_scenes() -> Array:
 	return _available_scenes
 
 func get_available_chapters() -> Array:
 	return _available_chapters
+
+func set_variable_names(names: Array) -> void:
+	_variable_names = names
+
+func get_variable_names() -> Array:
+	return _variable_names
+
+# --- Effects API ---
+
+func add_redirect_effect() -> void:
+	if _sequence == null or _sequence.ending == null or _sequence.ending.auto_consequence == null:
+		return
+	var e = VariableEffectScript.new()
+	e.operation = "set"
+	_sequence.ending.auto_consequence.effects.append(e)
+	if _redirect_container.visible:
+		_rebuild_redirect_effects()
+	ending_changed.emit()
+
+func remove_redirect_effect(index: int) -> void:
+	if _sequence == null or _sequence.ending == null or _sequence.ending.auto_consequence == null:
+		return
+	if index < 0 or index >= _sequence.ending.auto_consequence.effects.size():
+		return
+	_sequence.ending.auto_consequence.effects.remove_at(index)
+	if _redirect_container.visible:
+		_rebuild_redirect_effects()
+	ending_changed.emit()
+
+func update_redirect_effect(index: int, field: String, value: String) -> void:
+	if _sequence == null or _sequence.ending == null or _sequence.ending.auto_consequence == null:
+		return
+	if index < 0 or index >= _sequence.ending.auto_consequence.effects.size():
+		return
+	var e = _sequence.ending.auto_consequence.effects[index]
+	match field:
+		"variable":
+			e.variable = value
+		"operation":
+			e.operation = value
+		"value":
+			e.value = value
+	ending_changed.emit()
+
+func add_choice_effect(choice_index: int) -> void:
+	if _sequence == null or _sequence.ending == null:
+		return
+	if choice_index < 0 or choice_index >= _sequence.ending.choices.size():
+		return
+	var e = VariableEffectScript.new()
+	e.operation = "set"
+	_sequence.ending.choices[choice_index].effects.append(e)
+	if _choices_container.visible:
+		_rebuild_choices_list()
+	ending_changed.emit()
+
+func remove_choice_effect(choice_index: int, effect_index: int) -> void:
+	if _sequence == null or _sequence.ending == null:
+		return
+	if choice_index < 0 or choice_index >= _sequence.ending.choices.size():
+		return
+	var choice = _sequence.ending.choices[choice_index]
+	if effect_index < 0 or effect_index >= choice.effects.size():
+		return
+	choice.effects.remove_at(effect_index)
+	if _choices_container.visible:
+		_rebuild_choices_list()
+	ending_changed.emit()
+
+func update_choice_effect(choice_index: int, effect_index: int, field: String, value: String) -> void:
+	if _sequence == null or _sequence.ending == null:
+		return
+	if choice_index < 0 or choice_index >= _sequence.ending.choices.size():
+		return
+	var choice = _sequence.ending.choices[choice_index]
+	if effect_index < 0 or effect_index >= choice.effects.size():
+		return
+	var e = choice.effects[effect_index]
+	match field:
+		"variable":
+			e.variable = value
+		"operation":
+			e.operation = value
+		"value":
+			e.value = value
+	ending_changed.emit()
 
 # --- Mode handlers ---
 
@@ -250,11 +362,79 @@ func _get_targets_for_type(ctype: String) -> Array:
 	match ctype:
 		"redirect_sequence":
 			return _available_sequences
+		"redirect_condition":
+			return _available_conditions
 		"redirect_scene":
 			return _available_scenes
 		"redirect_chapter":
 			return _available_chapters
 	return []
+
+func _on_add_redirect_effect_pressed() -> void:
+	add_redirect_effect()
+
+func _rebuild_redirect_effects() -> void:
+	if _redirect_effects_list == null:
+		return
+	for child in _redirect_effects_list.get_children():
+		child.queue_free()
+	if _sequence == null or _sequence.ending == null or _sequence.ending.auto_consequence == null:
+		return
+	for i in range(_sequence.ending.auto_consequence.effects.size()):
+		var row = _create_effect_row(_sequence.ending.auto_consequence.effects[i], "redirect", -1, i)
+		_redirect_effects_list.add_child(row)
+
+func _create_effect_row(effect, context: String, choice_index: int, effect_index: int) -> HBoxContainer:
+	var row = HBoxContainer.new()
+
+	# Variable dropdown/edit
+	var var_edit = LineEdit.new()
+	var_edit.text = effect.variable
+	var_edit.placeholder_text = "Variable..."
+	var_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var_edit.tooltip_text = ", ".join(_variable_names) if _variable_names.size() > 0 else ""
+	if context == "redirect":
+		var_edit.text_changed.connect(func(t): update_redirect_effect(effect_index, "variable", t))
+	else:
+		var_edit.text_changed.connect(func(t): update_choice_effect(choice_index, effect_index, "variable", t))
+	row.add_child(var_edit)
+
+	# Operation dropdown
+	var op_dropdown = OptionButton.new()
+	for lbl in OPERATION_LABELS:
+		op_dropdown.add_item(lbl)
+	var op_idx = OPERATION_TYPES.find(effect.operation)
+	if op_idx < 0:
+		op_idx = 0
+	op_dropdown.selected = op_idx
+	if context == "redirect":
+		op_dropdown.item_selected.connect(func(idx): update_redirect_effect(effect_index, "operation", OPERATION_TYPES[idx]); _rebuild_redirect_effects())
+	else:
+		op_dropdown.item_selected.connect(func(idx): update_choice_effect(choice_index, effect_index, "operation", OPERATION_TYPES[idx]); _rebuild_choices_list())
+	row.add_child(op_dropdown)
+
+	# Value edit (hidden for delete)
+	var value_edit = LineEdit.new()
+	value_edit.text = effect.value
+	value_edit.placeholder_text = "Valeur..."
+	value_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	value_edit.visible = effect.operation != "delete"
+	if context == "redirect":
+		value_edit.text_changed.connect(func(t): update_redirect_effect(effect_index, "value", t))
+	else:
+		value_edit.text_changed.connect(func(t): update_choice_effect(choice_index, effect_index, "value", t))
+	row.add_child(value_edit)
+
+	# Delete button
+	var delete_btn = Button.new()
+	delete_btn.text = "×"
+	if context == "redirect":
+		delete_btn.pressed.connect(func(): remove_redirect_effect(effect_index))
+	else:
+		delete_btn.pressed.connect(func(): remove_choice_effect(choice_index, effect_index))
+	row.add_child(delete_btn)
+
+	return row
 
 func _update_redirect_summary() -> void:
 	if _sequence == null or _sequence.ending == null or _sequence.ending.auto_consequence == null:
@@ -358,6 +538,23 @@ func _create_choice_row(index: int, choice) -> VBoxContainer:
 	target_dropdown.item_selected.connect(_on_choice_target_changed.bind(index))
 	type_row.add_child(target_dropdown)
 
+	# Effects section for this choice
+	var effects_label = Label.new()
+	effects_label.text = "Effets sur les variables :"
+	container.add_child(effects_label)
+
+	var effects_list = VBoxContainer.new()
+	effects_list.name = "EffectsList"
+	container.add_child(effects_list)
+	for ei in range(choice.effects.size()):
+		var effect_row = _create_effect_row(choice.effects[ei], "choice", index, ei)
+		effects_list.add_child(effect_row)
+
+	var add_effect_btn = Button.new()
+	add_effect_btn.text = "+ Ajouter un effet"
+	add_effect_btn.pressed.connect(func(): add_choice_effect(index))
+	container.add_child(add_effect_btn)
+
 	# Add a separator
 	var sep = HSeparator.new()
 	container.add_child(sep)
@@ -447,6 +644,7 @@ func _refresh_ui() -> void:
 						_redirect_target_dropdown.selected = t
 						break
 			_update_redirect_summary()
+		_rebuild_redirect_effects()
 	elif etype == "choices":
 		_redirect_container.visible = false
 		_choices_container.visible = true
