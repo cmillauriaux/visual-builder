@@ -14,15 +14,17 @@ Condition (RefCounted)
 ├─ condition_name: String
 ├─ subtitle: String
 ├─ position: Vector2 (position dans le graphe)
-├─ variable: String (nom de la variable testée)
 ├─ rules: Array[ConditionRule] (liste ordonnée de règles)
 └─ default_consequence: Consequence (redirection si aucune règle ne matche)
 ```
 
 ### ConditionRule (`src/models/condition_rule.gd`)
 
+Chaque règle possède sa propre variable à tester, ce qui permet à une même condition de tester différentes variables selon les règles.
+
 ```
 ConditionRule (RefCounted)
+├─ variable: String (nom de la variable testée par cette règle)
 ├─ operator: String ("equal", "not_equal", "greater_than", "greater_than_equal", "less_than", "less_than_equal", "exists", "not_exists")
 ├─ value: String (valeur de comparaison, ignorée pour exists/not_exists)
 └─ consequence: Consequence (redirection si la règle matche)
@@ -86,9 +88,8 @@ Quand on double-clique sur un nœud condition, on entre dans un écran d'éditio
 
 L'éditeur contient :
 
-1. **Champ variable** : un `LineEdit` pour le nom de la variable à tester.
-
-2. **Liste de règles** : une liste scrollable de règles, chacune affichant :
+1. **Liste de règles** : une liste scrollable de règles, chacune affichant :
+   - Un `LineEdit` pour le nom de la variable testée par cette règle
    - Un `OptionButton` pour l'opérateur (8 types)
    - Un `LineEdit` pour la valeur de comparaison (masqué si opérateur = Exists ou Not Exists)
    - Une ligne de redirection : `OptionButton` type de conséquence + `OptionButton` cible
@@ -111,19 +112,18 @@ Les connexions issues d'un nœud condition sont calculées dans `_build_connecti
 
 Quand le `StoryPlayController` rencontre un nœud condition (au lieu d'une séquence) :
 
-1. Récupérer la valeur de `_variables[condition.variable]`.
-2. Parcourir `condition.rules` dans l'ordre.
-3. Pour chaque règle, évaluer l'opérateur :
-   - `exists` / `not_exists` : vérifier la présence de la clé dans `_variables`.
+1. Parcourir `condition.rules` dans l'ordre.
+2. Pour chaque règle, récupérer la valeur de `_variables[rule.variable]` et évaluer l'opérateur :
+   - `exists` / `not_exists` : vérifier la présence de `rule.variable` dans `_variables`.
    - Comparaisons numériques : convertir en float et comparer. Si la conversion échoue → règle non matchée.
    - `equal` / `not_equal` : comparaison en string.
-4. Si une règle matche, résoudre sa `consequence` (comme pour les endings).
-5. Si aucune règle ne matche, résoudre `default_consequence`.
-6. Si `default_consequence` est null → finir avec `"no_ending"`.
+3. Si une règle matche, résoudre sa `consequence` (comme pour les endings).
+4. Si aucune règle ne matche, résoudre `default_consequence`.
+5. Si `default_consequence` est null → finir avec `"no_ending"`.
 
 ### Persistance
 
-Les conditions sont sérialisées dans le YAML de la scène, dans un champ `"conditions"` au même niveau que `"sequences"`. Chaque condition est un dictionnaire avec `uuid`, `name`, `subtitle`, `position`, `variable`, `rules` et `default_consequence`.
+Les conditions sont sérialisées dans le YAML de la scène, dans un champ `"conditions"` au même niveau que `"sequences"`. Chaque condition est un dictionnaire avec `uuid`, `name`, `subtitle`, `position`, `rules` et `default_consequence`. Chaque règle contient `variable`, `operator`, `value` et `consequence`.
 
 ### Suppression et renommage
 
@@ -133,8 +133,8 @@ Les conditions sont sérialisées dans le YAML de la scène, dans un champ `"con
 ## Critères d'acceptation
 
 ### Modèle de données
-- [x] Le modèle `Condition` existe avec uuid, condition_name, subtitle, position, variable, rules, default_consequence
-- [x] Le modèle `ConditionRule` existe avec operator, value, consequence
+- [x] Le modèle `Condition` existe avec uuid, condition_name, subtitle, position, rules, default_consequence
+- [x] Le modèle `ConditionRule` existe avec variable, operator, value, consequence
 - [x] `SceneData` possède un champ `conditions: Array` et une méthode `find_condition(uuid)`
 - [x] Les 8 opérateurs sont supportés
 - [x] `Condition.to_dict()` et `Condition.from_dict()` fonctionnent correctement
@@ -152,9 +152,8 @@ Les conditions sont sérialisées dans le YAML de la scène, dans un champ `"con
 ### Éditeur de condition
 - [x] Double-cliquer sur un nœud condition ouvre l'éditeur de condition
 - [x] Le breadcrumb affiche le nom de la condition
-- [x] Le champ variable est un LineEdit fonctionnel
 - [x] On peut ajouter une règle via le bouton "+ Ajouter une règle"
-- [x] Chaque règle affiche un dropdown opérateur, un champ valeur et une ligne de redirection
+- [x] Chaque règle affiche un champ variable, un dropdown opérateur, un champ valeur et une ligne de redirection
 - [x] Le champ valeur est masqué quand l'opérateur est Exists ou Not Exists
 - [x] On peut supprimer une règle avec le bouton "×"
 - [x] La section Default affiche une redirection configurable

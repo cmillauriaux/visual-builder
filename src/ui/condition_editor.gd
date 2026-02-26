@@ -21,7 +21,6 @@ var _available_chapters: Array = []
 var _variable_names: Array = []
 
 # UI references
-var _variable_edit: LineEdit
 var _rules_list: VBoxContainer
 var _add_rule_btn: Button
 var _default_container: VBoxContainer
@@ -32,20 +31,6 @@ func _ready() -> void:
 	_build_ui()
 
 func _build_ui() -> void:
-	# Variable field
-	var var_label = Label.new()
-	var_label.text = "Variable :"
-	add_child(var_label)
-
-	_variable_edit = LineEdit.new()
-	_variable_edit.placeholder_text = "Nom de la variable..."
-	_variable_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_variable_edit.text_changed.connect(_on_variable_changed)
-	add_child(_variable_edit)
-
-	# Separator
-	add_child(HSeparator.new())
-
 	# Rules section
 	var rules_label = Label.new()
 	rules_label.text = "— Règles —"
@@ -97,22 +82,11 @@ func load_condition(condition) -> void:
 	_condition = condition
 	_refresh_ui()
 
-func get_variable_text() -> String:
-	if _variable_edit:
-		return _variable_edit.text
-	return ""
-
-func set_variable_text(text: String) -> void:
-	if _condition:
-		_condition.variable = text
-	if _variable_edit:
-		_variable_edit.text = text
-	condition_changed.emit()
-
 func add_rule() -> void:
 	if _condition == null:
 		return
 	var rule = ConditionRuleScript.new()
+	rule.variable = ""
 	rule.operator = "equal"
 	rule.value = ""
 	var cons = ConsequenceScript.new()
@@ -171,25 +145,17 @@ func get_available_chapters() -> Array:
 
 func set_variable_names(names: Array) -> void:
 	_variable_names = names
-	if _variable_edit:
-		_variable_edit.tooltip_text = "Variables disponibles : " + ", ".join(names) if names.size() > 0 else ""
+	_rebuild_rules_list()
 
 func get_variable_names() -> Array:
 	return _variable_names
 
 # --- Private ---
 
-func _on_variable_changed(new_text: String) -> void:
-	if _condition:
-		_condition.variable = new_text
-		condition_changed.emit()
-
 func _on_add_rule_pressed() -> void:
 	add_rule()
 
 func _refresh_ui() -> void:
-	if _variable_edit:
-		_variable_edit.text = _condition.variable if _condition else ""
 	_rebuild_rules_list()
 	_refresh_default_ui()
 
@@ -207,7 +173,7 @@ func _rebuild_rules_list() -> void:
 func _create_rule_row(index: int, rule) -> VBoxContainer:
 	var container = VBoxContainer.new()
 
-	# Header row: operator + delete
+	# Header row: label + delete
 	var header = HBoxContainer.new()
 	container.add_child(header)
 
@@ -223,6 +189,23 @@ func _create_rule_row(index: int, rule) -> VBoxContainer:
 	delete_btn.text = "×"
 	delete_btn.pressed.connect(_on_delete_rule.bind(index))
 	header.add_child(delete_btn)
+
+	# Variable row
+	var var_row = HBoxContainer.new()
+	container.add_child(var_row)
+
+	var var_label = Label.new()
+	var_label.text = "Variable :"
+	var_row.add_child(var_label)
+
+	var var_edit = LineEdit.new()
+	var_edit.text = rule.variable
+	var_edit.placeholder_text = "Nom de la variable..."
+	var_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var_edit.name = "VariableEdit"
+	var_edit.tooltip_text = "Variables disponibles : " + ", ".join(_variable_names) if _variable_names.size() > 0 else ""
+	var_edit.text_changed.connect(_on_rule_variable_changed.bind(index))
+	var_row.add_child(var_edit)
 
 	# Operator + value row
 	var op_row = HBoxContainer.new()
@@ -287,6 +270,12 @@ func _create_rule_row(index: int, rule) -> VBoxContainer:
 
 func _on_delete_rule(index: int) -> void:
 	remove_rule(index)
+
+func _on_rule_variable_changed(new_text: String, rule_index: int) -> void:
+	if _condition == null or rule_index >= _condition.rules.size():
+		return
+	_condition.rules[rule_index].variable = new_text
+	condition_changed.emit()
 
 func _on_rule_operator_changed(op_index: int, rule_index: int) -> void:
 	if _condition == null or rule_index >= _condition.rules.size():

@@ -43,14 +43,12 @@ func test_to_dict_includes_conditions():
 
 	var cond = ConditionScript.new()
 	cond.condition_name = "Score Check"
-	cond.variable = "score"
 	scene.conditions.append(cond)
 
 	var d = scene.to_dict()
 	assert_true(d.has("conditions"))
 	assert_eq(d["conditions"].size(), 1)
 	assert_eq(d["conditions"][0]["name"], "Score Check")
-	assert_eq(d["conditions"][0]["variable"], "score")
 
 func test_to_dict_empty_conditions():
 	var scene = SceneDataScript.new()
@@ -66,10 +64,9 @@ func test_from_dict_with_conditions():
 			{
 				"uuid": "cond-uuid",
 				"name": "Health",
-				"variable": "health",
 				"position": {"x": 100, "y": 200},
 				"rules": [
-					{"operator": "less_than", "value": "0", "consequence": {"type": "game_over"}}
+					{"variable": "health", "operator": "less_than", "value": "0", "consequence": {"type": "game_over"}}
 				],
 				"default_consequence": {"type": "redirect_sequence", "target": "s1"}
 			}
@@ -79,8 +76,8 @@ func test_from_dict_with_conditions():
 	assert_eq(scene.conditions.size(), 1)
 	assert_eq(scene.conditions[0].uuid, "cond-uuid")
 	assert_eq(scene.conditions[0].condition_name, "Health")
-	assert_eq(scene.conditions[0].variable, "health")
 	assert_eq(scene.conditions[0].rules.size(), 1)
+	assert_eq(scene.conditions[0].rules[0].variable, "health")
 	assert_not_null(scene.conditions[0].default_consequence)
 
 func test_from_dict_without_conditions_key():
@@ -94,8 +91,8 @@ func test_roundtrip_with_conditions():
 
 	var cond = ConditionScript.new()
 	cond.condition_name = "Cond1"
-	cond.variable = "flag"
 	var rule = ConditionRuleScript.new()
+	rule.variable = "flag"
 	rule.operator = "exists"
 	var cons = ConsequenceScript.new()
 	cons.type = "redirect_sequence"
@@ -107,6 +104,6 @@ func test_roundtrip_with_conditions():
 	var restored = SceneDataScript.from_dict(scene.to_dict())
 	assert_eq(restored.conditions.size(), 1)
 	assert_eq(restored.conditions[0].condition_name, "Cond1")
-	assert_eq(restored.conditions[0].variable, "flag")
 	assert_eq(restored.conditions[0].rules.size(), 1)
+	assert_eq(restored.conditions[0].rules[0].variable, "flag")
 	assert_eq(restored.conditions[0].rules[0].operator, "exists")

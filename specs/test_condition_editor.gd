@@ -15,7 +15,6 @@ func before_each():
 
 	_condition = ConditionScript.new()
 	_condition.condition_name = "Test Condition"
-	_condition.variable = "score"
 
 func _make_targets() -> void:
 	_editor.set_available_targets(
@@ -28,18 +27,11 @@ func _make_targets() -> void:
 
 func test_load_condition():
 	_editor.load_condition(_condition)
-	assert_eq(_editor.get_variable_text(), "score")
+	assert_eq(_editor.get_rule_count_ui(), 0)
 
 func test_load_condition_null():
 	_editor.load_condition(null)
-	assert_eq(_editor.get_variable_text(), "")
-
-# --- Variable ---
-
-func test_set_variable():
-	_editor.load_condition(_condition)
-	_editor.set_variable_text("health")
-	assert_eq(_condition.variable, "health")
+	assert_eq(_editor.get_rule_count_ui(), 0)
 
 # --- Règles ---
 
@@ -49,6 +41,17 @@ func test_add_rule():
 	_editor.add_rule()
 	assert_eq(_condition.rules.size(), 1)
 	assert_eq(_condition.rules[0].operator, "equal")
+	assert_eq(_condition.rules[0].variable, "")
+
+func test_rule_variable_is_per_rule():
+	_editor.load_condition(_condition)
+	_make_targets()
+	_editor.add_rule()
+	_editor.add_rule()
+	_condition.rules[0].variable = "score"
+	_condition.rules[1].variable = "health"
+	assert_eq(_condition.rules[0].variable, "score")
+	assert_eq(_condition.rules[1].variable, "health")
 
 func test_add_multiple_rules():
 	_editor.load_condition(_condition)
@@ -91,9 +94,13 @@ func test_condition_changed_signal_on_remove_rule():
 
 func test_condition_changed_signal_on_variable_change():
 	_editor.load_condition(_condition)
+	_make_targets()
+	_editor.add_rule()
 	watch_signals(_editor)
-	_editor.set_variable_text("new_var")
+	# Simulate variable change on the rule via the handler
+	_editor._on_rule_variable_changed("new_var", 0)
 	assert_signal_emitted(_editor, "condition_changed")
+	assert_eq(_condition.rules[0].variable, "new_var")
 
 # --- Cibles disponibles ---
 
@@ -144,6 +151,7 @@ func test_set_default_consequence_game_over():
 
 func test_load_condition_with_existing_rules():
 	var rule = ConditionRuleScript.new()
+	rule.variable = "score"
 	rule.operator = "greater_than"
 	rule.value = "50"
 	var cons = ConsequenceScript.new()
@@ -159,6 +167,7 @@ func test_load_condition_with_existing_rules():
 	_editor.load_condition(_condition)
 	_make_targets()
 	assert_eq(_condition.rules.size(), 1)
+	assert_eq(_condition.rules[0].variable, "score")
 
 # --- Opérateur exists masque la valeur ---
 

@@ -7,6 +7,7 @@ const ConsequenceScript = preload("res://src/models/consequence.gd")
 
 func test_default_values():
 	var rule = ConditionRuleScript.new()
+	assert_eq(rule.variable, "")
 	assert_eq(rule.operator, "")
 	assert_eq(rule.value, "")
 	assert_null(rule.consequence)
@@ -34,6 +35,7 @@ func test_valid_operators():
 
 func test_to_dict():
 	var rule = ConditionRuleScript.new()
+	rule.variable = "score"
 	rule.operator = "greater_than"
 	rule.value = "100"
 	var cons = ConsequenceScript.new()
@@ -42,6 +44,7 @@ func test_to_dict():
 	rule.consequence = cons
 
 	var d = rule.to_dict()
+	assert_eq(d["variable"], "score")
 	assert_eq(d["operator"], "greater_than")
 	assert_eq(d["value"], "100")
 	assert_eq(d["consequence"]["type"], "redirect_sequence")
@@ -55,11 +58,13 @@ func test_to_dict_no_consequence():
 
 func test_from_dict():
 	var d = {
+		"variable": "health",
 		"operator": "less_than_equal",
 		"value": "50",
 		"consequence": {"type": "game_over"}
 	}
 	var rule = ConditionRuleScript.from_dict(d)
+	assert_eq(rule.variable, "health")
 	assert_eq(rule.operator, "less_than_equal")
 	assert_eq(rule.value, "50")
 	assert_not_null(rule.consequence)
@@ -67,12 +72,14 @@ func test_from_dict():
 
 func test_from_dict_empty():
 	var rule = ConditionRuleScript.from_dict({})
+	assert_eq(rule.variable, "")
 	assert_eq(rule.operator, "")
 	assert_eq(rule.value, "")
 	assert_null(rule.consequence)
 
 func test_roundtrip():
 	var rule = ConditionRuleScript.new()
+	rule.variable = "character"
 	rule.operator = "not_equal"
 	rule.value = "hello"
 	var cons = ConsequenceScript.new()
@@ -81,6 +88,7 @@ func test_roundtrip():
 	rule.consequence = cons
 
 	var restored = ConditionRuleScript.from_dict(rule.to_dict())
+	assert_eq(restored.variable, "character")
 	assert_eq(restored.operator, "not_equal")
 	assert_eq(restored.value, "hello")
 	assert_eq(restored.consequence.type, "redirect_scene")
@@ -90,118 +98,138 @@ func test_roundtrip():
 
 func test_evaluate_equal_match():
 	var rule = ConditionRuleScript.new()
+	rule.variable = "character"
 	rule.operator = "equal"
 	rule.value = "alice"
-	assert_true(rule.evaluate({"character": "alice"}, "character"))
+	assert_true(rule.evaluate({"character": "alice"}))
 
 func test_evaluate_equal_no_match():
 	var rule = ConditionRuleScript.new()
+	rule.variable = "character"
 	rule.operator = "equal"
 	rule.value = "alice"
-	assert_false(rule.evaluate({"character": "bob"}, "character"))
+	assert_false(rule.evaluate({"character": "bob"}))
 
 func test_evaluate_not_equal_match():
 	var rule = ConditionRuleScript.new()
+	rule.variable = "character"
 	rule.operator = "not_equal"
 	rule.value = "alice"
-	assert_true(rule.evaluate({"character": "bob"}, "character"))
+	assert_true(rule.evaluate({"character": "bob"}))
 
 func test_evaluate_not_equal_no_match():
 	var rule = ConditionRuleScript.new()
+	rule.variable = "character"
 	rule.operator = "not_equal"
 	rule.value = "alice"
-	assert_false(rule.evaluate({"character": "alice"}, "character"))
+	assert_false(rule.evaluate({"character": "alice"}))
 
 func test_evaluate_greater_than_match():
 	var rule = ConditionRuleScript.new()
+	rule.variable = "score"
 	rule.operator = "greater_than"
 	rule.value = "10"
-	assert_true(rule.evaluate({"score": "15"}, "score"))
+	assert_true(rule.evaluate({"score": "15"}))
 
 func test_evaluate_greater_than_no_match():
 	var rule = ConditionRuleScript.new()
+	rule.variable = "score"
 	rule.operator = "greater_than"
 	rule.value = "10"
-	assert_false(rule.evaluate({"score": "10"}, "score"))
+	assert_false(rule.evaluate({"score": "10"}))
 
 func test_evaluate_greater_than_equal_match():
 	var rule = ConditionRuleScript.new()
+	rule.variable = "score"
 	rule.operator = "greater_than_equal"
 	rule.value = "10"
-	assert_true(rule.evaluate({"score": "10"}, "score"))
+	assert_true(rule.evaluate({"score": "10"}))
 
 func test_evaluate_greater_than_equal_no_match():
 	var rule = ConditionRuleScript.new()
+	rule.variable = "score"
 	rule.operator = "greater_than_equal"
 	rule.value = "10"
-	assert_false(rule.evaluate({"score": "9"}, "score"))
+	assert_false(rule.evaluate({"score": "9"}))
 
 func test_evaluate_less_than_match():
 	var rule = ConditionRuleScript.new()
+	rule.variable = "score"
 	rule.operator = "less_than"
 	rule.value = "10"
-	assert_true(rule.evaluate({"score": "5"}, "score"))
+	assert_true(rule.evaluate({"score": "5"}))
 
 func test_evaluate_less_than_no_match():
 	var rule = ConditionRuleScript.new()
+	rule.variable = "score"
 	rule.operator = "less_than"
 	rule.value = "10"
-	assert_false(rule.evaluate({"score": "10"}, "score"))
+	assert_false(rule.evaluate({"score": "10"}))
 
 func test_evaluate_less_than_equal_match():
 	var rule = ConditionRuleScript.new()
+	rule.variable = "score"
 	rule.operator = "less_than_equal"
 	rule.value = "10"
-	assert_true(rule.evaluate({"score": "10"}, "score"))
+	assert_true(rule.evaluate({"score": "10"}))
 
 func test_evaluate_less_than_equal_no_match():
 	var rule = ConditionRuleScript.new()
+	rule.variable = "score"
 	rule.operator = "less_than_equal"
 	rule.value = "10"
-	assert_false(rule.evaluate({"score": "11"}, "score"))
+	assert_false(rule.evaluate({"score": "11"}))
 
 func test_evaluate_exists_match():
 	var rule = ConditionRuleScript.new()
+	rule.variable = "flag"
 	rule.operator = "exists"
-	assert_true(rule.evaluate({"flag": "1"}, "flag"))
+	assert_true(rule.evaluate({"flag": "1"}))
 
 func test_evaluate_exists_no_match():
 	var rule = ConditionRuleScript.new()
+	rule.variable = "flag"
 	rule.operator = "exists"
-	assert_false(rule.evaluate({}, "flag"))
+	assert_false(rule.evaluate({}))
 
 func test_evaluate_not_exists_match():
 	var rule = ConditionRuleScript.new()
+	rule.variable = "flag"
 	rule.operator = "not_exists"
-	assert_true(rule.evaluate({}, "flag"))
+	assert_true(rule.evaluate({}))
 
 func test_evaluate_not_exists_no_match():
 	var rule = ConditionRuleScript.new()
+	rule.variable = "flag"
 	rule.operator = "not_exists"
-	assert_false(rule.evaluate({"flag": "1"}, "flag"))
+	assert_false(rule.evaluate({"flag": "1"}))
 
 func test_evaluate_numeric_invalid_value_returns_false():
 	var rule = ConditionRuleScript.new()
+	rule.variable = "score"
 	rule.operator = "greater_than"
 	rule.value = "10"
-	assert_false(rule.evaluate({"score": "not_a_number"}, "score"))
+	assert_false(rule.evaluate({"score": "not_a_number"}))
 
 func test_evaluate_numeric_invalid_rule_value_returns_false():
 	var rule = ConditionRuleScript.new()
+	rule.variable = "score"
 	rule.operator = "greater_than"
 	rule.value = "not_a_number"
-	assert_false(rule.evaluate({"score": "15"}, "score"))
+	assert_false(rule.evaluate({"score": "15"}))
 
 func test_evaluate_variable_not_found_returns_false():
 	var rule = ConditionRuleScript.new()
+	rule.variable = "missing_var"
 	rule.operator = "equal"
 	rule.value = "test"
-	assert_false(rule.evaluate({}, "missing_var"))
+	assert_false(rule.evaluate({}))
 
 func test_evaluate_equal_numeric_as_string():
 	var rule = ConditionRuleScript.new()
+	rule.variable = "score"
 	rule.operator = "equal"
 	rule.value = "10"
 	# equal compare en string
-	assert_true(rule.evaluate({"score": "10"}, "score"))
-	assert_false(rule.evaluate({"score": "10.0"}, "score"))
+	assert_true(rule.evaluate({"score": "10"}))
+	assert_false(rule.evaluate({"score": "10.0"}))

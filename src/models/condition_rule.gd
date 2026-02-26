@@ -5,23 +5,24 @@ const ConsequenceScript = preload("res://src/models/consequence.gd")
 const VALID_OPERATORS := ["equal", "not_equal", "greater_than", "greater_than_equal", "less_than", "less_than_equal", "exists", "not_exists"]
 const NUMERIC_OPERATORS := ["greater_than", "greater_than_equal", "less_than", "less_than_equal"]
 
+var variable: String = ""
 var operator: String = ""
 var value: String = ""
 var consequence = null  # Consequence
 
 ## Évalue cette règle contre un dictionnaire de variables.
 ## Retourne true si la règle matche.
-func evaluate(variables: Dictionary, variable_name: String) -> bool:
+func evaluate(variables: Dictionary, _unused = null) -> bool:
 	match operator:
 		"exists":
-			return variables.has(variable_name)
+			return variables.has(variable)
 		"not_exists":
-			return not variables.has(variable_name)
+			return not variables.has(variable)
 
-	if not variables.has(variable_name):
+	if not variables.has(variable):
 		return false
 
-	var var_value = str(variables[variable_name])
+	var var_value = str(variables[variable])
 
 	if operator == "equal":
 		return var_value == value
@@ -48,6 +49,7 @@ func evaluate(variables: Dictionary, variable_name: String) -> bool:
 
 func to_dict() -> Dictionary:
 	return {
+		"variable": variable,
 		"operator": operator,
 		"value": value,
 		"consequence": consequence.to_dict() if consequence else {},
@@ -56,6 +58,7 @@ func to_dict() -> Dictionary:
 static func from_dict(d: Dictionary):
 	var script = load("res://src/models/condition_rule.gd")
 	var rule = script.new()
+	rule.variable = d.get("variable", "")
 	rule.operator = d.get("operator", "")
 	rule.value = d.get("value", "")
 	if d.has("consequence") and not d["consequence"].is_empty():

@@ -53,10 +53,10 @@ func before_each():
 
 func _make_condition(variable: String, rules: Array, default_type: String = "", default_target: String = "") -> Object:
 	var cond = ConditionScript.new()
-	cond.variable = variable
 	cond.position = Vector2(50, 50)
 	for r in rules:
 		var rule = ConditionRuleScript.new()
+		rule.variable = r.get("variable", variable)
 		rule.operator = r["operator"]
 		rule.value = r.get("value", "")
 		var cons = ConsequenceScript.new()
@@ -186,6 +186,22 @@ func test_condition_game_over_consequence():
 	_ctrl.start_play_scene(_story, _chapter, _scene)
 
 	assert_signal_emitted_with_parameters(_ctrl, "play_finished", ["game_over"])
+
+func test_condition_rules_with_different_variables():
+	# Rule 1 tests "score", Rule 2 tests "health" — each rule has its own variable
+	var cond = _make_condition("", [
+		{"variable": "score", "operator": "greater_than", "value": "100", "cons_type": "redirect_sequence", "cons_target": _seq1.uuid},
+		{"variable": "health", "operator": "less_than", "value": "10", "cons_type": "redirect_sequence", "cons_target": _seq2.uuid},
+	], "redirect_sequence", _seq3.uuid)
+	_scene.conditions.append(cond)
+	_scene.entry_point_uuid = cond.uuid
+
+	watch_signals(_ctrl)
+	_add_story_variable("score", "50")   # score=50, rule 1 fails (50 < 100)
+	_add_story_variable("health", "5")   # health=5, rule 2 matches (5 < 10)
+	_ctrl.start_play_scene(_story, _chapter, _scene)
+
+	assert_signal_emitted(_ctrl, "sequence_play_requested")
 
 func test_find_entry_finds_conditions():
 	var cond = _make_condition("x", [], "redirect_sequence", _seq1.uuid)

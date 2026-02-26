@@ -7,7 +7,6 @@ var uuid: String = ""
 var condition_name: String = ""
 var subtitle: String = ""
 var position: Vector2 = Vector2.ZERO
-var variable: String = ""
 var rules: Array = []  # Array[ConditionRule]
 var default_consequence = null  # Consequence
 
@@ -37,7 +36,7 @@ static func _generate_uuid() -> String:
 ## Retourne la Consequence de la première règle qui matche, ou default_consequence, ou null.
 func evaluate(variables: Dictionary):
 	for rule in rules:
-		if rule.evaluate(variables, variable):
+		if rule.evaluate(variables):
 			return rule.consequence
 	return default_consequence
 
@@ -51,7 +50,6 @@ func to_dict() -> Dictionary:
 		"name": condition_name,
 		"subtitle": subtitle,
 		"position": {"x": position.x, "y": position.y},
-		"variable": variable,
 		"rules": rules_arr,
 	}
 
@@ -68,7 +66,6 @@ static func from_dict(d: Dictionary):
 	cond.subtitle = d.get("subtitle", "")
 	if d.has("position"):
 		cond.position = Vector2(d["position"].get("x", 0), d["position"].get("y", 0))
-	cond.variable = d.get("variable", "")
 
 	if d.has("rules"):
 		for rule_dict in d["rules"]:

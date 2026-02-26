@@ -96,8 +96,8 @@ func test_condition_rules_generate_connections():
 	_scene_data.sequences.append(seq2)
 
 	var cond = ConditionScript.new()
-	cond.variable = "score"
 	var rule = ConditionRuleScript.new()
+	rule.variable = "score"
 	rule.operator = "greater_than"
 	rule.value = "50"
 	var cons = ConsequenceScript.new()
