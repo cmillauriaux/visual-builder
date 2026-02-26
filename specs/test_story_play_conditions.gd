@@ -8,6 +8,7 @@ const SequenceScript = preload("res://src/models/sequence.gd")
 const ConditionScript = preload("res://src/models/condition.gd")
 const ConditionRuleScript = preload("res://src/models/condition_rule.gd")
 const ConsequenceScript = preload("res://src/models/consequence.gd")
+const VariableDefinitionScript = preload("res://src/models/variable_definition.gd")
 
 var _ctrl: Node
 var _story: Object
@@ -70,6 +71,12 @@ func _make_condition(variable: String, rules: Array, default_type: String = "", 
 		cond.default_consequence = def_cons
 	return cond
 
+func _add_story_variable(var_name: String, initial_value: String) -> void:
+	var v = VariableDefinitionScript.new()
+	v.var_name = var_name
+	v.initial_value = initial_value
+	_story.variables.append(v)
+
 # --- Variables dictionary ---
 
 func test_variables_initialized_empty():
@@ -80,6 +87,12 @@ func test_variables_reset_on_start():
 	_scene.entry_point_uuid = _seq1.uuid
 	_ctrl.start_play_story(_story)
 	assert_eq(_ctrl._variables, {})
+
+func test_variables_initialized_from_story_on_play_scene():
+	_add_story_variable("Test", "12")
+	_scene.entry_point_uuid = _seq1.uuid
+	_ctrl.start_play_scene(_story, _chapter, _scene)
+	assert_eq(_ctrl.get_variable("Test"), "12", "Les variables de la story doivent être initialisées lors de start_play_scene")
 
 func test_set_variable():
 	_ctrl.set_variable("score", "100")
@@ -102,7 +115,7 @@ func test_condition_rule_match_redirects():
 	_scene.entry_point_uuid = cond.uuid
 
 	watch_signals(_ctrl)
-	_ctrl._variables["score"] = "75"
+	_add_story_variable("score", "75")
 	_ctrl.start_play_scene(_story, _chapter, _scene)
 
 	# Should resolve the condition to seq2
@@ -116,7 +129,7 @@ func test_condition_default_when_no_match():
 	_scene.entry_point_uuid = cond.uuid
 
 	watch_signals(_ctrl)
-	_ctrl._variables["score"] = "10"
+	_add_story_variable("score", "10")
 	_ctrl.start_play_scene(_story, _chapter, _scene)
 
 	# Should resolve to default → seq3
@@ -130,7 +143,7 @@ func test_condition_no_default_finishes_no_ending():
 	_scene.entry_point_uuid = cond.uuid
 
 	watch_signals(_ctrl)
-	_ctrl._variables["score"] = "1"
+	_add_story_variable("score", "1")
 	_ctrl.start_play_scene(_story, _chapter, _scene)
 
 	assert_signal_emitted_with_parameters(_ctrl, "play_finished", ["no_ending"])
@@ -143,7 +156,7 @@ func test_condition_exists_operator():
 	_scene.entry_point_uuid = cond.uuid
 
 	watch_signals(_ctrl)
-	_ctrl._variables["flag"] = "1"
+	_add_story_variable("flag", "1")
 	_ctrl.start_play_scene(_story, _chapter, _scene)
 
 	assert_signal_emitted(_ctrl, "sequence_play_requested")
@@ -169,7 +182,7 @@ func test_condition_game_over_consequence():
 	_scene.entry_point_uuid = cond.uuid
 
 	watch_signals(_ctrl)
-	_ctrl._variables["x"] = "die"
+	_add_story_variable("x", "die")
 	_ctrl.start_play_scene(_story, _chapter, _scene)
 
 	assert_signal_emitted_with_parameters(_ctrl, "play_finished", ["game_over"])

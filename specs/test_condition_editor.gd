@@ -109,6 +109,22 @@ func test_set_available_targets():
 
 # --- Default consequence ---
 
+func test_load_condition_creates_default_consequence():
+	_make_targets()
+	assert_null(_condition.default_consequence)
+	_editor.load_condition(_condition)
+	assert_not_null(_condition.default_consequence, "Le default_consequence doit être créé automatiquement au chargement")
+	assert_eq(_condition.default_consequence.type, "redirect_sequence")
+	assert_eq(_condition.default_consequence.target, "s1")
+
+func test_load_condition_preserves_existing_default():
+	var def_cons = ConsequenceScript.new()
+	def_cons.type = "game_over"
+	_condition.default_consequence = def_cons
+	_make_targets()
+	_editor.load_condition(_condition)
+	assert_eq(_condition.default_consequence.type, "game_over", "Le type existant doit être conservé")
+
 func test_set_default_consequence():
 	_editor.load_condition(_condition)
 	_make_targets()

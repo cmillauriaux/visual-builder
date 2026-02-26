@@ -333,10 +333,25 @@ func _on_rule_cons_target_changed(target_index: int, rule_index: int) -> void:
 func _refresh_default_ui() -> void:
 	if _default_type_dropdown == null:
 		return
-	if _condition == null or _condition.default_consequence == null:
+	if _condition == null:
 		_default_type_dropdown.selected = 0
 		_populate_target_dropdown(_default_target_dropdown, CONSEQUENCE_TYPES[0])
 		_default_target_dropdown.visible = true
+		return
+	if _condition.default_consequence == null:
+		# Créer le default_consequence avec le type par défaut
+		var ctype = CONSEQUENCE_TYPES[0]
+		var target = ""
+		if ctype in REDIRECT_TYPES:
+			var items = _get_targets_for_type(ctype)
+			target = items[0]["uuid"] if items.size() > 0 else ""
+		var cons = ConsequenceScript.new()
+		cons.type = ctype
+		cons.target = target
+		_condition.default_consequence = cons
+		_default_type_dropdown.selected = 0
+		_populate_target_dropdown(_default_target_dropdown, ctype)
+		_default_target_dropdown.visible = ctype in REDIRECT_TYPES
 		return
 	var idx = CONSEQUENCE_TYPES.find(_condition.default_consequence.type)
 	if idx < 0:
@@ -364,8 +379,13 @@ func _on_default_type_changed(type_index: int) -> void:
 	set_default_consequence(ctype, target)
 
 func _on_default_target_changed(target_index: int) -> void:
-	if _condition == null or _condition.default_consequence == null:
+	if _condition == null:
 		return
+	if _condition.default_consequence == null:
+		var ctype = CONSEQUENCE_TYPES[_default_type_dropdown.selected]
+		var cons = ConsequenceScript.new()
+		cons.type = ctype
+		_condition.default_consequence = cons
 	var items = _get_targets_for_type(_condition.default_consequence.type)
 	if target_index >= 0 and target_index < items.size():
 		_condition.default_consequence.target = items[target_index]["uuid"]

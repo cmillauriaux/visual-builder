@@ -74,7 +74,8 @@ func start_play_scene(story, chapter, scene) -> void:
 	_current_chapter = chapter
 	_current_scene = scene
 	_user_stopped = false
-	# Ne pas réinitialiser _variables ici pour permettre la pré-configuration
+	_variables = {}
+	_init_variables_from_story(story)
 	_start_scene_entry(scene)
 
 ## Trouve l'entry point d'une scène (séquence ou condition) et démarre le play.
