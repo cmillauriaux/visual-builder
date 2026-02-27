@@ -3,20 +3,20 @@ extends RefCounted
 ## Construit l'arborescence UI complète de l'éditeur principal.
 ## Crée tous les nœuds, les ajoute à l'arbre et stocke les références sur main.
 
-const EditorMainScript = preload("res://src/ui/editor_main.gd")
-const BreadcrumbScript = preload("res://src/ui/breadcrumb.gd")
+const EditorMainScript = preload("res://src/ui/editors/editor_main.gd")
+const BreadcrumbScript = preload("res://src/ui/navigation/breadcrumb.gd")
 const ChapterGraphViewScript = preload("res://src/views/chapter_graph_view.gd")
 const SceneGraphViewScript = preload("res://src/views/scene_graph_view.gd")
 const SequenceGraphViewScript = preload("res://src/views/sequence_graph_view.gd")
-const SequenceVisualEditorScript = preload("res://src/ui/sequence_visual_editor.gd")
-const DialogueListPanelScript = preload("res://src/ui/dialogue_list_panel.gd")
-const EndingEditorScript = preload("res://src/ui/ending_editor.gd")
-const TransitionPanelScript = preload("res://src/ui/transition_panel.gd")
-const ForegroundTransitionScript = preload("res://src/ui/foreground_transition.gd")
-const DialogueEditorScript = preload("res://src/ui/dialogue_editor.gd")
-const StoryPlayControllerScript = preload("res://src/ui/story_play_controller.gd")
-const ConditionEditorScript = preload("res://src/ui/condition_editor.gd")
-const VariablePanelScript = preload("res://src/ui/variable_panel.gd")
+const SequenceVisualEditorScript = preload("res://src/ui/sequence/sequence_visual_editor.gd")
+const DialogueListPanelScript = preload("res://src/ui/sequence/dialogue_list_panel.gd")
+const EndingEditorScript = preload("res://src/ui/editors/ending_editor.gd")
+const TransitionPanelScript = preload("res://src/ui/sequence/transition_panel.gd")
+const ForegroundTransitionScript = preload("res://src/ui/visual/foreground_transition.gd")
+const DialogueEditorScript = preload("res://src/ui/editors/dialogue_editor.gd")
+const StoryPlayControllerScript = preload("res://src/ui/play/story_play_controller.gd")
+const ConditionEditorScript = preload("res://src/ui/editors/condition_editor.gd")
+const VariablePanelScript = preload("res://src/ui/editors/variable_panel.gd")
 
 
 static func build(main: Control) -> void:

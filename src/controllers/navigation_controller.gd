@@ -8,7 +8,7 @@ const ChapterScript = preload("res://src/models/chapter.gd")
 const SceneDataScript = preload("res://src/models/scene_data.gd")
 const SequenceScript = preload("res://src/models/sequence.gd")
 const StorySaver = preload("res://src/persistence/story_saver.gd")
-const RenameDialogScript = preload("res://src/ui/rename_dialog.gd")
+const RenameDialogScript = preload("res://src/ui/dialogs/rename_dialog.gd")
 
 var _main: Control
 var _rename_dialog: ConfirmationDialog

@@ -3,10 +3,10 @@ extends Control
 ## Scène principale — orchestre tous les composants de l'éditeur de visual novel.
 ## Délègue la construction UI, le play et la navigation à des contrôleurs dédiés.
 
-const EditorMainScript = preload("res://src/ui/editor_main.gd")
-const SequenceEditorScript = preload("res://src/ui/sequence_editor.gd")
-const ImagePickerDialogScript = preload("res://src/ui/image_picker_dialog.gd")
-const AIGenerateDialogScript = preload("res://src/ui/ai_generate_dialog.gd")
+const EditorMainScript = preload("res://src/ui/editors/editor_main.gd")
+const SequenceEditorScript = preload("res://src/ui/sequence/sequence_editor.gd")
+const ImagePickerDialogScript = preload("res://src/ui/dialogs/image_picker_dialog.gd")
+const AIGenerateDialogScript = preload("res://src/ui/dialogs/ai_generate_dialog.gd")
 const ComfyUIConfigScript = preload("res://src/services/comfyui_config.gd")
 const MainUIBuilder = preload("res://src/controllers/main_ui_builder.gd")
 const PlayControllerScript = preload("res://src/controllers/play_controller.gd")

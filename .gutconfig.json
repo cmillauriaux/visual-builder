@@ -1,5 +1,18 @@
 {
-  "dirs": ["res://specs/"],
+  "dirs": [
+    "res://specs/models/",
+    "res://specs/views/",
+    "res://specs/services/",
+    "res://specs/persistence/",
+    "res://specs/ui/editors/",
+    "res://specs/ui/sequence/",
+    "res://specs/ui/dialogs/",
+    "res://specs/ui/visual/",
+    "res://specs/ui/navigation/",
+    "res://specs/ui/play/",
+    "res://specs/ui/shared/",
+    "res://specs/integration/"
+  ],
   "prefix": "test_",
   "suffix": ".gd",
   "should_maximize": false,
