@@ -1,0 +1,111 @@
+extends RefCounted
+
+## Construit l'arborescence UI du jeu standalone (play-only, pas d'éditeur).
+
+const SequenceVisualEditorScript = preload("res://src/ui/sequence/sequence_visual_editor.gd")
+const ForegroundTransitionScript = preload("res://src/ui/visual/foreground_transition.gd")
+const StoryPlayControllerScript = preload("res://src/ui/play/story_play_controller.gd")
+const SequenceEditorScript = preload("res://src/ui/sequence/sequence_editor.gd")
+
+
+static func build(game: Control) -> void:
+	_build_visual_editor(game)
+	_build_play_overlay(game)
+	_build_stop_button(game)
+	_build_helpers(game)
+	_build_story_selector(game)
+
+
+static func _build_visual_editor(game: Control) -> void:
+	game._visual_editor = Control.new()
+	game._visual_editor.set_script(SequenceVisualEditorScript)
+	game._visual_editor.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	game.add_child(game._visual_editor)
+
+
+static func _build_play_overlay(game: Control) -> void:
+	game._play_overlay = PanelContainer.new()
+	game._play_overlay.visible = false
+	game._play_overlay.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	game._play_overlay.offset_top = -150
+	game._play_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+
+	var play_vbox = VBoxContainer.new()
+	game._play_overlay.add_child(play_vbox)
+
+	game._play_character_label = Label.new()
+	game._play_character_label.add_theme_font_size_override("font_size", 20)
+	play_vbox.add_child(game._play_character_label)
+
+	game._play_text_label = RichTextLabel.new()
+	game._play_text_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	game._play_text_label.bbcode_enabled = false
+	game._play_text_label.fit_content = true
+	play_vbox.add_child(game._play_text_label)
+
+	# Typewriter timer
+	game._typewriter_timer = Timer.new()
+	game._typewriter_timer.wait_time = 0.03
+	game.add_child(game._typewriter_timer)
+
+	# Choice overlay
+	game._choice_overlay = PanelContainer.new()
+	game._choice_overlay.visible = false
+	game._choice_overlay.set_anchors_preset(Control.PRESET_CENTER)
+	game._choice_overlay.custom_minimum_size = Vector2(400, 0)
+	game._choice_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+
+
+static func _build_stop_button(game: Control) -> void:
+	game._stop_button = Button.new()
+	game._stop_button.text = "■ Stop"
+	game._stop_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	game._stop_button.offset_left = -80
+	game._stop_button.offset_right = -10
+	game._stop_button.offset_top = 10
+	game._stop_button.offset_bottom = 40
+	game._stop_button.visible = false
+	game.add_child(game._stop_button)
+
+
+static func _build_helpers(game: Control) -> void:
+	game._sequence_editor_ctrl = Control.new()
+	game._sequence_editor_ctrl.set_script(SequenceEditorScript)
+	game.add_child(game._sequence_editor_ctrl)
+
+	game._foreground_transition = Node.new()
+	game._foreground_transition.set_script(ForegroundTransitionScript)
+	game.add_child(game._foreground_transition)
+
+	game._story_play_ctrl = Node.new()
+	game._story_play_ctrl.set_script(StoryPlayControllerScript)
+	game.add_child(game._story_play_ctrl)
+
+
+static func _build_story_selector(game: Control) -> void:
+	game._story_selector = PanelContainer.new()
+	game._story_selector.name = "StorySelector"
+	game._story_selector.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	game._story_selector.custom_minimum_size = Vector2(500, 400)
+
+	var vbox = VBoxContainer.new()
+	game._story_selector.add_child(vbox)
+
+	var title = Label.new()
+	title.text = "Sélectionnez une histoire"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 24)
+	vbox.add_child(title)
+
+	var separator = HSeparator.new()
+	vbox.add_child(separator)
+
+	var scroll = ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vbox.add_child(scroll)
+
+	game._story_list = VBoxContainer.new()
+	game._story_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(game._story_list)
+
+	game.add_child(game._story_selector)
