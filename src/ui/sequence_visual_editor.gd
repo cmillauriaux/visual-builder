@@ -6,6 +6,7 @@ extends Control
 const ForegroundScript = preload("res://src/models/foreground.gd")
 const PlacementGridScript = preload("res://src/ui/placement_grid.gd")
 const ForegroundClipboardScript = preload("res://src/ui/foreground_clipboard.gd")
+const TextureLoaderScript = preload("res://src/ui/texture_loader.gd")
 
 const DESIGN_RESOLUTION = Vector2(1920, 1080)
 
@@ -211,19 +212,7 @@ func _update_visual() -> void:
 	_update_grid_overlay()
 
 func _load_texture(path: String):
-	if path == "":
-		return null
-	# Try as Godot resource first
-	if ResourceLoader.exists(path):
-		return load(path)
-	# Try as external file
-	if not FileAccess.file_exists(path):
-		return null
-	var img = Image.new()
-	var err = img.load(path)
-	if err != OK:
-		return null
-	return ImageTexture.create_from_image(img)
+	return TextureLoaderScript.load_texture(path)
 
 # --- Foreground visuals ---
 

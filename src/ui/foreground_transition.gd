@@ -2,6 +2,8 @@ extends Node
 
 ## Gère le calcul et l'application des transitions visuelles entre foregrounds.
 
+const TextureLoaderScript = preload("res://src/ui/texture_loader.gd")
+
 func compute_transitions(old_fgs: Array, new_fgs: Array) -> Array:
 	var transitions: Array = []
 	var old_map: Dictionary = {}
@@ -110,14 +112,4 @@ func apply_tween_crossfade(target: Control, old_image_path: String, duration: fl
 	return tween
 
 func _load_texture(path: String):
-	if path == "":
-		return null
-	if ResourceLoader.exists(path):
-		return load(path)
-	if not FileAccess.file_exists(path):
-		return null
-	var img = Image.new()
-	var err = img.load(path)
-	if err != OK:
-		return null
-	return ImageTexture.create_from_image(img)
+	return TextureLoaderScript.load_texture(path)
