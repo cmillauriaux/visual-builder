@@ -7,9 +7,10 @@ const ConsequenceScript = preload("res://src/models/consequence.gd")
 const ChoiceScript = preload("res://src/models/choice.gd")
 const VariableEffectScript = preload("res://src/models/variable_effect.gd")
 const ConsequenceTargetHelperScript = preload("res://src/ui/consequence_target_helper.gd")
+const EffectRowBuilderScript = preload("res://src/ui/effect_row_builder.gd")
 
-const OPERATION_TYPES = ["set", "increment", "decrement", "delete"]
-const OPERATION_LABELS = ["Assigner", "Incrémenter", "Décrémenter", "Supprimer"]
+const OPERATION_TYPES = VariableEffectScript.VALID_OPERATIONS
+const OPERATION_LABELS = VariableEffectScript.OPERATION_LABELS
 
 signal ending_changed
 
@@ -373,56 +374,22 @@ func _rebuild_redirect_effects() -> void:
 		_redirect_effects_list.add_child(row)
 
 func _create_effect_row(effect, context: String, choice_index: int, effect_index: int) -> HBoxContainer:
-	var row = HBoxContainer.new()
-
-	# Variable dropdown/edit
-	var var_edit = LineEdit.new()
-	var_edit.text = effect.variable
-	var_edit.placeholder_text = "Variable..."
-	var_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var_edit.tooltip_text = ", ".join(_target_helper.variable_names) if _target_helper.variable_names.size() > 0 else ""
 	if context == "redirect":
-		var_edit.text_changed.connect(func(t): update_redirect_effect(effect_index, "variable", t))
+		return EffectRowBuilderScript.create_effect_row(
+			effect, _target_helper.variable_names,
+			func(t): update_redirect_effect(effect_index, "variable", t),
+			func(op): update_redirect_effect(effect_index, "operation", op); _rebuild_redirect_effects(),
+			func(t): update_redirect_effect(effect_index, "value", t),
+			func(): remove_redirect_effect(effect_index)
+		)
 	else:
-		var_edit.text_changed.connect(func(t): update_choice_effect(choice_index, effect_index, "variable", t))
-	row.add_child(var_edit)
-
-	# Operation dropdown
-	var op_dropdown = OptionButton.new()
-	for lbl in OPERATION_LABELS:
-		op_dropdown.add_item(lbl)
-	var op_idx = OPERATION_TYPES.find(effect.operation)
-	if op_idx < 0:
-		op_idx = 0
-	op_dropdown.selected = op_idx
-	if context == "redirect":
-		op_dropdown.item_selected.connect(func(idx): update_redirect_effect(effect_index, "operation", OPERATION_TYPES[idx]); _rebuild_redirect_effects())
-	else:
-		op_dropdown.item_selected.connect(func(idx): update_choice_effect(choice_index, effect_index, "operation", OPERATION_TYPES[idx]); _rebuild_choices_list())
-	row.add_child(op_dropdown)
-
-	# Value edit (hidden for delete)
-	var value_edit = LineEdit.new()
-	value_edit.text = effect.value
-	value_edit.placeholder_text = "Valeur..."
-	value_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	value_edit.visible = effect.operation != "delete"
-	if context == "redirect":
-		value_edit.text_changed.connect(func(t): update_redirect_effect(effect_index, "value", t))
-	else:
-		value_edit.text_changed.connect(func(t): update_choice_effect(choice_index, effect_index, "value", t))
-	row.add_child(value_edit)
-
-	# Delete button
-	var delete_btn = Button.new()
-	delete_btn.text = "×"
-	if context == "redirect":
-		delete_btn.pressed.connect(func(): remove_redirect_effect(effect_index))
-	else:
-		delete_btn.pressed.connect(func(): remove_choice_effect(choice_index, effect_index))
-	row.add_child(delete_btn)
-
-	return row
+		return EffectRowBuilderScript.create_effect_row(
+			effect, _target_helper.variable_names,
+			func(t): update_choice_effect(choice_index, effect_index, "variable", t),
+			func(op): update_choice_effect(choice_index, effect_index, "operation", op); _rebuild_choices_list(),
+			func(t): update_choice_effect(choice_index, effect_index, "value", t),
+			func(): remove_choice_effect(choice_index, effect_index)
+		)
 
 func _update_redirect_summary() -> void:
 	if _sequence == null or _sequence.ending == null or _sequence.ending.auto_consequence == null:

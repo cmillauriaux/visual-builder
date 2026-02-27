@@ -1,6 +1,7 @@
 extends RefCounted
 
 const VALID_OPERATIONS := ["set", "increment", "decrement", "delete"]
+const OPERATION_LABELS := ["Assigner", "Incrémenter", "Décrémenter", "Supprimer"]
 
 var variable: String = ""
 var operation: String = ""
