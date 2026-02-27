@@ -28,14 +28,14 @@ func test_variables_button_exists():
 func test_variables_button_visible_at_chapters():
 	var story = _make_story()
 	_main._editor_main.open_story(story)
-	_main._refresh_current_view()
+	_main.refresh_current_view()
 	assert_true(_main._variables_button.visible, "Visible au niveau chapters")
 
 func test_variables_button_visible_at_scenes():
 	var story = _make_story()
 	_main._editor_main.open_story(story)
 	_main._editor_main.navigate_to_chapter(story.chapters[0].uuid)
-	_main._refresh_current_view()
+	_main.refresh_current_view()
 	assert_true(_main._variables_button.visible, "Visible au niveau scenes")
 
 func test_variables_button_visible_at_sequences():
@@ -43,7 +43,7 @@ func test_variables_button_visible_at_sequences():
 	_main._editor_main.open_story(story)
 	_main._editor_main.navigate_to_chapter(story.chapters[0].uuid)
 	_main._editor_main.navigate_to_scene(story.chapters[0].scenes[0].uuid)
-	_main._refresh_current_view()
+	_main.refresh_current_view()
 	assert_true(_main._variables_button.visible, "Visible au niveau sequences")
 
 func test_variables_button_hidden_at_sequence_edit():
@@ -52,7 +52,7 @@ func test_variables_button_hidden_at_sequence_edit():
 	_main._editor_main.navigate_to_chapter(story.chapters[0].uuid)
 	_main._editor_main.navigate_to_scene(story.chapters[0].scenes[0].uuid)
 	_main._editor_main.navigate_to_sequence(story.chapters[0].scenes[0].sequences[0].uuid)
-	_main._refresh_current_view()
+	_main.refresh_current_view()
 	assert_false(_main._variables_button.visible, "Caché au niveau sequence_edit")
 
 # --- Panneau Variables ---
@@ -76,7 +76,7 @@ func test_variable_names_passed_to_ending_editor():
 	_main._editor_main.navigate_to_scene(story.chapters[0].scenes[0].uuid)
 	var seq = story.chapters[0].scenes[0].sequences[0]
 	_main._editor_main.navigate_to_sequence(seq.uuid)
-	_main._load_sequence_editors(seq)
+	_main.load_sequence_editors(seq)
 	assert_has(_main._ending_editor.get_variable_names(), "score")
 
 # --- Intégration variable names → condition editor ---

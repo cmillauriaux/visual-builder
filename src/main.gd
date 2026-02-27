@@ -362,21 +362,3 @@ func update_view() -> void:
 	_breadcrumb.set_current_level(level)
 	_breadcrumb.set_path(_editor_main.get_breadcrumb_path())
 	_top_play_button.visible = (level in ["chapters", "scenes", "sequences"]) and not _play_ctrl.is_story_play_mode()
-
-
-# --- Alias de compatibilité (utilisés par les tests existants) ---
-
-func _update_view() -> void:
-	update_view()
-
-
-func _refresh_current_view() -> void:
-	refresh_current_view()
-
-
-func _load_sequence_editors(seq) -> void:
-	load_sequence_editors(seq)
-
-
-func _update_ending_tab_indicator() -> void:
-	_nav_ctrl._update_ending_tab_indicator()

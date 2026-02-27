@@ -41,8 +41,8 @@ func _navigate_to_sequence_edit() -> void:
 	_main._editor_main.navigate_to_chapter(ch.uuid)
 	_main._editor_main.navigate_to_scene(sc.uuid)
 	_main._editor_main.navigate_to_sequence(seq.uuid)
-	_main._load_sequence_editors(seq)
-	_main._update_view()
+	_main.load_sequence_editors(seq)
+	_main.update_view()
 
 # --- Tests Layout ---
 
@@ -91,7 +91,7 @@ func test_sequence_panel_hidden_at_chapters():
 	var story = Story.new()
 	story.title = "Test"
 	_main._editor_main.open_story(story)
-	_main._update_view()
+	_main.update_view()
 	assert_false(_main._sequence_editor_panel.visible)
 
 # --- Test SequenceEditor integration ---

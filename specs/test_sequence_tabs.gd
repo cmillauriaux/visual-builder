@@ -41,8 +41,8 @@ func _navigate_to_sequence(seq: Sequence = null) -> Sequence:
 	_main._editor_main.navigate_to_chapter(ch.uuid)
 	_main._editor_main.navigate_to_scene(sc.uuid)
 	_main._editor_main.navigate_to_sequence(seq.uuid)
-	_main._load_sequence_editors(seq)
-	_main._update_view()
+	_main.load_sequence_editors(seq)
+	_main.update_view()
 	return seq
 
 # --- Structure TabContainer ---
@@ -139,7 +139,7 @@ func test_dialogues_tab_reset_on_sequence_load():
 func test_terminaison_tab_no_indicator_when_no_ending():
 	var seq = _navigate_to_sequence()
 	seq.ending = null
-	_main._update_ending_tab_indicator()
+	_main._nav_ctrl._update_ending_tab_indicator()
 	assert_eq(_main._tab_container.get_tab_title(1), "Terminaison")
 
 func test_terminaison_tab_indicator_when_ending_configured():
@@ -150,7 +150,7 @@ func test_terminaison_tab_indicator_when_ending_configured():
 	cons.type = "game_over"
 	ending.auto_consequence = cons
 	seq.ending = ending
-	_main._update_ending_tab_indicator()
+	_main._nav_ctrl._update_ending_tab_indicator()
 	assert_eq(_main._tab_container.get_tab_title(1), "Terminaison ●")
 
 func test_indicator_updates_on_ending_changed():
@@ -174,11 +174,11 @@ func test_indicator_removed_when_ending_cleared():
 	cons.type = "game_over"
 	ending.auto_consequence = cons
 	seq.ending = ending
-	_main._update_ending_tab_indicator()
+	_main._nav_ctrl._update_ending_tab_indicator()
 	assert_eq(_main._tab_container.get_tab_title(1), "Terminaison ●")
 	# Clear ending
 	seq.ending = null
-	_main._update_ending_tab_indicator()
+	_main._nav_ctrl._update_ending_tab_indicator()
 	assert_eq(_main._tab_container.get_tab_title(1), "Terminaison")
 
 # --- Fonctionnalités existantes ---

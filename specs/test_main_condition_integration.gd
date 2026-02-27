@@ -33,7 +33,7 @@ func before_each():
 	_main._editor_main.navigate_to_chapter(chapter.uuid)
 	_main._editor_main.navigate_to_scene(scene.uuid)
 	_main._sequence_graph_view.load_scene(scene)
-	_main._update_view()
+	_main.update_view()
 
 # --- Bouton création condition ---
 
@@ -45,7 +45,7 @@ func test_create_condition_button_visible_at_sequences_level():
 
 func test_create_condition_button_hidden_at_other_levels():
 	_main._editor_main.navigate_back()  # → scenes
-	_main._update_view()
+	_main.update_view()
 	assert_false(_main._create_condition_button.visible)
 
 func test_create_condition_button_creates_condition():
