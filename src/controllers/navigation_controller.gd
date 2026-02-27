@@ -269,22 +269,8 @@ func _update_ending_tab_indicator() -> void:
 
 
 func update_ending_targets() -> void:
-	var sequences: Array = []
-	var conditions: Array = []
-	var scenes: Array = []
-	var chapters: Array = []
-	if _main._editor_main._current_scene:
-		for seq in _main._editor_main._current_scene.sequences:
-			sequences.append({"uuid": seq.uuid, "name": seq.seq_name})
-		for c in _main._editor_main._current_scene.conditions:
-			conditions.append({"uuid": c.uuid, "name": c.condition_name})
-	if _main._editor_main._current_chapter:
-		for sc in _main._editor_main._current_chapter.scenes:
-			scenes.append({"uuid": sc.uuid, "name": sc.scene_name})
-	if _main._editor_main._story:
-		for ch in _main._editor_main._story.chapters:
-			chapters.append({"uuid": ch.uuid, "name": ch.chapter_name})
-	_main._ending_editor.set_available_targets(sequences, scenes, chapters, conditions)
+	var targets = _build_available_targets()
+	_main._ending_editor.set_available_targets(targets["sequences"], targets["scenes"], targets["chapters"], targets["conditions"])
 
 
 func _update_ending_connections() -> void:
@@ -306,6 +292,11 @@ func load_condition_editor(cond) -> void:
 
 
 func _update_condition_targets() -> void:
+	var targets = _build_available_targets()
+	_main._condition_editor.set_available_targets(targets["sequences"], targets["scenes"], targets["chapters"], targets["conditions"])
+
+
+func _build_available_targets() -> Dictionary:
 	var sequences: Array = []
 	var conditions: Array = []
 	var scenes: Array = []
@@ -321,4 +312,4 @@ func _update_condition_targets() -> void:
 	if _main._editor_main._story:
 		for ch in _main._editor_main._story.chapters:
 			chapters.append({"uuid": ch.uuid, "name": ch.chapter_name})
-	_main._condition_editor.set_available_targets(sequences, scenes, chapters, conditions)
+	return {"sequences": sequences, "conditions": conditions, "scenes": scenes, "chapters": chapters}

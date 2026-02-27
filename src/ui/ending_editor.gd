@@ -6,6 +6,7 @@ const EndingScript = preload("res://src/models/ending.gd")
 const ConsequenceScript = preload("res://src/models/consequence.gd")
 const ChoiceScript = preload("res://src/models/choice.gd")
 const VariableEffectScript = preload("res://src/models/variable_effect.gd")
+const ConsequenceTargetHelperScript = preload("res://src/ui/consequence_target_helper.gd")
 
 const OPERATION_TYPES = ["set", "increment", "decrement", "delete"]
 const OPERATION_LABELS = ["Assigner", "Incrémenter", "Décrémenter", "Supprimer"]
@@ -13,11 +14,7 @@ const OPERATION_LABELS = ["Assigner", "Incrémenter", "Décrémenter", "Supprime
 signal ending_changed
 
 var _sequence = null
-var _available_sequences: Array = []   # [{uuid, name}]
-var _available_conditions: Array = [] # [{uuid, name}]
-var _available_scenes: Array = []     # [{uuid, name}]
-var _available_chapters: Array = []   # [{uuid, name}]
-var _variable_names: Array = []       # [String]
+var _target_helper = ConsequenceTargetHelperScript.new()
 
 # UI references
 var _mode_none_btn: Button
@@ -33,10 +30,13 @@ var _add_choice_btn: Button
 var _redirect_effects_list: VBoxContainer
 var _add_redirect_effect_btn: Button
 
-# Consequence type labels
-const CONSEQUENCE_TYPES = ["redirect_sequence", "redirect_condition", "redirect_scene", "redirect_chapter", "game_over", "to_be_continued"]
-const CONSEQUENCE_LABELS = ["Séquence", "Condition", "Scène", "Chapitre", "Game Over", "To be continued"]
-const REDIRECT_TYPES = ["redirect_sequence", "redirect_condition", "redirect_scene", "redirect_chapter"]
+# Consequence type labels (delegated to helper)
+var CONSEQUENCE_TYPES: Array:
+	get: return ConsequenceTargetHelperScript.CONSEQUENCE_TYPES
+var CONSEQUENCE_LABELS: Array:
+	get: return ConsequenceTargetHelperScript.CONSEQUENCE_LABELS
+var REDIRECT_TYPES: Array:
+	get: return ConsequenceTargetHelperScript.REDIRECT_TYPES
 
 func _ready() -> void:
 	_build_ui()
@@ -170,10 +170,7 @@ func set_auto_consequence(type: String, target: String) -> void:
 	_sequence.ending.auto_consequence = consequence
 
 func set_available_targets(sequences: Array, scenes: Array, chapters: Array, conditions: Array = []) -> void:
-	_available_sequences = sequences
-	_available_conditions = conditions
-	_available_scenes = scenes
-	_available_chapters = chapters
+	_target_helper.set_available_targets(sequences, scenes, chapters, conditions)
 	# Refresh dropdowns if already showing
 	if _redirect_container.visible:
 		_populate_redirect_target()
@@ -181,22 +178,22 @@ func set_available_targets(sequences: Array, scenes: Array, chapters: Array, con
 		_rebuild_choices_list()
 
 func get_available_sequences() -> Array:
-	return _available_sequences
+	return _target_helper.available_sequences
 
 func get_available_conditions() -> Array:
-	return _available_conditions
+	return _target_helper.available_conditions
 
 func get_available_scenes() -> Array:
-	return _available_scenes
+	return _target_helper.available_scenes
 
 func get_available_chapters() -> Array:
-	return _available_chapters
+	return _target_helper.available_chapters
 
 func set_variable_names(names: Array) -> void:
-	_variable_names = names
+	_target_helper.variable_names = names
 
 func get_variable_names() -> Array:
-	return _variable_names
+	return _target_helper.variable_names
 
 # --- Effects API ---
 
@@ -359,16 +356,7 @@ func _populate_redirect_target() -> void:
 		_redirect_target_dropdown.set_item_metadata(_redirect_target_dropdown.item_count - 1, item["uuid"])
 
 func _get_targets_for_type(ctype: String) -> Array:
-	match ctype:
-		"redirect_sequence":
-			return _available_sequences
-		"redirect_condition":
-			return _available_conditions
-		"redirect_scene":
-			return _available_scenes
-		"redirect_chapter":
-			return _available_chapters
-	return []
+	return _target_helper.get_targets_for_type(ctype)
 
 func _on_add_redirect_effect_pressed() -> void:
 	add_redirect_effect()
@@ -392,7 +380,7 @@ func _create_effect_row(effect, context: String, choice_index: int, effect_index
 	var_edit.text = effect.variable
 	var_edit.placeholder_text = "Variable..."
 	var_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var_edit.tooltip_text = ", ".join(_variable_names) if _variable_names.size() > 0 else ""
+	var_edit.tooltip_text = ", ".join(_target_helper.variable_names) if _target_helper.variable_names.size() > 0 else ""
 	if context == "redirect":
 		var_edit.text_changed.connect(func(t): update_redirect_effect(effect_index, "variable", t))
 	else:
@@ -562,11 +550,7 @@ func _create_choice_row(index: int, choice) -> VBoxContainer:
 	return container
 
 func _populate_target_dropdown(dropdown: OptionButton, ctype: String) -> void:
-	dropdown.clear()
-	var items = _get_targets_for_type(ctype)
-	for item in items:
-		dropdown.add_item(item["name"])
-		dropdown.set_item_metadata(dropdown.item_count - 1, item["uuid"])
+	_target_helper.populate_target_dropdown(dropdown, ctype)
 
 func _on_choice_text_changed(new_text: String, index: int) -> void:
 	if _sequence == null or _sequence.ending == null:

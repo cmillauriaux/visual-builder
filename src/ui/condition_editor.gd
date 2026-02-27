@@ -4,21 +4,22 @@ extends VBoxContainer
 
 const ConditionRuleScript = preload("res://src/models/condition_rule.gd")
 const ConsequenceScript = preload("res://src/models/consequence.gd")
+const ConsequenceTargetHelperScript = preload("res://src/ui/consequence_target_helper.gd")
 
 signal condition_changed
 
 const OPERATOR_TYPES = ["equal", "not_equal", "greater_than", "greater_than_equal", "less_than", "less_than_equal", "exists", "not_exists"]
 const OPERATOR_LABELS = ["Equal", "Not Equal", "Greater Than", "Greater Than Equal", "Less Than", "Less Than Equal", "Exists", "Not Exists"]
-const CONSEQUENCE_TYPES = ["redirect_sequence", "redirect_condition", "redirect_scene", "redirect_chapter", "game_over", "to_be_continued"]
-const CONSEQUENCE_LABELS = ["Séquence", "Condition", "Scène", "Chapitre", "Game Over", "To be continued"]
-const REDIRECT_TYPES = ["redirect_sequence", "redirect_condition", "redirect_scene", "redirect_chapter"]
+
+var CONSEQUENCE_TYPES: Array:
+	get: return ConsequenceTargetHelperScript.CONSEQUENCE_TYPES
+var CONSEQUENCE_LABELS: Array:
+	get: return ConsequenceTargetHelperScript.CONSEQUENCE_LABELS
+var REDIRECT_TYPES: Array:
+	get: return ConsequenceTargetHelperScript.REDIRECT_TYPES
 
 var _condition = null
-var _available_sequences: Array = []
-var _available_conditions: Array = []
-var _available_scenes: Array = []
-var _available_chapters: Array = []
-var _variable_names: Array = []
+var _target_helper = ConsequenceTargetHelperScript.new()
 
 # UI references
 var _rules_list: VBoxContainer
@@ -92,8 +93,8 @@ func add_rule() -> void:
 	var cons = ConsequenceScript.new()
 	cons.type = "redirect_sequence"
 	# Set first available target if any
-	if _available_sequences.size() > 0:
-		cons.target = _available_sequences[0]["uuid"]
+	if _target_helper.available_sequences.size() > 0:
+		cons.target = _target_helper.available_sequences[0]["uuid"]
 	rule.consequence = cons
 	_condition.rules.append(rule)
 	_rebuild_rules_list()
@@ -123,32 +124,29 @@ func get_rule_count_ui() -> int:
 	return _condition.rules.size()
 
 func set_available_targets(sequences: Array, scenes: Array, chapters: Array, conditions: Array = []) -> void:
-	_available_sequences = sequences
-	_available_conditions = conditions
-	_available_scenes = scenes
-	_available_chapters = chapters
+	_target_helper.set_available_targets(sequences, scenes, chapters, conditions)
 	if _condition:
 		_rebuild_rules_list()
 		_refresh_default_ui()
 
 func get_available_sequences() -> Array:
-	return _available_sequences
+	return _target_helper.available_sequences
 
 func get_available_conditions() -> Array:
-	return _available_conditions
+	return _target_helper.available_conditions
 
 func get_available_scenes() -> Array:
-	return _available_scenes
+	return _target_helper.available_scenes
 
 func get_available_chapters() -> Array:
-	return _available_chapters
+	return _target_helper.available_chapters
 
 func set_variable_names(names: Array) -> void:
-	_variable_names = names
+	_target_helper.variable_names = names
 	_rebuild_rules_list()
 
 func get_variable_names() -> Array:
-	return _variable_names
+	return _target_helper.variable_names
 
 # --- Private ---
 
@@ -203,7 +201,7 @@ func _create_rule_row(index: int, rule) -> VBoxContainer:
 	var_edit.placeholder_text = "Nom de la variable..."
 	var_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var_edit.name = "VariableEdit"
-	var_edit.tooltip_text = "Variables disponibles : " + ", ".join(_variable_names) if _variable_names.size() > 0 else ""
+	var_edit.tooltip_text = "Variables disponibles : " + ", ".join(_target_helper.variable_names) if _target_helper.variable_names.size() > 0 else ""
 	var_edit.text_changed.connect(_on_rule_variable_changed.bind(index))
 	var_row.add_child(var_edit)
 
@@ -383,20 +381,7 @@ func _on_default_target_changed(target_index: int) -> void:
 # --- Target dropdowns ---
 
 func _populate_target_dropdown(dropdown: OptionButton, ctype: String) -> void:
-	dropdown.clear()
-	var items = _get_targets_for_type(ctype)
-	for item in items:
-		dropdown.add_item(item["name"])
-		dropdown.set_item_metadata(dropdown.item_count - 1, item["uuid"])
+	_target_helper.populate_target_dropdown(dropdown, ctype)
 
 func _get_targets_for_type(ctype: String) -> Array:
-	match ctype:
-		"redirect_sequence":
-			return _available_sequences
-		"redirect_condition":
-			return _available_conditions
-		"redirect_scene":
-			return _available_scenes
-		"redirect_chapter":
-			return _available_chapters
-	return []
+	return _target_helper.get_targets_for_type(ctype)
