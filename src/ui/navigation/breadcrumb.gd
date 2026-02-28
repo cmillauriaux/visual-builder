@@ -5,6 +5,7 @@ extends HBoxContainer
 signal level_clicked(index: int)
 signal story_context_menu_requested()
 signal story_rename_requested()
+signal menu_config_requested()
 
 var _path: Array = []
 var _current_level: String = "chapters"
@@ -12,6 +13,7 @@ var _popup_menu: PopupMenu = null
 
 const POPUP_ID_RENAME = 0
 const POPUP_ID_GO_CHAPTERS = 1
+const POPUP_ID_MENU_CONFIG = 2
 
 func set_path(path: Array) -> void:
 	_path = path.duplicate()
@@ -58,6 +60,7 @@ func _update_popup_items() -> void:
 		return
 	_popup_menu.clear()
 	_popup_menu.add_item("Renommer", POPUP_ID_RENAME)
+	_popup_menu.add_item("Configurer le menu", POPUP_ID_MENU_CONFIG)
 	if _current_level != "chapters":
 		_popup_menu.add_item("Aller aux chapitres", POPUP_ID_GO_CHAPTERS)
 
@@ -85,5 +88,7 @@ func _show_popup_at_story_button() -> void:
 func _on_popup_id_pressed(id: int) -> void:
 	if id == POPUP_ID_RENAME:
 		story_rename_requested.emit()
+	elif id == POPUP_ID_MENU_CONFIG:
+		menu_config_requested.emit()
 	elif id == POPUP_ID_GO_CHAPTERS:
 		level_clicked.emit(0)

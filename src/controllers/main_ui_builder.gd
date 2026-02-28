@@ -69,6 +69,10 @@ static func _build_top_bar(main: Control) -> void:
 	main._variables_button.text = "Variables"
 	main._top_bar.add_child(main._variables_button)
 
+	main._menu_config_button = Button.new()
+	main._menu_config_button.text = "Menu"
+	main._top_bar.add_child(main._menu_config_button)
+
 	# Variable panel popup
 	main._variable_panel_popup = PopupPanel.new()
 	main._variable_panel_popup.size = Vector2i(400, 350)

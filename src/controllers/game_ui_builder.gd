@@ -6,6 +6,7 @@ const SequenceVisualEditorScript = preload("res://src/ui/sequence/sequence_visua
 const ForegroundTransitionScript = preload("res://src/ui/visual/foreground_transition.gd")
 const StoryPlayControllerScript = preload("res://src/ui/play/story_play_controller.gd")
 const SequenceEditorScript = preload("res://src/ui/sequence/sequence_editor.gd")
+const MainMenuScript = preload("res://src/ui/menu/main_menu.gd")
 
 
 static func build(game: Control) -> void:
@@ -14,6 +15,7 @@ static func build(game: Control) -> void:
 	_build_stop_button(game)
 	_build_helpers(game)
 	_build_story_selector(game)
+	_build_main_menu(game)
 
 
 static func _build_visual_editor(game: Control) -> void:
@@ -109,3 +111,11 @@ static func _build_story_selector(game: Control) -> void:
 	scroll.add_child(game._story_list)
 
 	game.add_child(game._story_selector)
+
+
+static func _build_main_menu(game: Control) -> void:
+	game._main_menu = Control.new()
+	game._main_menu.set_script(MainMenuScript)
+	game._main_menu.build_ui()
+	game._main_menu.visible = false
+	game.add_child(game._main_menu)

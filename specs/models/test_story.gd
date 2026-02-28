@@ -119,3 +119,41 @@ func test_find_chapter_by_uuid():
 func test_find_chapter_not_found():
 	var story = Story.new()
 	assert_null(story.find_chapter("nonexistent"))
+
+# --- Tests des champs menu ---
+
+func test_menu_fields_default_values():
+	var story = Story.new()
+	assert_eq(story.menu_title, "", "menu_title doit être vide par défaut")
+	assert_eq(story.menu_subtitle, "", "menu_subtitle doit être vide par défaut")
+	assert_eq(story.menu_background, "", "menu_background doit être vide par défaut")
+
+func test_menu_fields_to_dict():
+	var story = Story.new()
+	story.menu_title = "Mon Jeu"
+	story.menu_subtitle = "Une aventure épique"
+	story.menu_background = "backgrounds/menu_bg.png"
+	var d = story.to_dict()
+	assert_eq(d["menu_title"], "Mon Jeu")
+	assert_eq(d["menu_subtitle"], "Une aventure épique")
+	assert_eq(d["menu_background"], "backgrounds/menu_bg.png")
+
+func test_menu_fields_from_dict():
+	var d = {
+		"title": "Test",
+		"menu_title": "Titre Menu",
+		"menu_subtitle": "Sous-titre",
+		"menu_background": "backgrounds/bg.png",
+	}
+	var story = Story.from_dict(d)
+	assert_eq(story.menu_title, "Titre Menu")
+	assert_eq(story.menu_subtitle, "Sous-titre")
+	assert_eq(story.menu_background, "backgrounds/bg.png")
+
+func test_menu_fields_from_dict_missing():
+	# Rétrocompatibilité : les vieilles stories n'ont pas ces champs
+	var d = {"title": "Old Story"}
+	var story = Story.from_dict(d)
+	assert_eq(story.menu_title, "")
+	assert_eq(story.menu_subtitle, "")
+	assert_eq(story.menu_background, "")

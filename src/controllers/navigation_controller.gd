@@ -9,9 +9,11 @@ const SceneDataScript = preload("res://src/models/scene_data.gd")
 const SequenceScript = preload("res://src/models/sequence.gd")
 const StorySaver = preload("res://src/persistence/story_saver.gd")
 const RenameDialogScript = preload("res://src/ui/dialogs/rename_dialog.gd")
+const MenuConfigDialogScript = preload("res://src/ui/dialogs/menu_config_dialog.gd")
 
 var _main: Control
 var _rename_dialog: ConfirmationDialog
+var _menu_config_dialog: ConfirmationDialog
 
 
 func setup(main: Control) -> void:
@@ -243,6 +245,25 @@ func on_variables_pressed() -> void:
 		return
 	_main._variable_panel.load_story(_main._editor_main._story)
 	_main._variable_panel_popup.popup_centered()
+
+
+func on_menu_config_requested() -> void:
+	if _main._editor_main._story == null:
+		return
+	if _menu_config_dialog != null and is_instance_valid(_menu_config_dialog):
+		_menu_config_dialog.queue_free()
+	_menu_config_dialog = ConfirmationDialog.new()
+	_menu_config_dialog.set_script(MenuConfigDialogScript)
+	_main.add_child(_menu_config_dialog)
+	_menu_config_dialog.setup(_main._editor_main._story)
+	_menu_config_dialog.menu_config_confirmed.connect(_on_menu_config_confirmed)
+	_menu_config_dialog.popup_centered()
+
+
+func _on_menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_background: String) -> void:
+	_main._editor_main._story.menu_title = menu_title
+	_main._editor_main._story.menu_subtitle = menu_subtitle
+	_main._editor_main._story.menu_background = menu_background
 
 
 func on_variables_changed() -> void:

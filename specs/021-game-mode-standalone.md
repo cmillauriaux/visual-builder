@@ -94,15 +94,15 @@ Pour exporter un jeu lié à une seule histoire :
 
 ## Critères d'acceptation
 
-- [ ] `game.tscn` est une scène indépendante qui se lance sans erreur
-- [ ] Le jeu charge une story depuis `user://stories/`
-- [ ] Les dialogues s'affichent avec le typewriter
-- [ ] Les transitions de foregrounds fonctionnent (fade in/out, crossfade)
-- [ ] Les choix s'affichent et sont fonctionnels
-- [ ] Un message de fin s'affiche (game over, to be continued, etc.)
-- [ ] Aucune référence aux fichiers éditeur (views, editors, navigation, main_ui_builder)
-- [ ] Le bouton Stop permet de revenir à la sélection de story
-- [ ] Les tests GUT passent
+- [x] `game.tscn` est une scène indépendante qui se lance sans erreur
+- [x] Le jeu charge une story depuis `user://stories/`
+- [x] Les dialogues s'affichent avec le typewriter
+- [x] Les transitions de foregrounds fonctionnent (fade in/out, crossfade)
+- [x] Les choix s'affichent et sont fonctionnels
+- [x] Un message de fin s'affiche (game over, to be continued, etc.)
+- [x] Aucune référence aux fichiers éditeur (views, editors, navigation, main_ui_builder)
+- [x] Le bouton Stop permet de revenir à la sélection de story
+- [x] Les tests GUT passent
 
 ## Configuration export
 

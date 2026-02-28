@@ -13,6 +13,9 @@ var chapters: Array = []  # Array[Chapter]
 var variables: Array = []  # Array[VariableDefinition]
 var connections: Array = []  # Array[Dictionary] — {"from": uuid, "to": uuid}
 var entry_point_uuid: String = ""
+var menu_title: String = ""
+var menu_subtitle: String = ""
+var menu_background: String = ""
 
 func _init():
 	var now = _iso_now()
@@ -64,6 +67,9 @@ func to_dict() -> Dictionary:
 		"variables": var_arr,
 		"connections": conn_arr,
 		"entry_point": entry_point_uuid,
+		"menu_title": menu_title,
+		"menu_subtitle": menu_subtitle,
+		"menu_background": menu_background,
 	}
 
 static func from_dict(d: Dictionary):
@@ -89,6 +95,9 @@ static func from_dict(d: Dictionary):
 			story.connections.append(conn)
 
 	story.entry_point_uuid = d.get("entry_point", "")
+	story.menu_title = d.get("menu_title", "")
+	story.menu_subtitle = d.get("menu_subtitle", "")
+	story.menu_background = d.get("menu_background", "")
 
 	return story
 

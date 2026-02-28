@@ -12,6 +12,7 @@ extends Control
 const GameUIBuilder = preload("res://src/controllers/game_ui_builder.gd")
 const GamePlayControllerScript = preload("res://src/controllers/game_play_controller.gd")
 const StorySaver = preload("res://src/persistence/story_saver.gd")
+const GameSettings = preload("res://src/ui/menu/game_settings.gd")
 
 ## Chemin vers la story à charger automatiquement.
 ## Si vide, affiche le sélecteur. Peut pointer vers res:// ou user://.
@@ -38,11 +39,21 @@ var _stop_button: Button
 var _story_selector: PanelContainer
 var _story_list: VBoxContainer
 
+# UI — Menu principal
+var _main_menu: Control
+
 # State
 var _current_story = null
+var _current_story_path: String = ""
+var _settings: RefCounted
 
 
 func _ready() -> void:
+	# Charger les réglages
+	_settings = GameSettings.new()
+	_settings.load_settings()
+	_settings.apply_settings()
+
 	GameUIBuilder.build(self)
 
 	_play_ctrl = Node.new()
@@ -50,7 +61,7 @@ func _ready() -> void:
 	_play_ctrl.setup(self)
 	add_child(_play_ctrl)
 
-	# Connect signals
+	# Connecter les signaux du play
 	_stop_button.pressed.connect(_play_ctrl.on_stop_pressed)
 	_typewriter_timer.timeout.connect(_play_ctrl.on_typewriter_tick)
 	_story_play_ctrl.sequence_play_requested.connect(_play_ctrl.on_sequence_play_requested)
@@ -60,32 +71,58 @@ func _ready() -> void:
 	_sequence_editor_ctrl.play_stopped.connect(_play_ctrl.on_play_stopped)
 	_play_ctrl.play_finished_show_selector.connect(_on_play_finished_return)
 
+	# Connecter les signaux du menu principal
+	_main_menu.new_game_pressed.connect(_on_new_game)
+	_main_menu.load_game_pressed.connect(_on_load_game)
+	_main_menu.quit_pressed.connect(_on_quit)
+	_main_menu.set_settings(_settings)
+
 	if story_path != "":
-		_load_and_play(story_path)
+		_load_story_and_show_menu(story_path)
 	else:
 		_show_story_selector()
 
 
-func _load_and_play(path: String) -> void:
+func _load_story_and_show_menu(path: String) -> void:
 	var story = StorySaver.load_story(path)
 	if story == null:
 		_show_error("Impossible de charger l'histoire depuis : " + path)
 		return
 	_current_story = story
+	_current_story_path = path
+	_show_main_menu(story)
+
+
+func _show_main_menu(story) -> void:
 	_story_selector.visible = false
-	_play_ctrl.start_story(story)
+	_stop_button.visible = false
+	_main_menu.setup(story, _current_story_path)
+	_main_menu.show_menu()
+
+
+func _on_new_game() -> void:
+	_main_menu.hide_menu()
+	_play_ctrl.start_story(_current_story)
+
+
+func _on_load_game() -> void:
+	_show_info("Fonctionnalité à venir")
+
+
+func _on_quit() -> void:
+	get_tree().quit()
 
 
 func _on_play_finished_return() -> void:
-	if story_path != "":
-		# Story embarquée : relancer la même story
-		_load_and_play(story_path)
+	if _current_story:
+		_show_main_menu(_current_story)
 	else:
 		_show_story_selector()
 
 
 func _show_story_selector() -> void:
 	_visual_editor.load_sequence(null)
+	_main_menu.hide_menu()
 	_story_selector.visible = true
 	_stop_button.visible = false
 	_refresh_story_list()
@@ -138,10 +175,17 @@ func _add_no_stories_label() -> void:
 
 
 func _on_story_selected(path: String) -> void:
-	_load_and_play(path)
+	_load_story_and_show_menu(path)
 
 
 func _show_error(msg: String) -> void:
+	var dialog = AcceptDialog.new()
+	dialog.dialog_text = msg
+	add_child(dialog)
+	dialog.popup_centered()
+
+
+func _show_info(msg: String) -> void:
 	var dialog = AcceptDialog.new()
 	dialog.dialog_text = msg
 	add_child(dialog)

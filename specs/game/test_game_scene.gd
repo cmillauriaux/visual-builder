@@ -70,16 +70,24 @@ func test_story_path_export_property_exists() -> void:
 	assert_typeof(_game.story_path, TYPE_STRING)
 
 
-func test_load_and_play_with_invalid_path_shows_error() -> void:
-	_game._load_and_play("res://nonexistent_story")
+func test_load_story_with_invalid_path_shows_error() -> void:
+	_game._load_story_and_show_menu("res://nonexistent_story")
 	# Should not crash, error dialog shown
 	pass_test("should not crash on invalid path")
 
 
-func test_on_play_finished_return_shows_selector_when_no_path() -> void:
-	_game._story_selector.visible = false
+func test_on_play_finished_return_shows_menu_when_story_loaded() -> void:
+	# Simuler une story chargée
+	var Story = preload("res://src/models/story.gd")
+	_game._current_story = Story.new()
+	_game._current_story.title = "Test"
+	_game._main_menu.visible = false
 	_game._on_play_finished_return()
-	assert_true(_game._story_selector.visible, "should show selector when story_path is empty")
+	assert_true(_game._main_menu.visible, "should show main menu after play finished")
+
+
+func test_game_has_main_menu() -> void:
+	assert_not_null(_game._main_menu, "game should have a main menu")
 
 
 # --- Helpers ---

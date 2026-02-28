@@ -28,6 +28,7 @@ var _top_stop_button: Button
 var _create_button: Button
 var _create_condition_button: Button
 var _variables_button: Button
+var _menu_config_button: Button
 var _variable_panel_popup: PopupPanel
 var _variable_panel: VBoxContainer
 var _save_button: Button
@@ -105,9 +106,11 @@ func _ready() -> void:
 	_back_button.pressed.connect(_nav_ctrl.on_back_pressed)
 	_breadcrumb.level_clicked.connect(_nav_ctrl.on_breadcrumb_clicked)
 	_breadcrumb.story_rename_requested.connect(_nav_ctrl.on_story_rename_requested)
+	_breadcrumb.menu_config_requested.connect(_nav_ctrl.on_menu_config_requested)
 	_create_button.pressed.connect(_nav_ctrl.on_create_pressed)
 	_create_condition_button.pressed.connect(_nav_ctrl.on_create_condition_pressed)
 	_variables_button.pressed.connect(_nav_ctrl.on_variables_pressed)
+	_menu_config_button.pressed.connect(_nav_ctrl.on_menu_config_requested)
 	_variable_panel.variables_changed.connect(_nav_ctrl.on_variables_changed)
 	_save_button.pressed.connect(_nav_ctrl.on_save_pressed)
 	_load_button.pressed.connect(_nav_ctrl.on_load_pressed)
@@ -359,6 +362,7 @@ func update_view() -> void:
 		_create_button.text = _editor_main.get_create_button_label()
 	_create_condition_button.visible = (level == "sequences")
 	_variables_button.visible = (level in ["chapters", "scenes", "sequences"])
+	_menu_config_button.visible = (level in ["chapters", "scenes", "sequences"])
 	_breadcrumb.set_current_level(level)
 	_breadcrumb.set_path(_editor_main.get_breadcrumb_path())
 	_top_play_button.visible = (level in ["chapters", "scenes", "sequences"]) and not _play_ctrl.is_story_play_mode()
