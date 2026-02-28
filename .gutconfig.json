@@ -13,7 +13,8 @@
     "res://specs/ui/shared/",
     "res://specs/integration/",
     "res://specs/ui/menu/",
-    "res://specs/game/"
+    "res://specs/game/",
+    "res://specs/export/"
   ],
   "prefix": "test_",
   "suffix": ".gd",

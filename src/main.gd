@@ -11,6 +11,7 @@ const ComfyUIConfigScript = preload("res://src/services/comfyui_config.gd")
 const MainUIBuilder = preload("res://src/controllers/main_ui_builder.gd")
 const PlayControllerScript = preload("res://src/controllers/play_controller.gd")
 const NavigationControllerScript = preload("res://src/controllers/navigation_controller.gd")
+const ExportDialogScript = preload("res://src/ui/dialogs/export_dialog.gd")
 
 # Contrôleurs
 var _editor_main: Control
@@ -31,6 +32,7 @@ var _variables_button: Button
 var _menu_config_button: Button
 var _variable_panel_popup: PopupPanel
 var _variable_panel: VBoxContainer
+var _export_button: Button
 var _save_button: Button
 var _load_button: Button
 var _new_story_button: Button
@@ -112,6 +114,7 @@ func _ready() -> void:
 	_variables_button.pressed.connect(_nav_ctrl.on_variables_pressed)
 	_menu_config_button.pressed.connect(_nav_ctrl.on_menu_config_requested)
 	_variable_panel.variables_changed.connect(_nav_ctrl.on_variables_changed)
+	_export_button.pressed.connect(_on_export_pressed)
 	_save_button.pressed.connect(_nav_ctrl.on_save_pressed)
 	_load_button.pressed.connect(_nav_ctrl.on_load_pressed)
 	_new_story_button.pressed.connect(_nav_ctrl.on_new_story_pressed)
@@ -363,6 +366,86 @@ func update_view() -> void:
 	_create_condition_button.visible = (level == "sequences")
 	_variables_button.visible = (level in ["chapters", "scenes", "sequences"])
 	_menu_config_button.visible = (level in ["chapters", "scenes", "sequences"])
+	_export_button.visible = (level in ["chapters", "scenes", "sequences"])
 	_breadcrumb.set_current_level(level)
 	_breadcrumb.set_path(_editor_main.get_breadcrumb_path())
 	_top_play_button.visible = (level in ["chapters", "scenes", "sequences"]) and not _play_ctrl.is_story_play_mode()
+
+
+func _on_export_pressed() -> void:
+	var dialog = ConfirmationDialog.new()
+	dialog.set_script(ExportDialogScript)
+	add_child(dialog)
+	dialog.setup(_editor_main._story)
+	dialog.export_requested.connect(_on_export_requested)
+	dialog.popup_centered()
+
+
+func _on_export_requested(platform: String, output_path: String) -> void:
+	if _editor_main._story == null:
+		return
+	var story_name = _editor_main._story.title.to_lower().replace(" ", "_")
+	var story_path = "user://stories/" + story_name
+	var game_name = _editor_main._story.menu_title if _editor_main._story.menu_title != "" else _editor_main._story.title
+	var script_path = ProjectSettings.globalize_path("res://scripts/export_story.sh")
+	var args = [story_path, "-p", platform, "-n", game_name, "-o", output_path]
+	var output = []
+	var exit_code = OS.execute(script_path, args, output, true)
+	var log_path = output_path + "/export.log"
+	if exit_code == 0:
+		_show_export_result(output_path, log_path)
+	else:
+		_show_export_error(log_path)
+
+
+func _show_export_result(output_path: String, log_path: String) -> void:
+	var dialog = AcceptDialog.new()
+	dialog.title = "Export terminé"
+	dialog.dialog_text = "Le jeu a été exporté dans :\n%s\n\nLog : %s" % [output_path, log_path]
+	add_child(dialog)
+	dialog.popup_centered()
+
+
+func _show_export_error(log_path: String) -> void:
+	var reason = _extract_export_error(log_path)
+	var dialog = AcceptDialog.new()
+	dialog.title = "Erreur d'export"
+	dialog.dialog_text = reason + "\n\nLog : " + log_path
+	add_child(dialog)
+	dialog.popup_centered()
+
+
+func _extract_export_error(log_path: String) -> String:
+	var file = FileAccess.open(log_path, FileAccess.READ)
+	if file == null:
+		return "L'export a échoué (log introuvable)."
+	var content = file.get_as_text()
+	file.close()
+	# Chercher les lignes "due to configuration errors:" suivies de la raison
+	var lines = content.split("\n")
+	var reasons := []
+	var capture_next := false
+	for line in lines:
+		var stripped = line.strip_edges()
+		# Supprimer les codes ANSI
+		var clean = stripped
+		while clean.find("\u001b[") >= 0:
+			var start = clean.find("\u001b[")
+			var end = clean.find("m", start)
+			if end >= 0:
+				clean = clean.substr(0, start) + clean.substr(end + 1)
+			else:
+				break
+		if clean.find("due to configuration errors:") >= 0:
+			capture_next = true
+			continue
+		if capture_next and clean != "" and not clean.begins_with("at:"):
+			reasons.append(clean)
+			capture_next = false
+		if clean.find("ERREUR:") >= 0 and clean.find("due to configuration") < 0 and clean.find("Project export") < 0:
+			var msg = clean.replace("ERROR:", "").replace("ERREUR:", "").strip_edges()
+			if msg != "" and not msg.begins_with("at:"):
+				reasons.append(msg)
+	if reasons.is_empty():
+		return "L'export a échoué."
+	return "\n".join(reasons)

@@ -82,6 +82,10 @@ static func _build_top_bar(main: Control) -> void:
 	main._variable_panel.set_script(VariablePanelScript)
 	main._variable_panel_popup.add_child(main._variable_panel)
 
+	main._export_button = Button.new()
+	main._export_button.text = "Exporter"
+	main._top_bar.add_child(main._export_button)
+
 	main._save_button = Button.new()
 	main._save_button.text = "Sauvegarder"
 	main._top_bar.add_child(main._save_button)
