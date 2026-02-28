@@ -6,8 +6,6 @@ extends Control
 const EditorMainScript = preload("res://src/ui/editors/editor_main.gd")
 const SequenceEditorScript = preload("res://src/ui/sequence/sequence_editor.gd")
 const ImagePickerDialogScript = preload("res://src/ui/dialogs/image_picker_dialog.gd")
-const AIGenerateDialogScript = preload("res://src/ui/dialogs/ai_generate_dialog.gd")
-const ComfyUIConfigScript = preload("res://src/services/comfyui_config.gd")
 const MainUIBuilder = preload("res://src/controllers/main_ui_builder.gd")
 const PlayControllerScript = preload("res://src/controllers/play_controller.gd")
 const NavigationControllerScript = preload("res://src/controllers/navigation_controller.gd")
@@ -48,8 +46,6 @@ var _sequence_editor_panel: VBoxContainer
 var _sequence_toolbar: HBoxContainer
 var _import_bg_button: Button
 var _add_fg_button: Button
-var _ai_generate_btn: Button
-var _ai_generate_dialog: Window
 var _grid_toggle: Button
 var _snap_toggle: Button
 var _play_button: Button
@@ -140,7 +136,6 @@ func _ready() -> void:
 	# Sequence toolbar → Main
 	_import_bg_button.pressed.connect(_on_import_bg_pressed)
 	_add_fg_button.pressed.connect(_on_add_foreground_pressed)
-	_ai_generate_btn.pressed.connect(_on_ai_generate_pressed)
 	_grid_toggle.toggled.connect(_on_grid_toggled)
 	_snap_toggle.toggled.connect(_on_snap_toggled)
 	_add_dialogue_btn.pressed.connect(_on_add_dialogue_pressed)
@@ -213,6 +208,10 @@ func _open_image_picker(mode: int, on_selected: Callable) -> void:
 	var story_name = _get_story_name()
 	picker.setup(mode, story_name)
 	picker.image_selected.connect(on_selected)
+	# Pre-fill IA source image
+	var source = _get_current_source_image(mode)
+	if source != "":
+		picker.set_source_image(source)
 	picker.popup_centered()
 
 
@@ -230,46 +229,20 @@ func _on_fg_file_selected(path: String) -> void:
 	update_preview_for_dialogue(idx)
 
 
-func _on_ai_generate_pressed() -> void:
-	if _sequence_editor_ctrl.get_selected_dialogue_index() < 0:
+func _get_current_source_image(mode: int) -> String:
+	if mode == ImagePickerDialogScript.Mode.FOREGROUND:
+		if _visual_editor._selected_fg_uuid != "":
+			var idx = _sequence_editor_ctrl.get_selected_dialogue_index()
+			if idx >= 0:
+				var fgs = _sequence_editor_ctrl.get_effective_foregrounds(idx)
+				for fg in fgs:
+					if fg.uuid == _visual_editor._selected_fg_uuid:
+						return fg.image
+	elif mode == ImagePickerDialogScript.Mode.BACKGROUND:
 		var seq = _sequence_editor_ctrl.get_sequence()
-		if seq and seq.dialogues.size() > 0:
-			_sequence_editor_ctrl.select_dialogue(0)
-		else:
-			return
-
-	if _ai_generate_dialog == null:
-		_ai_generate_dialog = Window.new()
-		_ai_generate_dialog.set_script(AIGenerateDialogScript)
-		_ai_generate_dialog.foreground_accepted.connect(_on_ai_fg_accepted)
-		add_child(_ai_generate_dialog)
-
-	var config = ComfyUIConfigScript.new()
-	config.load_from()
-
-	# Pre-fill source image if a foreground is selected
-	var source_path = ""
-	if _visual_editor._selected_fg_uuid != "":
-		var idx = _sequence_editor_ctrl.get_selected_dialogue_index()
-		if idx >= 0:
-			var fgs = _sequence_editor_ctrl.get_effective_foregrounds(idx)
-			for fg in fgs:
-				if fg.uuid == _visual_editor._selected_fg_uuid:
-					source_path = fg.image
-					break
-
-	_ai_generate_dialog.setup(config, source_path)
-	if _editor_main._story:
-		_ai_generate_dialog.set_story_name(_editor_main._story.title.to_lower().replace(" ", "_"))
-	_ai_generate_dialog.popup_centered()
-
-
-func _on_ai_fg_accepted(image_path: String) -> void:
-	var idx = _sequence_editor_ctrl.get_selected_dialogue_index()
-	if idx < 0:
-		return
-	_sequence_editor_ctrl.add_foreground_to_current("", image_path)
-	update_preview_for_dialogue(idx)
+		if seq and seq.background != "":
+			return seq.background
+	return ""
 
 
 func _on_add_dialogue_pressed() -> void:

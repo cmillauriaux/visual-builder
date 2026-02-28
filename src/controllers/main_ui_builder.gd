@@ -143,10 +143,6 @@ static func _build_sequence_editor(main: Control) -> void:
 	main._add_fg_button.text = "+ Foreground"
 	main._sequence_toolbar.add_child(main._add_fg_button)
 
-	main._ai_generate_btn = Button.new()
-	main._ai_generate_btn.text = "IA Foreground"
-	main._sequence_toolbar.add_child(main._ai_generate_btn)
-
 	main._grid_toggle = Button.new()
 	main._grid_toggle.text = "Grille"
 	main._grid_toggle.toggle_mode = true

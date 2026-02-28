@@ -1,7 +1,7 @@
 extends GutTest
 
 ## Tests pour ImagePickerDialog — dialog unifié de sélection d'images
-## (onglet Fichier + onglet Galerie)
+## (onglet Fichier + onglet Galerie + onglet IA)
 
 const ImagePickerDialog = preload("res://src/ui/dialogs/image_picker_dialog.gd")
 
@@ -29,14 +29,17 @@ func test_has_tab_container():
 	assert_not_null(_dialog._tab_container)
 	assert_is(_dialog._tab_container, TabContainer)
 
-func test_has_two_tabs():
-	assert_eq(_dialog._tab_container.get_tab_count(), 2)
+func test_has_three_tabs():
+	assert_eq(_dialog._tab_container.get_tab_count(), 3)
 
 func test_tab_fichier_exists():
 	assert_eq(_dialog._tab_container.get_tab_title(0), "Fichier")
 
 func test_tab_galerie_exists():
 	assert_eq(_dialog._tab_container.get_tab_title(1), "Galerie")
+
+func test_tab_ia_exists():
+	assert_eq(_dialog._tab_container.get_tab_title(2), "IA")
 
 func test_has_validate_button():
 	assert_not_null(_dialog._validate_btn)
@@ -405,6 +408,199 @@ func test_on_file_selected_without_story_does_not_set_path():
 	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, "")
 	_dialog._on_file_selected_from_dialog("/some/path/image.png")
 	assert_eq(_dialog._selected_path, "")
+
+# --- Onglet IA : Structure UI ---
+
+func test_ia_has_url_input():
+	assert_not_null(_dialog._ia_url_input)
+	assert_is(_dialog._ia_url_input, LineEdit)
+
+func test_ia_has_token_input():
+	assert_not_null(_dialog._ia_token_input)
+	assert_is(_dialog._ia_token_input, LineEdit)
+	assert_true(_dialog._ia_token_input.secret)
+
+func test_ia_has_prompt_input():
+	assert_not_null(_dialog._ia_prompt_input)
+	assert_is(_dialog._ia_prompt_input, TextEdit)
+
+func test_ia_has_generate_button():
+	assert_not_null(_dialog._ia_generate_btn)
+	assert_is(_dialog._ia_generate_btn, Button)
+
+func test_ia_has_accept_button():
+	assert_not_null(_dialog._ia_accept_btn)
+	assert_is(_dialog._ia_accept_btn, Button)
+
+func test_ia_has_regenerate_button():
+	assert_not_null(_dialog._ia_regenerate_btn)
+	assert_is(_dialog._ia_regenerate_btn, Button)
+
+func test_ia_has_status_label():
+	assert_not_null(_dialog._ia_status_label)
+	assert_is(_dialog._ia_status_label, Label)
+
+func test_ia_has_progress_bar():
+	assert_not_null(_dialog._ia_progress_bar)
+	assert_is(_dialog._ia_progress_bar, ProgressBar)
+
+func test_ia_has_source_path_label():
+	assert_not_null(_dialog._ia_source_path_label)
+	assert_is(_dialog._ia_source_path_label, Label)
+
+func test_ia_has_result_preview():
+	assert_not_null(_dialog._ia_result_preview)
+	assert_is(_dialog._ia_result_preview, TextureRect)
+
+func test_ia_has_choose_source_button():
+	assert_not_null(_dialog._ia_choose_source_btn)
+	assert_is(_dialog._ia_choose_source_btn, Button)
+
+# --- Onglet IA : État initial ---
+
+func test_ia_accept_button_initially_disabled():
+	assert_true(_dialog._ia_accept_btn.disabled)
+
+func test_ia_regenerate_button_initially_disabled():
+	assert_true(_dialog._ia_regenerate_btn.disabled)
+
+func test_ia_progress_bar_initially_hidden():
+	assert_false(_dialog._ia_progress_bar.visible)
+
+func test_ia_generate_button_initially_disabled():
+	assert_true(_dialog._ia_generate_btn.disabled)
+
+func test_ia_progress_bar_is_indeterminate():
+	assert_true(_dialog._ia_progress_bar.indeterminate)
+
+# --- Onglet IA : Generate button state ---
+
+func test_ia_generate_enabled_when_fields_filled():
+	_dialog._ia_source_image_path = "/path/to/image.png"
+	_dialog._ia_url_input.text = "http://localhost:8188"
+	_dialog._ia_prompt_input.text = "a cute cat"
+	_dialog._ia_update_generate_button_state()
+	assert_false(_dialog._ia_generate_btn.disabled)
+
+func test_ia_generate_disabled_without_source():
+	_dialog._ia_source_image_path = ""
+	_dialog._ia_url_input.text = "http://localhost:8188"
+	_dialog._ia_prompt_input.text = "a cute cat"
+	_dialog._ia_update_generate_button_state()
+	assert_true(_dialog._ia_generate_btn.disabled)
+
+func test_ia_generate_disabled_without_prompt():
+	_dialog._ia_source_image_path = "/path/to/img.png"
+	_dialog._ia_url_input.text = "http://localhost:8188"
+	_dialog._ia_prompt_input.text = ""
+	_dialog._ia_update_generate_button_state()
+	assert_true(_dialog._ia_generate_btn.disabled)
+
+func test_ia_generate_disabled_without_url():
+	_dialog._ia_source_image_path = "/path/to/img.png"
+	_dialog._ia_url_input.text = ""
+	_dialog._ia_prompt_input.text = "a cute cat"
+	_dialog._ia_update_generate_button_state()
+	assert_true(_dialog._ia_generate_btn.disabled)
+
+# --- Onglet IA : set_source_image ---
+
+func test_set_source_image_sets_path():
+	_dialog.set_source_image("/path/to/image.png")
+	assert_eq(_dialog._ia_source_image_path, "/path/to/image.png")
+
+func test_set_source_image_updates_label():
+	_dialog.set_source_image("/path/to/image.png")
+	assert_string_contains(_dialog._ia_source_path_label.text, "image.png")
+
+func test_set_source_image_empty_resets_label():
+	_dialog.set_source_image("/path/to/image.png")
+	_dialog.set_source_image("")
+	assert_eq(_dialog._ia_source_image_path, "")
+	assert_string_contains(_dialog._ia_source_path_label.text.to_lower(), "aucune")
+
+# --- Onglet IA : Status messages ---
+
+func test_ia_show_status_message():
+	_dialog._ia_show_status("Uploading...")
+	assert_eq(_dialog._ia_status_label.text, "Uploading...")
+	assert_true(_dialog._ia_progress_bar.visible)
+
+func test_ia_show_error_message():
+	_dialog._ia_show_error("Network error")
+	assert_string_contains(_dialog._ia_status_label.text, "Network error")
+	assert_false(_dialog._ia_progress_bar.visible)
+
+func test_ia_show_success_message():
+	_dialog._ia_show_success("Done!")
+	assert_eq(_dialog._ia_status_label.text, "Done!")
+	assert_false(_dialog._ia_progress_bar.visible)
+
+# --- Onglet IA : Status colors ---
+
+func test_ia_status_color_on_progress():
+	_dialog._ia_show_status("loading")
+	var color = _dialog._ia_status_label.get_theme_color("font_color")
+	assert_almost_eq(color.r, 0.8, 0.1)
+
+func test_ia_status_color_on_success():
+	_dialog._ia_show_success("ok")
+	var color = _dialog._ia_status_label.get_theme_color("font_color")
+	assert_true(color.g > 0.8, "Success should be green")
+
+func test_ia_status_color_on_error():
+	_dialog._ia_show_error("fail")
+	var color = _dialog._ia_status_label.get_theme_color("font_color")
+	assert_true(color.r > 0.8, "Error should be red")
+
+# --- Onglet IA : Inputs disabled/enabled ---
+
+func test_ia_set_inputs_disabled():
+	_dialog._ia_set_inputs_enabled(false)
+	assert_false(_dialog._ia_url_input.editable)
+	assert_false(_dialog._ia_token_input.editable)
+	assert_false(_dialog._ia_prompt_input.editable)
+	assert_true(_dialog._ia_choose_source_btn.disabled)
+
+func test_ia_set_inputs_enabled():
+	_dialog._ia_set_inputs_enabled(false)
+	_dialog._ia_set_inputs_enabled(true)
+	assert_true(_dialog._ia_url_input.editable)
+	assert_true(_dialog._ia_token_input.editable)
+	assert_true(_dialog._ia_prompt_input.editable)
+	assert_false(_dialog._ia_choose_source_btn.disabled)
+
+# --- Onglet IA : Save dir depends on mode ---
+
+func test_ia_save_dir_foreground_mode():
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, "my_story")
+	assert_true(_dialog._get_assets_dir().contains("foregrounds"))
+
+func test_ia_save_dir_background_mode():
+	_dialog.setup(ImagePickerDialog.Mode.BACKGROUND, "my_story")
+	assert_true(_dialog._get_assets_dir().contains("backgrounds"))
+
+# --- Onglet IA : Source preview ---
+
+func test_ia_load_source_preview_with_valid_image():
+	var tmp_dir = "user://test_ia_preview_%d" % randi()
+	DirAccess.make_dir_recursive_absolute(tmp_dir)
+	var img_path = tmp_dir + "/source.png"
+	var img = Image.create(1, 1, false, Image.FORMAT_RGB8)
+	img.save_png(img_path)
+	_dialog._ia_load_source_preview(img_path)
+	assert_not_null(_dialog._ia_source_preview.texture)
+	_remove_dir_recursive(tmp_dir)
+
+func test_ia_load_source_preview_with_invalid_path_clears_texture():
+	_dialog._ia_source_preview.texture = ImageTexture.new()
+	_dialog._ia_load_source_preview("user://nonexistent/path.png")
+	assert_null(_dialog._ia_source_preview.texture)
+
+func test_ia_load_source_preview_empty_path_clears_texture():
+	_dialog._ia_source_preview.texture = ImageTexture.new()
+	_dialog._ia_load_source_preview("")
+	assert_null(_dialog._ia_source_preview.texture)
 
 # --- Helpers ---
 
