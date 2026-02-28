@@ -83,3 +83,11 @@ func test_hide_choice_overlay() -> void:
 	_main._choice_overlay.visible = true
 	_main._play_ctrl._hide_choice_overlay()
 	assert_false(_main._choice_overlay.visible)
+
+
+func test_sequence_fx_player_exists() -> void:
+	assert_not_null(_main._sequence_fx_player, "sequence_fx_player should exist")
+
+
+func test_fx_panel_exists() -> void:
+	assert_not_null(_main._fx_panel, "fx_panel should exist")

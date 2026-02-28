@@ -13,6 +13,8 @@ const DialogueListPanelScript = preload("res://src/ui/sequence/dialogue_list_pan
 const EndingEditorScript = preload("res://src/ui/editors/ending_editor.gd")
 const TransitionPanelScript = preload("res://src/ui/sequence/transition_panel.gd")
 const ForegroundTransitionScript = preload("res://src/ui/visual/foreground_transition.gd")
+const SequenceFxPlayerScript = preload("res://src/ui/visual/sequence_fx_player.gd")
+const FxPanelScript = preload("res://src/ui/sequence/fx_panel.gd")
 const DialogueEditorScript = preload("res://src/ui/editors/dialogue_editor.gd")
 const StoryPlayControllerScript = preload("res://src/ui/play/story_play_controller.gd")
 const ConditionEditorScript = preload("res://src/ui/editors/condition_editor.gd")
@@ -239,16 +241,12 @@ static func _build_sequence_editor(main: Control) -> void:
 	musique_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	musique_tab.add_child(musique_label)
 
-	# Tab 3: FX (placeholder)
-	var fx_tab = VBoxContainer.new()
-	fx_tab.name = "FX"
-	main._tab_container.add_child(fx_tab)
-	var fx_label = Label.new()
-	fx_label.text = "À venir"
-	fx_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	fx_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	fx_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	fx_tab.add_child(fx_label)
+	# Tab 3: FX
+	main._fx_panel = VBoxContainer.new()
+	main._fx_panel.set_script(FxPanelScript)
+	main._fx_panel.name = "FX"
+	main._fx_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	main._tab_container.add_child(main._fx_panel)
 
 	# Legacy dialogue editor (kept for API compat)
 	main._dialogue_editor = Control.new()
@@ -307,6 +305,11 @@ static func _build_helpers(main: Control) -> void:
 	main._foreground_transition = Node.new()
 	main._foreground_transition.set_script(ForegroundTransitionScript)
 	main.add_child(main._foreground_transition)
+
+	# Sequence FX Player
+	main._sequence_fx_player = Node.new()
+	main._sequence_fx_player.set_script(SequenceFxPlayerScript)
+	main.add_child(main._sequence_fx_player)
 
 	# Story Play Controller
 	main._story_play_ctrl = Node.new()

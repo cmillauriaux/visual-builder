@@ -21,6 +21,7 @@ func setup(main: Control) -> void:
 	ctx.story_play_ctrl = main._story_play_ctrl
 	ctx.editor_main = main._editor_main
 	ctx.foreground_transition = main._foreground_transition
+	ctx.sequence_fx_player = main._sequence_fx_player
 	ctx.visual_editor = main._visual_editor
 	ctx.play_button = main._play_button
 	ctx.stop_button = main._stop_button
@@ -55,6 +56,17 @@ func is_story_play_mode() -> bool:
 func on_play_pressed() -> void:
 	_previous_play_foregrounds = []
 	_enter_play_fullscreen()
+	var seq = _ctx.sequence_editor_ctrl.get_sequence()
+	if seq and seq.fx.size() > 0:
+		_ctx.play_button.visible = false
+		_ctx.stop_button.visible = true
+		_ctx.sequence_fx_player.fx_finished.connect(_on_fx_finished_start_play, CONNECT_ONE_SHOT)
+		_ctx.sequence_fx_player.play_fx_list(seq.fx, _ctx.visual_editor)
+	else:
+		_start_play_after_fx()
+
+
+func _start_play_after_fx() -> void:
 	_ctx.sequence_editor_ctrl.start_play()
 	if _ctx.sequence_editor_ctrl.is_playing():
 		_ctx.play_button.visible = false
@@ -66,7 +78,14 @@ func on_play_pressed() -> void:
 		_exit_play_fullscreen()
 
 
+func _on_fx_finished_start_play() -> void:
+	if not _is_play_fullscreen:
+		return
+	_start_play_after_fx()
+
+
 func on_stop_pressed() -> void:
+	_ctx.sequence_fx_player.stop_fx()
 	if _is_story_play_mode:
 		_stop_story_play()
 		return
@@ -214,6 +233,7 @@ func on_top_stop_pressed() -> void:
 
 
 func _stop_story_play() -> void:
+	_ctx.sequence_fx_player.stop_fx()
 	if _ctx.sequence_editor_ctrl.is_playing():
 		_is_story_play_mode = false
 		_ctx.sequence_editor_ctrl.stop_play()
@@ -244,8 +264,18 @@ func on_story_play_sequence_requested(seq) -> void:
 	_ctx.sequence_graph_view.visible = false
 	# Enter fullscreen for play
 	_enter_play_fullscreen()
-	# Start sequence play
+	# Start sequence play (with FX if any)
 	_previous_play_foregrounds = []
+	if seq.fx.size() > 0:
+		_ctx.play_button.visible = false
+		_ctx.stop_button.visible = true
+		_ctx.sequence_fx_player.fx_finished.connect(_on_story_fx_finished_start_play, CONNECT_ONE_SHOT)
+		_ctx.sequence_fx_player.play_fx_list(seq.fx, _ctx.visual_editor)
+	else:
+		_start_story_sequence_play()
+
+
+func _start_story_sequence_play() -> void:
 	_ctx.sequence_editor_ctrl.start_play()
 	if _ctx.sequence_editor_ctrl.is_playing():
 		_ctx.play_button.visible = false
@@ -257,6 +287,12 @@ func on_story_play_sequence_requested(seq) -> void:
 		# Sequence has no dialogues — treat as immediate finish
 		_exit_play_fullscreen()
 		_ctx.story_play_ctrl.on_sequence_finished()
+
+
+func _on_story_fx_finished_start_play() -> void:
+	if not _is_play_fullscreen:
+		return
+	_start_story_sequence_play()
 
 
 func on_story_play_choice_requested(choices) -> void:

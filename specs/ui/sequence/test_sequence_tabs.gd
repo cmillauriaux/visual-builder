@@ -102,10 +102,10 @@ func test_musique_tab_placeholder():
 	var label = _find_label_in(musique_tab, "À venir")
 	assert_not_null(label, "Musique tab should have 'À venir' label")
 
-func test_fx_tab_placeholder():
+func test_fx_tab_has_fx_panel():
 	var fx_tab = _main._tab_container.get_child(3)
-	var label = _find_label_in(fx_tab, "À venir")
-	assert_not_null(label, "FX tab should have 'À venir' label")
+	assert_not_null(fx_tab, "FX tab should exist")
+	assert_eq(fx_tab, _main._fx_panel, "FX tab should be the FxPanel")
 
 func test_musique_placeholder_centered():
 	var musique_tab = _main._tab_container.get_child(2)
@@ -114,12 +114,8 @@ func test_musique_placeholder_centered():
 	if label:
 		assert_eq(label.horizontal_alignment, HORIZONTAL_ALIGNMENT_CENTER)
 
-func test_fx_placeholder_centered():
-	var fx_tab = _main._tab_container.get_child(3)
-	var label = _find_label_in(fx_tab, "À venir")
-	assert_not_null(label)
-	if label:
-		assert_eq(label.horizontal_alignment, HORIZONTAL_ALIGNMENT_CENTER)
+func test_fx_panel_has_add_button():
+	assert_not_null(_main._fx_panel._add_button, "FX panel should have an add button")
 
 # --- Sélection par défaut ---
 

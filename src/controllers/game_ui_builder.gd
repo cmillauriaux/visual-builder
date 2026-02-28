@@ -4,6 +4,7 @@ extends RefCounted
 
 const SequenceVisualEditorScript = preload("res://src/ui/sequence/sequence_visual_editor.gd")
 const ForegroundTransitionScript = preload("res://src/ui/visual/foreground_transition.gd")
+const SequenceFxPlayerScript = preload("res://src/ui/visual/sequence_fx_player.gd")
 const StoryPlayControllerScript = preload("res://src/ui/play/story_play_controller.gd")
 const SequenceEditorScript = preload("res://src/ui/sequence/sequence_editor.gd")
 const MainMenuScript = preload("res://src/ui/menu/main_menu.gd")
@@ -88,6 +89,10 @@ static func _build_helpers(game: Control) -> void:
 	game._foreground_transition = Node.new()
 	game._foreground_transition.set_script(ForegroundTransitionScript)
 	game.add_child(game._foreground_transition)
+
+	game._sequence_fx_player = Node.new()
+	game._sequence_fx_player.set_script(SequenceFxPlayerScript)
+	game.add_child(game._sequence_fx_player)
 
 	game._story_play_ctrl = Node.new()
 	game._story_play_ctrl.set_script(StoryPlayControllerScript)

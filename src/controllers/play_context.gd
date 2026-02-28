@@ -7,6 +7,7 @@ var sequence_editor_ctrl: Control
 var story_play_ctrl: Node
 var editor_main: Control
 var foreground_transition: Node
+var sequence_fx_player: Node
 
 # Visual
 var visual_editor: Control

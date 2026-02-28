@@ -23,6 +23,7 @@ var _play_ctrl: Node
 var _sequence_editor_ctrl: Control
 var _story_play_ctrl: Node
 var _foreground_transition: Node
+var _sequence_fx_player: Node
 
 # UI — Visual
 var _visual_editor: Control

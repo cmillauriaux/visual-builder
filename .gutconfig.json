@@ -14,7 +14,8 @@
     "res://specs/integration/",
     "res://specs/ui/menu/",
     "res://specs/game/",
-    "res://specs/export/"
+    "res://specs/export/",
+    "res://specs/controllers/"
   ],
   "prefix": "test_",
   "suffix": ".gd",

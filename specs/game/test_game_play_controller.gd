@@ -34,6 +34,7 @@ func test_setup_stores_references() -> void:
 	assert_eq(_game._play_ctrl._story_play_ctrl, _game._story_play_ctrl)
 	assert_eq(_game._play_ctrl._visual_editor, _game._visual_editor)
 	assert_eq(_game._play_ctrl._play_overlay, _game._play_overlay)
+	assert_eq(_game._play_ctrl._sequence_fx_player, _game._sequence_fx_player)
 
 
 func test_start_story_shows_menu_button() -> void:
@@ -130,6 +131,10 @@ func _create_sequence_with_dialogue(character: String, text: String):
 	dlg.text = text
 	seq.dialogues.append(dlg)
 	return seq
+
+
+func test_sequence_fx_player_exists() -> void:
+	assert_not_null(_game._sequence_fx_player, "sequence_fx_player should exist")
 
 
 func _create_minimal_story():

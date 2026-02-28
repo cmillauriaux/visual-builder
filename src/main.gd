@@ -79,6 +79,10 @@ var _choice_overlay: PanelContainer
 # Helpers
 var _foreground_transition: Node
 var _story_play_ctrl: Node
+var _sequence_fx_player: Node
+
+# FX Panel
+var _fx_panel: VBoxContainer
 
 
 func _ready() -> void:
@@ -164,6 +168,9 @@ func _ready() -> void:
 	# Visual editor → Main
 	_visual_editor.foreground_selected.connect(_on_foreground_selected)
 	_visual_editor.foreground_deselected.connect(_on_foreground_deselected)
+
+	# FX panel → Main
+	_fx_panel.fx_changed.connect(_on_fx_changed)
 
 	update_view()
 
@@ -305,6 +312,10 @@ func _on_foreground_deselected() -> void:
 	_transition_panel.hide_panel()
 
 
+func _on_fx_changed() -> void:
+	pass  # FX are stored directly on the sequence model; no extra action needed
+
+
 # --- Preview & Dialogue list ---
 
 func update_preview_for_dialogue(index: int) -> void:
@@ -332,6 +343,7 @@ func load_sequence_editors(seq) -> void:
 	if _editor_main._story:
 		_ending_editor.set_variable_names(_editor_main._story.get_variable_names())
 	_ending_editor.load_sequence(seq)
+	_fx_panel.load_sequence(seq)
 	_sequence_editor_ctrl.load_sequence(seq)
 	_rebuild_dialogue_list()
 	_tab_container.current_tab = 0

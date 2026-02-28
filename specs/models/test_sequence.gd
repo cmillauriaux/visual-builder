@@ -5,6 +5,7 @@ const Dialogue = preload("res://src/models/dialogue.gd")
 const Foreground = preload("res://src/models/foreground.gd")
 const Ending = preload("res://src/models/ending.gd")
 const Sequence = preload("res://src/models/sequence.gd")
+const SequenceFx = preload("res://src/models/sequence_fx.gd")
 
 # Tests pour le modèle Sequence
 
@@ -22,6 +23,7 @@ func test_default_values():
 	assert_eq(seq.foregrounds.size(), 0)
 	assert_eq(seq.dialogues.size(), 0)
 	assert_null(seq.ending)
+	assert_eq(seq.fx.size(), 0)
 
 func test_uuid_is_unique():
 	var s1 = Sequence.new()
@@ -181,3 +183,67 @@ func test_subtitle_retrocompat():
 	var dict = {"uuid": "seq-002", "name": "Vide", "position": {"x": 0, "y": 0}}
 	var seq = Sequence.from_dict(dict)
 	assert_eq(seq.subtitle, "")
+
+# --- Tests fx ---
+
+func test_fx_default_empty():
+	var seq = Sequence.new()
+	assert_eq(seq.fx.size(), 0)
+
+func test_fx_to_dict():
+	var seq = Sequence.new()
+	seq.uuid = "seq-fx-001"
+	seq.seq_name = "FX Test"
+	seq.position = Vector2(0, 0)
+	var fx = SequenceFx.new()
+	fx.uuid = "fx-001"
+	fx.fx_type = "screen_shake"
+	fx.duration = 1.0
+	fx.intensity = 2.0
+	seq.fx.append(fx)
+	var dict = seq.to_dict()
+	assert_eq(dict["fx"].size(), 1)
+	assert_eq(dict["fx"][0]["uuid"], "fx-001")
+	assert_eq(dict["fx"][0]["fx_type"], "screen_shake")
+
+func test_fx_from_dict():
+	var dict = {
+		"uuid": "seq-fx-002",
+		"name": "FX Test",
+		"position": {"x": 0, "y": 0},
+		"fx": [
+			{"uuid": "fx-001", "fx_type": "fade_in", "duration": 0.8, "intensity": 1.0},
+			{"uuid": "fx-002", "fx_type": "eyes_blink", "duration": 1.5, "intensity": 0.5},
+		]
+	}
+	var seq = Sequence.from_dict(dict)
+	assert_eq(seq.fx.size(), 2)
+	assert_eq(seq.fx[0].fx_type, "fade_in")
+	assert_eq(seq.fx[0].duration, 0.8)
+	assert_eq(seq.fx[1].fx_type, "eyes_blink")
+	assert_eq(seq.fx[1].intensity, 0.5)
+
+func test_fx_retrocompat():
+	var dict = {"uuid": "seq-old", "name": "Old", "position": {"x": 0, "y": 0}}
+	var seq = Sequence.from_dict(dict)
+	assert_eq(seq.fx.size(), 0)
+
+func test_fx_roundtrip():
+	var seq = Sequence.new()
+	var fx1 = SequenceFx.new()
+	fx1.fx_type = "screen_shake"
+	fx1.duration = 0.3
+	fx1.intensity = 2.5
+	var fx2 = SequenceFx.new()
+	fx2.fx_type = "eyes_blink"
+	fx2.duration = 1.2
+	seq.fx.append(fx1)
+	seq.fx.append(fx2)
+	var dict = seq.to_dict()
+	var restored = Sequence.from_dict(dict)
+	assert_eq(restored.fx.size(), 2)
+	assert_eq(restored.fx[0].fx_type, "screen_shake")
+	assert_eq(restored.fx[0].duration, 0.3)
+	assert_eq(restored.fx[0].intensity, 2.5)
+	assert_eq(restored.fx[1].fx_type, "eyes_blink")
+	assert_eq(restored.fx[1].duration, 1.2)

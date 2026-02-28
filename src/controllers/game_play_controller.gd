@@ -7,6 +7,7 @@ var _game: Control
 var _sequence_editor_ctrl: Control
 var _story_play_ctrl: Node
 var _foreground_transition: Node
+var _sequence_fx_player: Node
 var _visual_editor: Control
 var _play_overlay: PanelContainer
 var _play_character_label: Label
@@ -26,6 +27,7 @@ func setup(game: Control) -> void:
 	_sequence_editor_ctrl = game._sequence_editor_ctrl
 	_story_play_ctrl = game._story_play_ctrl
 	_foreground_transition = game._foreground_transition
+	_sequence_fx_player = game._sequence_fx_player
 	_visual_editor = game._visual_editor
 	_play_overlay = game._play_overlay
 	_play_character_label = game._play_character_label
@@ -42,6 +44,7 @@ func start_story(story) -> void:
 
 func stop_and_restart(story) -> void:
 	_user_stopped = true
+	_sequence_fx_player.stop_fx()
 	if _sequence_editor_ctrl.is_playing():
 		_sequence_editor_ctrl.stop_play()
 	if _story_play_ctrl.is_playing():
@@ -54,6 +57,7 @@ func stop_and_restart(story) -> void:
 
 func stop_current() -> void:
 	_user_stopped = true
+	_sequence_fx_player.stop_fx()
 	if _sequence_editor_ctrl.is_playing():
 		_sequence_editor_ctrl.stop_play()
 	if _story_play_ctrl.is_playing():
@@ -69,6 +73,14 @@ func on_sequence_play_requested(seq) -> void:
 	_sequence_editor_ctrl.load_sequence(seq)
 	_visual_editor.load_sequence(seq)
 	_previous_play_foregrounds = []
+	if seq.fx.size() > 0:
+		_sequence_fx_player.fx_finished.connect(_on_fx_finished_start_sequence, CONNECT_ONE_SHOT)
+		_sequence_fx_player.play_fx_list(seq.fx, _visual_editor)
+	else:
+		_start_sequence_play()
+
+
+func _start_sequence_play() -> void:
 	_sequence_editor_ctrl.start_play()
 	if _sequence_editor_ctrl.is_playing():
 		_play_overlay.visible = true
@@ -76,6 +88,10 @@ func on_sequence_play_requested(seq) -> void:
 		_typewriter_timer.start()
 	else:
 		_story_play_ctrl.on_sequence_finished()
+
+
+func _on_fx_finished_start_sequence() -> void:
+	_start_sequence_play()
 
 
 func on_choice_display_requested(choices) -> void:

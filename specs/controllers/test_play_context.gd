@@ -73,10 +73,10 @@ func test_set_layout_references() -> void:
 
 func test_set_callables() -> void:
 	var ctx = PlayContextScript.new()
-	var called := false
-	ctx.update_preview_for_dialogue = func(_idx): called = true
+	var calls := []
+	ctx.update_preview_for_dialogue = func(_idx): calls.append(true)
 	ctx.update_preview_for_dialogue.call(0)
-	assert_true(called)
+	assert_eq(calls.size(), 1, "callable should have been called once")
 
 
 func test_set_multiple_callables() -> void:

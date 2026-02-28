@@ -3,6 +3,7 @@ extends RefCounted
 const ForegroundScript = preload("res://src/models/foreground.gd")
 const DialogueScript = preload("res://src/models/dialogue.gd")
 const EndingScript = preload("res://src/models/ending.gd")
+const SequenceFxScript = preload("res://src/models/sequence_fx.gd")
 
 var uuid: String = ""
 var seq_name: String = ""
@@ -12,6 +13,7 @@ var background: String = ""
 var foregrounds: Array = []  # Array[Foreground]
 var dialogues: Array = []  # Array[Dialogue]
 var ending = null  # Ending
+var fx: Array = []  # Array[SequenceFx]
 
 func _init():
 	uuid = _generate_uuid()
@@ -44,6 +46,10 @@ func to_dict() -> Dictionary:
 	for dlg in dialogues:
 		dlg_arr.append(dlg.to_dict())
 
+	var fx_arr := []
+	for f in fx:
+		fx_arr.append(f.to_dict())
+
 	var d := {
 		"uuid": uuid,
 		"name": seq_name,
@@ -52,6 +58,7 @@ func to_dict() -> Dictionary:
 		"background": background,
 		"foregrounds": fg_arr,
 		"dialogues": dlg_arr,
+		"fx": fx_arr,
 	}
 
 	if ending:
@@ -76,6 +83,10 @@ static func from_dict(d: Dictionary):
 	if d.has("dialogues"):
 		for dlg_dict in d["dialogues"]:
 			seq.dialogues.append(DialogueScript.from_dict(dlg_dict))
+
+	if d.has("fx"):
+		for fx_dict in d["fx"]:
+			seq.fx.append(SequenceFxScript.from_dict(fx_dict))
 
 	if d.has("ending"):
 		seq.ending = EndingScript.from_dict(d["ending"])
