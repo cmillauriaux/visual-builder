@@ -43,8 +43,8 @@ func test_story_selector_visible_when_no_story_path() -> void:
 	assert_true(_game._story_selector.visible, "story selector should be visible when no story_path")
 
 
-func test_stop_button_hidden_on_start() -> void:
-	assert_false(_game._stop_button.visible, "stop button should be hidden on start")
+func test_menu_button_hidden_on_start() -> void:
+	assert_false(_game._menu_button.visible, "menu button should be hidden on start")
 
 
 func test_play_overlay_hidden_on_start() -> void:
@@ -58,10 +58,10 @@ func test_no_graph_edit_in_tree() -> void:
 
 func test_show_story_selector_resets_state() -> void:
 	_game._story_selector.visible = false
-	_game._stop_button.visible = true
+	_game._menu_button.visible = true
 	_game._show_story_selector()
 	assert_true(_game._story_selector.visible)
-	assert_false(_game._stop_button.visible)
+	assert_false(_game._menu_button.visible)
 
 
 func test_story_path_export_property_exists() -> void:
@@ -88,6 +88,20 @@ func test_on_play_finished_return_shows_menu_when_story_loaded() -> void:
 
 func test_game_has_main_menu() -> void:
 	assert_not_null(_game._main_menu, "game should have a main menu")
+
+
+func test_game_has_pause_menu() -> void:
+	assert_not_null(_game._pause_menu, "game should have a pause menu")
+	assert_false(_game._pause_menu.visible, "pause menu should start hidden")
+
+
+func test_pause_menu_signals_connected() -> void:
+	# Verify that the pause menu signals are connected
+	assert_true(_game._pause_menu.resume_pressed.is_connected(_game._on_pause_resume))
+	assert_true(_game._pause_menu.save_pressed.is_connected(_game._on_pause_save))
+	assert_true(_game._pause_menu.load_pressed.is_connected(_game._on_pause_load))
+	assert_true(_game._pause_menu.new_game_pressed.is_connected(_game._on_pause_new_game))
+	assert_true(_game._pause_menu.quit_pressed.is_connected(_game._on_pause_quit))
 
 
 # --- Helpers ---

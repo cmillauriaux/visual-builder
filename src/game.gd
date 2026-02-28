@@ -33,7 +33,10 @@ var _play_character_label: Label
 var _play_text_label: RichTextLabel
 var _typewriter_timer: Timer
 var _choice_overlay: PanelContainer
-var _stop_button: Button
+
+# UI — Menu button & Pause menu
+var _menu_button: Button
+var _pause_menu: Control
 
 # UI — Story selector
 var _story_selector: PanelContainer
@@ -62,20 +65,27 @@ func _ready() -> void:
 	add_child(_play_ctrl)
 
 	# Connecter les signaux du play
-	_stop_button.pressed.connect(_play_ctrl.on_stop_pressed)
+	_menu_button.pressed.connect(_on_menu_button_pressed)
 	_typewriter_timer.timeout.connect(_play_ctrl.on_typewriter_tick)
 	_story_play_ctrl.sequence_play_requested.connect(_play_ctrl.on_sequence_play_requested)
 	_story_play_ctrl.choice_display_requested.connect(_play_ctrl.on_choice_display_requested)
 	_story_play_ctrl.play_finished.connect(_play_ctrl.on_play_finished)
 	_sequence_editor_ctrl.play_dialogue_changed.connect(_play_ctrl.on_play_dialogue_changed)
 	_sequence_editor_ctrl.play_stopped.connect(_play_ctrl.on_play_stopped)
-	_play_ctrl.play_finished_show_selector.connect(_on_play_finished_return)
+	_play_ctrl.play_finished_show_menu.connect(_on_play_finished_return)
 
 	# Connecter les signaux du menu principal
 	_main_menu.new_game_pressed.connect(_on_new_game)
 	_main_menu.load_game_pressed.connect(_on_load_game)
 	_main_menu.quit_pressed.connect(_on_quit)
 	_main_menu.set_settings(_settings)
+
+	# Connecter les signaux du menu pause
+	_pause_menu.resume_pressed.connect(_on_pause_resume)
+	_pause_menu.save_pressed.connect(_on_pause_save)
+	_pause_menu.load_pressed.connect(_on_pause_load)
+	_pause_menu.new_game_pressed.connect(_on_pause_new_game)
+	_pause_menu.quit_pressed.connect(_on_pause_quit)
 
 	if story_path != "":
 		_load_story_and_show_menu(story_path)
@@ -95,7 +105,7 @@ func _load_story_and_show_menu(path: String) -> void:
 
 func _show_main_menu(story) -> void:
 	_story_selector.visible = false
-	_stop_button.visible = false
+	_menu_button.visible = false
 	_main_menu.setup(story, _current_story_path)
 	_main_menu.show_menu()
 
@@ -120,11 +130,49 @@ func _on_play_finished_return() -> void:
 		_show_story_selector()
 
 
+# --- Menu pause ---
+
+func _on_menu_button_pressed() -> void:
+	get_tree().paused = true
+	_pause_menu.show_menu()
+
+
+func _on_pause_resume() -> void:
+	_pause_menu.hide_menu()
+	get_tree().paused = false
+
+
+func _on_pause_save() -> void:
+	_show_info("Fonctionnalité à venir")
+
+
+func _on_pause_load() -> void:
+	_show_info("Fonctionnalité à venir")
+
+
+func _on_pause_new_game() -> void:
+	_pause_menu.hide_menu()
+	get_tree().paused = false
+	_play_ctrl.stop_and_restart(_current_story)
+
+
+func _on_pause_quit() -> void:
+	_pause_menu.hide_menu()
+	get_tree().paused = false
+	_play_ctrl.stop_current()
+	if _current_story:
+		_show_main_menu(_current_story)
+	else:
+		_show_story_selector()
+
+
+# --- Story selector ---
+
 func _show_story_selector() -> void:
 	_visual_editor.load_sequence(null)
 	_main_menu.hide_menu()
 	_story_selector.visible = true
-	_stop_button.visible = false
+	_menu_button.visible = false
 	_refresh_story_list()
 
 
@@ -188,5 +236,6 @@ func _show_error(msg: String) -> void:
 func _show_info(msg: String) -> void:
 	var dialog = AcceptDialog.new()
 	dialog.dialog_text = msg
+	dialog.process_mode = Node.PROCESS_MODE_ALWAYS
 	add_child(dialog)
 	dialog.popup_centered()

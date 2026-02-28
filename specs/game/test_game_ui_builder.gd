@@ -59,10 +59,17 @@ func test_builds_choice_overlay() -> void:
 	assert_false(_game._choice_overlay.visible, "choice overlay should start hidden")
 
 
-func test_builds_stop_button() -> void:
-	assert_not_null(_game._stop_button, "stop button should be created")
-	assert_false(_game._stop_button.visible, "stop button should start hidden")
-	assert_eq(_game._stop_button.text, "■ Stop")
+func test_builds_menu_button() -> void:
+	assert_not_null(_game._menu_button, "menu button should be created")
+	assert_false(_game._menu_button.visible, "menu button should start hidden")
+	assert_eq(_game._menu_button.text, "☰ Menu")
+	assert_eq(_game._menu_button.process_mode, Node.PROCESS_MODE_ALWAYS)
+
+
+func test_builds_pause_menu() -> void:
+	assert_not_null(_game._pause_menu, "pause menu should be created")
+	assert_false(_game._pause_menu.visible, "pause menu should start hidden")
+	assert_eq(_game._pause_menu.process_mode, Node.PROCESS_MODE_ALWAYS)
 
 
 func test_builds_sequence_editor_ctrl() -> void:

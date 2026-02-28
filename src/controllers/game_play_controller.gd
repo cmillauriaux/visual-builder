@@ -13,12 +13,12 @@ var _play_character_label: Label
 var _play_text_label: RichTextLabel
 var _typewriter_timer: Timer
 var _choice_overlay: PanelContainer
-var _stop_button: Button
+var _menu_button: Button
 
 var _previous_play_foregrounds: Array = []
 var _user_stopped: bool = false
 
-signal play_finished_show_selector()
+signal play_finished_show_menu()
 
 
 func setup(game: Control) -> void:
@@ -32,15 +32,15 @@ func setup(game: Control) -> void:
 	_play_text_label = game._play_text_label
 	_typewriter_timer = game._typewriter_timer
 	_choice_overlay = game._choice_overlay
-	_stop_button = game._stop_button
+	_menu_button = game._menu_button
 
 
 func start_story(story) -> void:
-	_stop_button.visible = true
+	_menu_button.visible = true
 	_story_play_ctrl.start_play_story(story)
 
 
-func on_stop_pressed() -> void:
+func stop_and_restart(story) -> void:
 	_user_stopped = true
 	if _sequence_editor_ctrl.is_playing():
 		_sequence_editor_ctrl.stop_play()
@@ -49,7 +49,18 @@ func on_stop_pressed() -> void:
 	_hide_choice_overlay()
 	_cleanup_play()
 	_user_stopped = false
-	play_finished_show_selector.emit()
+	start_story(story)
+
+
+func stop_current() -> void:
+	_user_stopped = true
+	if _sequence_editor_ctrl.is_playing():
+		_sequence_editor_ctrl.stop_play()
+	if _story_play_ctrl.is_playing():
+		_story_play_ctrl.stop_play()
+	_hide_choice_overlay()
+	_cleanup_play()
+	_user_stopped = false
 
 
 # --- StoryPlayController signals ---
@@ -103,8 +114,8 @@ func on_play_finished(reason: String) -> void:
 	var msg = messages.get(reason, "Fin de la lecture")
 	var dialog = AcceptDialog.new()
 	dialog.dialog_text = msg
-	dialog.confirmed.connect(func(): play_finished_show_selector.emit())
-	dialog.canceled.connect(func(): play_finished_show_selector.emit())
+	dialog.confirmed.connect(func(): play_finished_show_menu.emit())
+	dialog.canceled.connect(func(): play_finished_show_menu.emit())
 	_game.add_child(dialog)
 	dialog.popup_centered()
 
@@ -251,7 +262,7 @@ func _hide_choice_overlay() -> void:
 
 
 func _cleanup_play() -> void:
-	_stop_button.visible = false
+	_menu_button.visible = false
 	_play_overlay.visible = false
 	_typewriter_timer.stop()
 	if _play_overlay.get_parent():

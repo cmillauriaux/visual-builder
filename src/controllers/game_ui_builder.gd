@@ -7,12 +7,14 @@ const ForegroundTransitionScript = preload("res://src/ui/visual/foreground_trans
 const StoryPlayControllerScript = preload("res://src/ui/play/story_play_controller.gd")
 const SequenceEditorScript = preload("res://src/ui/sequence/sequence_editor.gd")
 const MainMenuScript = preload("res://src/ui/menu/main_menu.gd")
+const PauseMenuScript = preload("res://src/ui/menu/pause_menu.gd")
 
 
 static func build(game: Control) -> void:
 	_build_visual_editor(game)
 	_build_play_overlay(game)
-	_build_stop_button(game)
+	_build_menu_button(game)
+	_build_pause_menu(game)
 	_build_helpers(game)
 	_build_story_selector(game)
 	_build_main_menu(game)
@@ -58,16 +60,24 @@ static func _build_play_overlay(game: Control) -> void:
 	game._choice_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 
 
-static func _build_stop_button(game: Control) -> void:
-	game._stop_button = Button.new()
-	game._stop_button.text = "■ Stop"
-	game._stop_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-	game._stop_button.offset_left = -80
-	game._stop_button.offset_right = -10
-	game._stop_button.offset_top = 10
-	game._stop_button.offset_bottom = 40
-	game._stop_button.visible = false
-	game.add_child(game._stop_button)
+static func _build_menu_button(game: Control) -> void:
+	game._menu_button = Button.new()
+	game._menu_button.text = "☰ Menu"
+	game._menu_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	game._menu_button.offset_left = -100
+	game._menu_button.offset_right = -10
+	game._menu_button.offset_top = 10
+	game._menu_button.offset_bottom = 40
+	game._menu_button.visible = false
+	game._menu_button.process_mode = Node.PROCESS_MODE_ALWAYS
+	game.add_child(game._menu_button)
+
+
+static func _build_pause_menu(game: Control) -> void:
+	game._pause_menu = Control.new()
+	game._pause_menu.set_script(PauseMenuScript)
+	game._pause_menu.build_ui()
+	game.add_child(game._pause_menu)
 
 
 static func _build_helpers(game: Control) -> void:

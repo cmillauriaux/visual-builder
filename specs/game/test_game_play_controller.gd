@@ -36,10 +36,10 @@ func test_setup_stores_references() -> void:
 	assert_eq(_game._play_ctrl._play_overlay, _game._play_overlay)
 
 
-func test_start_story_shows_stop_button() -> void:
+func test_start_story_shows_menu_button() -> void:
 	var story = _create_minimal_story()
 	_game._play_ctrl.start_story(story)
-	assert_true(_game._stop_button.visible, "stop button should be visible after start")
+	assert_true(_game._menu_button.visible, "menu button should be visible after start")
 
 
 func test_on_play_dialogue_changed_updates_labels() -> void:
@@ -85,10 +85,10 @@ func test_typewriter_tick_stops_when_not_playing() -> void:
 
 
 func test_cleanup_play_hides_ui() -> void:
-	_game._stop_button.visible = true
+	_game._menu_button.visible = true
 	_game._play_overlay.visible = true
 	_game._play_ctrl._cleanup_play()
-	assert_false(_game._stop_button.visible)
+	assert_false(_game._menu_button.visible)
 	assert_false(_game._play_overlay.visible)
 
 
@@ -107,15 +107,18 @@ func test_on_sequence_play_requested_starts_play() -> void:
 	assert_true(_game._play_overlay.visible, "play overlay should be visible")
 
 
-func test_on_stop_pressed_cleans_up_and_shows_selector() -> void:
-	_game._story_selector.visible = false
-	_game._stop_button.visible = true
-	_game._play_ctrl.on_stop_pressed()
-	# on_stop_pressed emits play_finished_show_selector
-	# which is connected in game._ready to _show_story_selector
-	assert_false(_game._stop_button.visible, "stop button should be hidden after stop")
+func test_stop_current_cleans_up() -> void:
+	_game._menu_button.visible = true
+	_game._play_overlay.visible = true
+	_game._play_ctrl.stop_current()
+	assert_false(_game._menu_button.visible, "menu button should be hidden after stop")
 	assert_false(_game._play_overlay.visible, "play overlay should be hidden after stop")
-	assert_true(_game._story_selector.visible, "story selector should be shown after stop")
+
+
+func test_stop_and_restart_relaunches_story() -> void:
+	var story = _create_minimal_story()
+	_game._play_ctrl.stop_and_restart(story)
+	assert_true(_game._menu_button.visible, "menu button should be visible after restart")
 
 
 # --- Helpers ---
