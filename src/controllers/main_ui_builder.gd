@@ -44,6 +44,18 @@ static func _build_top_bar(main: Control) -> void:
 	main._back_button.text = "← Retour"
 	main._top_bar.add_child(main._back_button)
 
+	main._undo_button = Button.new()
+	main._undo_button.text = "← Annuler"
+	main._undo_button.disabled = true
+	main._undo_button.visible = false
+	main._top_bar.add_child(main._undo_button)
+
+	main._redo_button = Button.new()
+	main._redo_button.text = "Rétablir →"
+	main._redo_button.disabled = true
+	main._redo_button.visible = false
+	main._top_bar.add_child(main._redo_button)
+
 	main._breadcrumb = HBoxContainer.new()
 	main._breadcrumb.set_script(BreadcrumbScript)
 	main._top_bar.add_child(main._breadcrumb)

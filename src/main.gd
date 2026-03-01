@@ -10,17 +10,21 @@ const MainUIBuilder = preload("res://src/controllers/main_ui_builder.gd")
 const PlayControllerScript = preload("res://src/controllers/play_controller.gd")
 const NavigationControllerScript = preload("res://src/controllers/navigation_controller.gd")
 const ExportDialogScript = preload("res://src/ui/dialogs/export_dialog.gd")
+const UndoRedoService = preload("res://src/services/undo_redo_service.gd")
 
 # Contrôleurs
 var _editor_main: Control
 var _sequence_editor_ctrl: Control
 var _play_ctrl: Node
 var _nav_ctrl: Node
+var _undo_redo: RefCounted
 
 # UI — Top bar
 var _vbox: VBoxContainer
 var _top_bar: HBoxContainer
 var _back_button: Button
+var _undo_button: Button
+var _redo_button: Button
 var _breadcrumb: HBoxContainer
 var _top_play_button: Button
 var _top_stop_button: Button
@@ -92,6 +96,8 @@ func _ready() -> void:
 	_sequence_editor_ctrl = Control.new()
 	_sequence_editor_ctrl.set_script(SequenceEditorScript)
 
+	_undo_redo = UndoRedoService.new()
+
 	# Construire l'arborescence UI
 	MainUIBuilder.build(self)
 
@@ -107,6 +113,10 @@ func _ready() -> void:
 	add_child(_nav_ctrl)
 
 	# --- Connexion des signaux ---
+
+	# Undo / Redo buttons
+	_undo_button.pressed.connect(_on_undo_pressed)
+	_redo_button.pressed.connect(_on_redo_pressed)
 
 	# Top bar → Navigation
 	_back_button.pressed.connect(_nav_ctrl.on_back_pressed)
@@ -370,6 +380,45 @@ func update_view() -> void:
 	_breadcrumb.set_current_level(level)
 	_breadcrumb.set_path(_editor_main.get_breadcrumb_path())
 	_top_play_button.visible = (level in ["chapters", "scenes", "sequences"]) and not _play_ctrl.is_story_play_mode()
+	var story_open = (level != "none")
+	_undo_button.visible = story_open
+	_redo_button.visible = story_open
+	_refresh_undo_redo_buttons()
+
+
+func _input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.ctrl_pressed and event.keycode == KEY_Z and not event.shift_pressed:
+			_on_undo_pressed()
+			get_viewport().set_input_as_handled()
+		elif event.ctrl_pressed and (event.keycode == KEY_Y or (event.keycode == KEY_Z and event.shift_pressed)):
+			_on_redo_pressed()
+			get_viewport().set_input_as_handled()
+
+
+func _on_undo_pressed() -> void:
+	_undo_redo.undo()
+	refresh_current_view()
+	_refresh_undo_redo_buttons()
+
+
+func _on_redo_pressed() -> void:
+	_undo_redo.redo()
+	refresh_current_view()
+	_refresh_undo_redo_buttons()
+
+
+func _refresh_undo_redo_buttons() -> void:
+	_undo_button.disabled = not _undo_redo.can_undo()
+	_redo_button.disabled = not _undo_redo.can_redo()
+	if _undo_redo.can_undo():
+		_undo_button.tooltip_text = "Annuler : " + _undo_redo.get_undo_label()
+	else:
+		_undo_button.tooltip_text = ""
+	if _undo_redo.can_redo():
+		_redo_button.tooltip_text = "Rétablir : " + _undo_redo.get_redo_label()
+	else:
+		_redo_button.tooltip_text = ""
 
 
 func _on_export_pressed() -> void:

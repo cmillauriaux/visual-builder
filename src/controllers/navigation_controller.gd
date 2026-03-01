@@ -11,6 +11,11 @@ const StorySaver = preload("res://src/persistence/story_saver.gd")
 const RenameDialogScript = preload("res://src/ui/dialogs/rename_dialog.gd")
 const MenuConfigDialogScript = preload("res://src/ui/dialogs/menu_config_dialog.gd")
 const StoryVerifierScript = preload("res://src/services/story_verifier.gd")
+const AddChapterCommand = preload("res://src/commands/add_chapter_command.gd")
+const AddSceneCommand = preload("res://src/commands/add_scene_command.gd")
+const AddSequenceCommand = preload("res://src/commands/add_sequence_command.gd")
+const AddConditionCommand = preload("res://src/commands/add_condition_command.gd")
+const RenameNodeCommand = preload("res://src/commands/rename_node_command.gd")
 
 var _main: Control
 var _rename_dialog: ConfirmationDialog
@@ -29,13 +34,22 @@ func on_create_pressed() -> void:
 	var item_name = _main._editor_main.get_next_item_name()
 	if level == "chapters":
 		var pos = _main._editor_main.compute_next_position(_main._editor_main._story.chapters)
-		_main._chapter_graph_view.add_new_chapter(item_name, pos)
+		var cmd = AddChapterCommand.new(_main._editor_main._story, item_name, pos)
+		_main._undo_redo.push(cmd)
+		_main._chapter_graph_view.load_story(_main._editor_main._story)
+		_main._refresh_undo_redo_buttons()
 	elif level == "scenes":
 		var pos = _main._editor_main.compute_next_position(_main._editor_main._current_chapter.scenes)
-		_main._scene_graph_view.add_new_scene(item_name, pos)
+		var cmd = AddSceneCommand.new(_main._editor_main._current_chapter, item_name, pos)
+		_main._undo_redo.push(cmd)
+		_main._scene_graph_view.load_chapter(_main._editor_main._current_chapter)
+		_main._refresh_undo_redo_buttons()
 	elif level == "sequences":
 		var pos = _main._editor_main.compute_next_position(_main._editor_main._current_scene.sequences)
-		_main._sequence_graph_view.add_new_sequence(item_name, pos)
+		var cmd = AddSequenceCommand.new(_main._editor_main._current_scene, item_name, pos)
+		_main._undo_redo.push(cmd)
+		_main._sequence_graph_view.load_scene(_main._editor_main._current_scene)
+		_main._refresh_undo_redo_buttons()
 
 
 func on_create_condition_pressed() -> void:
@@ -46,7 +60,10 @@ func on_create_condition_pressed() -> void:
 	all_items.append_array(_main._editor_main._current_scene.sequences)
 	all_items.append_array(_main._editor_main._current_scene.conditions)
 	var pos = _main._editor_main.compute_next_position(all_items)
-	_main._sequence_graph_view.add_new_condition(cond_name, pos)
+	var cmd = AddConditionCommand.new(_main._editor_main._current_scene, cond_name, pos)
+	_main._undo_redo.push(cmd)
+	_main._sequence_graph_view.load_scene(_main._editor_main._current_scene)
+	_main._refresh_undo_redo_buttons()
 
 
 # --- Navigation ---
@@ -121,7 +138,13 @@ func on_chapter_rename_requested(uuid: String) -> void:
 	if chapter == null:
 		return
 	_open_rename_dialog(uuid, chapter.chapter_name, chapter.subtitle, func(u, n, s):
-		_main._chapter_graph_view.rename_chapter(u, n, s)
+		var cmd = RenameNodeCommand.new(
+			func(nm, sub): chapter.chapter_name = nm; chapter.subtitle = sub; _main._chapter_graph_view.rename_chapter(u, nm, sub),
+			func(): return [chapter.chapter_name, chapter.subtitle],
+			n, s, chapter.chapter_name, chapter.subtitle, "chapitre"
+		)
+		_main._undo_redo.push(cmd)
+		_main._refresh_undo_redo_buttons()
 	)
 
 
@@ -132,7 +155,13 @@ func on_scene_rename_requested(uuid: String) -> void:
 	if scene == null:
 		return
 	_open_rename_dialog(uuid, scene.scene_name, scene.subtitle, func(u, n, s):
-		_main._scene_graph_view.rename_scene(u, n, s)
+		var cmd = RenameNodeCommand.new(
+			func(nm, sub): scene.scene_name = nm; scene.subtitle = sub; _main._scene_graph_view.rename_scene(u, nm, sub),
+			func(): return [scene.scene_name, scene.subtitle],
+			n, s, scene.scene_name, scene.subtitle, "scène"
+		)
+		_main._undo_redo.push(cmd)
+		_main._refresh_undo_redo_buttons()
 	)
 
 
@@ -143,7 +172,13 @@ func on_sequence_rename_requested(uuid: String) -> void:
 	if seq == null:
 		return
 	_open_rename_dialog(uuid, seq.seq_name, seq.subtitle, func(u, n, s):
-		_main._sequence_graph_view.rename_sequence(u, n, s)
+		var cmd = RenameNodeCommand.new(
+			func(nm, sub): seq.seq_name = nm; seq.subtitle = sub; _main._sequence_graph_view.rename_sequence(u, nm, sub),
+			func(): return [seq.seq_name, seq.subtitle],
+			n, s, seq.seq_name, seq.subtitle, "séquence"
+		)
+		_main._undo_redo.push(cmd)
+		_main._refresh_undo_redo_buttons()
 	)
 
 
@@ -154,7 +189,13 @@ func on_condition_rename_requested(uuid: String) -> void:
 	if cond == null:
 		return
 	_open_rename_dialog(uuid, cond.condition_name, cond.subtitle, func(u, n, s):
-		_main._sequence_graph_view.rename_condition(u, n, s)
+		var cmd = RenameNodeCommand.new(
+			func(nm, sub): cond.condition_name = nm; cond.subtitle = sub; _main._sequence_graph_view.rename_condition(u, nm, sub),
+			func(): return [cond.condition_name, cond.subtitle],
+			n, s, cond.condition_name, cond.subtitle, "condition"
+		)
+		_main._undo_redo.push(cmd)
+		_main._refresh_undo_redo_buttons()
 	)
 
 
@@ -245,6 +286,7 @@ func _on_load_dir_selected(path: String) -> void:
 		err_dialog.popup_centered()
 		return
 	_last_save_path = path
+	_main._undo_redo.clear()
 	_main._editor_main.open_story(loaded_story)
 	_main.refresh_current_view()
 
@@ -270,6 +312,7 @@ func on_new_story_pressed() -> void:
 	seq.position = Vector2(100, 100)
 	scene.sequences.append(seq)
 
+	_main._undo_redo.clear()
 	_main._editor_main.open_story(story)
 	_main.refresh_current_view()
 
