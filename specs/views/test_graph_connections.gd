@@ -6,6 +6,8 @@ const Sequence = preload("res://src/models/sequence.gd")
 const Ending = preload("res://src/models/ending.gd")
 const Consequence = preload("res://src/models/consequence.gd")
 const ChoiceScript = preload("res://src/models/choice.gd")
+const ConditionScript = preload("res://src/models/condition.gd")
+const ConditionRuleScript = preload("res://src/models/condition_rule.gd")
 const SequenceGraphView = preload("res://src/views/sequence_graph_view.gd")
 const SceneGraphView = preload("res://src/views/scene_graph_view.gd")
 const ChapterGraphView = preload("res://src/views/chapter_graph_view.gd")
@@ -50,6 +52,19 @@ func _count_connections(graph: GraphEdit, from_uuid: String, to_uuid: String) ->
 		if conn["from_node"] == StringName(from_uuid) and conn["to_node"] == StringName(to_uuid):
 			count += 1
 	return count
+
+func _make_condition_with_rule(consequence_type: String, target: String) -> ConditionScript:
+	var cond = ConditionScript.new()
+	var rule = ConditionRuleScript.new()
+	rule.variable = "x"
+	rule.operator = "equal"
+	rule.value = "1"
+	var cons = Consequence.new()
+	cons.type = consequence_type
+	cons.target = target
+	rule.consequence = cons
+	cond.rules.append(rule)
+	return cond
 
 # ============================================================
 # Tests du graphe de SÉQUENCES
@@ -387,6 +402,71 @@ func test_scene_graph_no_duplicate_manual_plus_ending():
 	assert_eq(_count_connections(graph, scene1.uuid, scene2.uuid), 1,
 		"Connexion manuelle + terminaison vers même cible → un seul lien")
 
+func test_scene_graph_condition_redirect_scene_shows_connection():
+	# Une condition avec redirect_scene doit créer un lien dans le graphe de scènes
+	var chapter = ChapterScript.new()
+	var scene1 = SceneDataScript.new(); scene1.scene_name = "Scène 1"
+	var scene2 = SceneDataScript.new(); scene2.scene_name = "Scène 2"
+	chapter.scenes.append(scene1)
+	chapter.scenes.append(scene2)
+
+	var cond = _make_condition_with_rule("redirect_scene", scene2.uuid)
+	scene1.conditions.append(cond)
+
+	var graph = GraphEdit.new()
+	graph.set_script(SceneGraphView)
+	add_child_autofree(graph)
+	graph.load_chapter(chapter)
+
+	assert_true(_has_connection(graph, scene1.uuid, scene2.uuid),
+		"condition redirect_scene doit créer un lien scene1→scene2")
+
+func test_scene_graph_condition_default_redirect_scene_shows_connection():
+	# Une default_consequence avec redirect_scene doit créer un lien
+	var chapter = ChapterScript.new()
+	var scene1 = SceneDataScript.new(); scene1.scene_name = "Scène 1"
+	var scene2 = SceneDataScript.new(); scene2.scene_name = "Scène 2"
+	chapter.scenes.append(scene1)
+	chapter.scenes.append(scene2)
+
+	var cond = ConditionScript.new()
+	var default_cons = Consequence.new()
+	default_cons.type = "redirect_scene"
+	default_cons.target = scene2.uuid
+	cond.default_consequence = default_cons
+	scene1.conditions.append(cond)
+
+	var graph = GraphEdit.new()
+	graph.set_script(SceneGraphView)
+	add_child_autofree(graph)
+	graph.load_chapter(chapter)
+
+	assert_true(_has_connection(graph, scene1.uuid, scene2.uuid),
+		"condition default_consequence redirect_scene doit créer un lien scene1→scene2")
+
+func test_scene_graph_condition_no_duplicate_with_seq_redirect():
+	# Condition + séquence pointant vers la même scène cible → un seul lien
+	var chapter = ChapterScript.new()
+	var scene1 = SceneDataScript.new(); scene1.scene_name = "Scène 1"
+	var scene2 = SceneDataScript.new(); scene2.scene_name = "Scène 2"
+	chapter.scenes.append(scene1)
+	chapter.scenes.append(scene2)
+
+	var seq = Sequence.new()
+	seq.ending = _make_redirect_ending("redirect_scene", scene2.uuid)
+	scene1.sequences.append(seq)
+
+	var cond = _make_condition_with_rule("redirect_scene", scene2.uuid)
+	scene1.conditions.append(cond)
+
+	var graph = GraphEdit.new()
+	graph.set_script(SceneGraphView)
+	add_child_autofree(graph)
+	graph.load_chapter(chapter)
+
+	assert_eq(_count_connections(graph, scene1.uuid, scene2.uuid), 1,
+		"Condition + séquence vers même cible → un seul lien")
+
 # ============================================================
 # Tests du graphe de CHAPITRES
 # ============================================================
@@ -567,3 +647,49 @@ func test_chapter_graph_no_duplicate_manual_plus_ending():
 
 	assert_eq(_count_connections(graph, ch1.uuid, ch2.uuid), 1,
 		"Connexion manuelle + terminaison vers même chapitre → un seul lien")
+
+func test_chapter_graph_condition_redirect_chapter_shows_connection():
+	# Une condition avec redirect_chapter doit créer un lien dans le graphe de chapitres
+	var story = StoryScript.new()
+	var ch1 = ChapterScript.new(); ch1.chapter_name = "Chapitre 1"
+	var ch2 = ChapterScript.new(); ch2.chapter_name = "Chapitre 2"
+	story.chapters.append(ch1)
+	story.chapters.append(ch2)
+
+	var scene = SceneDataScript.new()
+	ch1.scenes.append(scene)
+	var cond = _make_condition_with_rule("redirect_chapter", ch2.uuid)
+	scene.conditions.append(cond)
+
+	var graph = GraphEdit.new()
+	graph.set_script(ChapterGraphView)
+	add_child_autofree(graph)
+	graph.load_story(story)
+
+	assert_true(_has_connection(graph, ch1.uuid, ch2.uuid),
+		"condition redirect_chapter doit créer un lien ch1→ch2")
+
+func test_chapter_graph_condition_default_redirect_chapter_shows_connection():
+	# Une default_consequence avec redirect_chapter doit créer un lien
+	var story = StoryScript.new()
+	var ch1 = ChapterScript.new(); ch1.chapter_name = "Chapitre 1"
+	var ch2 = ChapterScript.new(); ch2.chapter_name = "Chapitre 2"
+	story.chapters.append(ch1)
+	story.chapters.append(ch2)
+
+	var scene = SceneDataScript.new()
+	ch1.scenes.append(scene)
+	var cond = ConditionScript.new()
+	var default_cons = Consequence.new()
+	default_cons.type = "redirect_chapter"
+	default_cons.target = ch2.uuid
+	cond.default_consequence = default_cons
+	scene.conditions.append(cond)
+
+	var graph = GraphEdit.new()
+	graph.set_script(ChapterGraphView)
+	add_child_autofree(graph)
+	graph.load_story(story)
+
+	assert_true(_has_connection(graph, ch1.uuid, ch2.uuid),
+		"condition default_consequence redirect_chapter doit créer un lien ch1→ch2")

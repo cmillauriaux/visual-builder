@@ -167,6 +167,12 @@ func _build_connection_type_map() -> void:
 				for choice in seq.ending.choices:
 					if choice.consequence and choice.consequence.type == "redirect_scene" and choice.consequence.target != "":
 						_merge_connection_type(scene.uuid + "→" + choice.consequence.target, "choice")
+		for cond in scene.conditions:
+			for rule in cond.rules:
+				if rule.consequence and rule.consequence.type == "redirect_scene" and rule.consequence.target != "":
+					_merge_connection_type(scene.uuid + "→" + rule.consequence.target, "transition")
+			if cond.default_consequence and cond.default_consequence.type == "redirect_scene" and cond.default_consequence.target != "":
+				_merge_connection_type(scene.uuid + "→" + cond.default_consequence.target, "transition")
 
 func _merge_connection_type(key: String, new_type: String) -> void:
 	if not _connection_type_map.has(key):

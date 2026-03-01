@@ -31,7 +31,7 @@ sequences:
   - uuid: "68b8f032-e0be-4655-af4f-04950aa199c9"
     name: "Épreuve 1 - Le Choix de la Voie"
     subtitle: ""
-    position: { x: 250.0, y: 100.0 }
+    position: { x: 280.0, y: 100.0 }
     background: ""
     foregrounds: []
     dialogues:
@@ -76,7 +76,7 @@ sequences:
   - uuid: "207eca4d-5546-4e71-8fa0-c355f4bdfdd3"
     name: "Épreuve 2 - La Quête des Cristaux"
     subtitle: ""
-    position: { x: 500.0, y: 100.0 }
+    position: { x: 660.0, y: 100.0 }
     background: ""
     foregrounds: []
     dialogues:
@@ -112,7 +112,7 @@ sequences:
   - uuid: "d200d6ff-b8fd-49ed-aac9-aad73801cc56"
     name: "La Porte du Jugement"
     subtitle: ""
-    position: { x: 750.0, y: 100.0 }
+    position: { x: 1040.0, y: 100.0 }
     background: ""
     foregrounds: []
     dialogues:
@@ -135,7 +135,7 @@ conditions:
   - uuid: "97cdb314-4df0-437a-4e20-5af98f8a3d98"
     name: "Jugement du Tournoi"
     subtitle: ""
-    position: { x: 1000.0, y: 100.0 }
+    position: { x: 1340.0, y: 100.0 }
     rules:
       - variable: "force"
         operator: "greater_than_equal"

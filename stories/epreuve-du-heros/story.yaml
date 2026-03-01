@@ -3,7 +3,7 @@ author: "Test Intégration"
 description: "Histoire de test d'intégration — 2 chapitres, 6 scènes, variables, conditions, choix."
 version: "1.0.0"
 created_at: "2026-03-01T11:01:05Z"
-updated_at: "2026-03-01T13:29:34Z"
+updated_at: "2026-03-01T13:50:13Z"
 chapters:
   - uuid: "e3298e3f-fc76-4c8f-891c-8e6ba1013fc4"
     name: "Les Épreuves de la Cité"
