@@ -1,0 +1,32 @@
+uuid: "86e5b74a-2a07-4f5d-7953-f47b32d92eb9"
+name: "Victoire Totale"
+subtitle: ""
+sequences:
+  - uuid: "a270ca9d-af31-443c-9405-db04a7da23e9"
+    name: "Gloire Absolue"
+    subtitle: ""
+    position: { x: 100.0, y: 100.0 }
+    background: ""
+    foregrounds: []
+    dialogues:
+      - uuid: "1a0abbca-4077-414e-f660-ed4730cd7f7b"
+        character: "Esprit de la Forêt"
+        text: "Vous possédez les cristaux sacrés!"
+        foregrounds: []
+      - uuid: "1b10c9c5-d1f9-4d2b-84c7-1133ff20d2ac"
+        character: "Roi de la Forêt"
+        text: "La forêt vous appartient, grand champion!"
+        foregrounds: []
+      - uuid: "c4de403a-572a-4a34-e4cc-cd62d32fcc36"
+        character: "Roi de la Forêt"
+        text: "Votre légende traversera les âges..."
+        foregrounds: []
+    fx: []
+    ending:
+      type: "auto_redirect"
+      consequence:
+        type: "to_be_continued"
+        effects: []
+conditions: []
+connections: []
+entry_point: "a270ca9d-af31-443c-9405-db04a7da23e9"

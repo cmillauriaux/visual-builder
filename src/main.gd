@@ -31,7 +31,7 @@ var _menu_config_button: Button
 var _variable_panel_popup: PopupPanel
 var _variable_panel: VBoxContainer
 var _export_button: Button
-var _save_button: Button
+var _save_button: MenuButton
 var _load_button: Button
 var _new_story_button: Button
 
@@ -121,7 +121,12 @@ func _ready() -> void:
 	_verify_button.pressed.connect(_nav_ctrl.on_verify_pressed)
 	_verifier_report_panel.close_requested.connect(_nav_ctrl.on_verifier_close)
 	_export_button.pressed.connect(_on_export_pressed)
-	_save_button.pressed.connect(_nav_ctrl.on_save_pressed)
+	_save_button.get_popup().id_pressed.connect(func(id: int) -> void:
+		if id == 0:
+			_nav_ctrl.on_save_pressed()
+		else:
+			_nav_ctrl.on_save_as_pressed()
+	)
 	_load_button.pressed.connect(_nav_ctrl.on_load_pressed)
 	_new_story_button.pressed.connect(_nav_ctrl.on_new_story_pressed)
 

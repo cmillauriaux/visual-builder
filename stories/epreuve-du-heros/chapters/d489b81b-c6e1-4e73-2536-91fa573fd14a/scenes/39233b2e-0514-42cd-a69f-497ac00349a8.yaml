@@ -1,0 +1,51 @@
+uuid: "39233b2e-0514-42cd-a69f-497ac00349a8"
+name: "L'Entrée de la Forêt"
+subtitle: ""
+sequences:
+  - uuid: "48c94f04-36ca-42be-eafd-9250677107ed"
+    name: "La Lisière de la Forêt"
+    subtitle: ""
+    position: { x: 0.0, y: 100.0 }
+    background: ""
+    foregrounds: []
+    dialogues:
+      - uuid: "e98bf07d-b49c-4431-bbc4-58fff09f932c"
+        character: "Narrateur"
+        text: "Vous pénétrez dans la forêt enchantée..."
+        foregrounds: []
+      - uuid: "24ec2e55-3205-41cf-bd53-1ae2020a5360"
+        character: "Esprit de la Forêt"
+        text: "Seuls les dignes peuvent traverser mes bois."
+        foregrounds: []
+      - uuid: "6f102a78-74cb-4847-0b1e-f06327dadba8"
+        character: "Esprit de la Forêt"
+        text: "Je vais évaluer ce que vous portez avec vous."
+        foregrounds: []
+    fx: []
+    ending:
+      type: "auto_redirect"
+      consequence:
+        type: "redirect_condition"
+        target: "9466fd19-39e8-433d-82a7-08ba2ed3af49"
+        effects: []
+conditions:
+  - uuid: "9466fd19-39e8-433d-82a7-08ba2ed3af49"
+    name: "Vérification des Cristaux"
+    subtitle: ""
+    position: { x: 300.0, y: 100.0 }
+    rules:
+      - variable: "cristaux"
+        operator: "greater_than_equal"
+        value: "3"
+        consequence:
+          type: "redirect_scene"
+          target: "86e5b74a-2a07-4f5d-7953-f47b32d92eb9"
+          effects: []
+    default_consequence:
+      type: "redirect_scene"
+      target: "b864e0fe-e186-408b-e8ac-dff4901b2702"
+      effects: []
+connections:
+  - from: "48c94f04-36ca-42be-eafd-9250677107ed"
+    to: "9466fd19-39e8-433d-82a7-08ba2ed3af49"
+entry_point: "48c94f04-36ca-42be-eafd-9250677107ed"

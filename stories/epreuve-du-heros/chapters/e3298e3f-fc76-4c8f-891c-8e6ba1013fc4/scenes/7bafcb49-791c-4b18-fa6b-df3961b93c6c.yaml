@@ -1,0 +1,166 @@
+uuid: "7bafcb49-791c-4b18-fa6b-df3961b93c6c"
+name: "La Salle des Défis"
+subtitle: ""
+sequences:
+  - uuid: "7e303ff2-4334-4459-81c4-6a9e39139f22"
+    name: "Accueil du Tournoi"
+    subtitle: ""
+    position: { x: 0.0, y: 100.0 }
+    background: ""
+    foregrounds: []
+    dialogues:
+      - uuid: "a4d2ed1c-acd9-4b13-b1ae-f13b074782d1"
+        character: "Héraut Royal"
+        text: "Bienvenue au Grand Tournoi des Héros!"
+        foregrounds: []
+      - uuid: "7890a691-df54-488f-0eac-5e90eeaf5f57"
+        character: "Héraut Royal"
+        text: "Trois épreuves vous attendent. Montrez votre valeur!"
+        foregrounds: []
+      - uuid: "f095cd49-5d49-4c9a-dec8-2cc490179223"
+        character: "Héraut Royal"
+        text: "Que le meilleur triomphe!"
+        foregrounds: []
+    fx: []
+    ending:
+      type: "auto_redirect"
+      consequence:
+        type: "redirect_sequence"
+        target: "68b8f032-e0be-4655-af4f-04950aa199c9"
+        effects: []
+  - uuid: "68b8f032-e0be-4655-af4f-04950aa199c9"
+    name: "Épreuve 1 - Le Choix de la Voie"
+    subtitle: ""
+    position: { x: 250.0, y: 100.0 }
+    background: ""
+    foregrounds: []
+    dialogues:
+      - uuid: "93d68511-8d13-4221-1d1f-59a919694fde"
+        character: "Maître du Tournoi"
+        text: "Quelle voie choisissez-vous, valeureux héros?"
+        foregrounds: []
+      - uuid: "5ab58deb-2605-4f5e-9e25-bf196fad1570"
+        character: "Maître du Tournoi"
+        text: "La force brute, la sagesse arcanique... ou la retraite?"
+        foregrounds: []
+    fx: []
+    ending:
+      type: "choices"
+      choices:
+        - text: "Voie du Guerrier — Maîtriser la force physique"
+          consequence:
+            type: "redirect_sequence"
+            target: "207eca4d-5546-4e71-8fa0-c355f4bdfdd3"
+            effects: []
+          conditions: {}
+          effects:
+            - variable: "force"
+              operation: "increment"
+              value: "2"
+        - text: "Voie du Mage — Cultiver la sagesse arcanique"
+          consequence:
+            type: "redirect_sequence"
+            target: "207eca4d-5546-4e71-8fa0-c355f4bdfdd3"
+            effects: []
+          conditions: {}
+          effects:
+            - variable: "sagesse"
+              operation: "increment"
+              value: "2"
+        - text: "Abandonner le tournoi et rentrer chez soi"
+          consequence:
+            type: "game_over"
+            effects: []
+          conditions: {}
+          effects: []
+  - uuid: "207eca4d-5546-4e71-8fa0-c355f4bdfdd3"
+    name: "Épreuve 2 - La Quête des Cristaux"
+    subtitle: ""
+    position: { x: 500.0, y: 100.0 }
+    background: ""
+    foregrounds: []
+    dialogues:
+      - uuid: "881fcfb4-1974-425d-0b14-816d1be0e253"
+        character: "Gardien des Cristaux"
+        text: "La deuxième épreuve commence."
+        foregrounds: []
+      - uuid: "450a7215-97d8-4ac2-a150-eb3db9444959"
+        character: "Gardien des Cristaux"
+        text: "Ces cristaux magiques augmenteront vos chances lors du jugement."
+        foregrounds: []
+    fx: []
+    ending:
+      type: "choices"
+      choices:
+        - text: "Récolter les cristaux magiques de la salle"
+          consequence:
+            type: "redirect_sequence"
+            target: "d200d6ff-b8fd-49ed-aac9-aad73801cc56"
+            effects: []
+          conditions: {}
+          effects:
+            - variable: "cristaux"
+              operation: "increment"
+              value: "3"
+        - text: "Conserver son énergie et continuer sans cristaux"
+          consequence:
+            type: "redirect_sequence"
+            target: "d200d6ff-b8fd-49ed-aac9-aad73801cc56"
+            effects: []
+          conditions: {}
+          effects: []
+  - uuid: "d200d6ff-b8fd-49ed-aac9-aad73801cc56"
+    name: "La Porte du Jugement"
+    subtitle: ""
+    position: { x: 750.0, y: 100.0 }
+    background: ""
+    foregrounds: []
+    dialogues:
+      - uuid: "7e26c5e0-f4f2-48b0-9de0-9404beaf88ee"
+        character: "Voix Mystérieuse"
+        text: "Approchez... Le jugement va commencer."
+        foregrounds: []
+      - uuid: "9b286867-42fe-4e94-13c6-e6d0b41041b7"
+        character: "Voix Mystérieuse"
+        text: "Vos choix ont forgé votre destin."
+        foregrounds: []
+    fx: []
+    ending:
+      type: "auto_redirect"
+      consequence:
+        type: "redirect_condition"
+        target: "97cdb314-4df0-437a-4e20-5af98f8a3d98"
+        effects: []
+conditions:
+  - uuid: "97cdb314-4df0-437a-4e20-5af98f8a3d98"
+    name: "Jugement du Tournoi"
+    subtitle: ""
+    position: { x: 1000.0, y: 100.0 }
+    rules:
+      - variable: "force"
+        operator: "greater_than_equal"
+        value: "2"
+        consequence:
+          type: "redirect_scene"
+          target: "49f6cfac-3798-4c4a-049b-cad6067b34fa"
+          effects: []
+      - variable: "sagesse"
+        operator: "greater_than_equal"
+        value: "2"
+        consequence:
+          type: "redirect_scene"
+          target: "791d6901-6d6b-40ab-e903-836891e6e2e4"
+          effects: []
+    default_consequence:
+      type: "game_over"
+      effects: []
+connections:
+  - from: "7e303ff2-4334-4459-81c4-6a9e39139f22"
+    to: "68b8f032-e0be-4655-af4f-04950aa199c9"
+  - from: "68b8f032-e0be-4655-af4f-04950aa199c9"
+    to: "207eca4d-5546-4e71-8fa0-c355f4bdfdd3"
+  - from: "207eca4d-5546-4e71-8fa0-c355f4bdfdd3"
+    to: "d200d6ff-b8fd-49ed-aac9-aad73801cc56"
+  - from: "d200d6ff-b8fd-49ed-aac9-aad73801cc56"
+    to: "97cdb314-4df0-437a-4e20-5af98f8a3d98"
+entry_point: "7e303ff2-4334-4459-81c4-6a9e39139f22"

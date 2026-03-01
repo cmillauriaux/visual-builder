@@ -1,0 +1,33 @@
+uuid: "49f6cfac-3798-4c4a-049b-cad6067b34fa"
+name: "Victoire Guerrière"
+subtitle: ""
+sequences:
+  - uuid: "a4b11a1f-67d4-46d8-b182-c4d30bf36310"
+    name: "Célébration Guerrière"
+    subtitle: ""
+    position: { x: 100.0, y: 100.0 }
+    background: ""
+    foregrounds: []
+    dialogues:
+      - uuid: "435df0f3-7407-4ba3-2179-0ae0f26184c6"
+        character: "Champion Guerrier"
+        text: "Ma force m'a conduit jusqu'ici!"
+        foregrounds: []
+      - uuid: "ab894d0f-0c84-400d-8e55-49c87a4516ba"
+        character: "Foule"
+        text: "Longue vie au champion!"
+        foregrounds: []
+      - uuid: "265a6e26-a6a4-402c-d3fe-b51081088705"
+        character: "Champion Guerrier"
+        text: "La forêt enchantée m'attend..."
+        foregrounds: []
+    fx: []
+    ending:
+      type: "auto_redirect"
+      consequence:
+        type: "redirect_chapter"
+        target: "d489b81b-c6e1-4e73-2536-91fa573fd14a"
+        effects: []
+conditions: []
+connections: []
+entry_point: "a4b11a1f-67d4-46d8-b182-c4d30bf36310"

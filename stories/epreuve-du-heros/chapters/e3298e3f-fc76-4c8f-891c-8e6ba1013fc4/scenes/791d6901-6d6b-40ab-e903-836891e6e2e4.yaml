@@ -1,0 +1,33 @@
+uuid: "791d6901-6d6b-40ab-e903-836891e6e2e4"
+name: "Victoire Sage"
+subtitle: ""
+sequences:
+  - uuid: "f7082d0b-2a2c-4b7b-225e-7727baccf006"
+    name: "Célébration Sage"
+    subtitle: ""
+    position: { x: 100.0, y: 100.0 }
+    background: ""
+    foregrounds: []
+    dialogues:
+      - uuid: "0fc4da0f-28a6-4cfd-79d0-493792921eee"
+        character: "Archimage"
+        text: "La sagesse illumine tous les chemins!"
+        foregrounds: []
+      - uuid: "2061b969-273d-4fee-2471-f7ed70652ea0"
+        character: "Conseil des Mages"
+        text: "Vous avez honoré notre ordre."
+        foregrounds: []
+      - uuid: "2daccda8-26dd-49d0-86ac-bf4a5a2891e0"
+        character: "Archimage"
+        text: "Que votre quête continue dans la forêt..."
+        foregrounds: []
+    fx: []
+    ending:
+      type: "auto_redirect"
+      consequence:
+        type: "redirect_chapter"
+        target: "d489b81b-c6e1-4e73-2536-91fa573fd14a"
+        effects: []
+conditions: []
+connections: []
+entry_point: "f7082d0b-2a2c-4b7b-225e-7727baccf006"

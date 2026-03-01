@@ -1,0 +1,51 @@
+uuid: "b864e0fe-e186-408b-e8ac-dff4901b2702"
+name: "Combat Final"
+subtitle: ""
+sequences:
+  - uuid: "d84e819f-d4df-4913-f91c-07b83af1f03f"
+    name: "Le Combat Final"
+    subtitle: ""
+    position: { x: 0.0, y: 100.0 }
+    background: ""
+    foregrounds: []
+    dialogues:
+      - uuid: "c5656575-bc49-4b73-0f1e-b4c5c6133fb3"
+        character: "Gardien Ancien"
+        text: "Vous n'avez pas de cristaux... Affrontez-moi!"
+        foregrounds: []
+      - uuid: "9a87196b-65dd-4d81-6d77-ae7bf4b2d496"
+        character: "Gardien Ancien"
+        text: "Seule la force ou la sagesse pourra me vaincre."
+        foregrounds: []
+    fx: []
+    ending:
+      type: "auto_redirect"
+      consequence:
+        type: "redirect_condition"
+        target: "a8f9a8fb-9bb4-4d55-44fd-3e6d628666a5"
+        effects: []
+conditions:
+  - uuid: "a8f9a8fb-9bb4-4d55-44fd-3e6d628666a5"
+    name: "Vérification de Puissance"
+    subtitle: ""
+    position: { x: 300.0, y: 100.0 }
+    rules:
+      - variable: "force"
+        operator: "greater_than_equal"
+        value: "2"
+        consequence:
+          type: "to_be_continued"
+          effects: []
+      - variable: "sagesse"
+        operator: "greater_than_equal"
+        value: "2"
+        consequence:
+          type: "to_be_continued"
+          effects: []
+    default_consequence:
+      type: "game_over"
+      effects: []
+connections:
+  - from: "d84e819f-d4df-4913-f91c-07b83af1f03f"
+    to: "a8f9a8fb-9bb4-4d55-44fd-3e6d628666a5"
+entry_point: "d84e819f-d4df-4913-f91c-07b83af1f03f"

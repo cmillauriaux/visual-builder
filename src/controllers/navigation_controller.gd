@@ -15,6 +15,7 @@ const StoryVerifierScript = preload("res://src/services/story_verifier.gd")
 var _main: Control
 var _rename_dialog: ConfirmationDialog
 var _menu_config_dialog: ConfirmationDialog
+var _last_save_path: String = ""
 
 
 func setup(main: Control) -> void:
@@ -175,6 +176,21 @@ func _open_rename_dialog(uuid: String, current_name: String, current_subtitle: S
 func on_save_pressed() -> void:
 	if _main._editor_main._story == null:
 		return
+	_sync_positions()
+	if _last_save_path != "":
+		_do_save(_last_save_path)
+	else:
+		_open_save_dialog()
+
+
+func on_save_as_pressed() -> void:
+	if _main._editor_main._story == null:
+		return
+	_sync_positions()
+	_open_save_dialog()
+
+
+func _sync_positions() -> void:
 	var level = _main._editor_main.get_current_level()
 	if level == "chapters":
 		_main._chapter_graph_view.sync_positions_to_model()
@@ -182,8 +198,26 @@ func on_save_pressed() -> void:
 		_main._scene_graph_view.sync_positions_to_model()
 	elif level == "sequences":
 		_main._sequence_graph_view.sync_positions_to_model()
+
+
+func _open_save_dialog() -> void:
+	var dialog = FileDialog.new()
+	dialog.file_mode = FileDialog.FILE_MODE_OPEN_DIR
+	dialog.access = FileDialog.ACCESS_FILESYSTEM
+	dialog.current_dir = _last_save_path if _last_save_path != "" else OS.get_environment("HOME")
+	dialog.dir_selected.connect(_on_save_dir_selected)
+	_main.add_child(dialog)
+	dialog.popup_centered(Vector2i(800, 600))
+
+
+func _on_save_dir_selected(path: String) -> void:
+	_do_save(path)
+
+
+func _do_save(path: String) -> void:
+	_last_save_path = path
 	_main._editor_main._story.touch()
-	StorySaver.save_story(_main._editor_main._story, "user://stories/" + _main._editor_main._story.title.to_lower().replace(" ", "_"))
+	StorySaver.save_story(_main._editor_main._story, path)
 	_main._save_button.text = "Sauvegardé !"
 	_main._save_button.disabled = true
 	_main.get_tree().create_timer(2.0).timeout.connect(func():
@@ -195,8 +229,8 @@ func on_save_pressed() -> void:
 func on_load_pressed() -> void:
 	var dialog = FileDialog.new()
 	dialog.file_mode = FileDialog.FILE_MODE_OPEN_DIR
-	dialog.access = FileDialog.ACCESS_USERDATA
-	dialog.current_dir = "user://stories/"
+	dialog.access = FileDialog.ACCESS_FILESYSTEM
+	dialog.current_dir = OS.get_environment("HOME")
 	dialog.dir_selected.connect(_on_load_dir_selected)
 	_main.add_child(dialog)
 	dialog.popup_centered(Vector2i(800, 600))
@@ -210,6 +244,7 @@ func _on_load_dir_selected(path: String) -> void:
 		_main.add_child(err_dialog)
 		err_dialog.popup_centered()
 		return
+	_last_save_path = path
 	_main._editor_main.open_story(loaded_story)
 	_main.refresh_current_view()
 

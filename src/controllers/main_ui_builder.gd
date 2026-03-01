@@ -94,8 +94,10 @@ static func _build_top_bar(main: Control) -> void:
 	main._export_button.text = "Exporter"
 	main._top_bar.add_child(main._export_button)
 
-	main._save_button = Button.new()
+	main._save_button = MenuButton.new()
 	main._save_button.text = "Sauvegarder"
+	main._save_button.get_popup().add_item("Sauvegarder", 0)
+	main._save_button.get_popup().add_item("Sauvegarder sous...", 1)
 	main._top_bar.add_child(main._save_button)
 
 	main._load_button = Button.new()

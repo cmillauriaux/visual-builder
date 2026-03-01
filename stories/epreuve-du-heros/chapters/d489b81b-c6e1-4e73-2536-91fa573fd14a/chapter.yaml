@@ -1,0 +1,18 @@
+uuid: "d489b81b-c6e1-4e73-2536-91fa573fd14a"
+name: "La Forêt Enchantée"
+subtitle: ""
+scenes:
+  - uuid: "39233b2e-0514-42cd-a69f-497ac00349a8"
+    name: "L'Entrée de la Forêt"
+    subtitle: ""
+    position: { x: 100.0, y: 100.0 }
+  - uuid: "86e5b74a-2a07-4f5d-7953-f47b32d92eb9"
+    name: "Victoire Totale"
+    subtitle: ""
+    position: { x: 400.0, y: 100.0 }
+  - uuid: "b864e0fe-e186-408b-e8ac-dff4901b2702"
+    name: "Combat Final"
+    subtitle: ""
+    position: { x: 400.0, y: 300.0 }
+connections: []
+entry_point: "39233b2e-0514-42cd-a69f-497ac00349a8"
