@@ -103,7 +103,7 @@ func test_seq_graph_redirect_scene_shows_terminal_node():
 
 	assert_eq(graph.get_connection_list().size(), 1,
 		"redirect_scene doit créer un lien vers le nœud terminal dans le graphe de séquences")
-	assert_true(_has_connection(graph, seq1.uuid, "terminal:redirect_scene"),
+	assert_true(_has_connection(graph, seq1.uuid, "terminal_redirect_scene"),
 		"redirect_scene doit connecter seq1 au nœud terminal 'redirect_scene'")
 
 func test_seq_graph_redirect_chapter_shows_terminal_node():
@@ -120,7 +120,7 @@ func test_seq_graph_redirect_chapter_shows_terminal_node():
 
 	assert_eq(graph.get_connection_list().size(), 1,
 		"redirect_chapter doit créer un lien vers le nœud terminal dans le graphe de séquences")
-	assert_true(_has_connection(graph, seq1.uuid, "terminal:redirect_chapter"),
+	assert_true(_has_connection(graph, seq1.uuid, "terminal_redirect_chapter"),
 		"redirect_chapter doit connecter seq1 au nœud terminal 'redirect_chapter'")
 
 func test_seq_graph_no_duplicate_when_two_seqs_redirect_to_same():
@@ -204,7 +204,7 @@ func test_seq_graph_choices_mixed_types_redirect_sequence_and_terminal():
 
 	assert_true(_has_connection(graph, seq1.uuid, seq2.uuid),
 		"redirect_sequence doit apparaître dans le graphe séquence")
-	assert_true(_has_connection(graph, seq1.uuid, "terminal:redirect_scene"),
+	assert_true(_has_connection(graph, seq1.uuid, "terminal_redirect_scene"),
 		"redirect_scene doit créer un lien vers le nœud terminal")
 	assert_eq(graph.get_connection_list().size(), 2,
 		"deux liens : un vers seq2 et un vers le terminal redirect_scene")
@@ -251,7 +251,7 @@ func test_seq_graph_choice_node_multiport_3_choices_2_same_target_1_game_over():
 		"3 connexions : 2 vers seq2 + 1 vers terminal game_over")
 	assert_true(_has_connection(graph, seq1.uuid, seq2.uuid),
 		"connexion vers seq2 existe")
-	assert_true(_has_connection(graph, seq1.uuid, "terminal:game_over"),
+	assert_true(_has_connection(graph, seq1.uuid, "terminal_game_over"),
 		"connexion vers terminal game_over existe")
 
 # ============================================================

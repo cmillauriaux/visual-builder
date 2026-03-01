@@ -5,7 +5,7 @@ extends GraphEdit
 const GraphNodeItem = preload("res://src/views/graph_node_item.gd")
 const SceneDataScript = preload("res://src/models/scene_data.gd")
 
-const COLOR_TRANSITION = Color.WHITE
+const COLOR_TRANSITION = Color(0.6, 0.8, 1.0)
 const COLOR_CHOICE = Color(0.0, 0.9, 0.2)
 const COLOR_BOTH = Color(1.0, 0.85, 0.0)
 const TOOLTIP_HOVER_THRESHOLD = 10.0
@@ -24,6 +24,7 @@ var _tooltip_label: Label
 var _hovered_key: String = ""
 
 func _ready() -> void:
+	connection_lines_thickness = 6.0
 	_setup_tooltip()
 	set_process(true)
 
@@ -64,15 +65,42 @@ func _canvas_to_screen(canvas_pos: Vector2) -> Vector2:
 	return (canvas_pos - scroll_offset) * zoom
 
 func _is_near_bezier(point: Vector2, from_pos: Vector2, to_pos: Vector2) -> bool:
-	var dist_x = abs(to_pos.x - from_pos.x)
-	var cp1 = from_pos + Vector2(dist_x * 0.5, 0.0)
-	var cp2 = to_pos - Vector2(dist_x * 0.5, 0.0)
-	for i in range(BEZIER_SAMPLE_COUNT + 1):
-		var t = float(i) / BEZIER_SAMPLE_COUNT
-		var p = from_pos.bezier_interpolate(cp1, cp2, to_pos, t)
+	for p in _get_connection_line(from_pos, to_pos):
 		if point.distance_to(p) <= TOOLTIP_HOVER_THRESHOLD:
 			return true
 	return false
+
+func _get_connection_line(from_position: Vector2, to_position: Vector2) -> PackedVector2Array:
+	var points = PackedVector2Array()
+	if to_position.x >= from_position.x:
+		var dist_x = abs(to_position.x - from_position.x)
+		var cp_offset = maxf(dist_x * 0.5, 40.0)
+		var cp1 = from_position + Vector2(cp_offset, 0.0)
+		var cp2 = to_position - Vector2(cp_offset, 0.0)
+		for i in range(BEZIER_SAMPLE_COUNT + 1):
+			var t = float(i) / BEZIER_SAMPLE_COUNT
+			points.append(from_position.bezier_interpolate(cp1, cp2, to_position, t))
+		return points
+	var margin = 60.0
+	var bottom_y = maxf(from_position.y, to_position.y) + margin
+	var right_x = from_position.x + margin
+	var left_x = to_position.x - margin
+	var corner_right = Vector2(right_x, bottom_y)
+	var corner_left = Vector2(left_x, bottom_y)
+	for i in range(BEZIER_SAMPLE_COUNT + 1):
+		var t = float(i) / BEZIER_SAMPLE_COUNT
+		var cp1 = Vector2(right_x, from_position.y)
+		var cp2 = Vector2(right_x, bottom_y)
+		points.append(from_position.bezier_interpolate(cp1, cp2, corner_right, t))
+	for i in range(1, BEZIER_SAMPLE_COUNT + 1):
+		var t = float(i) / BEZIER_SAMPLE_COUNT
+		points.append(corner_right.lerp(corner_left, t))
+	for i in range(1, BEZIER_SAMPLE_COUNT + 1):
+		var t = float(i) / BEZIER_SAMPLE_COUNT
+		var cp1 = Vector2(left_x, bottom_y)
+		var cp2 = Vector2(left_x, to_position.y)
+		points.append(corner_left.bezier_interpolate(cp1, cp2, to_position, t))
+	return points
 
 func _update_tooltip(mouse_pos: Vector2) -> void:
 	if not _tooltip_panel:

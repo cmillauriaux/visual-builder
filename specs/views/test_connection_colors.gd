@@ -13,7 +13,7 @@ const SceneDataScript = preload("res://src/models/scene_data.gd")
 const ChapterScript = preload("res://src/models/chapter.gd")
 const StoryScript = preload("res://src/models/story.gd")
 
-const COLOR_TRANSITION = Color.WHITE
+const COLOR_TRANSITION = Color(0.6, 0.8, 1.0)
 const COLOR_CHOICE = Color(0.0, 0.9, 0.2)
 const COLOR_BOTH = Color(1.0, 0.85, 0.0)
 

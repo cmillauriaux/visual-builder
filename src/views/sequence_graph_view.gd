@@ -6,7 +6,7 @@ const GraphNodeItem = preload("res://src/views/graph_node_item.gd")
 const SequenceScript = preload("res://src/models/sequence.gd")
 const ConditionScript = preload("res://src/models/condition.gd")
 
-const COLOR_TRANSITION = Color.WHITE
+const COLOR_TRANSITION = Color(0.6, 0.8, 1.0)
 const COLOR_CHOICE = Color(0.0, 0.9, 0.2)
 const COLOR_CONDITION = Color(0.4, 0.6, 1.0)
 const COLOR_BOTH = Color(1.0, 0.85, 0.0)
@@ -46,6 +46,7 @@ var _tooltip_label: Label
 var _hovered_key: String = ""
 
 func _ready() -> void:
+	connection_lines_thickness = 6.0
 	_setup_tooltip()
 	set_process(true)
 
@@ -88,15 +89,47 @@ func _canvas_to_screen(canvas_pos: Vector2) -> Vector2:
 	return (canvas_pos - scroll_offset) * zoom
 
 func _is_near_bezier(point: Vector2, from_pos: Vector2, to_pos: Vector2) -> bool:
-	var dist_x = abs(to_pos.x - from_pos.x)
-	var cp1 = from_pos + Vector2(dist_x * 0.5, 0.0)
-	var cp2 = to_pos - Vector2(dist_x * 0.5, 0.0)
-	for i in range(BEZIER_SAMPLE_COUNT + 1):
-		var t = float(i) / BEZIER_SAMPLE_COUNT
-		var p = from_pos.bezier_interpolate(cp1, cp2, to_pos, t)
+	for p in _get_connection_line(from_pos, to_pos):
 		if point.distance_to(p) <= TOOLTIP_HOVER_THRESHOLD:
 			return true
 	return false
+
+func _get_connection_line(from_position: Vector2, to_position: Vector2) -> PackedVector2Array:
+	var points = PackedVector2Array()
+	if to_position.x >= from_position.x:
+		# Cas forward : Bézier standard
+		var dist_x = abs(to_position.x - from_position.x)
+		var cp_offset = maxf(dist_x * 0.5, 40.0)
+		var cp1 = from_position + Vector2(cp_offset, 0.0)
+		var cp2 = to_position - Vector2(cp_offset, 0.0)
+		for i in range(BEZIER_SAMPLE_COUNT + 1):
+			var t = float(i) / BEZIER_SAMPLE_COUNT
+			points.append(from_position.bezier_interpolate(cp1, cp2, to_position, t))
+		return points
+	# Connexion arrière : contourner par en-dessous via 3 segments
+	var margin = 60.0
+	var bottom_y = maxf(from_position.y, to_position.y) + margin
+	var right_x = from_position.x + margin
+	var left_x = to_position.x - margin
+	var corner_right = Vector2(right_x, bottom_y)
+	var corner_left = Vector2(left_x, bottom_y)
+	# Segment 1 : from → coin bas-droit
+	for i in range(BEZIER_SAMPLE_COUNT + 1):
+		var t = float(i) / BEZIER_SAMPLE_COUNT
+		var cp1 = Vector2(right_x, from_position.y)
+		var cp2 = Vector2(right_x, bottom_y)
+		points.append(from_position.bezier_interpolate(cp1, cp2, corner_right, t))
+	# Segment 2 : coin bas-droit → coin bas-gauche
+	for i in range(1, BEZIER_SAMPLE_COUNT + 1):
+		var t = float(i) / BEZIER_SAMPLE_COUNT
+		points.append(corner_right.lerp(corner_left, t))
+	# Segment 3 : coin bas-gauche → to
+	for i in range(1, BEZIER_SAMPLE_COUNT + 1):
+		var t = float(i) / BEZIER_SAMPLE_COUNT
+		var cp1 = Vector2(left_x, bottom_y)
+		var cp2 = Vector2(left_x, to_position.y)
+		points.append(corner_left.bezier_interpolate(cp1, cp2, to_position, t))
+	return points
 
 func _update_tooltip(mouse_pos: Vector2) -> void:
 	if not _tooltip_panel:
@@ -227,7 +260,7 @@ func _build_connection_type_map() -> void:
 			if cons.type in local_redirect_types and cons.target != "":
 				_merge_connection_type(seq.uuid + "→" + cons.target, "transition")
 			elif cons.type in TERMINAL_TYPES:
-				var terminal_uuid = "terminal:" + cons.type
+				var terminal_uuid = "terminal_" + cons.type
 				if _node_map.has(terminal_uuid):
 					_merge_connection_type(seq.uuid + "→" + terminal_uuid, "transition")
 		elif seq.ending.type == "choices":
@@ -239,7 +272,7 @@ func _build_connection_type_map() -> void:
 				if choice.consequence.type in local_redirect_types and choice.consequence.target != "":
 					target_uuid = choice.consequence.target
 				elif choice.consequence.type in TERMINAL_TYPES:
-					var terminal_uuid = "terminal:" + choice.consequence.type
+					var terminal_uuid = "terminal_" + choice.consequence.type
 					if _node_map.has(terminal_uuid):
 						target_uuid = terminal_uuid
 				if target_uuid != "":
@@ -247,7 +280,7 @@ func _build_connection_type_map() -> void:
 					_merge_connection_type(seq.uuid + "→" + target_uuid, "choice")
 					# Enregistrer la connexion avec le port spécifique au choix
 					if _node_map.has(target_uuid):
-						_choice_connections.append({"from_uuid": seq.uuid, "from_port": i + 1, "to_uuid": target_uuid})
+						_choice_connections.append({"from_uuid": seq.uuid, "from_port": i, "to_uuid": target_uuid})
 	# Connexions issues des conditions
 	for cond in _scene_data.conditions:
 		for rule in cond.rules:
@@ -256,7 +289,7 @@ func _build_connection_type_map() -> void:
 			if rule.consequence.type in local_redirect_types and rule.consequence.target != "":
 				_merge_connection_type(cond.uuid + "→" + rule.consequence.target, "condition")
 			elif rule.consequence.type in TERMINAL_TYPES:
-				var terminal_uuid = "terminal:" + rule.consequence.type
+				var terminal_uuid = "terminal_" + rule.consequence.type
 				if _node_map.has(terminal_uuid):
 					_merge_connection_type(cond.uuid + "→" + terminal_uuid, "condition")
 		if cond.default_consequence == null:
@@ -264,7 +297,7 @@ func _build_connection_type_map() -> void:
 		if cond.default_consequence.type in local_redirect_types and cond.default_consequence.target != "":
 			_merge_connection_type(cond.uuid + "→" + cond.default_consequence.target, "condition")
 		elif cond.default_consequence.type in TERMINAL_TYPES:
-			var terminal_uuid = "terminal:" + cond.default_consequence.type
+			var terminal_uuid = "terminal_" + cond.default_consequence.type
 			if _node_map.has(terminal_uuid):
 				_merge_connection_type(cond.uuid + "→" + terminal_uuid, "condition")
 
@@ -437,7 +470,7 @@ func _create_needed_terminal_nodes() -> void:
 			max_x = _node_map[uuid].position_offset.x
 	var y_offset = 0.0
 	for terminal_type in needed:
-		var uuid = "terminal:" + terminal_type
+		var uuid = "terminal_" + terminal_type
 		var display_name = TERMINAL_DISPLAY_NAMES.get(terminal_type, terminal_type)
 		var pos = Vector2(max_x + 280.0, 100.0 + y_offset)
 		_create_terminal_node(uuid, display_name, pos, terminal_type)
