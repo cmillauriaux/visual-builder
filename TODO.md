@@ -1,1 +1,0 @@
-- En cliquant droit sur une image je dois pouvoir la renommer.

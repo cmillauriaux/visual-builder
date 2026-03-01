@@ -690,6 +690,36 @@ func test_gallery_context_menu_initially_null():
 	assert_null(_dialog._gallery_context_menu)
 
 
+func test_gallery_context_menu_rename_is_first_item():
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
+	_dialog._show_gallery_context_menu(_test_dir + "/assets/foregrounds/test.png", Vector2(100, 100))
+	assert_eq(_dialog._gallery_context_menu.get_item_text(0), "Renommer")
+
+
+func test_gallery_context_menu_rename_id_is_8000():
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
+	_dialog._show_gallery_context_menu(_test_dir + "/assets/foregrounds/test.png", Vector2(100, 100))
+	assert_eq(_dialog._gallery_context_menu.get_item_id(0), 8000)
+
+
+func test_gallery_context_menu_has_rename_then_separator():
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
+	_dialog._show_gallery_context_menu(_test_dir + "/assets/foregrounds/test.png", Vector2(100, 100))
+	# index 0 = Renommer, index 1 = separator
+	assert_true(_dialog._gallery_context_menu.is_item_separator(1))
+
+
+func test_gallery_context_menu_total_count_with_default_categories():
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
+	_dialog._show_gallery_context_menu(_test_dir + "/assets/foregrounds/test.png", Vector2(100, 100))
+	# Renommer + sep + 3 categories + sep + Gérer = 7
+	assert_eq(_dialog._gallery_context_menu.item_count, 7)
+
+
+func test_gallery_has_image_renamed_signal():
+	assert_true(_dialog.has_signal("image_renamed"))
+
+
 # --- Popup "Choisir une image source" : filtre catégories ---
 
 func test_ia_choose_gallery_filter_no_checkboxes_shows_all():

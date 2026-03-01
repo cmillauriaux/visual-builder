@@ -289,8 +289,8 @@ func test_context_menu_has_category_items():
 	story.title = "Test"
 	_dialog.setup(story, _test_dir)
 	_dialog._show_context_menu(_test_dir + "/assets/backgrounds/test.png", Vector2(100, 100))
-	# 3 categories + separator + "Gérer les catégories..." = 5 items
-	assert_eq(_dialog._context_menu.item_count, 5)
+	# Renommer + sep + 3 categories + separator + "Gérer les catégories..." = 7 items
+	assert_eq(_dialog._context_menu.item_count, 7)
 
 
 func test_context_menu_has_manage_option():
@@ -300,3 +300,63 @@ func test_context_menu_has_manage_option():
 	_dialog._show_context_menu(_test_dir + "/assets/backgrounds/test.png", Vector2(100, 100))
 	var last_idx = _dialog._context_menu.item_count - 1
 	assert_eq(_dialog._context_menu.get_item_text(last_idx), "Gérer les catégories...")
+
+
+func test_context_menu_rename_is_first_item():
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	_dialog._show_context_menu(_test_dir + "/assets/backgrounds/test.png", Vector2(100, 100))
+	assert_eq(_dialog._context_menu.get_item_text(0), "Renommer")
+
+
+func test_context_menu_rename_id_is_8000():
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	_dialog._show_context_menu(_test_dir + "/assets/backgrounds/test.png", Vector2(100, 100))
+	assert_eq(_dialog._context_menu.get_item_id(0), 8000)
+
+
+func test_rename_dialog_is_added_on_show():
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	var before_count = _dialog.get_child_count()
+	_dialog._show_rename_dialog(_test_dir + "/assets/backgrounds/forest.png")
+	assert_gt(_dialog.get_child_count(), before_count)
+
+
+func test_rename_dialog_has_correct_title():
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	_dialog._show_rename_dialog(_test_dir + "/assets/backgrounds/forest.png")
+	var rename_dlg: ConfirmationDialog = null
+	for child in _dialog.get_children():
+		if child is ConfirmationDialog:
+			rename_dlg = child
+			break
+	assert_not_null(rename_dlg)
+	assert_eq(rename_dlg.title, "Renommer l'image")
+
+
+func test_rename_dialog_line_edit_prefilled_without_extension():
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	_dialog._show_rename_dialog(_test_dir + "/assets/backgrounds/forest.png")
+	var rename_dlg: ConfirmationDialog = null
+	for child in _dialog.get_children():
+		if child is ConfirmationDialog:
+			rename_dlg = child
+			break
+	assert_not_null(rename_dlg)
+	var line_edit: LineEdit = null
+	for child in rename_dlg.get_children():
+		if child is VBoxContainer:
+			for sub in child.get_children():
+				if sub is LineEdit:
+					line_edit = sub
+	assert_not_null(line_edit)
+	assert_eq(line_edit.text, "forest")

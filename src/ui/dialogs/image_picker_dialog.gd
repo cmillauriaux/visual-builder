@@ -15,6 +15,9 @@ const ComfyUIClient = preload("res://src/services/comfyui_client.gd")
 const ImagePreviewPopup = preload("res://src/ui/shared/image_preview_popup.gd")
 const ImageCategoryService = preload("res://src/services/image_category_service.gd")
 const CategoryManagerDialogScript = preload("res://src/ui/dialogs/category_manager_dialog.gd")
+const ImageRenameService = preload("res://src/services/image_rename_service.gd")
+
+signal image_renamed(old_path: String, new_path: String)
 
 enum Mode { BACKGROUND, FOREGROUND }
 
@@ -602,12 +605,19 @@ func _show_gallery_context_menu(image_path: String, pos: Vector2) -> void:
 	_gallery_context_menu = PopupMenu.new()
 	var image_key = ImageCategoryService.path_to_key(image_path)
 
+	var rename_id = 8000
+	_gallery_context_menu.add_item("Renommer", rename_id)
+	_gallery_context_menu.add_separator()
+
 	if _category_service:
 		var categories = _category_service.get_categories()
 		for i in range(categories.size()):
 			var cat = categories[i]
 			_gallery_context_menu.add_check_item(cat, i)
-			_gallery_context_menu.set_item_checked(i, _category_service.is_image_in_category(image_key, cat))
+			_gallery_context_menu.set_item_checked(
+				_gallery_context_menu.get_item_index(i),
+				_category_service.is_image_in_category(image_key, cat)
+			)
 
 		if not categories.is_empty():
 			_gallery_context_menu.add_separator()
@@ -616,7 +626,9 @@ func _show_gallery_context_menu(image_path: String, pos: Vector2) -> void:
 	_gallery_context_menu.add_item("Gérer les catégories...", manage_id)
 
 	_gallery_context_menu.id_pressed.connect(func(id: int):
-		if id == manage_id:
+		if id == rename_id:
+			_show_rename_dialog(image_path)
+		elif id == manage_id:
 			_open_gallery_category_manager()
 		elif _category_service:
 			var categories = _category_service.get_categories()
@@ -633,6 +645,66 @@ func _show_gallery_context_menu(image_path: String, pos: Vector2) -> void:
 	add_child(_gallery_context_menu)
 	_gallery_context_menu.position = Vector2i(int(pos.x), int(pos.y))
 	_gallery_context_menu.popup()
+
+
+func _show_rename_dialog(image_path: String) -> void:
+	var dialog := ConfirmationDialog.new()
+	dialog.title = "Renommer l'image"
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 8)
+
+	var line_edit := LineEdit.new()
+	var current_name := image_path.get_file().get_basename()
+	line_edit.text = current_name
+	vbox.add_child(line_edit)
+
+	var error_label := Label.new()
+	error_label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.4))
+	error_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	error_label.visible = false
+	vbox.add_child(error_label)
+
+	dialog.add_child(vbox)
+
+	line_edit.text_changed.connect(func(new_text: String):
+		var trimmed := new_text.strip_edges()
+		if trimmed == "":
+			error_label.visible = false
+			dialog.get_ok_button().disabled = true
+			return
+		var format_error := ImageRenameService.validate_name_format(trimmed)
+		if format_error != "":
+			error_label.text = format_error
+			error_label.visible = true
+			dialog.get_ok_button().disabled = true
+			return
+		if trimmed != current_name:
+			var ext := "." + image_path.get_extension()
+			var new_full_path := image_path.get_base_dir().path_join(trimmed + ext)
+			if FileAccess.file_exists(new_full_path):
+				error_label.text = "Ce nom est déjà utilisé."
+				error_label.visible = true
+				dialog.get_ok_button().disabled = true
+				return
+		error_label.visible = false
+		dialog.get_ok_button().disabled = false
+	)
+
+	dialog.confirmed.connect(func():
+		var new_name := line_edit.text.strip_edges()
+		var result := ImageRenameService.rename(image_path, new_name, _category_service)
+		if result["ok"] and not result["same_name"]:
+			if _story_base_path != "":
+				_category_service.save_to(_story_base_path)
+			image_renamed.emit(image_path, result["new_path"])
+			_refresh_gallery()
+	)
+
+	add_child(dialog)
+	dialog.popup_centered()
+	line_edit.select_all()
+	line_edit.grab_focus()
 
 
 func _open_gallery_category_manager() -> void:
