@@ -111,6 +111,19 @@ func filter_paths_by_category(paths: Array, category: String) -> Array:
 	return result
 
 
+func filter_paths_by_categories(paths: Array, categories: Array) -> Array:
+	if categories.is_empty():
+		return paths.duplicate()
+	var result := []
+	for path in paths:
+		var key = _path_to_key(path)
+		for cat in categories:
+			if is_image_in_category(key, cat):
+				result.append(path)
+				break
+	return result
+
+
 func save_to(base_path: String) -> void:
 	var file_path = base_path + "/" + CATEGORIES_FILE
 	var dir_path = file_path.get_base_dir()

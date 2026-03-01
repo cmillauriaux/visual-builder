@@ -31,7 +31,8 @@ var _file_path_label: Label
 var _gallery_grid: GridContainer
 var _empty_label: Label
 var _no_story_label: Label
-var _gallery_category_filter: OptionButton
+var _gallery_category_filter_container: HBoxContainer
+var _gallery_category_checkboxes: Array = []
 var _gallery_context_menu: PopupMenu
 
 # IA tab UI
@@ -214,12 +215,12 @@ func _build_gallery_tab() -> void:
 	gallery_tab.add_child(filter_hbox)
 
 	var filter_label = Label.new()
-	filter_label.text = "Catégorie :"
+	filter_label.text = "Filtrer :"
 	filter_hbox.add_child(filter_label)
 
-	_gallery_category_filter = OptionButton.new()
-	_gallery_category_filter.item_selected.connect(_on_gallery_category_filter_changed)
-	filter_hbox.add_child(_gallery_category_filter)
+	_gallery_category_filter_container = HBoxContainer.new()
+	_gallery_category_filter_container.add_theme_constant_override("separation", 4)
+	filter_hbox.add_child(_gallery_category_filter_container)
 
 	var scroll = ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -433,9 +434,9 @@ func _refresh_gallery() -> void:
 		return
 
 	var images = _list_gallery_images()
-	var selected_cat = _get_gallery_selected_category()
-	if selected_cat != "" and _category_service:
-		images = _category_service.filter_paths_by_category(images, selected_cat)
+	var selected_cats = _get_gallery_selected_categories()
+	if not selected_cats.is_empty() and _category_service:
+		images = _category_service.filter_paths_by_categories(images, selected_cats)
 	if images.is_empty():
 		_empty_label.text = "Aucune image disponible. Importez d'abord une image via l'onglet Fichier."
 		_empty_label.visible = true
@@ -572,23 +573,26 @@ static func _resolve_unique_path(dir_path: String, filename: String) -> String:
 # --- Category Methods ---
 
 func _update_gallery_category_filter() -> void:
-	if _gallery_category_filter == null:
+	if _gallery_category_filter_container == null:
 		return
-	_gallery_category_filter.clear()
-	_gallery_category_filter.add_item("Toutes")
+	for child in _gallery_category_filter_container.get_children():
+		child.queue_free()
+	_gallery_category_checkboxes.clear()
 	if _category_service:
 		for cat in _category_service.get_categories():
-			_gallery_category_filter.add_item(cat)
+			var cb = CheckBox.new()
+			cb.text = cat
+			cb.toggled.connect(func(_p): _refresh_gallery())
+			_gallery_category_filter_container.add_child(cb)
+			_gallery_category_checkboxes.append(cb)
 
 
-func _on_gallery_category_filter_changed(_index: int) -> void:
-	_refresh_gallery()
-
-
-func _get_gallery_selected_category() -> String:
-	if _gallery_category_filter == null or _gallery_category_filter.selected <= 0:
-		return ""
-	return _gallery_category_filter.get_item_text(_gallery_category_filter.selected)
+func _get_gallery_selected_categories() -> Array:
+	var result := []
+	for cb in _gallery_category_checkboxes:
+		if cb.button_pressed:
+			result.append(cb.text)
+	return result
 
 
 func _show_gallery_context_menu(image_path: String, pos: Vector2) -> void:
@@ -704,9 +708,6 @@ func _on_ia_choose_from_gallery() -> void:
 	gallery_window.size = Vector2i(600, 450)
 	gallery_window.exclusive = true
 
-	var vbox = VBoxContainer.new()
-	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
-	vbox.add_theme_constant_override("separation", 8)
 	var margin = MarginContainer.new()
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
 	margin.add_theme_constant_override("margin_left", 12)
@@ -714,36 +715,67 @@ func _on_ia_choose_from_gallery() -> void:
 	margin.add_theme_constant_override("margin_top", 12)
 	margin.add_theme_constant_override("margin_bottom", 12)
 	gallery_window.add_child(margin)
+
+	var vbox = VBoxContainer.new()
+	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vbox.add_theme_constant_override("separation", 8)
 	margin.add_child(vbox)
 
-	var images = _list_gallery_images()
+	# Filtre par catégorie
+	var filter_hbox = HBoxContainer.new()
+	filter_hbox.add_theme_constant_override("separation", 4)
+	vbox.add_child(filter_hbox)
 
-	if images.is_empty():
-		var empty_msg = Label.new()
-		empty_msg.text = "Aucune image dans la galerie."
-		empty_msg.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		empty_msg.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		vbox.add_child(empty_msg)
-	else:
-		var scroll = ScrollContainer.new()
-		scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		vbox.add_child(scroll)
+	var filter_label = Label.new()
+	filter_label.text = "Filtrer :"
+	filter_hbox.add_child(filter_label)
 
-		var grid = GridContainer.new()
-		grid.columns = 4
-		grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		scroll.add_child(grid)
+	var source_checkboxes: Array = []
+	if _category_service:
+		for cat in _category_service.get_categories():
+			var cb = CheckBox.new()
+			cb.text = cat
+			filter_hbox.add_child(cb)
+			source_checkboxes.append(cb)
 
+	# Scroll + grille
+	var scroll = ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vbox.add_child(scroll)
+
+	var grid = GridContainer.new()
+	grid.columns = 4
+	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(grid)
+
+	var empty_msg = Label.new()
+	empty_msg.text = "Aucune image dans la galerie."
+	empty_msg.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	empty_msg.visible = false
+	vbox.add_child(empty_msg)
+
+	# Reconstruction de la grille selon le filtre actif
+	var rebuild_grid = func():
+		for child in grid.get_children():
+			child.queue_free()
+		var all_images = _list_gallery_images()
+		var selected_cats: Array = []
+		for cb in source_checkboxes:
+			if cb.button_pressed:
+				selected_cats.append(cb.text)
+		var images = all_images
+		if not selected_cats.is_empty() and _category_service:
+			images = _category_service.filter_paths_by_categories(all_images, selected_cats)
+		empty_msg.visible = images.is_empty()
+		scroll.visible = not images.is_empty()
 		for path in images:
 			var container = Panel.new()
 			container.custom_minimum_size = Vector2(120, 140)
 			container.mouse_filter = Control.MOUSE_FILTER_STOP
-
 			var item_vbox = VBoxContainer.new()
 			item_vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
 			item_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
 			container.add_child(item_vbox)
-
 			var tex_rect = TextureRect.new()
 			tex_rect.custom_minimum_size = Vector2(100, 100)
 			tex_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -753,7 +785,6 @@ func _on_ia_choose_from_gallery() -> void:
 			if img.load(path) == OK:
 				tex_rect.texture = ImageTexture.create_from_image(img)
 			item_vbox.add_child(tex_rect)
-
 			var name_label = Label.new()
 			name_label.text = path.get_file()
 			name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -761,7 +792,6 @@ func _on_ia_choose_from_gallery() -> void:
 			name_label.custom_minimum_size.x = 100
 			name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			item_vbox.add_child(name_label)
-
 			container.gui_input.connect(func(event: InputEvent):
 				if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 					_ia_source_image_path = path
@@ -771,6 +801,11 @@ func _on_ia_choose_from_gallery() -> void:
 					gallery_window.queue_free()
 			)
 			grid.add_child(container)
+
+	for cb in source_checkboxes:
+		cb.toggled.connect(func(_p): rebuild_grid.call())
+
+	rebuild_grid.call()
 
 	var cancel_btn = Button.new()
 	cancel_btn.text = "Annuler"

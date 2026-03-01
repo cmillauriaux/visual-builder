@@ -665,19 +665,20 @@ func test_ia_source_preview_mouse_filter_stop():
 
 # --- Galerie : Filtre par catégorie ---
 
-func test_has_gallery_category_filter():
-	assert_not_null(_dialog._gallery_category_filter)
-	assert_is(_dialog._gallery_category_filter, OptionButton)
-
-
-func test_gallery_category_filter_has_toutes():
-	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
-	assert_eq(_dialog._gallery_category_filter.get_item_text(0), "Toutes")
+func test_has_gallery_category_filter_container():
+	assert_not_null(_dialog._gallery_category_filter_container)
+	assert_is(_dialog._gallery_category_filter_container, HBoxContainer)
 
 
 func test_gallery_category_filter_has_default_categories():
 	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
-	assert_eq(_dialog._gallery_category_filter.item_count, 4)
+	assert_eq(_dialog._gallery_category_checkboxes.size(), 3)
+
+
+func test_gallery_category_checkboxes_initially_unchecked():
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
+	for cb in _dialog._gallery_category_checkboxes:
+		assert_false(cb.button_pressed)
 
 
 func test_category_service_loaded_on_setup():
@@ -687,6 +688,34 @@ func test_category_service_loaded_on_setup():
 
 func test_gallery_context_menu_initially_null():
 	assert_null(_dialog._gallery_context_menu)
+
+
+# --- Popup "Choisir une image source" : filtre catégories ---
+
+func test_ia_choose_gallery_filter_no_checkboxes_shows_all():
+	var dir = _test_dir + "/assets/foregrounds"
+	DirAccess.make_dir_recursive_absolute(dir)
+	_create_minimal_png(dir + "/img1.png")
+	_create_minimal_png(dir + "/img2.png")
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
+	# Aucune case cochée → toutes les images
+	var all_images = _dialog._list_gallery_images()
+	var selected: Array = []
+	var filtered = _dialog._category_service.filter_paths_by_categories(all_images, selected)
+	assert_eq(filtered.size(), 2)
+
+
+func test_ia_choose_gallery_filter_by_category():
+	var dir = _test_dir + "/assets/foregrounds"
+	DirAccess.make_dir_recursive_absolute(dir)
+	_create_minimal_png(dir + "/img1.png")
+	_create_minimal_png(dir + "/img2.png")
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
+	_dialog._category_service.assign_image_to_category("foregrounds/img1.png", "Base")
+	var all_images = _dialog._list_gallery_images()
+	var filtered = _dialog._category_service.filter_paths_by_categories(all_images, ["Base"])
+	assert_eq(filtered.size(), 1)
+	assert_string_contains(filtered[0], "img1.png")
 
 
 # --- Helpers ---

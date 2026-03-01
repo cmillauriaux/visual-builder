@@ -24,7 +24,8 @@ var _fg_empty_label: Label
 var _clean_button: Button
 var _close_button: Button
 var _image_preview: Control
-var _category_filter: OptionButton
+var _category_filter_container: HBoxContainer
+var _category_checkboxes: Array = []
 var _context_menu: PopupMenu
 
 
@@ -66,12 +67,12 @@ func _build_ui() -> void:
 	vbox.add_child(filter_hbox)
 
 	var filter_label = Label.new()
-	filter_label.text = "Catégorie :"
+	filter_label.text = "Filtrer :"
 	filter_hbox.add_child(filter_label)
 
-	_category_filter = OptionButton.new()
-	_category_filter.item_selected.connect(_on_category_filter_changed)
-	filter_hbox.add_child(_category_filter)
+	_category_filter_container = HBoxContainer.new()
+	_category_filter_container.add_theme_constant_override("separation", 4)
+	filter_hbox.add_child(_category_filter_container)
 
 	# Scroll pour le contenu
 	var scroll = ScrollContainer.new()
@@ -157,9 +158,9 @@ func _refresh_grid(grid: GridContainer, empty_label: Label, dir_path: String) ->
 		child.queue_free()
 
 	var images = _list_images(dir_path)
-	var selected_cat = _get_selected_category()
-	if selected_cat != "" and _category_service:
-		images = _category_service.filter_paths_by_category(images, selected_cat)
+	var selected_cats = _get_selected_categories()
+	if not selected_cats.is_empty() and _category_service:
+		images = _category_service.filter_paths_by_categories(images, selected_cats)
 	if images.is_empty():
 		empty_label.visible = true
 		grid.visible = false
@@ -282,21 +283,24 @@ func _show_image_preview(path: String) -> void:
 
 
 func _update_category_filter() -> void:
-	_category_filter.clear()
-	_category_filter.add_item("Toutes")
+	for child in _category_filter_container.get_children():
+		child.queue_free()
+	_category_checkboxes.clear()
 	if _category_service:
 		for cat in _category_service.get_categories():
-			_category_filter.add_item(cat)
+			var cb = CheckBox.new()
+			cb.text = cat
+			cb.toggled.connect(func(_p): _refresh())
+			_category_filter_container.add_child(cb)
+			_category_checkboxes.append(cb)
 
 
-func _on_category_filter_changed(_index: int) -> void:
-	_refresh()
-
-
-func _get_selected_category() -> String:
-	if _category_filter.selected <= 0:
-		return ""
-	return _category_filter.get_item_text(_category_filter.selected)
+func _get_selected_categories() -> Array:
+	var result := []
+	for cb in _category_checkboxes:
+		if cb.button_pressed:
+			result.append(cb.text)
+	return result
 
 
 func _show_context_menu(image_path: String, pos: Vector2) -> void:

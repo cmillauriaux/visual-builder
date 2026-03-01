@@ -200,31 +200,24 @@ func test_close_button_exists():
 
 # --- Category filter ---
 
-func test_has_category_filter():
-	assert_not_null(_dialog._category_filter)
-	assert_is(_dialog._category_filter, OptionButton)
-
-
-func test_category_filter_has_toutes_option():
-	var story = StoryScript.new()
-	story.title = "Test"
-	_dialog.setup(story, _test_dir)
-	assert_eq(_dialog._category_filter.get_item_text(0), "Toutes")
+func test_has_category_filter_container():
+	assert_not_null(_dialog._category_filter_container)
+	assert_is(_dialog._category_filter_container, HBoxContainer)
 
 
 func test_category_filter_has_default_categories():
 	var story = StoryScript.new()
 	story.title = "Test"
 	_dialog.setup(story, _test_dir)
-	# "Toutes" + 3 default categories = 4
-	assert_eq(_dialog._category_filter.item_count, 4)
+	assert_eq(_dialog._category_checkboxes.size(), 3)
 
 
-func test_category_filter_initially_on_toutes():
+func test_category_checkboxes_initially_unchecked():
 	var story = StoryScript.new()
 	story.title = "Test"
 	_dialog.setup(story, _test_dir)
-	assert_eq(_dialog._category_filter.selected, 0)
+	for cb in _dialog._category_checkboxes:
+		assert_false(cb.button_pressed)
 
 
 func test_category_service_loaded_on_setup():
@@ -241,22 +234,38 @@ func test_filter_by_category_shows_only_assigned():
 	story.title = "Test"
 	_dialog.setup(story, _test_dir)
 	_dialog._category_service.assign_image_to_category("backgrounds/bg1.png", "Base")
-	# Select "Base" filter
-	_dialog._category_filter.select(1)
-	_dialog._on_category_filter_changed(1)
+	for cb in _dialog._category_checkboxes:
+		if cb.text == "Base":
+			cb.button_pressed = true
+	_dialog._refresh()
 	assert_eq(_dialog._bg_grid.get_child_count(), 1)
 
 
-func test_filter_toutes_shows_all():
+func test_filter_no_checkboxes_shows_all():
 	_create_test_image(_test_dir + "/assets/backgrounds/bg1.png")
 	_create_test_image(_test_dir + "/assets/backgrounds/bg2.png")
 	var story = StoryScript.new()
 	story.title = "Test"
 	_dialog.setup(story, _test_dir)
 	_dialog._category_service.assign_image_to_category("backgrounds/bg1.png", "Base")
-	# Select "Toutes"
-	_dialog._category_filter.select(0)
-	_dialog._on_category_filter_changed(0)
+	# No checkboxes checked = show all
+	_dialog._refresh()
+	assert_eq(_dialog._bg_grid.get_child_count(), 2)
+
+
+func test_filter_multiple_categories_shows_union():
+	_create_test_image(_test_dir + "/assets/backgrounds/bg1.png")
+	_create_test_image(_test_dir + "/assets/backgrounds/bg2.png")
+	_create_test_image(_test_dir + "/assets/backgrounds/bg3.png")
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	_dialog._category_service.assign_image_to_category("backgrounds/bg1.png", "Base")
+	_dialog._category_service.assign_image_to_category("backgrounds/bg2.png", "NPC")
+	for cb in _dialog._category_checkboxes:
+		if cb.text == "Base" or cb.text == "NPC":
+			cb.button_pressed = true
+	_dialog._refresh()
 	assert_eq(_dialog._bg_grid.get_child_count(), 2)
 
 

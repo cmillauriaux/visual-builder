@@ -211,6 +211,46 @@ func test_filter_paths_empty_when_no_match():
 	assert_eq(filtered.size(), 0)
 
 
+func test_filter_paths_by_categories_single():
+	_service.assign_image_to_category("backgrounds/forest.png", "Base")
+	var paths = [
+		"/home/story/assets/backgrounds/forest.png",
+		"/home/story/assets/backgrounds/city.png",
+	]
+	var filtered = _service.filter_paths_by_categories(paths, ["Base"])
+	assert_eq(filtered.size(), 1)
+	assert_string_contains(filtered[0], "forest.png")
+
+
+func test_filter_paths_by_categories_multiple():
+	_service.assign_image_to_category("backgrounds/forest.png", "Base")
+	_service.assign_image_to_category("backgrounds/city.png", "NPC")
+	var paths = [
+		"/home/story/assets/backgrounds/forest.png",
+		"/home/story/assets/backgrounds/city.png",
+		"/home/story/assets/backgrounds/sky.png",
+	]
+	var filtered = _service.filter_paths_by_categories(paths, ["Base", "NPC"])
+	assert_eq(filtered.size(), 2)
+
+
+func test_filter_paths_by_categories_empty_list_returns_all():
+	var paths = [
+		"/home/story/assets/backgrounds/forest.png",
+		"/home/story/assets/backgrounds/city.png",
+	]
+	var filtered = _service.filter_paths_by_categories(paths, [])
+	assert_eq(filtered.size(), 2)
+
+
+func test_filter_paths_by_categories_no_duplicate_when_image_in_multiple():
+	_service.assign_image_to_category("backgrounds/forest.png", "Base")
+	_service.assign_image_to_category("backgrounds/forest.png", "NPC")
+	var paths = ["/home/story/assets/backgrounds/forest.png"]
+	var filtered = _service.filter_paths_by_categories(paths, ["Base", "NPC"])
+	assert_eq(filtered.size(), 1)
+
+
 # --- path_to_key ---
 
 func test_path_to_key_backgrounds():

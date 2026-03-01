@@ -1,1 +1,1 @@
-- Dans les fenêtres de sélection foreground/background, quand on affiche la galerie on doit pouvoir afficher tout ou seulement certaines catégories.
+- En cliquant droit sur une image je dois pouvoir la renommer.
