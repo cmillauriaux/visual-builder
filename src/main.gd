@@ -10,6 +10,7 @@ const MainUIBuilder = preload("res://src/controllers/main_ui_builder.gd")
 const PlayControllerScript = preload("res://src/controllers/play_controller.gd")
 const NavigationControllerScript = preload("res://src/controllers/navigation_controller.gd")
 const ExportDialogScript = preload("res://src/ui/dialogs/export_dialog.gd")
+const GalleryDialogScript = preload("res://src/ui/dialogs/gallery_dialog.gd")
 const UndoRedoService = preload("res://src/services/undo_redo_service.gd")
 
 # Contrôleurs
@@ -32,6 +33,7 @@ var _create_button: Button
 var _create_condition_button: Button
 var _variables_button: Button
 var _menu_config_button: Button
+var _gallery_button: Button
 var _variable_panel_popup: PopupPanel
 var _variable_panel: VBoxContainer
 var _export_button: Button
@@ -127,6 +129,7 @@ func _ready() -> void:
 	_create_condition_button.pressed.connect(_nav_ctrl.on_create_condition_pressed)
 	_variables_button.pressed.connect(_nav_ctrl.on_variables_pressed)
 	_menu_config_button.pressed.connect(_nav_ctrl.on_menu_config_requested)
+	_gallery_button.pressed.connect(_on_gallery_pressed)
 	_variable_panel.variables_changed.connect(_nav_ctrl.on_variables_changed)
 	_verify_button.pressed.connect(_nav_ctrl.on_verify_pressed)
 	_verifier_report_panel.close_requested.connect(_nav_ctrl.on_verifier_close)
@@ -375,6 +378,7 @@ func update_view() -> void:
 	_create_condition_button.visible = (level == "sequences")
 	_variables_button.visible = (level in ["chapters", "scenes", "sequences"])
 	_menu_config_button.visible = (level in ["chapters", "scenes", "sequences"])
+	_gallery_button.visible = (level in ["chapters", "scenes", "sequences"])
 	_verify_button.visible = (level == "chapters")
 	_export_button.visible = (level in ["chapters", "scenes", "sequences"])
 	_breadcrumb.set_current_level(level)
@@ -419,6 +423,16 @@ func _refresh_undo_redo_buttons() -> void:
 		_redo_button.tooltip_text = "Rétablir : " + _undo_redo.get_redo_label()
 	else:
 		_redo_button.tooltip_text = ""
+
+
+func _on_gallery_pressed() -> void:
+	if _editor_main._story == null:
+		return
+	var dialog = Window.new()
+	dialog.set_script(GalleryDialogScript)
+	add_child(dialog)
+	dialog.setup(_editor_main._story, _get_story_base_path())
+	dialog.popup_centered()
 
 
 func _on_export_pressed() -> void:

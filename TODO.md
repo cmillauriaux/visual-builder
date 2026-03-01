@@ -1,3 +1,2 @@
-- On doit pouvoir cliquer sur une image (dans la galerie, à la génération) pour la voir en entier 
-- Dans la page principale on rajoute un bouton "Galerie" qui permet de consulter la galerie, de "Clean" la galerie avec un bouton (de supprimer les images qui ne sont pas réellement utilisées)
-- Dans le bouton "Galerie" ou n'importe où on affiche une galerie, on doit pouvoir cliquer droit sur une image et l'affecter à une ou plusieurs catégories. On doit également pouvoir Ajouter/modifier/supprimer des catégories (On a par défaut "Base", "NPC", "Character")
+- Dans la page "Galerie" ou n'importe où on affiche une galerie, on doit pouvoir cliquer droit sur une image et l'affecter à une ou plusieurs catégories. On doit également pouvoir Ajouter/modifier/supprimer des catégories (On a par défaut "Base", "NPC", "Character")
+- Dans les fenêtres de sélection foreground/background, quand on affiche la galerie on doit pouvoir afficher tout ou seulement certaines catégories.
