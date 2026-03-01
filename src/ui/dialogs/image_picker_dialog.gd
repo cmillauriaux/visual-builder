@@ -13,6 +13,8 @@ const IA_TAB := 2
 const ComfyUIConfig = preload("res://src/services/comfyui_config.gd")
 const ComfyUIClient = preload("res://src/services/comfyui_client.gd")
 const ImagePreviewPopup = preload("res://src/ui/shared/image_preview_popup.gd")
+const ImageCategoryService = preload("res://src/services/image_category_service.gd")
+const CategoryManagerDialogScript = preload("res://src/ui/dialogs/category_manager_dialog.gd")
 
 enum Mode { BACKGROUND, FOREGROUND }
 
@@ -20,6 +22,7 @@ var _mode: int = Mode.FOREGROUND
 var _story_base_path: String = ""
 var _selected_path: String = ""
 var _selected_gallery_item = null
+var _category_service: RefCounted = null
 
 # Références UI
 var _tab_container: TabContainer
@@ -28,6 +31,8 @@ var _file_path_label: Label
 var _gallery_grid: GridContainer
 var _empty_label: Label
 var _no_story_label: Label
+var _gallery_category_filter: OptionButton
+var _gallery_context_menu: PopupMenu
 
 # IA tab UI
 var _ia_url_input: LineEdit
@@ -74,6 +79,10 @@ func setup(mode: int, story_base_path: String) -> void:
 	_update_story_warning()
 	if _ia_choose_gallery_btn:
 		_ia_choose_gallery_btn.disabled = (story_base_path == "")
+	_category_service = ImageCategoryService.new()
+	if story_base_path != "":
+		_category_service.load_from(story_base_path)
+	_update_gallery_category_filter()
 
 func _reset_selection() -> void:
 	_selected_path = ""
@@ -198,6 +207,19 @@ func _build_gallery_tab() -> void:
 	var gallery_tab = VBoxContainer.new()
 	gallery_tab.name = "Galerie"
 	_tab_container.add_child(gallery_tab)
+
+	# Filtre par catégorie
+	var filter_hbox = HBoxContainer.new()
+	filter_hbox.add_theme_constant_override("separation", 8)
+	gallery_tab.add_child(filter_hbox)
+
+	var filter_label = Label.new()
+	filter_label.text = "Catégorie :"
+	filter_hbox.add_child(filter_label)
+
+	_gallery_category_filter = OptionButton.new()
+	_gallery_category_filter.item_selected.connect(_on_gallery_category_filter_changed)
+	filter_hbox.add_child(_gallery_category_filter)
 
 	var scroll = ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -411,6 +433,9 @@ func _refresh_gallery() -> void:
 		return
 
 	var images = _list_gallery_images()
+	var selected_cat = _get_gallery_selected_category()
+	if selected_cat != "" and _category_service:
+		images = _category_service.filter_paths_by_category(images, selected_cat)
 	if images.is_empty():
 		_empty_label.text = "Aucune image disponible. Importez d'abord une image via l'onglet Fichier."
 		_empty_label.visible = true
@@ -451,11 +476,14 @@ func _add_gallery_item(path: String) -> void:
 	vbox.add_child(name_label)
 
 	container.gui_input.connect(func(event: InputEvent):
-		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			if event.double_click:
-				_show_image_preview_from_path(path)
-			else:
-				_on_gallery_item_selected(container, path)
+		if event is InputEventMouseButton and event.pressed:
+			if event.button_index == MOUSE_BUTTON_LEFT:
+				if event.double_click:
+					_show_image_preview_from_path(path)
+				else:
+					_on_gallery_item_selected(container, path)
+			elif event.button_index == MOUSE_BUTTON_RIGHT:
+				_show_gallery_context_menu(path, container.get_global_mouse_position())
 	)
 	_gallery_grid.add_child(container)
 
@@ -539,6 +567,82 @@ static func _resolve_unique_path(dir_path: String, filename: String) -> String:
 	while FileAccess.file_exists(dir_path + "/" + name + "_" + str(i) + ext):
 		i += 1
 	return dir_path + "/" + name + "_" + str(i) + ext
+
+
+# --- Category Methods ---
+
+func _update_gallery_category_filter() -> void:
+	if _gallery_category_filter == null:
+		return
+	_gallery_category_filter.clear()
+	_gallery_category_filter.add_item("Toutes")
+	if _category_service:
+		for cat in _category_service.get_categories():
+			_gallery_category_filter.add_item(cat)
+
+
+func _on_gallery_category_filter_changed(_index: int) -> void:
+	_refresh_gallery()
+
+
+func _get_gallery_selected_category() -> String:
+	if _gallery_category_filter == null or _gallery_category_filter.selected <= 0:
+		return ""
+	return _gallery_category_filter.get_item_text(_gallery_category_filter.selected)
+
+
+func _show_gallery_context_menu(image_path: String, pos: Vector2) -> void:
+	if _gallery_context_menu != null:
+		_gallery_context_menu.queue_free()
+
+	_gallery_context_menu = PopupMenu.new()
+	var image_key = ImageCategoryService.path_to_key(image_path)
+
+	if _category_service:
+		var categories = _category_service.get_categories()
+		for i in range(categories.size()):
+			var cat = categories[i]
+			_gallery_context_menu.add_check_item(cat, i)
+			_gallery_context_menu.set_item_checked(i, _category_service.is_image_in_category(image_key, cat))
+
+		if not categories.is_empty():
+			_gallery_context_menu.add_separator()
+
+	var manage_id = 9000
+	_gallery_context_menu.add_item("Gérer les catégories...", manage_id)
+
+	_gallery_context_menu.id_pressed.connect(func(id: int):
+		if id == manage_id:
+			_open_gallery_category_manager()
+		elif _category_service:
+			var categories = _category_service.get_categories()
+			if id >= 0 and id < categories.size():
+				var cat = categories[id]
+				if _category_service.is_image_in_category(image_key, cat):
+					_category_service.unassign_image_from_category(image_key, cat)
+				else:
+					_category_service.assign_image_to_category(image_key, cat)
+				if _story_base_path != "":
+					_category_service.save_to(_story_base_path)
+				_refresh_gallery()
+	)
+	add_child(_gallery_context_menu)
+	_gallery_context_menu.position = Vector2i(int(pos.x), int(pos.y))
+	_gallery_context_menu.popup()
+
+
+func _open_gallery_category_manager() -> void:
+	var manager = Window.new()
+	manager.set_script(CategoryManagerDialogScript)
+	add_child(manager)
+	manager.setup(_category_service)
+	manager.categories_changed.connect(func():
+		if _story_base_path != "":
+			_category_service.save_to(_story_base_path)
+		_update_gallery_category_filter()
+		_refresh_gallery()
+	)
+	manager.popup_centered()
 
 
 # --- IA Tab Methods ---

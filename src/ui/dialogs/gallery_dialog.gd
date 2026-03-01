@@ -6,10 +6,13 @@ extends Window
 
 const GalleryCleanerService = preload("res://src/services/gallery_cleaner_service.gd")
 const ImagePreviewPopup = preload("res://src/ui/shared/image_preview_popup.gd")
+const ImageCategoryService = preload("res://src/services/image_category_service.gd")
+const CategoryManagerDialogScript = preload("res://src/ui/dialogs/category_manager_dialog.gd")
 
 var _story = null
 var _story_base_path: String = ""
 var _used_images: Array = []
+var _category_service: RefCounted = null
 
 # Références UI
 var _bg_section_label: Label
@@ -21,6 +24,8 @@ var _fg_empty_label: Label
 var _clean_button: Button
 var _close_button: Button
 var _image_preview: Control
+var _category_filter: OptionButton
+var _context_menu: PopupMenu
 
 
 func _ready() -> void:
@@ -35,6 +40,10 @@ func setup(story, story_base_path: String) -> void:
 	_story_base_path = story_base_path
 	title = "Galerie — " + story.title
 	_used_images = GalleryCleanerService.collect_used_images(story)
+	_category_service = ImageCategoryService.new()
+	if story_base_path != "":
+		_category_service.load_from(story_base_path)
+	_update_category_filter()
 	_refresh()
 
 
@@ -50,6 +59,19 @@ func _build_ui() -> void:
 	var vbox = VBoxContainer.new()
 	vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	margin.add_child(vbox)
+
+	# Filtre par catégorie
+	var filter_hbox = HBoxContainer.new()
+	filter_hbox.add_theme_constant_override("separation", 8)
+	vbox.add_child(filter_hbox)
+
+	var filter_label = Label.new()
+	filter_label.text = "Catégorie :"
+	filter_hbox.add_child(filter_label)
+
+	_category_filter = OptionButton.new()
+	_category_filter.item_selected.connect(_on_category_filter_changed)
+	filter_hbox.add_child(_category_filter)
 
 	# Scroll pour le contenu
 	var scroll = ScrollContainer.new()
@@ -131,9 +153,13 @@ func _refresh() -> void:
 
 func _refresh_grid(grid: GridContainer, empty_label: Label, dir_path: String) -> void:
 	for child in grid.get_children():
+		grid.remove_child(child)
 		child.queue_free()
 
 	var images = _list_images(dir_path)
+	var selected_cat = _get_selected_category()
+	if selected_cat != "" and _category_service:
+		images = _category_service.filter_paths_by_category(images, selected_cat)
 	if images.is_empty():
 		empty_label.visible = true
 		grid.visible = false
@@ -178,9 +204,11 @@ func _add_gallery_item(grid: GridContainer, path: String) -> void:
 	vbox.add_child(name_label)
 
 	container.gui_input.connect(func(event: InputEvent):
-		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			if event.double_click:
+		if event is InputEventMouseButton and event.pressed:
+			if event.button_index == MOUSE_BUTTON_LEFT and event.double_click:
 				_show_image_preview(path)
+			elif event.button_index == MOUSE_BUTTON_RIGHT:
+				_show_context_menu(path, container.get_global_mouse_position())
 	)
 	grid.add_child(container)
 
@@ -251,6 +279,78 @@ func _show_image_preview(path: String) -> void:
 		var tex = ImageTexture.create_from_image(img)
 		if _image_preview:
 			_image_preview.show_preview(tex, path.get_file())
+
+
+func _update_category_filter() -> void:
+	_category_filter.clear()
+	_category_filter.add_item("Toutes")
+	if _category_service:
+		for cat in _category_service.get_categories():
+			_category_filter.add_item(cat)
+
+
+func _on_category_filter_changed(_index: int) -> void:
+	_refresh()
+
+
+func _get_selected_category() -> String:
+	if _category_filter.selected <= 0:
+		return ""
+	return _category_filter.get_item_text(_category_filter.selected)
+
+
+func _show_context_menu(image_path: String, pos: Vector2) -> void:
+	if _context_menu != null:
+		_context_menu.queue_free()
+
+	_context_menu = PopupMenu.new()
+	var image_key = ImageCategoryService.path_to_key(image_path)
+
+	if _category_service:
+		var categories = _category_service.get_categories()
+		for i in range(categories.size()):
+			var cat = categories[i]
+			_context_menu.add_check_item(cat, i)
+			_context_menu.set_item_checked(i, _category_service.is_image_in_category(image_key, cat))
+
+		if not categories.is_empty():
+			_context_menu.add_separator()
+
+	var manage_id = 9000
+	_context_menu.add_item("Gérer les catégories...", manage_id)
+
+	_context_menu.id_pressed.connect(func(id: int):
+		if id == manage_id:
+			_open_category_manager()
+		elif _category_service:
+			var categories = _category_service.get_categories()
+			if id >= 0 and id < categories.size():
+				var cat = categories[id]
+				if _category_service.is_image_in_category(image_key, cat):
+					_category_service.unassign_image_from_category(image_key, cat)
+				else:
+					_category_service.assign_image_to_category(image_key, cat)
+				if _story_base_path != "":
+					_category_service.save_to(_story_base_path)
+				_refresh()
+	)
+	add_child(_context_menu)
+	_context_menu.position = Vector2i(int(pos.x), int(pos.y))
+	_context_menu.popup()
+
+
+func _open_category_manager() -> void:
+	var manager = Window.new()
+	manager.set_script(CategoryManagerDialogScript)
+	add_child(manager)
+	manager.setup(_category_service)
+	manager.categories_changed.connect(func():
+		if _story_base_path != "":
+			_category_service.save_to(_story_base_path)
+		_update_category_filter()
+		_refresh()
+	)
+	manager.popup_centered()
 
 
 func _on_close() -> void:

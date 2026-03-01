@@ -7,6 +7,7 @@ const SceneDataScript = preload("res://src/models/scene_data.gd")
 const SequenceScript = preload("res://src/models/sequence.gd")
 const ForegroundScript = preload("res://src/models/foreground.gd")
 const DialogueScript = preload("res://src/models/dialogue.gd")
+const ImageCategoryService = preload("res://src/services/image_category_service.gd")
 
 var _dialog: Window
 var _test_dir: String = ""
@@ -195,3 +196,98 @@ func test_clean_button_enabled_when_gallery_has_images():
 func test_close_button_exists():
 	assert_not_null(_dialog._close_button)
 	assert_eq(_dialog._close_button.text, "Fermer")
+
+
+# --- Category filter ---
+
+func test_has_category_filter():
+	assert_not_null(_dialog._category_filter)
+	assert_is(_dialog._category_filter, OptionButton)
+
+
+func test_category_filter_has_toutes_option():
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	assert_eq(_dialog._category_filter.get_item_text(0), "Toutes")
+
+
+func test_category_filter_has_default_categories():
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	# "Toutes" + 3 default categories = 4
+	assert_eq(_dialog._category_filter.item_count, 4)
+
+
+func test_category_filter_initially_on_toutes():
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	assert_eq(_dialog._category_filter.selected, 0)
+
+
+func test_category_service_loaded_on_setup():
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	assert_not_null(_dialog._category_service)
+
+
+func test_filter_by_category_shows_only_assigned():
+	_create_test_image(_test_dir + "/assets/backgrounds/bg1.png")
+	_create_test_image(_test_dir + "/assets/backgrounds/bg2.png")
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	_dialog._category_service.assign_image_to_category("backgrounds/bg1.png", "Base")
+	# Select "Base" filter
+	_dialog._category_filter.select(1)
+	_dialog._on_category_filter_changed(1)
+	assert_eq(_dialog._bg_grid.get_child_count(), 1)
+
+
+func test_filter_toutes_shows_all():
+	_create_test_image(_test_dir + "/assets/backgrounds/bg1.png")
+	_create_test_image(_test_dir + "/assets/backgrounds/bg2.png")
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	_dialog._category_service.assign_image_to_category("backgrounds/bg1.png", "Base")
+	# Select "Toutes"
+	_dialog._category_filter.select(0)
+	_dialog._on_category_filter_changed(0)
+	assert_eq(_dialog._bg_grid.get_child_count(), 2)
+
+
+# --- Context menu ---
+
+func test_context_menu_initially_null():
+	assert_null(_dialog._context_menu)
+
+
+func test_show_context_menu_creates_popup():
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	_dialog._show_context_menu(_test_dir + "/assets/backgrounds/test.png", Vector2(100, 100))
+	assert_not_null(_dialog._context_menu)
+	assert_is(_dialog._context_menu, PopupMenu)
+
+
+func test_context_menu_has_category_items():
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	_dialog._show_context_menu(_test_dir + "/assets/backgrounds/test.png", Vector2(100, 100))
+	# 3 categories + separator + "Gérer les catégories..." = 5 items
+	assert_eq(_dialog._context_menu.item_count, 5)
+
+
+func test_context_menu_has_manage_option():
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	_dialog._show_context_menu(_test_dir + "/assets/backgrounds/test.png", Vector2(100, 100))
+	var last_idx = _dialog._context_menu.item_count - 1
+	assert_eq(_dialog._context_menu.get_item_text(last_idx), "Gérer les catégories...")

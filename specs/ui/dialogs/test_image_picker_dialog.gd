@@ -4,6 +4,7 @@ extends GutTest
 ## (onglet Fichier + onglet Galerie + onglet IA)
 
 const ImagePickerDialog = preload("res://src/ui/dialogs/image_picker_dialog.gd")
+const ImageCategoryService = preload("res://src/services/image_category_service.gd")
 
 var _dialog: Window
 var _test_dir: String = ""
@@ -661,6 +662,32 @@ func test_ia_result_preview_mouse_filter_stop():
 
 func test_ia_source_preview_mouse_filter_stop():
 	assert_eq(_dialog._ia_source_preview.mouse_filter, Control.MOUSE_FILTER_STOP)
+
+# --- Galerie : Filtre par catégorie ---
+
+func test_has_gallery_category_filter():
+	assert_not_null(_dialog._gallery_category_filter)
+	assert_is(_dialog._gallery_category_filter, OptionButton)
+
+
+func test_gallery_category_filter_has_toutes():
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
+	assert_eq(_dialog._gallery_category_filter.get_item_text(0), "Toutes")
+
+
+func test_gallery_category_filter_has_default_categories():
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
+	assert_eq(_dialog._gallery_category_filter.item_count, 4)
+
+
+func test_category_service_loaded_on_setup():
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
+	assert_not_null(_dialog._category_service)
+
+
+func test_gallery_context_menu_initially_null():
+	assert_null(_dialog._gallery_context_menu)
+
 
 # --- Helpers ---
 

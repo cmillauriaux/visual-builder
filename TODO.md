@@ -1,2 +1,1 @@
-- Dans la page "Galerie" ou n'importe où on affiche une galerie, on doit pouvoir cliquer droit sur une image et l'affecter à une ou plusieurs catégories. On doit également pouvoir Ajouter/modifier/supprimer des catégories (On a par défaut "Base", "NPC", "Character")
 - Dans les fenêtres de sélection foreground/background, quand on affiche la galerie on doit pouvoir afficher tout ou seulement certaines catégories.
