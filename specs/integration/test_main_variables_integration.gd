@@ -95,7 +95,7 @@ func test_variable_names_passed_to_condition_editor():
 	cond.condition_name = "Test"
 	story.chapters[0].scenes[0].conditions.append(cond)
 	_main._editor_main.navigate_to_condition(cond.uuid)
-	_main._load_condition_editor(cond)
+	_main._nav_ctrl.load_condition_editor(cond)
 	assert_has(_main._condition_editor.get_variable_names(), "hp")
 
 # --- Helper ---

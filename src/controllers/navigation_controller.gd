@@ -10,6 +10,7 @@ const SequenceScript = preload("res://src/models/sequence.gd")
 const StorySaver = preload("res://src/persistence/story_saver.gd")
 const RenameDialogScript = preload("res://src/ui/dialogs/rename_dialog.gd")
 const MenuConfigDialogScript = preload("res://src/ui/dialogs/menu_config_dialog.gd")
+const StoryVerifierScript = preload("res://src/services/story_verifier.gd")
 
 var _main: Control
 var _rename_dialog: ConfirmationDialog
@@ -315,6 +316,27 @@ func load_condition_editor(cond) -> void:
 func _update_condition_targets() -> void:
 	var targets = _build_available_targets()
 	_main._condition_editor.set_available_targets(targets["sequences"], targets["scenes"], targets["chapters"], targets["conditions"])
+
+
+# --- Verifier ---
+
+func on_verify_pressed() -> void:
+	if _main._editor_main._story == null:
+		return
+	var verifier = StoryVerifierScript.new()
+	var report = verifier.verify(_main._editor_main._story)
+	_main._verifier_report_panel.show_report(report)
+	_main._verifier_report_panel.visible = true
+	_main._chapter_graph_view.visible = false
+	_main._scene_graph_view.visible = false
+	_main._sequence_graph_view.visible = false
+	_main._sequence_editor_panel.visible = false
+	_main._condition_editor_panel.visible = false
+
+
+func on_verifier_close() -> void:
+	_main._verifier_report_panel.visible = false
+	_main.update_view()
 
 
 func _build_available_targets() -> Dictionary:

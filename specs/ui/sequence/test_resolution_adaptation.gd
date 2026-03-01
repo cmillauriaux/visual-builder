@@ -123,10 +123,10 @@ func test_enter_fullscreen_creates_layer():
 	add_child_autofree(main_ctrl)
 	# Wait for _ready to complete
 	await get_tree().process_frame
-	main_ctrl._enter_play_fullscreen()
-	assert_not_null(main_ctrl._fullscreen_layer, "Fullscreen layer should be created")
-	assert_true(main_ctrl._fullscreen_layer.is_inside_tree(), "Fullscreen layer should be in the tree")
-	main_ctrl._exit_play_fullscreen()
+	main_ctrl._play_ctrl._enter_play_fullscreen()
+	assert_not_null(main_ctrl._play_ctrl._fullscreen_layer, "Fullscreen layer should be created")
+	assert_true(main_ctrl._play_ctrl._fullscreen_layer.is_inside_tree(), "Fullscreen layer should be in the tree")
+	main_ctrl._play_ctrl._exit_play_fullscreen()
 
 func test_visual_editor_reparented_in_fullscreen():
 	var main_ctrl = Control.new()
@@ -134,9 +134,9 @@ func test_visual_editor_reparented_in_fullscreen():
 	add_child_autofree(main_ctrl)
 	await get_tree().process_frame
 	var original_parent = main_ctrl._visual_editor.get_parent()
-	main_ctrl._enter_play_fullscreen()
-	assert_eq(main_ctrl._visual_editor.get_parent(), main_ctrl._fullscreen_layer, "Visual editor should be child of fullscreen layer")
-	main_ctrl._exit_play_fullscreen()
+	main_ctrl._play_ctrl._enter_play_fullscreen()
+	assert_eq(main_ctrl._visual_editor.get_parent(), main_ctrl._play_ctrl._fullscreen_layer, "Visual editor should be child of fullscreen layer")
+	main_ctrl._play_ctrl._exit_play_fullscreen()
 
 func test_exit_fullscreen_restores_hierarchy():
 	var main_ctrl = Control.new()
@@ -144,8 +144,8 @@ func test_exit_fullscreen_restores_hierarchy():
 	add_child_autofree(main_ctrl)
 	await get_tree().process_frame
 	var original_parent = main_ctrl._visual_editor.get_parent()
-	main_ctrl._enter_play_fullscreen()
-	main_ctrl._exit_play_fullscreen()
+	main_ctrl._play_ctrl._enter_play_fullscreen()
+	main_ctrl._play_ctrl._exit_play_fullscreen()
 	assert_eq(main_ctrl._visual_editor.get_parent(), main_ctrl._left_panel, "Visual editor should be restored to left_panel")
 
 func test_stop_button_visible_in_fullscreen():
@@ -153,11 +153,11 @@ func test_stop_button_visible_in_fullscreen():
 	main_ctrl.set_script(MainScript)
 	add_child_autofree(main_ctrl)
 	await get_tree().process_frame
-	main_ctrl._enter_play_fullscreen()
-	var stop_btn = main_ctrl._fullscreen_layer.get_node_or_null("FullscreenStopButton")
+	main_ctrl._play_ctrl._enter_play_fullscreen()
+	var stop_btn = main_ctrl._play_ctrl._fullscreen_layer.get_node_or_null("FullscreenStopButton")
 	assert_not_null(stop_btn, "Stop button should exist in fullscreen layer")
 	assert_true(stop_btn.visible, "Stop button should be visible")
-	main_ctrl._exit_play_fullscreen()
+	main_ctrl._play_ctrl._exit_play_fullscreen()
 
 func test_editor_ui_hidden_in_fullscreen():
 	var main_ctrl = Control.new()
@@ -165,18 +165,17 @@ func test_editor_ui_hidden_in_fullscreen():
 	add_child_autofree(main_ctrl)
 	await get_tree().process_frame
 	assert_true(main_ctrl._vbox.visible, "Editor UI should be visible initially")
-	main_ctrl._enter_play_fullscreen()
+	main_ctrl._play_ctrl._enter_play_fullscreen()
 	assert_false(main_ctrl._vbox.visible, "Editor UI should be hidden in fullscreen")
-	main_ctrl._exit_play_fullscreen()
+	main_ctrl._play_ctrl._exit_play_fullscreen()
 	assert_true(main_ctrl._vbox.visible, "Editor UI should be restored after fullscreen")
-	main_ctrl._exit_play_fullscreen()
 
 func test_fullscreen_layer_is_black():
 	var main_ctrl = Control.new()
 	main_ctrl.set_script(MainScript)
 	add_child_autofree(main_ctrl)
 	await get_tree().process_frame
-	main_ctrl._enter_play_fullscreen()
-	assert_true(main_ctrl._fullscreen_layer is ColorRect, "Fullscreen layer should be a ColorRect")
-	assert_eq(main_ctrl._fullscreen_layer.color, Color(0, 0, 0, 1), "Fullscreen layer should be black")
-	main_ctrl._exit_play_fullscreen()
+	main_ctrl._play_ctrl._enter_play_fullscreen()
+	assert_true(main_ctrl._play_ctrl._fullscreen_layer is ColorRect, "Fullscreen layer should be a ColorRect")
+	assert_eq(main_ctrl._play_ctrl._fullscreen_layer.color, Color(0, 0, 0, 1), "Fullscreen layer should be black")
+	main_ctrl._play_ctrl._exit_play_fullscreen()

@@ -49,7 +49,7 @@ func test_create_condition_button_hidden_at_other_levels():
 	assert_false(_main._create_condition_button.visible)
 
 func test_create_condition_button_creates_condition():
-	_main._on_create_condition_pressed()
+	_main._nav_ctrl.on_create_condition_pressed()
 	var scene = _main._editor_main._current_scene
 	assert_eq(scene.conditions.size(), 1)
 	assert_eq(scene.conditions[0].condition_name, "Condition 1")
@@ -63,7 +63,7 @@ func test_double_click_condition_navigates_to_condition_edit():
 	scene.conditions.append(cond)
 	_main._sequence_graph_view.load_scene(scene)
 
-	_main._on_condition_double_clicked(cond.uuid)
+	_main._nav_ctrl.on_condition_double_clicked(cond.uuid)
 	assert_eq(_main._editor_main.get_current_level(), "condition_edit")
 
 func test_condition_editor_visible_in_condition_edit():
@@ -73,7 +73,7 @@ func test_condition_editor_visible_in_condition_edit():
 	scene.conditions.append(cond)
 	_main._sequence_graph_view.load_scene(scene)
 
-	_main._on_condition_double_clicked(cond.uuid)
+	_main._nav_ctrl.on_condition_double_clicked(cond.uuid)
 	assert_true(_main._condition_editor_panel.visible)
 	assert_false(_main._sequence_graph_view.visible)
 
@@ -86,7 +86,7 @@ func test_breadcrumb_shows_condition_name():
 	scene.conditions.append(cond)
 	_main._sequence_graph_view.load_scene(scene)
 
-	_main._on_condition_double_clicked(cond.uuid)
+	_main._nav_ctrl.on_condition_double_clicked(cond.uuid)
 	var path = _main._editor_main.get_breadcrumb_path()
 	assert_eq(path[path.size() - 1], "MyCond")
 
@@ -99,6 +99,6 @@ func test_back_from_condition_edit():
 	scene.conditions.append(cond)
 	_main._sequence_graph_view.load_scene(scene)
 
-	_main._on_condition_double_clicked(cond.uuid)
-	_main._on_back_pressed()
+	_main._nav_ctrl.on_condition_double_clicked(cond.uuid)
+	_main._nav_ctrl.on_back_pressed()
 	assert_eq(_main._editor_main.get_current_level(), "sequences")

@@ -19,6 +19,7 @@ const DialogueEditorScript = preload("res://src/ui/editors/dialogue_editor.gd")
 const StoryPlayControllerScript = preload("res://src/ui/play/story_play_controller.gd")
 const ConditionEditorScript = preload("res://src/ui/editors/condition_editor.gd")
 const VariablePanelScript = preload("res://src/ui/editors/variable_panel.gd")
+const VerifierReportPanelScript = preload("res://src/ui/editors/verifier_report_panel.gd")
 
 
 static func build(main: Control) -> void:
@@ -26,6 +27,7 @@ static func build(main: Control) -> void:
 	_build_content_area(main)
 	_build_sequence_editor(main)
 	_build_condition_editor(main)
+	_build_verifier_panel(main)
 	_build_play_overlay(main)
 	_build_helpers(main)
 
@@ -83,6 +85,10 @@ static func _build_top_bar(main: Control) -> void:
 	main._variable_panel = VBoxContainer.new()
 	main._variable_panel.set_script(VariablePanelScript)
 	main._variable_panel_popup.add_child(main._variable_panel)
+
+	main._verify_button = Button.new()
+	main._verify_button.text = "Verifier l'histoire"
+	main._top_bar.add_child(main._verify_button)
 
 	main._export_button = Button.new()
 	main._export_button.text = "Exporter"
@@ -261,6 +267,14 @@ static func _build_condition_editor(main: Control) -> void:
 	main._condition_editor.set_script(ConditionEditorScript)
 	main._condition_editor.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	main._condition_editor_panel.add_child(main._condition_editor)
+
+
+static func _build_verifier_panel(main: Control) -> void:
+	main._verifier_report_panel = VBoxContainer.new()
+	main._verifier_report_panel.set_script(VerifierReportPanelScript)
+	main._verifier_report_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	main._verifier_report_panel.visible = false
+	main._content_area.add_child(main._verifier_report_panel)
 
 
 static func _build_play_overlay(main: Control) -> void:

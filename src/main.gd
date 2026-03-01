@@ -65,6 +65,10 @@ var _ending_editor: VBoxContainer
 var _condition_editor_panel: VBoxContainer
 var _condition_editor: VBoxContainer
 
+# UI — Verifier
+var _verify_button: Button
+var _verifier_report_panel: VBoxContainer
+
 # UI — Play overlay
 var _play_overlay: PanelContainer
 var _play_character_label: Label
@@ -114,6 +118,8 @@ func _ready() -> void:
 	_variables_button.pressed.connect(_nav_ctrl.on_variables_pressed)
 	_menu_config_button.pressed.connect(_nav_ctrl.on_menu_config_requested)
 	_variable_panel.variables_changed.connect(_nav_ctrl.on_variables_changed)
+	_verify_button.pressed.connect(_nav_ctrl.on_verify_pressed)
+	_verifier_report_panel.close_requested.connect(_nav_ctrl.on_verifier_close)
 	_export_button.pressed.connect(_on_export_pressed)
 	_save_button.pressed.connect(_nav_ctrl.on_save_pressed)
 	_load_button.pressed.connect(_nav_ctrl.on_load_pressed)
@@ -338,6 +344,9 @@ func refresh_current_view() -> void:
 
 
 func update_view() -> void:
+	# Si le panel de verification est visible, ne pas toucher aux vues
+	if _verifier_report_panel.visible:
+		return
 	var level = _editor_main.get_current_level()
 	_chapter_graph_view.visible = (level == "chapters")
 	_scene_graph_view.visible = (level == "scenes")
@@ -351,6 +360,7 @@ func update_view() -> void:
 	_create_condition_button.visible = (level == "sequences")
 	_variables_button.visible = (level in ["chapters", "scenes", "sequences"])
 	_menu_config_button.visible = (level in ["chapters", "scenes", "sequences"])
+	_verify_button.visible = (level == "chapters")
 	_export_button.visible = (level in ["chapters", "scenes", "sequences"])
 	_breadcrumb.set_current_level(level)
 	_breadcrumb.set_path(_editor_main.get_breadcrumb_path())

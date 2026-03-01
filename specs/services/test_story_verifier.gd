@@ -1,0 +1,599 @@
+extends GutTest
+
+# Tests unitaires pour le verificateur d'histoire
+
+const StoryVerifier = preload("res://src/services/story_verifier.gd")
+const StoryScript = preload("res://src/models/story.gd")
+const ChapterScript = preload("res://src/models/chapter.gd")
+const SceneDataScript = preload("res://src/models/scene_data.gd")
+const SequenceScript = preload("res://src/models/sequence.gd")
+const EndingScript = preload("res://src/models/ending.gd")
+const ConsequenceScript = preload("res://src/models/consequence.gd")
+const ChoiceScript = preload("res://src/models/choice.gd")
+const DialogueScript = preload("res://src/models/dialogue.gd")
+const ConditionModelScript = preload("res://src/models/condition.gd")
+const ConditionRuleScript = preload("res://src/models/condition_rule.gd")
+const VariableDefinitionScript = preload("res://src/models/variable_definition.gd")
+const VariableEffectScript = preload("res://src/models/variable_effect.gd")
+
+var _verifier: RefCounted
+
+
+func before_each():
+	_verifier = StoryVerifier.new()
+
+
+# === Helpers ===
+
+func _make_story() -> RefCounted:
+	var story = StoryScript.new()
+	story.title = "Test Story"
+	return story
+
+func _make_chapter(ch_name: String, pos: Vector2 = Vector2(100, 100)) -> RefCounted:
+	var ch = ChapterScript.new()
+	ch.chapter_name = ch_name
+	ch.position = pos
+	return ch
+
+func _make_scene(sc_name: String, pos: Vector2 = Vector2(100, 100)) -> RefCounted:
+	var sc = SceneDataScript.new()
+	sc.scene_name = sc_name
+	sc.position = pos
+	return sc
+
+func _make_sequence(name: String, pos: Vector2 = Vector2(100, 100)) -> RefCounted:
+	var seq = SequenceScript.new()
+	seq.seq_name = name
+	seq.position = pos
+	var dlg = DialogueScript.new()
+	dlg.character = "Narrator"
+	dlg.text = "Hello"
+	seq.dialogues.append(dlg)
+	return seq
+
+func _make_ending_auto(type: String, target: String) -> RefCounted:
+	var ending = EndingScript.new()
+	ending.type = "auto_redirect"
+	var cons = ConsequenceScript.new()
+	cons.type = type
+	cons.target = target
+	ending.auto_consequence = cons
+	return ending
+
+func _make_ending_choices(choices_data: Array) -> RefCounted:
+	var ending = EndingScript.new()
+	ending.type = "choices"
+	for data in choices_data:
+		var choice = ChoiceScript.new()
+		choice.text = data["text"]
+		var cons = ConsequenceScript.new()
+		cons.type = data["type"]
+		cons.target = data.get("target", "")
+		choice.consequence = cons
+		ending.choices.append(choice)
+	return ending
+
+func _build_simple_story() -> RefCounted:
+	var story = _make_story()
+	var ch = _make_chapter("Ch1")
+	story.chapters.append(ch)
+	var sc = _make_scene("Sc1")
+	ch.scenes.append(sc)
+	var seq = _make_sequence("Seq1")
+	sc.sequences.append(seq)
+	return story
+
+
+# === Tests null/empty ===
+
+func test_verify_null_story():
+	var report = _verifier.verify(null)
+	assert_false(report["success"])
+	assert_eq(report["total_runs"], 0)
+
+func test_verify_empty_story():
+	var story = _make_story()
+	var report = _verifier.verify(story)
+	assert_false(report["success"])
+	assert_eq(report["total_runs"], 0)
+
+
+# === Single sequence tests ===
+
+func test_verify_single_sequence_no_ending():
+	var story = _build_simple_story()
+	var report = _verifier.verify(story)
+	assert_false(report["success"])
+	assert_eq(report["runs"].size(), 1)
+	assert_eq(report["runs"][0]["ending_reason"], "no_ending")
+	assert_false(report["runs"][0]["is_valid"])
+
+func test_verify_single_sequence_game_over():
+	var story = _build_simple_story()
+	story.chapters[0].scenes[0].sequences[0].ending = _make_ending_auto("game_over", "")
+	var report = _verifier.verify(story)
+	assert_true(report["success"])
+	assert_eq(report["total_runs"], 1)
+	assert_eq(report["runs"][0]["ending_reason"], "game_over")
+	assert_true(report["runs"][0]["is_valid"])
+	assert_eq(report["orphan_nodes"].size(), 0)
+
+func test_verify_single_sequence_to_be_continued():
+	var story = _build_simple_story()
+	story.chapters[0].scenes[0].sequences[0].ending = _make_ending_auto("to_be_continued", "")
+	var report = _verifier.verify(story)
+	assert_true(report["success"])
+	assert_eq(report["runs"][0]["ending_reason"], "to_be_continued")
+
+
+# === Linear chain ===
+
+func test_verify_linear_chain():
+	var story = _make_story()
+	var ch = _make_chapter("Ch1")
+	story.chapters.append(ch)
+	var sc = _make_scene("Sc1")
+	ch.scenes.append(sc)
+	var seq1 = _make_sequence("Seq1", Vector2(0, 0))
+	var seq2 = _make_sequence("Seq2", Vector2(200, 0))
+	sc.sequences.append(seq1)
+	sc.sequences.append(seq2)
+	seq1.ending = _make_ending_auto("redirect_sequence", seq2.uuid)
+	seq2.ending = _make_ending_auto("game_over", "")
+	var report = _verifier.verify(story)
+	assert_true(report["success"])
+	assert_eq(report["visited_nodes"], 2)
+	assert_eq(report["orphan_nodes"].size(), 0)
+
+
+# === Orphan detection ===
+
+func test_verify_orphan_detection():
+	var story = _make_story()
+	var ch = _make_chapter("Ch1")
+	story.chapters.append(ch)
+	var sc = _make_scene("Sc1")
+	ch.scenes.append(sc)
+	var seq1 = _make_sequence("Seq1", Vector2(0, 0))
+	var seq2 = _make_sequence("OrphanSeq", Vector2(200, 0))
+	sc.sequences.append(seq1)
+	sc.sequences.append(seq2)
+	sc.entry_point_uuid = seq1.uuid
+	seq1.ending = _make_ending_auto("game_over", "")
+	var report = _verifier.verify(story)
+	assert_false(report["success"])  # Orphan means not fully successful
+	assert_eq(report["orphan_nodes"].size(), 1)
+	assert_eq(report["orphan_nodes"][0]["name"], "OrphanSeq")
+	assert_eq(report["orphan_nodes"][0]["type"], "sequence")
+	assert_true(report["runs"][0]["is_valid"])  # Run itself is valid
+
+
+# === Choices coverage ===
+
+func test_verify_choices_coverage():
+	var story = _make_story()
+	var ch = _make_chapter("Ch1")
+	story.chapters.append(ch)
+	var sc = _make_scene("Sc1")
+	ch.scenes.append(sc)
+	var seq1 = _make_sequence("Seq1", Vector2(0, 0))
+	var seq2 = _make_sequence("SeqA", Vector2(200, 0))
+	var seq3 = _make_sequence("SeqB", Vector2(200, 200))
+	sc.sequences.append(seq1)
+	sc.sequences.append(seq2)
+	sc.sequences.append(seq3)
+	sc.entry_point_uuid = seq1.uuid
+	seq1.ending = _make_ending_choices([
+		{"text": "Go A", "type": "redirect_sequence", "target": seq2.uuid},
+		{"text": "Go B", "type": "redirect_sequence", "target": seq3.uuid},
+	])
+	seq2.ending = _make_ending_auto("game_over", "")
+	seq3.ending = _make_ending_auto("to_be_continued", "")
+	var report = _verifier.verify(story)
+	assert_true(report["success"])
+	assert_eq(report["total_runs"], 2)
+	assert_eq(report["visited_nodes"], 3)
+	assert_eq(report["orphan_nodes"].size(), 0)
+
+func test_verify_choices_different_each_run():
+	var story = _make_story()
+	var ch = _make_chapter("Ch1")
+	story.chapters.append(ch)
+	var sc = _make_scene("Sc1")
+	ch.scenes.append(sc)
+	var seq1 = _make_sequence("Seq1", Vector2(0, 0))
+	var seq2 = _make_sequence("SeqA", Vector2(200, 0))
+	var seq3 = _make_sequence("SeqB", Vector2(200, 200))
+	sc.sequences.append(seq1)
+	sc.sequences.append(seq2)
+	sc.sequences.append(seq3)
+	sc.entry_point_uuid = seq1.uuid
+	seq1.ending = _make_ending_choices([
+		{"text": "Go A", "type": "redirect_sequence", "target": seq2.uuid},
+		{"text": "Go B", "type": "redirect_sequence", "target": seq3.uuid},
+	])
+	seq2.ending = _make_ending_auto("game_over", "")
+	seq3.ending = _make_ending_auto("game_over", "")
+	var report = _verifier.verify(story)
+	# Run 0 should take choice 0, Run 1 should take choice 1
+	var run0_path = report["runs"][0]["path"]
+	var run1_path = report["runs"][1]["path"]
+	var run0_choice = _find_choice_step(run0_path)
+	var run1_choice = _find_choice_step(run1_path)
+	assert_eq(run0_choice["choice_index"], 0)
+	assert_eq(run1_choice["choice_index"], 1)
+
+
+# === Condition evaluation ===
+
+func test_verify_condition_evaluation():
+	var story = _make_story()
+	var ch = _make_chapter("Ch1")
+	story.chapters.append(ch)
+	var sc = _make_scene("Sc1")
+	ch.scenes.append(sc)
+	# Condition en entry point
+	var cond = ConditionModelScript.new()
+	cond.condition_name = "CheckScore"
+	cond.position = Vector2(0, 0)
+	# Default consequence -> game_over
+	var default_cons = ConsequenceScript.new()
+	default_cons.type = "game_over"
+	cond.default_consequence = default_cons
+	sc.conditions.append(cond)
+	sc.entry_point_uuid = cond.uuid
+	var report = _verifier.verify(story)
+	assert_true(report["success"])
+	assert_eq(report["visited_nodes"], 1)
+	assert_eq(report["runs"][0]["ending_reason"], "game_over")
+
+func test_verify_condition_no_default_no_match():
+	var story = _make_story()
+	var ch = _make_chapter("Ch1")
+	story.chapters.append(ch)
+	var sc = _make_scene("Sc1")
+	ch.scenes.append(sc)
+	var cond = ConditionModelScript.new()
+	cond.condition_name = "NoMatch"
+	cond.position = Vector2(0, 0)
+	# Pas de default, pas de regles
+	sc.conditions.append(cond)
+	sc.entry_point_uuid = cond.uuid
+	var report = _verifier.verify(story)
+	assert_false(report["success"])
+	assert_eq(report["runs"][0]["ending_reason"], "no_ending")
+
+
+# === Variable effects ===
+
+func test_verify_variable_effects():
+	var story = _make_story()
+	# Ajouter une variable
+	var var_def = VariableDefinitionScript.new()
+	var_def.var_name = "score"
+	var_def.initial_value = "0"
+	story.variables.append(var_def)
+	var ch = _make_chapter("Ch1")
+	story.chapters.append(ch)
+	var sc = _make_scene("Sc1")
+	ch.scenes.append(sc)
+	# Seq1 -> auto_redirect vers condition, avec effet increment score
+	var seq1 = _make_sequence("Seq1", Vector2(0, 0))
+	sc.sequences.append(seq1)
+	# Condition: si score > 0 -> to_be_continued, sinon game_over
+	var cond = ConditionModelScript.new()
+	cond.condition_name = "CheckScore"
+	cond.position = Vector2(200, 0)
+	var rule = ConditionRuleScript.new()
+	rule.variable = "score"
+	rule.operator = "greater_than"
+	rule.value = "0"
+	var rule_cons = ConsequenceScript.new()
+	rule_cons.type = "to_be_continued"
+	rule.consequence = rule_cons
+	cond.rules.append(rule)
+	var default_cons = ConsequenceScript.new()
+	default_cons.type = "game_over"
+	cond.default_consequence = default_cons
+	sc.conditions.append(cond)
+	sc.entry_point_uuid = seq1.uuid
+	# Ending seq1: auto_redirect vers condition avec effet increment
+	var ending = EndingScript.new()
+	ending.type = "auto_redirect"
+	var cons = ConsequenceScript.new()
+	cons.type = "redirect_condition"
+	cons.target = cond.uuid
+	var effect = VariableEffectScript.new()
+	effect.variable = "score"
+	effect.operation = "increment"
+	effect.value = "10"
+	cons.effects.append(effect)
+	ending.auto_consequence = cons
+	seq1.ending = ending
+	var report = _verifier.verify(story)
+	assert_true(report["success"])
+	# Score incremente a 10, donc > 0, donc to_be_continued
+	assert_eq(report["runs"][0]["ending_reason"], "to_be_continued")
+
+
+# === Cross-scene/chapter redirects ===
+
+func test_verify_cross_scene_redirect():
+	var story = _make_story()
+	var ch = _make_chapter("Ch1")
+	story.chapters.append(ch)
+	var sc1 = _make_scene("Sc1", Vector2(0, 0))
+	var sc2 = _make_scene("Sc2", Vector2(200, 0))
+	ch.scenes.append(sc1)
+	ch.scenes.append(sc2)
+	var seq1 = _make_sequence("Seq1")
+	sc1.sequences.append(seq1)
+	var seq2 = _make_sequence("Seq2")
+	sc2.sequences.append(seq2)
+	seq1.ending = _make_ending_auto("redirect_scene", sc2.uuid)
+	seq2.ending = _make_ending_auto("game_over", "")
+	var report = _verifier.verify(story)
+	assert_true(report["success"])
+	assert_eq(report["visited_nodes"], 2)
+
+func test_verify_cross_chapter_redirect():
+	var story = _make_story()
+	var ch1 = _make_chapter("Ch1", Vector2(0, 0))
+	var ch2 = _make_chapter("Ch2", Vector2(200, 0))
+	story.chapters.append(ch1)
+	story.chapters.append(ch2)
+	var sc1 = _make_scene("Sc1")
+	ch1.scenes.append(sc1)
+	var sc2 = _make_scene("Sc2")
+	ch2.scenes.append(sc2)
+	var seq1 = _make_sequence("Seq1")
+	sc1.sequences.append(seq1)
+	var seq2 = _make_sequence("Seq2")
+	sc2.sequences.append(seq2)
+	seq1.ending = _make_ending_auto("redirect_chapter", ch2.uuid)
+	seq2.ending = _make_ending_auto("to_be_continued", "")
+	var report = _verifier.verify(story)
+	assert_true(report["success"])
+	assert_eq(report["visited_nodes"], 2)
+
+
+# === Loop detection ===
+
+func test_verify_loop_detection():
+	var story = _make_story()
+	var ch = _make_chapter("Ch1")
+	story.chapters.append(ch)
+	var sc = _make_scene("Sc1")
+	ch.scenes.append(sc)
+	var seq1 = _make_sequence("Seq1", Vector2(0, 0))
+	var seq2 = _make_sequence("Seq2", Vector2(200, 0))
+	sc.sequences.append(seq1)
+	sc.sequences.append(seq2)
+	sc.entry_point_uuid = seq1.uuid
+	seq1.ending = _make_ending_auto("redirect_sequence", seq2.uuid)
+	seq2.ending = _make_ending_auto("redirect_sequence", seq1.uuid)
+	var report = _verifier.verify(story)
+	assert_false(report["success"])
+	assert_eq(report["runs"][0]["ending_reason"], "loop_detected")
+
+func test_verify_loop_with_variable_terminates():
+	# Seq1 incremente counter, condition verifie si counter >= 3
+	var story = _make_story()
+	var var_def = VariableDefinitionScript.new()
+	var_def.var_name = "counter"
+	var_def.initial_value = "0"
+	story.variables.append(var_def)
+	var ch = _make_chapter("Ch1")
+	story.chapters.append(ch)
+	var sc = _make_scene("Sc1")
+	ch.scenes.append(sc)
+	var seq1 = _make_sequence("Seq1", Vector2(0, 0))
+	sc.sequences.append(seq1)
+	sc.entry_point_uuid = seq1.uuid
+	# Condition: counter >= 3 -> game_over, sinon redirect_sequence seq1
+	var cond = ConditionModelScript.new()
+	cond.condition_name = "CheckCounter"
+	cond.position = Vector2(200, 0)
+	var rule = ConditionRuleScript.new()
+	rule.variable = "counter"
+	rule.operator = "greater_than_equal"
+	rule.value = "3"
+	var rule_cons = ConsequenceScript.new()
+	rule_cons.type = "game_over"
+	rule.consequence = rule_cons
+	cond.rules.append(rule)
+	var default_cons = ConsequenceScript.new()
+	default_cons.type = "redirect_sequence"
+	default_cons.target = seq1.uuid
+	cond.default_consequence = default_cons
+	sc.conditions.append(cond)
+	# Seq1 ending: auto_redirect vers condition, avec increment counter
+	var ending = EndingScript.new()
+	ending.type = "auto_redirect"
+	var cons = ConsequenceScript.new()
+	cons.type = "redirect_condition"
+	cons.target = cond.uuid
+	var effect = VariableEffectScript.new()
+	effect.variable = "counter"
+	effect.operation = "increment"
+	effect.value = "1"
+	cons.effects.append(effect)
+	ending.auto_consequence = cons
+	seq1.ending = ending
+	var report = _verifier.verify(story)
+	assert_true(report["success"])
+	assert_eq(report["runs"][0]["ending_reason"], "game_over")
+
+
+# === Missing target ===
+
+func test_verify_missing_target():
+	var story = _build_simple_story()
+	story.chapters[0].scenes[0].sequences[0].ending = _make_ending_auto("redirect_sequence", "nonexistent_uuid")
+	var report = _verifier.verify(story)
+	assert_false(report["success"])
+	assert_eq(report["runs"][0]["ending_reason"], "error")
+
+
+# === Entry point UUID ===
+
+func test_verify_entry_point_uuid():
+	var story = _make_story()
+	var ch = _make_chapter("Ch1")
+	story.chapters.append(ch)
+	var sc = _make_scene("Sc1")
+	ch.scenes.append(sc)
+	var seq1 = _make_sequence("NotEntry", Vector2(0, 0))
+	var seq2 = _make_sequence("Entry", Vector2(200, 0))
+	sc.sequences.append(seq1)
+	sc.sequences.append(seq2)
+	sc.entry_point_uuid = seq2.uuid
+	seq2.ending = _make_ending_auto("game_over", "")
+	var report = _verifier.verify(story)
+	# seq1 is orphan because entry goes to seq2 directly
+	assert_false(report["success"])
+	assert_eq(report["orphan_nodes"].size(), 1)
+	assert_eq(report["orphan_nodes"][0]["name"], "NotEntry")
+	assert_eq(report["runs"][0]["path"][0]["name"], "Entry")
+
+
+# === Report success flag ===
+
+func test_verify_report_success_all_valid_no_orphans():
+	var story = _build_simple_story()
+	story.chapters[0].scenes[0].sequences[0].ending = _make_ending_auto("game_over", "")
+	var report = _verifier.verify(story)
+	assert_true(report["success"])
+
+func test_verify_report_success_false_with_orphans():
+	var story = _make_story()
+	var ch = _make_chapter("Ch1")
+	story.chapters.append(ch)
+	var sc = _make_scene("Sc1")
+	ch.scenes.append(sc)
+	var seq1 = _make_sequence("Seq1", Vector2(0, 0))
+	var seq2 = _make_sequence("Orphan", Vector2(200, 0))
+	sc.sequences.append(seq1)
+	sc.sequences.append(seq2)
+	sc.entry_point_uuid = seq1.uuid
+	seq1.ending = _make_ending_auto("game_over", "")
+	var report = _verifier.verify(story)
+	assert_false(report["success"])  # Orphan present
+
+func test_verify_report_success_false_with_invalid_run():
+	var story = _build_simple_story()
+	# No ending -> no_ending -> invalid
+	var report = _verifier.verify(story)
+	assert_false(report["success"])
+
+
+# === Choice effects applied ===
+
+func test_verify_choice_effects_applied():
+	var story = _make_story()
+	var var_def = VariableDefinitionScript.new()
+	var_def.var_name = "flag"
+	var_def.initial_value = "0"
+	story.variables.append(var_def)
+	var ch = _make_chapter("Ch1")
+	story.chapters.append(ch)
+	var sc = _make_scene("Sc1")
+	ch.scenes.append(sc)
+	var seq1 = _make_sequence("Seq1", Vector2(0, 0))
+	sc.sequences.append(seq1)
+	sc.entry_point_uuid = seq1.uuid
+	# Condition: flag == "1" -> to_be_continued, sinon game_over
+	var cond = ConditionModelScript.new()
+	cond.condition_name = "CheckFlag"
+	cond.position = Vector2(200, 0)
+	var rule = ConditionRuleScript.new()
+	rule.variable = "flag"
+	rule.operator = "equal"
+	rule.value = "1"
+	var rule_cons = ConsequenceScript.new()
+	rule_cons.type = "to_be_continued"
+	rule.consequence = rule_cons
+	cond.rules.append(rule)
+	var default_cons = ConsequenceScript.new()
+	default_cons.type = "game_over"
+	cond.default_consequence = default_cons
+	sc.conditions.append(cond)
+	# Seq1 ending: choice with effect set flag=1, then redirect to condition
+	var ending = EndingScript.new()
+	ending.type = "choices"
+	var choice = ChoiceScript.new()
+	choice.text = "Set flag"
+	var choice_effect = VariableEffectScript.new()
+	choice_effect.variable = "flag"
+	choice_effect.operation = "set"
+	choice_effect.value = "1"
+	choice.effects.append(choice_effect)
+	var choice_cons = ConsequenceScript.new()
+	choice_cons.type = "redirect_condition"
+	choice_cons.target = cond.uuid
+	choice.consequence = choice_cons
+	ending.choices.append(choice)
+	seq1.ending = ending
+	var report = _verifier.verify(story)
+	assert_true(report["success"])
+	# Flag set to 1 by choice effect, condition matches rule -> to_be_continued
+	assert_eq(report["runs"][0]["ending_reason"], "to_be_continued")
+
+
+# === Path tracking ===
+
+func test_verify_path_contains_all_visited_nodes():
+	var story = _make_story()
+	var ch = _make_chapter("Ch1")
+	story.chapters.append(ch)
+	var sc = _make_scene("Sc1")
+	ch.scenes.append(sc)
+	var seq1 = _make_sequence("First", Vector2(0, 0))
+	var seq2 = _make_sequence("Second", Vector2(200, 0))
+	sc.sequences.append(seq1)
+	sc.sequences.append(seq2)
+	sc.entry_point_uuid = seq1.uuid
+	seq1.ending = _make_ending_auto("redirect_sequence", seq2.uuid)
+	seq2.ending = _make_ending_auto("game_over", "")
+	var report = _verifier.verify(story)
+	var path = report["runs"][0]["path"]
+	assert_eq(path.size(), 2)
+	assert_eq(path[0]["name"], "First")
+	assert_eq(path[0]["type"], "sequence")
+	assert_eq(path[1]["name"], "Second")
+	assert_eq(path[1]["type"], "sequence")
+
+
+# === Nodes count ===
+
+func test_verify_all_nodes_count():
+	var story = _make_story()
+	var ch = _make_chapter("Ch1")
+	story.chapters.append(ch)
+	var sc = _make_scene("Sc1")
+	ch.scenes.append(sc)
+	var seq1 = _make_sequence("Seq1", Vector2(0, 0))
+	var seq2 = _make_sequence("Seq2", Vector2(200, 0))
+	sc.sequences.append(seq1)
+	sc.sequences.append(seq2)
+	var cond = ConditionModelScript.new()
+	cond.condition_name = "Cond1"
+	cond.position = Vector2(400, 0)
+	var default_cons = ConsequenceScript.new()
+	default_cons.type = "game_over"
+	cond.default_consequence = default_cons
+	sc.conditions.append(cond)
+	sc.entry_point_uuid = seq1.uuid
+	seq1.ending = _make_ending_auto("game_over", "")
+	var report = _verifier.verify(story)
+	assert_eq(report["all_nodes"], 3)  # 2 sequences + 1 condition
+
+
+# === Helper ===
+
+func _find_choice_step(path: Array) -> Dictionary:
+	for step in path:
+		if step["type"] == "choice":
+			return step
+	return {}
