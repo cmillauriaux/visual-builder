@@ -551,7 +551,8 @@ func _on_ia_generate_pressed() -> void:
 	_ia_set_inputs_enabled(false)
 	_ia_show_status("Lancement...")
 
-	_ia_client.generate(config, _ia_source_image_path, _ia_prompt_input.text)
+	var remove_bg = (_mode != Mode.BACKGROUND)
+	_ia_client.generate(config, _ia_source_image_path, _ia_prompt_input.text, remove_bg)
 
 func _on_ia_generation_completed(image: Image) -> void:
 	_ia_generated_image = image

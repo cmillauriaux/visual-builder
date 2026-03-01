@@ -43,6 +43,25 @@ func test_build_workflow_different_seeds_produce_different_workflows():
 	var wf2 = _client.build_workflow("img.png", "prompt", 222)
 	assert_ne(wf1["75:73"]["inputs"]["noise_seed"], wf2["75:73"]["inputs"]["noise_seed"])
 
+# --- build_workflow without background removal ---
+
+func test_build_workflow_no_remove_bg_excludes_birefnet_node():
+	var wf = _client.build_workflow("test.png", "a landscape", 42, false)
+	assert_false(wf.has("100"), "BiRefNetRMBG node should not exist when remove_background is false")
+
+func test_build_workflow_no_remove_bg_save_image_points_to_vae_decode():
+	var wf = _client.build_workflow("test.png", "a landscape", 42, false)
+	assert_eq(wf["9"]["inputs"]["images"], ["75:65", 0], "SaveImage should point directly to VAEDecode output")
+
+func test_build_workflow_with_remove_bg_includes_birefnet_node():
+	var wf = _client.build_workflow("test.png", "a cat", 42, true)
+	assert_has(wf, "100", "BiRefNetRMBG node should exist when remove_background is true")
+	assert_eq(wf["9"]["inputs"]["images"], ["100", 0], "SaveImage should point to BiRefNetRMBG output")
+
+func test_build_workflow_default_includes_birefnet():
+	var wf = _client.build_workflow("test.png", "a cat", 42)
+	assert_has(wf, "100", "Default should include BiRefNetRMBG node")
+
 # --- build_multipart_body ---
 
 func test_build_multipart_body_returns_array():

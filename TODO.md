@@ -1,4 +1,4 @@
-- Quand un génère un background IA il ne faut pas appliquer le noeud de transparence
+- ~~Quand un génère un background IA il ne faut pas appliquer le noeud de transparence~~ ✓
 - Dans une génération IA, on doit avoir un bouton pour choisir un fichier (ce qui est le cas) ou choisir dans la galerie
 - Il faut recopier les images dans assets ce qui n'est pas le cas actuellement
 - Dans le choix des terminaisons avoir une option en début de liste "Nouveau" qui crée dynamiquement une scène, chapitre, séquence
