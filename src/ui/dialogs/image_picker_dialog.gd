@@ -12,6 +12,7 @@ const GALERIE_TAB := 1
 const IA_TAB := 2
 const ComfyUIConfig = preload("res://src/services/comfyui_config.gd")
 const ComfyUIClient = preload("res://src/services/comfyui_client.gd")
+const ImagePreviewPopup = preload("res://src/ui/shared/image_preview_popup.gd")
 
 enum Mode { BACKGROUND, FOREGROUND }
 
@@ -38,12 +39,17 @@ var _ia_choose_gallery_btn: Button
 var _ia_prompt_input: TextEdit
 var _ia_cfg_slider: HSlider
 var _ia_cfg_value_label: Label
+var _ia_steps_slider: HSlider
+var _ia_steps_value_label: Label
 var _ia_generate_btn: Button
 var _ia_result_preview: TextureRect
 var _ia_status_label: Label
 var _ia_progress_bar: ProgressBar
 var _ia_accept_btn: Button
 var _ia_regenerate_btn: Button
+
+# Image preview
+var _image_preview: Control
 
 # IA state
 var _ia_client: Node = null
@@ -145,6 +151,11 @@ func _build_ui() -> void:
 	_validate_btn.disabled = true
 	_validate_btn.pressed.connect(_on_validate)
 	hbox.add_child(_validate_btn)
+
+	# Image preview overlay (must be last child to appear on top)
+	_image_preview = Control.new()
+	_image_preview.set_script(ImagePreviewPopup)
+	add_child(_image_preview)
 
 func _build_file_tab() -> void:
 	var file_tab = VBoxContainer.new()
@@ -251,6 +262,11 @@ func _build_ia_tab() -> void:
 	_ia_source_preview.custom_minimum_size = Vector2(64, 64)
 	_ia_source_preview.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
 	_ia_source_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_ia_source_preview.mouse_filter = Control.MOUSE_FILTER_STOP
+	_ia_source_preview.gui_input.connect(func(event: InputEvent):
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			_show_image_preview(_ia_source_preview.texture, _ia_source_image_path.get_file())
+	)
 	source_hbox.add_child(_ia_source_preview)
 
 	_ia_source_path_label = Label.new()
@@ -302,6 +318,29 @@ func _build_ia_tab() -> void:
 	_ia_cfg_value_label.custom_minimum_size.x = 32
 	cfg_hbox.add_child(_ia_cfg_value_label)
 
+	# --- Steps slider ---
+	var steps_hbox = HBoxContainer.new()
+	steps_hbox.add_theme_constant_override("separation", 8)
+	vbox.add_child(steps_hbox)
+
+	var steps_label = Label.new()
+	steps_label.text = "Steps :"
+	steps_hbox.add_child(steps_label)
+
+	_ia_steps_slider = HSlider.new()
+	_ia_steps_slider.min_value = 1
+	_ia_steps_slider.max_value = 50
+	_ia_steps_slider.step = 1
+	_ia_steps_slider.value = 4
+	_ia_steps_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_ia_steps_slider.value_changed.connect(func(val: float): _ia_steps_value_label.text = str(int(val)))
+	steps_hbox.add_child(_ia_steps_slider)
+
+	_ia_steps_value_label = Label.new()
+	_ia_steps_value_label.text = "4"
+	_ia_steps_value_label.custom_minimum_size.x = 32
+	steps_hbox.add_child(_ia_steps_value_label)
+
 	# --- Generate button ---
 	_ia_generate_btn = Button.new()
 	_ia_generate_btn.text = "Générer"
@@ -319,6 +358,11 @@ func _build_ia_tab() -> void:
 	_ia_result_preview.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_ia_result_preview.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
 	_ia_result_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_ia_result_preview.mouse_filter = Control.MOUSE_FILTER_STOP
+	_ia_result_preview.gui_input.connect(func(event: InputEvent):
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			_show_image_preview(_ia_result_preview.texture, "Résultat IA")
+	)
 	vbox.add_child(_ia_result_preview)
 
 	# --- Status ---
@@ -408,7 +452,10 @@ func _add_gallery_item(path: String) -> void:
 
 	container.gui_input.connect(func(event: InputEvent):
 		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			_on_gallery_item_selected(container, path)
+			if event.double_click:
+				_show_image_preview_from_path(path)
+			else:
+				_on_gallery_item_selected(container, path)
 	)
 	_gallery_grid.add_child(container)
 
@@ -670,7 +717,8 @@ func _on_ia_generate_pressed() -> void:
 
 	var remove_bg = (_mode != Mode.BACKGROUND)
 	var cfg_value = _ia_cfg_slider.value
-	_ia_client.generate(config, _ia_source_image_path, _ia_prompt_input.text, remove_bg, cfg_value)
+	var steps_value = int(_ia_steps_slider.value)
+	_ia_client.generate(config, _ia_source_image_path, _ia_prompt_input.text, remove_bg, cfg_value, steps_value)
 
 func _on_ia_generation_completed(image: Image) -> void:
 	_ia_generated_image = image
@@ -706,6 +754,20 @@ func _on_ia_accept_pressed() -> void:
 
 func _on_ia_regenerate_pressed() -> void:
 	_on_ia_generate_pressed()
+
+# --- Image Preview ---
+
+func _show_image_preview(texture: Texture2D, filename: String) -> void:
+	if _image_preview:
+		_image_preview.show_preview(texture, filename)
+
+func _show_image_preview_from_path(path: String) -> void:
+	if path == "":
+		return
+	var img = Image.new()
+	if img.load(path) == OK:
+		var tex = ImageTexture.create_from_image(img)
+		_show_image_preview(tex, path.get_file())
 
 func _ia_cancel_generation() -> void:
 	if _ia_client != null:

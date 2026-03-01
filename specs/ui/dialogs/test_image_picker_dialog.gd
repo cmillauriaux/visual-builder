@@ -616,6 +616,52 @@ func test_ia_load_source_preview_empty_path_clears_texture():
 	_dialog._ia_load_source_preview("")
 	assert_null(_dialog._ia_source_preview.texture)
 
+# --- Image Preview : Structure ---
+
+func test_has_image_preview():
+	assert_not_null(_dialog._image_preview)
+	assert_is(_dialog._image_preview, Control)
+
+func test_image_preview_initially_hidden():
+	assert_false(_dialog._image_preview.visible)
+
+# --- Image Preview : show_image_preview ---
+
+func test_show_image_preview_opens_popup():
+	var img = Image.create(2, 2, false, Image.FORMAT_RGB8)
+	var tex = ImageTexture.create_from_image(img)
+	_dialog._show_image_preview(tex, "test.png")
+	assert_true(_dialog._image_preview.visible)
+
+func test_show_image_preview_null_texture_stays_hidden():
+	_dialog._show_image_preview(null, "test.png")
+	assert_false(_dialog._image_preview.visible)
+
+# --- Image Preview : show_image_preview_from_path ---
+
+func test_show_image_preview_from_path_with_valid_image():
+	var tmp_dir = "user://test_preview_%d" % randi()
+	DirAccess.make_dir_recursive_absolute(tmp_dir)
+	var img_path = tmp_dir + "/preview_test.png"
+	_create_minimal_png(img_path)
+	_dialog._show_image_preview_from_path(img_path)
+	assert_true(_dialog._image_preview.visible)
+	_remove_dir_recursive(tmp_dir)
+
+func test_show_image_preview_from_path_empty_does_nothing():
+	_dialog._show_image_preview_from_path("")
+	assert_false(_dialog._image_preview.visible)
+
+# --- Image Preview : IA result click ---
+
+func test_ia_result_preview_mouse_filter_stop():
+	assert_eq(_dialog._ia_result_preview.mouse_filter, Control.MOUSE_FILTER_STOP)
+
+# --- Image Preview : IA source click ---
+
+func test_ia_source_preview_mouse_filter_stop():
+	assert_eq(_dialog._ia_source_preview.mouse_filter, Control.MOUSE_FILTER_STOP)
+
 # --- Helpers ---
 
 func _create_file(path: String) -> void:

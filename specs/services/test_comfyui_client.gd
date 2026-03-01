@@ -66,6 +66,14 @@ func test_build_workflow_default_cfg_is_1():
 	var wf = _client.build_workflow("test.png", "a cat", 42)
 	assert_eq(wf["75:63"]["inputs"]["cfg"], 1.0)
 
+func test_build_workflow_sets_steps_value():
+	var wf = _client.build_workflow("test.png", "a cat", 42, true, 1.0, 20)
+	assert_eq(wf["75:62"]["inputs"]["steps"], 20)
+
+func test_build_workflow_default_steps_is_4():
+	var wf = _client.build_workflow("test.png", "a cat", 42)
+	assert_eq(wf["75:62"]["inputs"]["steps"], 4)
+
 func test_build_workflow_default_includes_birefnet():
 	var wf = _client.build_workflow("test.png", "a cat", 42)
 	assert_has(wf, "100", "Default should include BiRefNetRMBG node")
