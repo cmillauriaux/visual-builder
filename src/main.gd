@@ -226,8 +226,8 @@ func _open_image_picker(mode: int, on_selected: Callable) -> void:
 	var picker = Window.new()
 	picker.set_script(ImagePickerDialogScript)
 	add_child(picker)
-	var story_name = _get_story_name()
-	picker.setup(mode, story_name)
+	var story_base_path = _get_story_base_path()
+	picker.setup(mode, story_base_path)
 	picker.image_selected.connect(on_selected)
 	# Pre-fill IA source image
 	var source = _get_current_source_image(mode)
@@ -236,10 +236,8 @@ func _open_image_picker(mode: int, on_selected: Callable) -> void:
 	picker.popup_centered()
 
 
-func _get_story_name() -> String:
-	if _editor_main._story == null:
-		return ""
-	return _editor_main._story.title.to_lower().replace(" ", "_")
+func _get_story_base_path() -> String:
+	return _nav_ctrl.get_save_path()
 
 
 func _on_fg_file_selected(path: String) -> void:

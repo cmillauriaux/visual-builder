@@ -53,14 +53,14 @@ func test_bg_preview_size():
 
 func test_setup_fills_fields():
 	var story = _make_story("Titre Menu", "Sous-titre", "/path/to/bg.png")
-	_dialog.setup(story)
+	_dialog.setup(story, "/tmp/test_story")
 	assert_eq(_dialog.get_menu_title(), "Titre Menu")
 	assert_eq(_dialog.get_menu_subtitle(), "Sous-titre")
 	assert_eq(_dialog.get_menu_background(), "/path/to/bg.png")
 
 func test_setup_with_empty_fields():
 	var story = _make_story()
-	_dialog.setup(story)
+	_dialog.setup(story, "/tmp/test_story")
 	assert_eq(_dialog.get_menu_title(), "")
 	assert_eq(_dialog.get_menu_subtitle(), "")
 	assert_eq(_dialog.get_menu_background(), "")
@@ -72,14 +72,14 @@ func test_menu_config_confirmed_signal_exists():
 
 func test_confirmed_emits_signal():
 	var story = _make_story("Mon Titre", "Mon Sous-titre", "bg.png")
-	_dialog.setup(story)
+	_dialog.setup(story, "/tmp/test_story")
 	watch_signals(_dialog)
 	_dialog._on_confirmed()
 	assert_signal_emitted(_dialog, "menu_config_confirmed")
 
 func test_confirmed_signal_params():
 	var story = _make_story("T", "S", "B")
-	_dialog.setup(story)
+	_dialog.setup(story, "/tmp/test_story")
 	watch_signals(_dialog)
 	_dialog._on_confirmed()
 	var params = get_signal_parameters(_dialog, "menu_config_confirmed")
@@ -91,13 +91,13 @@ func test_confirmed_signal_params():
 
 func test_clear_bg_clears_field():
 	var story = _make_story("", "", "/path/to/bg.png")
-	_dialog.setup(story)
+	_dialog.setup(story, "/tmp/test_story")
 	_dialog._on_clear_bg_pressed()
 	assert_eq(_dialog.get_menu_background(), "")
 
 func test_clear_bg_clears_preview():
 	var story = _make_story()
-	_dialog.setup(story)
+	_dialog.setup(story, "/tmp/test_story")
 	_dialog._on_clear_bg_pressed()
 	assert_null(_dialog._bg_preview.texture)
 

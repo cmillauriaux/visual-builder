@@ -208,6 +208,96 @@ func test_subtitle_retrocompat_load():
 	assert_eq(loaded.chapters[0].scenes[0].subtitle, "")
 	assert_eq(loaded.chapters[0].scenes[0].sequences[0].subtitle, "")
 
+# --- Tests relocalisation des assets ---
+
+func test_save_copies_background_to_assets():
+	var src_dir = _test_dir + "/src"
+	DirAccess.make_dir_recursive_absolute(src_dir)
+	var src_path = src_dir + "/bg.png"
+	_create_minimal_png(src_path)
+	var story = _create_test_story()
+	story.chapters[0].scenes[0].sequences[0].background = src_path
+	StorySaver.save_story(story, _test_dir)
+	assert_true(FileAccess.file_exists(_test_dir + "/assets/backgrounds/bg.png"))
+
+func test_save_rewrites_background_path():
+	var src_dir = _test_dir + "/src"
+	DirAccess.make_dir_recursive_absolute(src_dir)
+	var src_path = src_dir + "/bg.png"
+	_create_minimal_png(src_path)
+	var story = _create_test_story()
+	story.chapters[0].scenes[0].sequences[0].background = src_path
+	StorySaver.save_story(story, _test_dir)
+	assert_eq(story.chapters[0].scenes[0].sequences[0].background, _test_dir + "/assets/backgrounds/bg.png")
+
+func test_save_copies_foreground_to_assets():
+	var src_dir = _test_dir + "/src"
+	DirAccess.make_dir_recursive_absolute(src_dir)
+	var src_path = src_dir + "/hero.png"
+	_create_minimal_png(src_path)
+	var story = _create_test_story()
+	story.chapters[0].scenes[0].sequences[0].foregrounds[0].image = src_path
+	StorySaver.save_story(story, _test_dir)
+	assert_true(FileAccess.file_exists(_test_dir + "/assets/foregrounds/hero.png"))
+
+func test_save_rewrites_foreground_path():
+	var src_dir = _test_dir + "/src"
+	DirAccess.make_dir_recursive_absolute(src_dir)
+	var src_path = src_dir + "/hero.png"
+	_create_minimal_png(src_path)
+	var story = _create_test_story()
+	story.chapters[0].scenes[0].sequences[0].foregrounds[0].image = src_path
+	StorySaver.save_story(story, _test_dir)
+	assert_eq(story.chapters[0].scenes[0].sequences[0].foregrounds[0].image, _test_dir + "/assets/foregrounds/hero.png")
+
+func test_save_copies_dialogue_foreground_to_assets():
+	var src_dir = _test_dir + "/src"
+	DirAccess.make_dir_recursive_absolute(src_dir)
+	var src_path = src_dir + "/dlg_fg.png"
+	_create_minimal_png(src_path)
+	var story = _create_test_story()
+	var fg = Foreground.new()
+	fg.image = src_path
+	story.chapters[0].scenes[0].sequences[0].dialogues[0].foregrounds.append(fg)
+	StorySaver.save_story(story, _test_dir)
+	assert_true(FileAccess.file_exists(_test_dir + "/assets/foregrounds/dlg_fg.png"))
+
+func test_save_copies_menu_background_to_assets():
+	var src_dir = _test_dir + "/src"
+	DirAccess.make_dir_recursive_absolute(src_dir)
+	var src_path = src_dir + "/menu_bg.png"
+	_create_minimal_png(src_path)
+	var story = _create_test_story()
+	story.menu_background = src_path
+	StorySaver.save_story(story, _test_dir)
+	assert_true(FileAccess.file_exists(_test_dir + "/assets/backgrounds/menu_bg.png"))
+	assert_eq(story.menu_background, _test_dir + "/assets/backgrounds/menu_bg.png")
+
+func test_save_does_not_copy_if_already_in_assets():
+	var story = _create_test_story()
+	DirAccess.make_dir_recursive_absolute(_test_dir + "/assets/backgrounds")
+	var existing_path = _test_dir + "/assets/backgrounds/bg.png"
+	_create_minimal_png(existing_path)
+	story.chapters[0].scenes[0].sequences[0].background = existing_path
+	StorySaver.save_story(story, _test_dir)
+	assert_eq(story.chapters[0].scenes[0].sequences[0].background, existing_path)
+
+func test_save_keeps_empty_paths_unchanged():
+	var story = _create_test_story()
+	story.chapters[0].scenes[0].sequences[0].background = ""
+	StorySaver.save_story(story, _test_dir)
+	assert_eq(story.chapters[0].scenes[0].sequences[0].background, "")
+
+func test_save_keeps_nonexistent_source_path_unchanged():
+	var story = _create_test_story()
+	story.chapters[0].scenes[0].sequences[0].background = "user://nonexistent/img.png"
+	StorySaver.save_story(story, _test_dir)
+	assert_eq(story.chapters[0].scenes[0].sequences[0].background, "user://nonexistent/img.png")
+
+func _create_minimal_png(path: String) -> void:
+	var img = Image.create(1, 1, false, Image.FORMAT_RGB8)
+	img.save_png(path)
+
 # --- Helper ---
 
 func _create_test_story() -> RefCounted:

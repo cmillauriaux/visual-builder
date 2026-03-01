@@ -48,14 +48,14 @@ func test_update_view_at_chapters_level() -> void:
 	assert_false(_main._condition_editor_panel.visible)
 
 
-func test_get_story_name_with_no_story() -> void:
-	assert_eq(_main._get_story_name(), "")
+func test_get_story_base_path_returns_empty_when_no_save() -> void:
+	assert_eq(_main._get_story_base_path(), "")
 
 
-func test_get_story_name_formats_correctly() -> void:
+func test_get_story_base_path_returns_save_path() -> void:
 	_main._nav_ctrl.on_new_story_pressed()
-	var result = _main._get_story_name()
-	assert_eq(result, "mon_histoire")
+	_main._nav_ctrl._last_save_path = "/tmp/my_story"
+	assert_eq(_main._get_story_base_path(), "/tmp/my_story")
 
 
 func test_extract_export_error_no_file() -> void:

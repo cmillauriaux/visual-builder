@@ -16,7 +16,7 @@ const ComfyUIClient = preload("res://src/services/comfyui_client.gd")
 enum Mode { BACKGROUND, FOREGROUND }
 
 var _mode: int = Mode.FOREGROUND
-var _story_name: String = ""
+var _story_base_path: String = ""
 var _selected_path: String = ""
 var _selected_gallery_item = null
 
@@ -55,9 +55,9 @@ func _ready() -> void:
 	close_requested.connect(_on_cancel)
 	_build_ui()
 
-func setup(mode: int, story_name: String) -> void:
+func setup(mode: int, story_base_path: String) -> void:
 	_mode = mode
-	_story_name = story_name
+	_story_base_path = story_base_path
 	if mode == Mode.BACKGROUND:
 		title = "Sélectionner un background"
 	else:
@@ -65,7 +65,7 @@ func setup(mode: int, story_name: String) -> void:
 	_reset_selection()
 	_update_story_warning()
 	if _ia_choose_gallery_btn:
-		_ia_choose_gallery_btn.disabled = (story_name == "")
+		_ia_choose_gallery_btn.disabled = (story_base_path == "")
 
 func _reset_selection() -> void:
 	_selected_path = ""
@@ -77,7 +77,7 @@ func _reset_selection() -> void:
 
 func _update_story_warning() -> void:
 	if _no_story_label:
-		_no_story_label.visible = (_story_name == "")
+		_no_story_label.visible = (_story_base_path == "")
 
 func set_source_image(path: String) -> void:
 	_ia_source_image_path = path
@@ -335,7 +335,7 @@ func _refresh_gallery() -> void:
 	for child in _gallery_grid.get_children():
 		child.queue_free()
 
-	if _story_name == "":
+	if _story_base_path == "":
 		_empty_label.text = "Aucune histoire ouverte. Veuillez ouvrir une histoire avant d'utiliser la galerie."
 		_empty_label.visible = true
 		_gallery_grid.visible = false
@@ -405,7 +405,7 @@ func _on_browse_file() -> void:
 	dialog.popup_centered(Vector2i(800, 600))
 
 func _on_file_selected_from_dialog(source_path: String) -> void:
-	if _story_name == "":
+	if _story_base_path == "":
 		_file_path_label.text = "Impossible de copier : aucune histoire ouverte"
 		return
 	var copied_path = _copy_to_assets(source_path)
@@ -415,7 +415,7 @@ func _on_file_selected_from_dialog(source_path: String) -> void:
 		_validate_btn.disabled = false
 
 func _copy_to_assets(source_path: String) -> String:
-	if _story_name == "":
+	if _story_base_path == "":
 		return ""
 	var dest_dir = _get_assets_dir()
 	DirAccess.make_dir_recursive_absolute(dest_dir)
@@ -437,8 +437,8 @@ func _on_cancel() -> void:
 
 func _get_assets_dir() -> String:
 	if _mode == Mode.BACKGROUND:
-		return "user://stories/" + _story_name + "/assets/backgrounds"
-	return "user://stories/" + _story_name + "/assets/foregrounds"
+		return _story_base_path + "/assets/backgrounds"
+	return _story_base_path + "/assets/foregrounds"
 
 func _list_gallery_images() -> Array:
 	var result = []

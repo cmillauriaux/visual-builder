@@ -23,6 +23,10 @@ var _menu_config_dialog: ConfirmationDialog
 var _last_save_path: String = ""
 
 
+func get_save_path() -> String:
+	return _last_save_path
+
+
 func setup(main: Control) -> void:
 	_main = main
 
@@ -334,7 +338,7 @@ func on_menu_config_requested() -> void:
 	_menu_config_dialog = ConfirmationDialog.new()
 	_menu_config_dialog.set_script(MenuConfigDialogScript)
 	_main.add_child(_menu_config_dialog)
-	_menu_config_dialog.setup(_main._editor_main._story)
+	_menu_config_dialog.setup(_main._editor_main._story, _last_save_path)
 	_menu_config_dialog.menu_config_confirmed.connect(_on_menu_config_confirmed)
 	_menu_config_dialog.popup_centered()
 

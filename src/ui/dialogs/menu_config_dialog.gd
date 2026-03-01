@@ -12,7 +12,7 @@ var _menu_bg_edit: LineEdit
 var _browse_button: Button
 var _clear_bg_button: Button
 var _bg_preview: TextureRect
-var _story_name: String = ""
+var _story_base_path: String = ""
 
 func _init():
 	title = "Configurer le menu"
@@ -76,11 +76,11 @@ func _init():
 
 	confirmed.connect(_on_confirmed)
 
-func setup(story) -> void:
+func setup(story, story_base_path: String = "") -> void:
 	_menu_title_edit.text = story.menu_title
 	_menu_subtitle_edit.text = story.menu_subtitle
 	_menu_bg_edit.text = story.menu_background
-	_story_name = story.title.to_lower().replace(" ", "_") if story.title != "" else ""
+	_story_base_path = story_base_path
 	_update_preview()
 
 func get_menu_title() -> String:
@@ -96,7 +96,7 @@ func _on_browse_pressed() -> void:
 	var picker = Window.new()
 	picker.set_script(ImagePickerDialogScript)
 	add_child(picker)
-	picker.setup(ImagePickerDialogScript.Mode.BACKGROUND, _story_name)
+	picker.setup(ImagePickerDialogScript.Mode.BACKGROUND, _story_base_path)
 	picker.image_selected.connect(_on_bg_image_selected)
 	picker.popup_centered()
 

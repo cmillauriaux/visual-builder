@@ -17,6 +17,9 @@ static func save_story(story, base_path: String) -> void:
 	DirAccess.make_dir_recursive_absolute(base_path + "/assets/foregrounds")
 	DirAccess.make_dir_recursive_absolute(base_path + "/chapters")
 
+	# Copier les assets et réécrire les chemins
+	_relocate_assets(story, base_path)
+
 	# Écrire story.yaml
 	var story_dict = story.to_dict()
 	var story_yaml = YamlParser.dict_to_yaml(story_dict)
@@ -98,3 +101,41 @@ static func _read_file(path: String) -> String:
 		file.close()
 		return content
 	return ""
+
+# --- Relocalisation des assets ---
+
+static func _relocate_assets(story, base_path: String) -> void:
+	# Menu background
+	story.menu_background = _relocate_image(story.menu_background, base_path, "backgrounds")
+
+	for chapter in story.chapters:
+		for scene in chapter.scenes:
+			for seq in scene.sequences:
+				# Background de séquence
+				seq.background = _relocate_image(seq.background, base_path, "backgrounds")
+				# Foregrounds de séquence
+				for fg in seq.foregrounds:
+					fg.image = _relocate_image(fg.image, base_path, "foregrounds")
+				# Foregrounds de chaque dialogue
+				for dlg in seq.dialogues:
+					for fg in dlg.foregrounds:
+						fg.image = _relocate_image(fg.image, base_path, "foregrounds")
+
+
+static func _relocate_image(image_path: String, base_path: String, subfolder: String) -> String:
+	if image_path == "":
+		return ""
+	var dest_dir = base_path + "/assets/" + subfolder
+	var filename = image_path.get_file()
+	var expected = dest_dir + "/" + filename
+	# Already in the right place
+	if image_path == expected:
+		return image_path
+	# Source file must exist to copy
+	if not FileAccess.file_exists(image_path):
+		return image_path
+	# Avoid overwriting if a file with the same name already exists
+	if FileAccess.file_exists(expected):
+		return expected
+	DirAccess.copy_absolute(image_path, expected)
+	return expected
