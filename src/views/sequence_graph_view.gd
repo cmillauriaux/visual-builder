@@ -13,6 +13,20 @@ const COLOR_BOTH = Color(1.0, 0.85, 0.0)
 const TOOLTIP_HOVER_THRESHOLD = 10.0
 const BEZIER_SAMPLE_COUNT = 20
 
+const TERMINAL_TYPES = ["game_over", "to_be_continued", "redirect_scene", "redirect_chapter"]
+const TERMINAL_DISPLAY_NAMES = {
+	"game_over": "Fin de partie",
+	"to_be_continued": "À suivre...",
+	"redirect_scene": "→ Scène suivante",
+	"redirect_chapter": "→ Chapitre suivant",
+}
+const TERMINAL_COLORS = {
+	"game_over": Color(0.65, 0.1, 0.1),
+	"to_be_continued": Color(0.35, 0.2, 0.55),
+	"redirect_scene": Color(0.1, 0.3, 0.65),
+	"redirect_chapter": Color(0.55, 0.3, 0.1),
+}
+
 signal sequence_double_clicked(sequence_uuid: String)
 signal condition_double_clicked(condition_uuid: String)
 signal sequence_rename_requested(sequence_uuid: String)
@@ -22,6 +36,9 @@ signal entry_point_changed(uuid: String)
 var _scene_data = null
 var _node_map: Dictionary = {}  # uuid → GraphNode
 var _condition_uuids: Dictionary = {}  # uuid → true (pour identifier les nœuds condition)
+var _terminal_uuids: Dictionary = {}  # uuid → terminal_type (pour les nœuds terminaux)
+var _choice_sequence_uuids: Dictionary = {}  # uuid → true (pour les nœuds séquence-choix multi-ports)
+var _choice_connections: Array = []  # [{from_uuid, from_port, to_uuid}, ...]
 var _connection_type_map: Dictionary = {}  # "from→to" → "transition"|"choice"|"condition"|"both"
 
 var _tooltip_panel: PanelContainer
@@ -50,6 +67,8 @@ func _process(_delta: float) -> void:
 		var parts = key.split("→")
 		if parts.size() != 2:
 			continue
+		if _choice_sequence_uuids.has(parts[0]):
+			continue  # Les connexions multi-ports ont leur propre logique
 		var from_node = _node_map.get(parts[0])
 		var to_node = _node_map.get(parts[1])
 		if not from_node or not to_node:
@@ -108,6 +127,7 @@ func load_scene(scene_data) -> void:
 		_create_condition_node(cond.uuid, cond.condition_name, cond.position, cond.subtitle)
 	if _scene_data.entry_point_uuid != "" and _node_map.has(_scene_data.entry_point_uuid):
 		_node_map[_scene_data.entry_point_uuid].set_entry_point(true)
+	_create_needed_terminal_nodes()
 	_build_connection_type_map()
 	_connect_all_from_map()
 	_update_node_colors()
@@ -116,7 +136,7 @@ func get_scene_data():
 	return _scene_data
 
 func get_node_count() -> int:
-	return _node_map.size()
+	return _node_map.size() - _terminal_uuids.size()
 
 func get_connection_type(from_uuid: String, to_uuid: String) -> String:
 	return _connection_type_map.get(from_uuid + "→" + to_uuid, "")
@@ -191,8 +211,11 @@ func sync_positions_to_model() -> void:
 
 func _build_connection_type_map() -> void:
 	_connection_type_map.clear()
-	# Connexions manuelles = transition
+	_choice_connections.clear()
+	# Connexions manuelles = transition (on ignore celles issues de séquences "choices")
 	for conn in _scene_data.connections:
+		if _choice_sequence_uuids.has(conn["from"]):
+			continue
 		_merge_connection_type(conn["from"] + "→" + conn["to"], "transition")
 	# Connexions issues des endings des séquences
 	var local_redirect_types = ["redirect_sequence", "redirect_condition"]
@@ -200,19 +223,50 @@ func _build_connection_type_map() -> void:
 		if seq.ending == null:
 			continue
 		if seq.ending.type == "auto_redirect" and seq.ending.auto_consequence:
-			if seq.ending.auto_consequence.type in local_redirect_types and seq.ending.auto_consequence.target != "":
-				_merge_connection_type(seq.uuid + "→" + seq.ending.auto_consequence.target, "transition")
+			var cons = seq.ending.auto_consequence
+			if cons.type in local_redirect_types and cons.target != "":
+				_merge_connection_type(seq.uuid + "→" + cons.target, "transition")
+			elif cons.type in TERMINAL_TYPES:
+				var terminal_uuid = "terminal:" + cons.type
+				if _node_map.has(terminal_uuid):
+					_merge_connection_type(seq.uuid + "→" + terminal_uuid, "transition")
 		elif seq.ending.type == "choices":
-			for choice in seq.ending.choices:
-				if choice.consequence and choice.consequence.type in local_redirect_types and choice.consequence.target != "":
-					_merge_connection_type(seq.uuid + "→" + choice.consequence.target, "choice")
+			for i in range(seq.ending.choices.size()):
+				var choice = seq.ending.choices[i]
+				if choice.consequence == null:
+					continue
+				var target_uuid = ""
+				if choice.consequence.type in local_redirect_types and choice.consequence.target != "":
+					target_uuid = choice.consequence.target
+				elif choice.consequence.type in TERMINAL_TYPES:
+					var terminal_uuid = "terminal:" + choice.consequence.type
+					if _node_map.has(terminal_uuid):
+						target_uuid = terminal_uuid
+				if target_uuid != "":
+					# Conserver dans _connection_type_map pour colorer les ports du nœud destination
+					_merge_connection_type(seq.uuid + "→" + target_uuid, "choice")
+					# Enregistrer la connexion avec le port spécifique au choix
+					if _node_map.has(target_uuid):
+						_choice_connections.append({"from_uuid": seq.uuid, "from_port": i + 1, "to_uuid": target_uuid})
 	# Connexions issues des conditions
 	for cond in _scene_data.conditions:
 		for rule in cond.rules:
-			if rule.consequence and rule.consequence.type in local_redirect_types and rule.consequence.target != "":
+			if rule.consequence == null:
+				continue
+			if rule.consequence.type in local_redirect_types and rule.consequence.target != "":
 				_merge_connection_type(cond.uuid + "→" + rule.consequence.target, "condition")
-		if cond.default_consequence and cond.default_consequence.type in local_redirect_types and cond.default_consequence.target != "":
+			elif rule.consequence.type in TERMINAL_TYPES:
+				var terminal_uuid = "terminal:" + rule.consequence.type
+				if _node_map.has(terminal_uuid):
+					_merge_connection_type(cond.uuid + "→" + terminal_uuid, "condition")
+		if cond.default_consequence == null:
+			continue
+		if cond.default_consequence.type in local_redirect_types and cond.default_consequence.target != "":
 			_merge_connection_type(cond.uuid + "→" + cond.default_consequence.target, "condition")
+		elif cond.default_consequence.type in TERMINAL_TYPES:
+			var terminal_uuid = "terminal:" + cond.default_consequence.type
+			if _node_map.has(terminal_uuid):
+				_merge_connection_type(cond.uuid + "→" + terminal_uuid, "condition")
 
 func _merge_connection_type(key: String, new_type: String) -> void:
 	if not _connection_type_map.has(key):
@@ -223,13 +277,18 @@ func _merge_connection_type(key: String, new_type: String) -> void:
 func _connect_all_from_map() -> void:
 	for key in _connection_type_map:
 		var parts = key.split("→")
-		if parts.size() == 2:
+		if parts.size() == 2 and not _choice_sequence_uuids.has(parts[0]):
 			_connect_nodes(parts[0], parts[1])
+	# Connexions multi-ports pour les séquences de type "choices"
+	for cc in _choice_connections:
+		if _node_map.has(cc["from_uuid"]) and _node_map.has(cc["to_uuid"]):
+			connect_node(cc["from_uuid"], cc["from_port"], cc["to_uuid"], 0)
 
 func _update_node_colors() -> void:
 	for uuid in _node_map:
 		var node = _node_map[uuid]
-		node.set_slot_color_right(0, _compute_outgoing_color(uuid))
+		if not _terminal_uuids.has(uuid) and not _choice_sequence_uuids.has(uuid):
+			node.set_slot_color_right(0, _compute_outgoing_color(uuid))
 		node.set_slot_color_left(0, _compute_incoming_color(uuid))
 
 func _compute_outgoing_color(uuid: String) -> Color:
@@ -278,7 +337,17 @@ func _create_node(uuid: String, item_name: String, pos: Vector2, subtitle: Strin
 	var node = GraphNode.new()
 	node.set_script(GraphNodeItem)
 	add_child(node)
-	node.setup(uuid, item_name, pos, subtitle)
+	# Détecter si c'est une séquence de type "choices" pour afficher les ports multi-choix
+	var seq_choices = []
+	for seq in _scene_data.sequences:
+		if seq.uuid == uuid and seq.ending != null and seq.ending.type == "choices":
+			seq_choices = seq.ending.choices
+			break
+	if seq_choices.size() > 0:
+		node.setup_as_choice_sequence(uuid, item_name, pos, subtitle, seq_choices)
+		_choice_sequence_uuids[uuid] = true
+	else:
+		node.setup(uuid, item_name, pos, subtitle)
 	node.double_clicked.connect(_on_node_double_clicked)
 	node.rename_requested.connect(_on_node_rename_requested)
 	node.entry_point_toggled.connect(_on_entry_point_toggled)
@@ -336,5 +405,57 @@ func _clear_nodes() -> void:
 			_node_map[uuid].queue_free()
 	_node_map.clear()
 	_condition_uuids.clear()
+	_terminal_uuids.clear()
+	_choice_sequence_uuids.clear()
+	_choice_connections.clear()
 	_connection_type_map.clear()
 	clear_connections()
+
+func _create_needed_terminal_nodes() -> void:
+	var needed: Dictionary = {}  # terminal_type → true
+	for seq in _scene_data.sequences:
+		if seq.ending == null:
+			continue
+		if seq.ending.type == "choices":
+			for choice in seq.ending.choices:
+				if choice.consequence and choice.consequence.type in TERMINAL_TYPES:
+					needed[choice.consequence.type] = true
+		elif seq.ending.type == "auto_redirect" and seq.ending.auto_consequence:
+			if seq.ending.auto_consequence.type in TERMINAL_TYPES:
+				needed[seq.ending.auto_consequence.type] = true
+	for cond in _scene_data.conditions:
+		for rule in cond.rules:
+			if rule.consequence and rule.consequence.type in TERMINAL_TYPES:
+				needed[rule.consequence.type] = true
+		if cond.default_consequence and cond.default_consequence.type in TERMINAL_TYPES:
+			needed[cond.default_consequence.type] = true
+	if needed.is_empty():
+		return
+	var max_x = 0.0
+	for uuid in _node_map:
+		if _node_map[uuid].position_offset.x > max_x:
+			max_x = _node_map[uuid].position_offset.x
+	var y_offset = 0.0
+	for terminal_type in needed:
+		var uuid = "terminal:" + terminal_type
+		var display_name = TERMINAL_DISPLAY_NAMES.get(terminal_type, terminal_type)
+		var pos = Vector2(max_x + 280.0, 100.0 + y_offset)
+		_create_terminal_node(uuid, display_name, pos, terminal_type)
+		y_offset += 80.0
+
+func _create_terminal_node(uuid: String, display_name: String, pos: Vector2, terminal_type: String) -> void:
+	var node = GraphNode.new()
+	node.set_script(GraphNodeItem)
+	add_child(node)
+	node.setup(uuid, display_name, pos, "", true)
+	var color = TERMINAL_COLORS.get(terminal_type, Color(0.3, 0.3, 0.3))
+	var stylebox = StyleBoxFlat.new()
+	stylebox.bg_color = color
+	stylebox.set_corner_radius_all(4)
+	node.add_theme_stylebox_override("titlebar", stylebox)
+	var stylebox_sel = StyleBoxFlat.new()
+	stylebox_sel.bg_color = color.lightened(0.15)
+	stylebox_sel.set_corner_radius_all(4)
+	node.add_theme_stylebox_override("titlebar_selected", stylebox_sel)
+	_node_map[uuid] = node
+	_terminal_uuids[uuid] = terminal_type

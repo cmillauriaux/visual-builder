@@ -87,14 +87,13 @@ func test_seq_graph_redirect_sequence_shows_connection():
 	assert_true(_has_connection(graph, seq1.uuid, seq2.uuid),
 		"redirect_sequence doit créer un lien seq1→seq2 dans le graphe de séquences")
 
-func test_seq_graph_redirect_scene_does_not_show_connection():
-	# Une terminaison redirect_scene ne doit PAS créer de lien dans le graphe de séquences
+func test_seq_graph_redirect_scene_shows_terminal_node():
+	# Une terminaison redirect_scene doit créer un lien vers un nœud terminal dans le graphe
 	var scene = SceneDataScript.new()
 	var seq1 = Sequence.new(); seq1.seq_name = "Seq 1"
 	var seq2 = Sequence.new(); seq2.seq_name = "Seq 2"
 	scene.sequences.append(seq1)
 	scene.sequences.append(seq2)
-	# redirect_scene pointe vers un UUID de scène fictif (pas une séquence)
 	seq1.ending = _make_redirect_ending("redirect_scene", "fake-scene-uuid")
 
 	var graph = GraphEdit.new()
@@ -102,11 +101,13 @@ func test_seq_graph_redirect_scene_does_not_show_connection():
 	add_child_autofree(graph)
 	graph.load_scene(scene)
 
-	assert_eq(graph.get_connection_list().size(), 0,
-		"redirect_scene ne doit pas créer de lien dans le graphe de séquences")
+	assert_eq(graph.get_connection_list().size(), 1,
+		"redirect_scene doit créer un lien vers le nœud terminal dans le graphe de séquences")
+	assert_true(_has_connection(graph, seq1.uuid, "terminal:redirect_scene"),
+		"redirect_scene doit connecter seq1 au nœud terminal 'redirect_scene'")
 
-func test_seq_graph_redirect_chapter_does_not_show_connection():
-	# Une terminaison redirect_chapter ne doit PAS créer de lien dans le graphe de séquences
+func test_seq_graph_redirect_chapter_shows_terminal_node():
+	# Une terminaison redirect_chapter doit créer un lien vers un nœud terminal dans le graphe
 	var scene = SceneDataScript.new()
 	var seq1 = Sequence.new(); seq1.seq_name = "Seq 1"
 	scene.sequences.append(seq1)
@@ -117,8 +118,10 @@ func test_seq_graph_redirect_chapter_does_not_show_connection():
 	add_child_autofree(graph)
 	graph.load_scene(scene)
 
-	assert_eq(graph.get_connection_list().size(), 0,
-		"redirect_chapter ne doit pas créer de lien dans le graphe de séquences")
+	assert_eq(graph.get_connection_list().size(), 1,
+		"redirect_chapter doit créer un lien vers le nœud terminal dans le graphe de séquences")
+	assert_true(_has_connection(graph, seq1.uuid, "terminal:redirect_chapter"),
+		"redirect_chapter doit connecter seq1 au nœud terminal 'redirect_chapter'")
 
 func test_seq_graph_no_duplicate_when_two_seqs_redirect_to_same():
 	# Deux séquences qui redirigent vers la même ne doivent créer qu'un seul lien
@@ -181,8 +184,9 @@ func test_seq_graph_choices_redirect_sequence():
 	assert_true(_has_connection(graph, seq1.uuid, seq2.uuid),
 		"choix redirect_sequence doit créer un lien seq1→seq2")
 
-func test_seq_graph_choices_mixed_types_only_redirect_sequence_shown():
-	# Un choix avec redirect_sequence ET redirect_scene : seul redirect_sequence apparaît
+func test_seq_graph_choices_mixed_types_redirect_sequence_and_terminal():
+	# Un choix avec redirect_sequence ET redirect_scene : les deux créent un lien
+	# (redirect_sequence → seq2, redirect_scene → nœud terminal)
 	var scene = SceneDataScript.new()
 	var seq1 = Sequence.new(); seq1.seq_name = "Seq 1"
 	var seq2 = Sequence.new(); seq2.seq_name = "Seq 2"
@@ -200,8 +204,55 @@ func test_seq_graph_choices_mixed_types_only_redirect_sequence_shown():
 
 	assert_true(_has_connection(graph, seq1.uuid, seq2.uuid),
 		"redirect_sequence doit apparaître dans le graphe séquence")
-	assert_eq(graph.get_connection_list().size(), 1,
-		"redirect_scene ne doit pas créer de lien dans le graphe séquence")
+	assert_true(_has_connection(graph, seq1.uuid, "terminal:redirect_scene"),
+		"redirect_scene doit créer un lien vers le nœud terminal")
+	assert_eq(graph.get_connection_list().size(), 2,
+		"deux liens : un vers seq2 et un vers le terminal redirect_scene")
+
+func test_seq_graph_choice_node_multiport_3_choices_2_same_target_1_game_over():
+	# Scénario "Épreuve 1" : 3 choix — 2 redirigent vers la même séquence, 1 est game_over
+	# Le nœud doit avoir 3 ports de sortie (un par choix) avec les bons labels
+	var scene = SceneDataScript.new()
+	var seq1 = Sequence.new(); seq1.seq_name = "Épreuve 1"
+	var seq2 = Sequence.new(); seq2.seq_name = "Épreuve 2"
+	scene.sequences.append(seq1)
+	scene.sequences.append(seq2)
+	seq1.ending = _make_choices_ending([
+		{"type": "redirect_sequence", "target": seq2.uuid},
+		{"type": "redirect_sequence", "target": seq2.uuid},
+		{"type": "game_over", "target": ""}
+	])
+
+	var graph = GraphEdit.new()
+	graph.set_script(SequenceGraphView)
+	add_child_autofree(graph)
+	graph.load_scene(scene)
+
+	# Le nœud séquence-choix a 3 ports de sortie (slots 1, 2, 3)
+	var node1 = null
+	for child in graph.get_children():
+		if child is GraphNode and child.name == StringName(seq1.uuid):
+			node1 = child
+			break
+	assert_not_null(node1, "nœud Épreuve 1 existe")
+	assert_true(node1.is_choice_sequence_node(), "nœud est de type séquence-choix")
+	assert_eq(node1.get_choice_count(), 3, "nœud a 3 choix")
+
+	# Slot 0 n'a PAS de sortie (entrée seulement)
+	assert_false(node1.is_slot_enabled_right(0), "slot 0 n'a pas de port de sortie")
+
+	# Slots 1, 2, 3 sont des sorties
+	assert_true(node1.is_slot_enabled_right(1), "slot 1 (choix 1) a un port de sortie")
+	assert_true(node1.is_slot_enabled_right(2), "slot 2 (choix 2) a un port de sortie")
+	assert_true(node1.is_slot_enabled_right(3), "slot 3 (choix 3) a un port de sortie")
+
+	# 3 connexions : port 1→seq2, port 2→seq2, port 3→terminal:game_over
+	assert_eq(graph.get_connection_list().size(), 3,
+		"3 connexions : 2 vers seq2 + 1 vers terminal game_over")
+	assert_true(_has_connection(graph, seq1.uuid, seq2.uuid),
+		"connexion vers seq2 existe")
+	assert_true(_has_connection(graph, seq1.uuid, "terminal:game_over"),
+		"connexion vers terminal game_over existe")
 
 # ============================================================
 # Tests du graphe de SCÈNES

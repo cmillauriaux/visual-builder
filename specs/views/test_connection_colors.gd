@@ -105,8 +105,8 @@ func test_seq_manual_connection_is_transition():
 	assert_eq(graph.get_connection_type(seq1.uuid, seq2.uuid), "transition",
 		"connexion manuelle → type transition")
 
-func test_seq_manual_plus_choice_is_both():
-	# Connexion manuelle (transition) + ending choices vers la même cible → both
+func test_seq_manual_plus_choice_is_choice():
+	# Connexion manuelle ignorée pour les séquences "choices" → type "choice" (pas "both")
 	var scene = SceneDataScript.new()
 	var seq1 = Sequence.new(); seq1.seq_name = "Seq 1"
 	var seq2 = Sequence.new(); seq2.seq_name = "Seq 2"
@@ -117,8 +117,8 @@ func test_seq_manual_plus_choice_is_both():
 
 	var graph = _make_seq_graph(scene)
 
-	assert_eq(graph.get_connection_type(seq1.uuid, seq2.uuid), "both",
-		"connexion manuelle + choices vers même cible → type both")
+	assert_eq(graph.get_connection_type(seq1.uuid, seq2.uuid), "choice",
+		"connexion manuelle ignorée pour séquence choices → type choice")
 
 func test_seq_unknown_connection_returns_empty():
 	var scene = SceneDataScript.new()
@@ -298,6 +298,7 @@ func test_seq_transition_right_port_is_white():
 		"port droit blanc pour connexion de type transition")
 
 func test_seq_choice_right_port_is_green():
+	# Pour un nœud séquence-choix, slot 0 n'a pas de sortie ; slot 1 = premier choix (vert)
 	var scene = SceneDataScript.new()
 	var seq1 = Sequence.new(); seq1.seq_name = "Seq 1"
 	var seq2 = Sequence.new(); seq2.seq_name = "Seq 2"
@@ -309,10 +310,11 @@ func test_seq_choice_right_port_is_green():
 	var node1 = _get_node_by_uuid(graph, seq1.uuid)
 
 	assert_not_null(node1, "nœud seq1 existe")
-	assert_eq(node1.get_slot_color_right(0), COLOR_CHOICE,
-		"port droit vert pour connexion de type choice")
+	assert_eq(node1.get_slot_color_right(1), COLOR_CHOICE,
+		"port droit vert pour le premier choix (slot 1)")
 
-func test_seq_both_right_port_is_yellow():
+func test_seq_choices_right_port_is_green_even_with_manual_connection():
+	# Connexion manuelle ignorée pour les séquences "choices" → slot 1 (premier choix) reste vert
 	var scene = SceneDataScript.new()
 	var seq1 = Sequence.new(); seq1.seq_name = "Seq 1"
 	var seq2 = Sequence.new(); seq2.seq_name = "Seq 2"
@@ -325,8 +327,8 @@ func test_seq_both_right_port_is_yellow():
 	var node1 = _get_node_by_uuid(graph, seq1.uuid)
 
 	assert_not_null(node1, "nœud seq1 existe")
-	assert_eq(node1.get_slot_color_right(0), COLOR_BOTH,
-		"port droit jaune pour connexion de type both")
+	assert_eq(node1.get_slot_color_right(1), COLOR_CHOICE,
+		"slot 1 (premier choix) vert pour séquence choices même avec connexion manuelle")
 
 func test_seq_no_outgoing_port_is_white():
 	var scene = SceneDataScript.new()

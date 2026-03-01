@@ -10,12 +10,16 @@ var _uuid: String = ""
 var _item_name: String = ""
 var _subtitle: String = ""
 var _is_entry_point: bool = false
+var _is_terminal: bool = false
+var _is_choice_sequence: bool = false
+var _choice_count: int = 0
 var _popup_menu: PopupMenu
 
-func setup(uuid: String, item_name: String, pos: Vector2, subtitle: String = "") -> void:
+func setup(uuid: String, item_name: String, pos: Vector2, subtitle: String = "", is_terminal: bool = false) -> void:
 	_uuid = uuid
 	_item_name = item_name
 	_subtitle = subtitle
+	_is_terminal = is_terminal
 	title = item_name
 	position_offset = pos
 	name = uuid
@@ -26,11 +30,54 @@ func setup(uuid: String, item_name: String, pos: Vector2, subtitle: String = "")
 	label.name = "ContentLabel"
 	add_child(label)
 
-	# Activer les ports d'entrée (gauche) et de sortie (droite)
+	# Activer le port d'entrée (gauche) toujours
 	set_slot_enabled_left(0, true)
 	set_slot_color_left(0, Color.WHITE)
-	set_slot_enabled_right(0, true)
-	set_slot_color_right(0, Color.WHITE)
+
+	if not is_terminal:
+		# Port de sortie (droite) uniquement pour les nœuds non-terminaux
+		set_slot_enabled_right(0, true)
+		set_slot_color_right(0, Color.WHITE)
+
+		# Menu contextuel
+		_popup_menu = PopupMenu.new()
+		_popup_menu.name = "ContextMenu"
+		_popup_menu.add_item("Renommer", 0)
+		_popup_menu.add_check_item("Point d'entrée", 1)
+		_popup_menu.id_pressed.connect(_on_popup_id_pressed)
+		add_child(_popup_menu)
+
+func setup_as_choice_sequence(uuid: String, item_name: String, pos: Vector2, subtitle: String, choices: Array) -> void:
+	_uuid = uuid
+	_item_name = item_name
+	_subtitle = subtitle
+	_is_choice_sequence = true
+	_choice_count = choices.size()
+	title = item_name
+	position_offset = pos
+	name = uuid
+
+	# Slot 0 : entrée uniquement, pas de sortie
+	var label = Label.new()
+	label.text = subtitle if subtitle != "" else ""
+	label.name = "ContentLabel"
+	add_child(label)
+	set_slot_enabled_left(0, true)
+	set_slot_color_left(0, Color.WHITE)
+	set_slot_enabled_right(0, false)
+
+	# Un slot de sortie par choix
+	for i in range(choices.size()):
+		var text = choices[i].text if choices[i].text != "" else "Choix %d" % (i + 1)
+		if text.length() > 35:
+			text = text.left(33) + "…"
+		var clabel = Label.new()
+		clabel.text = text
+		clabel.name = "ChoiceLabel_%d" % i
+		add_child(clabel)
+		set_slot_enabled_left(i + 1, false)
+		set_slot_enabled_right(i + 1, true)
+		set_slot_color_right(i + 1, Color(0.0, 0.9, 0.2))
 
 	# Menu contextuel
 	_popup_menu = PopupMenu.new()
@@ -39,6 +86,12 @@ func setup(uuid: String, item_name: String, pos: Vector2, subtitle: String = "")
 	_popup_menu.add_check_item("Point d'entrée", 1)
 	_popup_menu.id_pressed.connect(_on_popup_id_pressed)
 	add_child(_popup_menu)
+
+func is_choice_sequence_node() -> bool:
+	return _is_choice_sequence
+
+func get_choice_count() -> int:
+	return _choice_count
 
 func get_item_uuid() -> String:
 	return _uuid
@@ -85,6 +138,8 @@ func get_item_position() -> Vector2:
 	return position_offset
 
 func _gui_input(event: InputEvent) -> void:
+	if _is_terminal:
+		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.double_click:
 		double_clicked.emit(_uuid)
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
