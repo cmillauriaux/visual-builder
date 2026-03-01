@@ -78,7 +78,7 @@ func test_get_targets_for_unknown_type_returns_empty():
 
 # --- populate_target_dropdown ---
 
-func test_populate_target_dropdown_fills_items():
+func test_populate_target_dropdown_fills_items_with_nouveau():
 	var dropdown = OptionButton.new()
 	add_child_autofree(dropdown)
 	_helper.set_available_targets(
@@ -86,11 +86,14 @@ func test_populate_target_dropdown_fills_items():
 		[], []
 	)
 	_helper.populate_target_dropdown(dropdown, "redirect_sequence")
-	assert_eq(dropdown.item_count, 2)
-	assert_eq(dropdown.get_item_text(0), "Seq1")
-	assert_eq(dropdown.get_item_metadata(0), "s1")
-	assert_eq(dropdown.get_item_text(1), "Seq2")
-	assert_eq(dropdown.get_item_metadata(1), "s2")
+	# Index 0 = "Nouveau...", index 1-2 = items
+	assert_eq(dropdown.item_count, 3)
+	assert_eq(dropdown.get_item_text(0), "✚ Nouvelle séquence...")
+	assert_eq(dropdown.get_item_metadata(0), "__new__")
+	assert_eq(dropdown.get_item_text(1), "Seq1")
+	assert_eq(dropdown.get_item_metadata(1), "s1")
+	assert_eq(dropdown.get_item_text(2), "Seq2")
+	assert_eq(dropdown.get_item_metadata(2), "s2")
 
 func test_populate_target_dropdown_clears_previous():
 	var dropdown = OptionButton.new()
@@ -98,14 +101,51 @@ func test_populate_target_dropdown_clears_previous():
 	dropdown.add_item("Old")
 	_helper.set_available_targets([{"uuid": "s1", "name": "New"}], [], [])
 	_helper.populate_target_dropdown(dropdown, "redirect_sequence")
-	assert_eq(dropdown.item_count, 1)
-	assert_eq(dropdown.get_item_text(0), "New")
+	# "Nouveau..." + 1 item
+	assert_eq(dropdown.item_count, 2)
+	assert_eq(dropdown.get_item_text(0), "✚ Nouvelle séquence...")
+	assert_eq(dropdown.get_item_text(1), "New")
 
 func test_populate_target_dropdown_empty_for_non_redirect():
 	var dropdown = OptionButton.new()
 	add_child_autofree(dropdown)
 	_helper.populate_target_dropdown(dropdown, "game_over")
 	assert_eq(dropdown.item_count, 0)
+
+func test_populate_target_dropdown_nouveau_for_scene():
+	var dropdown = OptionButton.new()
+	add_child_autofree(dropdown)
+	_helper.set_available_targets([], [{"uuid": "sc1", "name": "Scene1"}], [])
+	_helper.populate_target_dropdown(dropdown, "redirect_scene")
+	assert_eq(dropdown.item_count, 2)
+	assert_eq(dropdown.get_item_text(0), "✚ Nouvelle scène...")
+	assert_eq(dropdown.get_item_metadata(0), "__new__")
+
+func test_populate_target_dropdown_nouveau_for_chapter():
+	var dropdown = OptionButton.new()
+	add_child_autofree(dropdown)
+	_helper.set_available_targets([], [], [{"uuid": "ch1", "name": "Chap1"}])
+	_helper.populate_target_dropdown(dropdown, "redirect_chapter")
+	assert_eq(dropdown.item_count, 2)
+	assert_eq(dropdown.get_item_text(0), "✚ Nouveau chapitre...")
+	assert_eq(dropdown.get_item_metadata(0), "__new__")
+
+func test_populate_target_dropdown_no_nouveau_for_condition():
+	var dropdown = OptionButton.new()
+	add_child_autofree(dropdown)
+	_helper.set_available_targets([], [], [], [{"uuid": "c1", "name": "Cond1"}])
+	_helper.populate_target_dropdown(dropdown, "redirect_condition")
+	assert_eq(dropdown.item_count, 1)
+	assert_eq(dropdown.get_item_text(0), "Cond1")
+	assert_eq(dropdown.get_item_metadata(0), "c1")
+
+func test_is_new_target_meta_true():
+	assert_true(ConsequenceTargetHelperScript.is_new_target_meta("__new__"))
+
+func test_is_new_target_meta_false():
+	assert_false(ConsequenceTargetHelperScript.is_new_target_meta("some-uuid"))
+	assert_false(ConsequenceTargetHelperScript.is_new_target_meta(null))
+	assert_false(ConsequenceTargetHelperScript.is_new_target_meta(""))
 
 
 # --- variable_names ---

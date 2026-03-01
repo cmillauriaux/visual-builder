@@ -134,12 +134,12 @@ ScrollContainer
 
 ## Criteres d'acceptation
 
-- [ ] Le bouton "Verifier l'histoire" est visible au niveau chapters uniquement
-- [ ] Le verificateur simule plusieurs parcours avec des choix differents
-- [ ] Les variables et conditions sont evaluees de maniere realiste
-- [ ] Les boucles infinies sont detectees (detection par etat + garde max steps)
-- [ ] Le rapport identifie les noeuds orphelins avec leur localisation (chapitre/scene)
-- [ ] Le rapport identifie les parcours qui n'aboutissent pas a une fin valide
-- [ ] Le panel de rapport est scrollable et affiche toutes les informations
-- [ ] Le bouton "Fermer" du panel restaure la vue normale
-- [ ] Tous les tests passent
+- [x] Le bouton "Verifier l'histoire" est visible au niveau chapters uniquement
+- [x] Le verificateur simule plusieurs parcours avec des choix differents
+- [x] Les variables et conditions sont evaluees de maniere realiste
+- [x] Les boucles infinies sont detectees (detection par etat + garde max steps)
+- [x] Le rapport identifie les noeuds orphelins avec leur localisation (chapitre/scene)
+- [x] Le rapport identifie les parcours qui n'aboutissent pas a une fin valide
+- [x] Le panel de rapport est scrollable et affiche toutes les informations
+- [x] Le bouton "Fermer" du panel restaure la vue normale
+- [x] Tous les tests passent

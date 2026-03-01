@@ -168,7 +168,9 @@ func _ready() -> void:
 
 	# Editors → Navigation
 	_ending_editor.ending_changed.connect(_nav_ctrl.on_ending_changed)
+	_ending_editor.new_target_requested.connect(_nav_ctrl._on_new_target_requested)
 	_condition_editor.condition_changed.connect(_nav_ctrl.on_condition_changed)
+	_condition_editor.new_target_requested.connect(_nav_ctrl._on_new_target_requested)
 
 	# Play signals → Play controller
 	_typewriter_timer.timeout.connect(_play_ctrl.on_typewriter_tick)

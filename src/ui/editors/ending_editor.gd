@@ -13,6 +13,7 @@ const OPERATION_TYPES = VariableEffectScript.VALID_OPERATIONS
 const OPERATION_LABELS = VariableEffectScript.OPERATION_LABELS
 
 signal ending_changed
+signal new_target_requested(ctype: String, callback: Callable)
 
 var _sequence = null
 var _target_helper = ConsequenceTargetHelperScript.new()
@@ -328,9 +329,10 @@ func _apply_redirect_type(index: int) -> void:
 	_redirect_target_dropdown.visible = needs_target
 	if needs_target:
 		var target = ""
-		if _redirect_target_dropdown.item_count > 0:
-			target = _redirect_target_dropdown.get_item_metadata(0) if _redirect_target_dropdown.item_count > 0 else ""
-			_redirect_target_dropdown.selected = 0
+		var first_real = _find_first_real_target_index(_redirect_target_dropdown)
+		if first_real >= 0:
+			target = _redirect_target_dropdown.get_item_metadata(first_real)
+			_redirect_target_dropdown.selected = first_real
 		set_auto_consequence(ctype, target)
 	else:
 		set_auto_consequence(ctype, "")
@@ -340,21 +342,28 @@ func _on_redirect_target_changed(index: int) -> void:
 	if _sequence == null or _sequence.ending == null or _sequence.ending.auto_consequence == null:
 		return
 	if index >= 0 and index < _redirect_target_dropdown.item_count:
-		var target_uuid = _redirect_target_dropdown.get_item_metadata(index)
-		_sequence.ending.auto_consequence.target = target_uuid
+		var meta = _redirect_target_dropdown.get_item_metadata(index)
+		if ConsequenceTargetHelperScript.is_new_target_meta(meta):
+			var ctype = _sequence.ending.auto_consequence.type
+			new_target_requested.emit(ctype, func(new_uuid: String) -> void:
+				_sequence.ending.auto_consequence.target = new_uuid
+				_populate_redirect_target()
+				_select_target_in_dropdown(_redirect_target_dropdown, new_uuid)
+				_update_redirect_summary()
+				ending_changed.emit()
+			)
+			return
+		_sequence.ending.auto_consequence.target = meta
 	_update_redirect_summary()
 	ending_changed.emit()
 
 func _populate_redirect_target() -> void:
-	_redirect_target_dropdown.clear()
 	var type_index = _redirect_type_dropdown.selected
 	if type_index < 0 or type_index >= CONSEQUENCE_TYPES.size():
+		_redirect_target_dropdown.clear()
 		return
 	var ctype = CONSEQUENCE_TYPES[type_index]
-	var items = _get_targets_for_type(ctype)
-	for item in items:
-		_redirect_target_dropdown.add_item(item["name"])
-		_redirect_target_dropdown.set_item_metadata(_redirect_target_dropdown.item_count - 1, item["uuid"])
+	_target_helper.populate_target_dropdown(_redirect_target_dropdown, ctype)
 
 func _get_targets_for_type(ctype: String) -> Array:
 	return _target_helper.get_targets_for_type(ctype)
@@ -540,7 +549,6 @@ func _on_choice_type_changed(type_index: int, choice_index: int) -> void:
 	if ctype not in REDIRECT_TYPES:
 		choice.consequence.target = ""
 	else:
-		# Reset target to first available
 		var items = _get_targets_for_type(ctype)
 		choice.consequence.target = items[0]["uuid"] if items.size() > 0 else ""
 	_rebuild_choices_list()
@@ -556,10 +564,42 @@ func _on_choice_target_changed(target_index: int, choice_index: int) -> void:
 		return
 	# Find the target dropdown in the choice row
 	var ctype = choice.consequence.type
-	var items = _get_targets_for_type(ctype)
-	if target_index >= 0 and target_index < items.size():
-		choice.consequence.target = items[target_index]["uuid"]
+	# Get metadata from the dropdown to check for __new__
+	var choice_row = _choices_list.get_child(choice_index)
+	var target_dropdown = _find_target_dropdown_in_choice(choice_row)
+	if target_dropdown and target_index >= 0 and target_index < target_dropdown.item_count:
+		var meta = target_dropdown.get_item_metadata(target_index)
+		if ConsequenceTargetHelperScript.is_new_target_meta(meta):
+			new_target_requested.emit(ctype, func(new_uuid: String) -> void:
+				choice.consequence.target = new_uuid
+				_rebuild_choices_list()
+				ending_changed.emit()
+			)
+			return
+		choice.consequence.target = meta
 	ending_changed.emit()
+
+func _find_target_dropdown_in_choice(choice_row) -> OptionButton:
+	if choice_row == null:
+		return null
+	for child in choice_row.get_children():
+		if child is HBoxContainer:
+			for sub in child.get_children():
+				if sub is OptionButton and sub.size_flags_horizontal == Control.SIZE_EXPAND_FILL:
+					return sub
+	return null
+
+func _select_target_in_dropdown(dropdown: OptionButton, uuid: String) -> void:
+	for i in range(dropdown.item_count):
+		if dropdown.get_item_metadata(i) == uuid:
+			dropdown.selected = i
+			return
+
+func _find_first_real_target_index(dropdown: OptionButton) -> int:
+	for i in range(dropdown.item_count):
+		if not ConsequenceTargetHelperScript.is_new_target_meta(dropdown.get_item_metadata(i)):
+			return i
+	return -1
 
 func _on_delete_choice(index: int) -> void:
 	remove_choice(index)

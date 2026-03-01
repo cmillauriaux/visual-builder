@@ -176,6 +176,44 @@ func test_mode_none_clears_ending():
 	_editor._on_mode_none()
 	assert_null(_sequence.ending)
 
+# === "Nouveau..." signal tests ===
+
+func test_new_target_requested_signal_exists():
+	assert_has_signal(_editor, "new_target_requested")
+
+func test_redirect_nouveau_emits_new_target_requested():
+	_editor.load_sequence(_sequence)
+	_editor.set_available_targets(
+		[{"uuid": "s1", "name": "Seq 1"}],
+		[], []
+	)
+	_editor._on_mode_redirect()
+	watch_signals(_editor)
+	# Select index 0 which is "Nouveau..."
+	_editor._on_redirect_target_changed(0)
+	assert_signal_emitted(_editor, "new_target_requested")
+
+func test_redirect_nouveau_callback_updates_model():
+	_editor.load_sequence(_sequence)
+	_editor.set_available_targets(
+		[{"uuid": "s1", "name": "Seq 1"}],
+		[], []
+	)
+	_editor._on_mode_redirect()
+	# Use an array to capture by reference
+	var received = [{"ctype": ""}]
+	_editor.new_target_requested.connect(func(ctype, callback):
+		received[0]["ctype"] = ctype
+		_editor.set_available_targets(
+			[{"uuid": "s1", "name": "Seq 1"}, {"uuid": "new-uuid", "name": "Séquence 2"}],
+			[], []
+		)
+		callback.call("new-uuid")
+	)
+	_editor._on_redirect_target_changed(0)
+	assert_eq(received[0]["ctype"], "redirect_sequence")
+	assert_eq(_sequence.ending.auto_consequence.target, "new-uuid")
+
 # === Graph view ending connection tests ===
 
 func test_sequence_graph_ending_connections():

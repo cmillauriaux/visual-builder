@@ -7,6 +7,7 @@ const ConsequenceScript = preload("res://src/models/consequence.gd")
 const ConsequenceTargetHelperScript = preload("res://src/ui/shared/consequence_target_helper.gd")
 
 signal condition_changed
+signal new_target_requested(ctype: String, callback: Callable)
 
 const OPERATOR_TYPES = ["equal", "not_equal", "greater_than", "greater_than_equal", "less_than", "less_than_equal", "exists", "not_exists"]
 const OPERATOR_LABELS = ["Equal", "Not Equal", "Greater Than", "Greater Than Equal", "Less Than", "Less Than Equal", "Exists", "Not Exists"]
@@ -310,9 +311,20 @@ func _on_rule_cons_target_changed(target_index: int, rule_index: int) -> void:
 	var rule = _condition.rules[rule_index]
 	if rule.consequence == null:
 		return
-	var items = _get_targets_for_type(rule.consequence.type)
-	if target_index >= 0 and target_index < items.size():
-		rule.consequence.target = items[target_index]["uuid"]
+	# Find the target dropdown in the rule row
+	var rule_row = _rules_list.get_child(rule_index)
+	var target_dropdown = _find_target_dropdown_in_rule(rule_row)
+	if target_dropdown and target_index >= 0 and target_index < target_dropdown.item_count:
+		var meta = target_dropdown.get_item_metadata(target_index)
+		if ConsequenceTargetHelperScript.is_new_target_meta(meta):
+			var ctype = rule.consequence.type
+			new_target_requested.emit(ctype, func(new_uuid: String) -> void:
+				rule.consequence.target = new_uuid
+				_rebuild_rules_list()
+				condition_changed.emit()
+			)
+			return
+		rule.consequence.target = meta
 	condition_changed.emit()
 
 # --- Default consequence ---
@@ -326,7 +338,6 @@ func _refresh_default_ui() -> void:
 		_default_target_dropdown.visible = true
 		return
 	if _condition.default_consequence == null:
-		# Créer le default_consequence avec le type par défaut
 		var ctype = CONSEQUENCE_TYPES[0]
 		var target = ""
 		if ctype in REDIRECT_TYPES:
@@ -339,6 +350,10 @@ func _refresh_default_ui() -> void:
 		_default_type_dropdown.selected = 0
 		_populate_target_dropdown(_default_target_dropdown, ctype)
 		_default_target_dropdown.visible = ctype in REDIRECT_TYPES
+		if ctype in REDIRECT_TYPES:
+			var first_real = _find_first_real_target_index(_default_target_dropdown)
+			if first_real >= 0:
+				_default_target_dropdown.selected = first_real
 		return
 	var idx = CONSEQUENCE_TYPES.find(_condition.default_consequence.type)
 	if idx < 0:
@@ -363,6 +378,9 @@ func _on_default_type_changed(type_index: int) -> void:
 	if ctype in REDIRECT_TYPES:
 		var items = _get_targets_for_type(ctype)
 		target = items[0]["uuid"] if items.size() > 0 else ""
+		var first_real = _find_first_real_target_index(_default_target_dropdown)
+		if first_real >= 0:
+			_default_target_dropdown.selected = first_real
 	set_default_consequence(ctype, target)
 
 func _on_default_target_changed(target_index: int) -> void:
@@ -373,9 +391,17 @@ func _on_default_target_changed(target_index: int) -> void:
 		var cons = ConsequenceScript.new()
 		cons.type = ctype
 		_condition.default_consequence = cons
-	var items = _get_targets_for_type(_condition.default_consequence.type)
-	if target_index >= 0 and target_index < items.size():
-		_condition.default_consequence.target = items[target_index]["uuid"]
+	if target_index >= 0 and target_index < _default_target_dropdown.item_count:
+		var meta = _default_target_dropdown.get_item_metadata(target_index)
+		if ConsequenceTargetHelperScript.is_new_target_meta(meta):
+			var ctype = _condition.default_consequence.type
+			new_target_requested.emit(ctype, func(new_uuid: String) -> void:
+				_condition.default_consequence.target = new_uuid
+				_refresh_default_ui()
+				condition_changed.emit()
+			)
+			return
+		_condition.default_consequence.target = meta
 	condition_changed.emit()
 
 # --- Target dropdowns ---
@@ -385,3 +411,19 @@ func _populate_target_dropdown(dropdown: OptionButton, ctype: String) -> void:
 
 func _get_targets_for_type(ctype: String) -> Array:
 	return _target_helper.get_targets_for_type(ctype)
+
+func _find_target_dropdown_in_rule(rule_row) -> OptionButton:
+	if rule_row == null:
+		return null
+	for child in rule_row.get_children():
+		if child is HBoxContainer:
+			for sub in child.get_children():
+				if sub is OptionButton and sub.size_flags_horizontal == Control.SIZE_EXPAND_FILL:
+					return sub
+	return null
+
+func _find_first_real_target_index(dropdown: OptionButton) -> int:
+	for i in range(dropdown.item_count):
+		if not ConsequenceTargetHelperScript.is_new_target_meta(dropdown.get_item_metadata(i)):
+			return i
+	return -1

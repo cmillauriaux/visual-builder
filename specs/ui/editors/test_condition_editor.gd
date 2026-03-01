@@ -174,3 +174,33 @@ func test_load_condition_with_existing_rules():
 func test_operator_labels():
 	assert_eq(ConditionEditorScript.OPERATOR_TYPES.size(), 8)
 	assert_eq(ConditionEditorScript.OPERATOR_LABELS.size(), 8)
+
+# === "Nouveau..." signal tests ===
+
+func test_new_target_requested_signal_exists():
+	assert_has_signal(_editor, "new_target_requested")
+
+func test_default_nouveau_emits_new_target_requested():
+	_make_targets()
+	_editor.load_condition(_condition)
+	watch_signals(_editor)
+	# Select index 0 which is "Nouveau..." in the default target dropdown
+	_editor._on_default_target_changed(0)
+	assert_signal_emitted(_editor, "new_target_requested")
+
+func test_default_nouveau_callback_updates_model():
+	_make_targets()
+	_editor.load_condition(_condition)
+	var received = [{"ctype": ""}]
+	_editor.new_target_requested.connect(func(ctype, callback):
+		received[0]["ctype"] = ctype
+		_editor.set_available_targets(
+			[{"uuid": "s1", "name": "Seq1"}, {"uuid": "s2", "name": "Seq2"}, {"uuid": "new-uuid", "name": "Seq3"}],
+			[{"uuid": "sc1", "name": "Scene1"}],
+			[{"uuid": "ch1", "name": "Chapter1"}]
+		)
+		callback.call("new-uuid")
+	)
+	_editor._on_default_target_changed(0)
+	assert_eq(received[0]["ctype"], "redirect_sequence")
+	assert_eq(_condition.default_consequence.target, "new-uuid")

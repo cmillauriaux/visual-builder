@@ -421,6 +421,52 @@ func on_verifier_close() -> void:
 	_main.update_view()
 
 
+func _on_new_target_requested(ctype: String, callback: Callable) -> void:
+	match ctype:
+		"redirect_sequence":
+			if _main._editor_main._current_scene == null:
+				return
+			var name = "Séquence %d" % (_main._editor_main._current_scene.sequences.size() + 1)
+			var all_items: Array = []
+			all_items.append_array(_main._editor_main._current_scene.sequences)
+			all_items.append_array(_main._editor_main._current_scene.conditions)
+			var pos = _main._editor_main.compute_next_position(all_items)
+			var cmd = AddSequenceCommand.new(_main._editor_main._current_scene, name, pos)
+			_main._undo_redo.push(cmd)
+			var new_uuid = _main._editor_main._current_scene.sequences.back().uuid
+			update_ending_targets()
+			_update_condition_targets()
+			callback.call(new_uuid)
+			_update_ending_connections()
+			_main._refresh_undo_redo_buttons()
+		"redirect_scene":
+			if _main._editor_main._current_chapter == null:
+				return
+			var name = "Scène %d" % (_main._editor_main._current_chapter.scenes.size() + 1)
+			var pos = _main._editor_main.compute_next_position(_main._editor_main._current_chapter.scenes)
+			var cmd = AddSceneCommand.new(_main._editor_main._current_chapter, name, pos)
+			_main._undo_redo.push(cmd)
+			var new_uuid = _main._editor_main._current_chapter.scenes.back().uuid
+			update_ending_targets()
+			_update_condition_targets()
+			callback.call(new_uuid)
+			_update_ending_connections()
+			_main._refresh_undo_redo_buttons()
+		"redirect_chapter":
+			if _main._editor_main._story == null:
+				return
+			var name = "Chapitre %d" % (_main._editor_main._story.chapters.size() + 1)
+			var pos = _main._editor_main.compute_next_position(_main._editor_main._story.chapters)
+			var cmd = AddChapterCommand.new(_main._editor_main._story, name, pos)
+			_main._undo_redo.push(cmd)
+			var new_uuid = _main._editor_main._story.chapters.back().uuid
+			update_ending_targets()
+			_update_condition_targets()
+			callback.call(new_uuid)
+			_update_ending_connections()
+			_main._refresh_undo_redo_buttons()
+
+
 func _build_available_targets() -> Dictionary:
 	var sequences: Array = []
 	var conditions: Array = []
