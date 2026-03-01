@@ -449,6 +449,27 @@ func test_ia_set_inputs_enabled_includes_gallery_button():
 	_dialog._ia_set_inputs_enabled(true)
 	assert_false(_dialog._ia_choose_gallery_btn.disabled)
 
+# --- Onglet IA : CFG slider ---
+
+func test_ia_has_cfg_slider():
+	assert_not_null(_dialog._ia_cfg_slider)
+	assert_is(_dialog._ia_cfg_slider, HSlider)
+
+func test_ia_cfg_slider_default_value():
+	assert_eq(_dialog._ia_cfg_slider.value, 1.0)
+
+func test_ia_cfg_slider_range():
+	assert_eq(_dialog._ia_cfg_slider.min_value, 1.0)
+	assert_eq(_dialog._ia_cfg_slider.max_value, 30.0)
+
+func test_ia_cfg_slider_step():
+	assert_eq(_dialog._ia_cfg_slider.step, 0.5)
+
+func test_ia_has_cfg_value_label():
+	assert_not_null(_dialog._ia_cfg_value_label)
+	assert_is(_dialog._ia_cfg_value_label, Label)
+	assert_eq(_dialog._ia_cfg_value_label.text, "1.0")
+
 # --- Onglet IA : État initial ---
 
 func test_ia_accept_button_initially_disabled():

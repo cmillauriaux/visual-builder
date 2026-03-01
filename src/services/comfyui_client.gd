@@ -14,6 +14,7 @@ var _config: RefCounted = null
 var _poll_timer: Timer = null
 var _cancelled: bool = false
 var _remove_background: bool = true
+var _cfg: float = 1.0
 
 # --- Workflow template (Flux 2 Klein + BiRefNet) ---
 # Reproduit exactement Edit_Image_Transparent_API.json
@@ -183,11 +184,12 @@ func is_generating() -> bool:
 
 # --- Build workflow with dynamic parameters ---
 
-func build_workflow(filename: String, prompt_text: String, seed: int, remove_background: bool = true) -> Dictionary:
+func build_workflow(filename: String, prompt_text: String, seed: int, remove_background: bool = true, cfg: float = 1.0) -> Dictionary:
 	var wf = WORKFLOW_TEMPLATE.duplicate(true)
 	wf["76"]["inputs"]["image"] = filename
 	wf["75:74"]["inputs"]["text"] = prompt_text
 	wf["75:73"]["inputs"]["noise_seed"] = seed
+	wf["75:63"]["inputs"]["cfg"] = cfg
 	if not remove_background:
 		# Pour les backgrounds : sauvegarder directement la sortie du VAEDecode
 		# sans passer par BiRefNetRMBG (pas de suppression de fond)
@@ -258,7 +260,7 @@ func parse_history_response(json_str: String, prompt_id: String) -> Dictionary:
 
 # --- Full generation flow ---
 
-func generate(config: RefCounted, source_image_path: String, prompt_text: String, remove_background: bool = true) -> void:
+func generate(config: RefCounted, source_image_path: String, prompt_text: String, remove_background: bool = true, cfg: float = 1.0) -> void:
 	if _generating:
 		generation_failed.emit("Une génération est déjà en cours")
 		return
@@ -267,6 +269,7 @@ func generate(config: RefCounted, source_image_path: String, prompt_text: String
 	_cancelled = false
 	_config = config
 	_remove_background = remove_background
+	_cfg = cfg
 
 	generation_progress.emit("Chargement de l'image source...")
 
@@ -316,7 +319,7 @@ func _do_upload(filename: String, file_bytes: PackedByteArray, prompt_text: Stri
 
 func _do_prompt(filename: String, prompt_text: String) -> void:
 	var seed = randi()
-	var workflow = build_workflow(filename, prompt_text, seed, _remove_background)
+	var workflow = build_workflow(filename, prompt_text, seed, _remove_background, _cfg)
 	var payload = JSON.stringify({"prompt": workflow})
 
 	var http = HTTPRequest.new()

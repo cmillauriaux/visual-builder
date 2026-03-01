@@ -36,6 +36,8 @@ var _ia_source_preview: TextureRect
 var _ia_choose_source_btn: Button
 var _ia_choose_gallery_btn: Button
 var _ia_prompt_input: TextEdit
+var _ia_cfg_slider: HSlider
+var _ia_cfg_value_label: Label
 var _ia_generate_btn: Button
 var _ia_result_preview: TextureRect
 var _ia_status_label: Label
@@ -276,6 +278,29 @@ func _build_ia_tab() -> void:
 	_ia_prompt_input.placeholder_text = "Décrivez l'image à générer..."
 	_ia_prompt_input.text_changed.connect(func(): _ia_update_generate_button_state())
 	vbox.add_child(_ia_prompt_input)
+
+	# --- CFG slider ---
+	var cfg_hbox = HBoxContainer.new()
+	cfg_hbox.add_theme_constant_override("separation", 8)
+	vbox.add_child(cfg_hbox)
+
+	var cfg_label = Label.new()
+	cfg_label.text = "CFG :"
+	cfg_hbox.add_child(cfg_label)
+
+	_ia_cfg_slider = HSlider.new()
+	_ia_cfg_slider.min_value = 1.0
+	_ia_cfg_slider.max_value = 30.0
+	_ia_cfg_slider.step = 0.5
+	_ia_cfg_slider.value = 1.0
+	_ia_cfg_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_ia_cfg_slider.value_changed.connect(func(val: float): _ia_cfg_value_label.text = str(val))
+	cfg_hbox.add_child(_ia_cfg_slider)
+
+	_ia_cfg_value_label = Label.new()
+	_ia_cfg_value_label.text = "1.0"
+	_ia_cfg_value_label.custom_minimum_size.x = 32
+	cfg_hbox.add_child(_ia_cfg_value_label)
 
 	# --- Generate button ---
 	_ia_generate_btn = Button.new()
@@ -644,7 +669,8 @@ func _on_ia_generate_pressed() -> void:
 	_ia_show_status("Lancement...")
 
 	var remove_bg = (_mode != Mode.BACKGROUND)
-	_ia_client.generate(config, _ia_source_image_path, _ia_prompt_input.text, remove_bg)
+	var cfg_value = _ia_cfg_slider.value
+	_ia_client.generate(config, _ia_source_image_path, _ia_prompt_input.text, remove_bg, cfg_value)
 
 func _on_ia_generation_completed(image: Image) -> void:
 	_ia_generated_image = image

@@ -58,6 +58,14 @@ func test_build_workflow_with_remove_bg_includes_birefnet_node():
 	assert_has(wf, "100", "BiRefNetRMBG node should exist when remove_background is true")
 	assert_eq(wf["9"]["inputs"]["images"], ["100", 0], "SaveImage should point to BiRefNetRMBG output")
 
+func test_build_workflow_sets_cfg_value():
+	var wf = _client.build_workflow("test.png", "a cat", 42, true, 7.5)
+	assert_eq(wf["75:63"]["inputs"]["cfg"], 7.5)
+
+func test_build_workflow_default_cfg_is_1():
+	var wf = _client.build_workflow("test.png", "a cat", 42)
+	assert_eq(wf["75:63"]["inputs"]["cfg"], 1.0)
+
 func test_build_workflow_default_includes_birefnet():
 	var wf = _client.build_workflow("test.png", "a cat", 42)
 	assert_has(wf, "100", "Default should include BiRefNetRMBG node")
