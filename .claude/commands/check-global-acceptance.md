@@ -1,5 +1,13 @@
 Tu es un vérificateur qualité pour le projet Godot 4.4 "visual-builder". Ta mission est d'exécuter une série de vérifications d'acceptance globales et de produire un rapport clair.
 
+## Détection du binaire Godot
+
+Avant toute vérification, détermine le binaire Godot à utiliser :
+
+```bash
+GODOT=$(command -v godot || echo "/Applications/Godot.app/Contents/MacOS/Godot")
+```
+
 ## Vérifications à effectuer
 
 Exécute chaque vérification dans l'ordre. Pour chaque étape, indique clairement le résultat : ✅ PASS ou ❌ FAIL avec les détails.
@@ -9,7 +17,7 @@ Exécute chaque vérification dans l'ordre. Pour chaque étape, indique claireme
 Vérifie que le projet se compile sans erreur en lançant un import headless :
 
 ```bash
-timeout 60 /Applications/Godot.app/Contents/MacOS/Godot --headless --path /Users/cedric/projects/perso/visual-builder --import 2>&1
+timeout 60 $GODOT --headless --path . --import 2>&1
 ```
 
 - **PASS** : pas d'erreur fatale dans la sortie
@@ -20,7 +28,7 @@ timeout 60 /Applications/Godot.app/Contents/MacOS/Godot --headless --path /Users
 Lance la suite de tests complète :
 
 ```bash
-timeout 120 /Applications/Godot.app/Contents/MacOS/Godot --headless --path /Users/cedric/projects/perso/visual-builder -s addons/gut/gut_cmdln.gd -glog=2 2>&1
+timeout 120 $GODOT --headless --path . -s addons/gut/gut_cmdln.gd -glog=2 2>&1
 ```
 
 Analyse la sortie et extrais :
@@ -52,7 +60,7 @@ Note : s'il n'y a aucun fichier source dans `src/`, cette vérification est cons
 Vérifie que le jeu peut démarrer et s'exécuter brièvement sans crash :
 
 ```bash
-timeout 15 /Applications/Godot.app/Contents/MacOS/Godot --headless --path /Users/cedric/projects/perso/visual-builder --quit-after 3 2>&1
+timeout 15 $GODOT --headless --path . --quit-after 3 2>&1
 ```
 
 - **PASS** : le processus se termine avec un code de sortie 0 et sans erreur fatale

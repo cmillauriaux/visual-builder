@@ -6,33 +6,52 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Godot 4.4 project ("visual-builder") using GL Compatibility renderer (supports web/HTML5 export).
 
+## Environnement Godot
+
+Le binaire Godot est installé automatiquement via le hook SessionStart (`.claude/hooks/install-godot.sh`).
+
+- **Local (macOS)** : `/Applications/Godot.app/Contents/MacOS/Godot`
+- **Remote (Linux / Claude Code web)** : `godot` (installé dans `/usr/local/bin/godot`)
+
+Pour déterminer quel binaire utiliser :
+
+```bash
+# Détection automatique
+GODOT=$(command -v godot || echo "/Applications/Godot.app/Contents/MacOS/Godot")
+```
+
 ## Running the Project
 
 ```bash
-# Open in Godot editor
-/Applications/Godot.app/Contents/MacOS/Godot --editor --path /Users/cedric/projects/perso/visual-builder
+# Open in Godot editor (local macOS)
+/Applications/Godot.app/Contents/MacOS/Godot --editor --path .
 
 # Run the project directly
-/Applications/Godot.app/Contents/MacOS/Godot --path /Users/cedric/projects/perso/visual-builder
+$GODOT --path .
 ```
 
 ## Exécution des tests GUT
 
-GUT est configuré avec `"should_exit": true` dans `.gutconfig.json`, ce qui fait quitter Godot automatiquement après les tests. Le `gtimeout` sert uniquement de filet de sécurité.
+GUT est configuré avec `"should_exit": true` dans `.gutconfig.json`, ce qui fait quitter Godot automatiquement après les tests. Le `timeout` sert uniquement de filet de sécurité.
 
 ```bash
+# Détection du binaire Godot
+GODOT=$(command -v godot || echo "/Applications/Godot.app/Contents/MacOS/Godot")
+
 # Lancer tous les tests GUT
-gtimeout 30 /Applications/Godot.app/Contents/MacOS/Godot --headless --path /Users/cedric/projects/perso/visual-builder -s addons/gut/gut_cmdln.gd
+timeout 120 $GODOT --headless --path . -s addons/gut/gut_cmdln.gd
 
 # Lancer un fichier de test spécifique
-gtimeout 30 /Applications/Godot.app/Contents/MacOS/Godot --headless --path /Users/cedric/projects/perso/visual-builder -s addons/gut/gut_cmdln.gd -gtest=res://specs/test_example.gd
+timeout 30 $GODOT --headless --path . -s addons/gut/gut_cmdln.gd -gtest=res://specs/test_example.gd
 ```
 
 ## Project Structure
 
 - `project.godot` — Main engine configuration
-- `specs/` — Test directory (empty, framework TBD)
+- `specs/` — Test directory (GUT tests + Markdown specifications)
 - `.godot/` — Engine cache (gitignored, auto-generated)
+- `.claude/hooks/install-godot.sh` — Script d'installation automatique de Godot headless
+- `.claude/settings.json` — Configuration des hooks Claude Code (SessionStart)
 
 ## Priorities
 
