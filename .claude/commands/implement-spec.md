@@ -68,7 +68,8 @@ Pour chaque composant du plan, applique strictement le cycle Red-Green-Refactor 
 - Ne rajoute rien de plus que ce que les tests exigent
 - Lance les tests pour vérifier qu'ils passent :
   ```bash
-  /Applications/Godot.app/Contents/MacOS/Godot --headless --path /Users/cedric/projects/perso/visual-builder -s addons/gut/gut_cmdln.gd
+  GODOT=$(command -v godot || echo "/Applications/Godot.app/Contents/MacOS/Godot")
+  $GODOT --headless --path . -s addons/gut/gut_cmdln.gd
   ```
 
 #### 1.3 REFACTOR — Nettoyer
@@ -149,12 +150,14 @@ src/
 Commande pour lancer les tests GUT en ligne de commande :
 
 ```bash
+GODOT=$(command -v godot || echo "/Applications/Godot.app/Contents/MacOS/Godot")
+
 # Tous les tests
-/Applications/Godot.app/Contents/MacOS/Godot --headless --path /Users/cedric/projects/perso/visual-builder -s addons/gut/gut_cmdln.gd
+$GODOT --headless --path . -s addons/gut/gut_cmdln.gd
 
 # Un fichier de test spécifique
-/Applications/Godot.app/Contents/MacOS/Godot --headless --path /Users/cedric/projects/perso/visual-builder -s addons/gut/gut_cmdln.gd -gtest=specs/test_story_model.gd
+$GODOT --headless --path . -s addons/gut/gut_cmdln.gd -gtest=specs/test_story_model.gd
 
 # Avec plus de verbosité
-/Applications/Godot.app/Contents/MacOS/Godot --headless --path /Users/cedric/projects/perso/visual-builder -s addons/gut/gut_cmdln.gd -glog=3
+$GODOT --headless --path . -s addons/gut/gut_cmdln.gd -glog=3
 ```
