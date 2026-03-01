@@ -456,6 +456,29 @@ func test_ia_has_choose_source_button():
 	assert_not_null(_dialog._ia_choose_source_btn)
 	assert_is(_dialog._ia_choose_source_btn, Button)
 
+# --- Onglet IA : Bouton Galerie source ---
+
+func test_ia_has_choose_gallery_button():
+	assert_not_null(_dialog._ia_choose_gallery_btn)
+	assert_is(_dialog._ia_choose_gallery_btn, Button)
+
+func test_ia_choose_gallery_button_disabled_without_story():
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, "")
+	assert_true(_dialog._ia_choose_gallery_btn.disabled)
+
+func test_ia_choose_gallery_button_enabled_with_story():
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, "my_story")
+	assert_false(_dialog._ia_choose_gallery_btn.disabled)
+
+func test_ia_set_inputs_disabled_includes_gallery_button():
+	_dialog._ia_set_inputs_enabled(false)
+	assert_true(_dialog._ia_choose_gallery_btn.disabled)
+
+func test_ia_set_inputs_enabled_includes_gallery_button():
+	_dialog._ia_set_inputs_enabled(false)
+	_dialog._ia_set_inputs_enabled(true)
+	assert_false(_dialog._ia_choose_gallery_btn.disabled)
+
 # --- Onglet IA : État initial ---
 
 func test_ia_accept_button_initially_disabled():

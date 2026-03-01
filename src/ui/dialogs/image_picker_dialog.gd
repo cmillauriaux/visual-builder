@@ -34,6 +34,7 @@ var _ia_token_input: LineEdit
 var _ia_source_path_label: Label
 var _ia_source_preview: TextureRect
 var _ia_choose_source_btn: Button
+var _ia_choose_gallery_btn: Button
 var _ia_prompt_input: TextEdit
 var _ia_generate_btn: Button
 var _ia_result_preview: TextureRect
@@ -63,6 +64,8 @@ func setup(mode: int, story_name: String) -> void:
 		title = "Sélectionner un foreground"
 	_reset_selection()
 	_update_story_warning()
+	if _ia_choose_gallery_btn:
+		_ia_choose_gallery_btn.disabled = (story_name == "")
 
 func _reset_selection() -> void:
 	_selected_path = ""
@@ -257,6 +260,11 @@ func _build_ia_tab() -> void:
 	_ia_choose_source_btn.text = "Parcourir..."
 	_ia_choose_source_btn.pressed.connect(_on_ia_choose_source)
 	source_hbox.add_child(_ia_choose_source_btn)
+
+	_ia_choose_gallery_btn = Button.new()
+	_ia_choose_gallery_btn.text = "Galerie..."
+	_ia_choose_gallery_btn.pressed.connect(_on_ia_choose_from_gallery)
+	source_hbox.add_child(_ia_choose_gallery_btn)
 
 	# --- Prompt ---
 	var prompt_label = Label.new()
@@ -498,6 +506,7 @@ func _ia_set_inputs_enabled(enabled: bool) -> void:
 	_ia_token_input.editable = enabled
 	_ia_prompt_input.editable = enabled
 	_ia_choose_source_btn.disabled = not enabled
+	_ia_choose_gallery_btn.disabled = not enabled
 
 func _on_ia_choose_source() -> void:
 	var dialog = FileDialog.new()
@@ -512,6 +521,89 @@ func _on_ia_choose_source() -> void:
 	)
 	add_child(dialog)
 	dialog.popup_centered(Vector2i(800, 600))
+
+func _on_ia_choose_from_gallery() -> void:
+	var gallery_window = Window.new()
+	gallery_window.title = "Choisir une image source"
+	gallery_window.size = Vector2i(600, 450)
+	gallery_window.exclusive = true
+
+	var vbox = VBoxContainer.new()
+	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vbox.add_theme_constant_override("separation", 8)
+	var margin = MarginContainer.new()
+	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+	margin.add_theme_constant_override("margin_left", 12)
+	margin.add_theme_constant_override("margin_right", 12)
+	margin.add_theme_constant_override("margin_top", 12)
+	margin.add_theme_constant_override("margin_bottom", 12)
+	gallery_window.add_child(margin)
+	margin.add_child(vbox)
+
+	var images = _list_gallery_images()
+
+	if images.is_empty():
+		var empty_msg = Label.new()
+		empty_msg.text = "Aucune image dans la galerie."
+		empty_msg.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		empty_msg.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		vbox.add_child(empty_msg)
+	else:
+		var scroll = ScrollContainer.new()
+		scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		vbox.add_child(scroll)
+
+		var grid = GridContainer.new()
+		grid.columns = 4
+		grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		scroll.add_child(grid)
+
+		for path in images:
+			var container = Panel.new()
+			container.custom_minimum_size = Vector2(120, 140)
+			container.mouse_filter = Control.MOUSE_FILTER_STOP
+
+			var item_vbox = VBoxContainer.new()
+			item_vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+			item_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+			container.add_child(item_vbox)
+
+			var tex_rect = TextureRect.new()
+			tex_rect.custom_minimum_size = Vector2(100, 100)
+			tex_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			var img = Image.new()
+			if img.load(path) == OK:
+				tex_rect.texture = ImageTexture.create_from_image(img)
+			item_vbox.add_child(tex_rect)
+
+			var name_label = Label.new()
+			name_label.text = path.get_file()
+			name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			name_label.clip_text = true
+			name_label.custom_minimum_size.x = 100
+			name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			item_vbox.add_child(name_label)
+
+			container.gui_input.connect(func(event: InputEvent):
+				if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+					_ia_source_image_path = path
+					_ia_source_path_label.text = path.get_file()
+					_ia_load_source_preview(path)
+					_ia_update_generate_button_state()
+					gallery_window.queue_free()
+			)
+			grid.add_child(container)
+
+	var cancel_btn = Button.new()
+	cancel_btn.text = "Annuler"
+	cancel_btn.pressed.connect(func(): gallery_window.queue_free())
+	vbox.add_child(cancel_btn)
+
+	gallery_window.close_requested.connect(func(): gallery_window.queue_free())
+	add_child(gallery_window)
+	gallery_window.popup_centered()
 
 func _ia_load_source_preview(path: String) -> void:
 	if path == "":
