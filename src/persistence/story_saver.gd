@@ -7,10 +7,11 @@ const StoryScript = preload("res://src/models/story.gd")
 const ChapterScript = preload("res://src/models/chapter.gd")
 const SceneDataScript = preload("res://src/models/scene_data.gd")
 const SequenceScript = preload("res://src/models/sequence.gd")
+const StoryI18nService = preload("res://src/services/story_i18n_service.gd")
 
 # --- Sauvegarde ---
 
-static func save_story(story, base_path: String) -> void:
+static func save_story(story, base_path: String, lang: String = "fr") -> void:
 	# Créer la structure de dossiers
 	DirAccess.make_dir_recursive_absolute(base_path)
 	DirAccess.make_dir_recursive_absolute(base_path + "/assets/backgrounds")
@@ -42,9 +43,13 @@ static func save_story(story, base_path: String) -> void:
 			var scene_yaml = YamlParser.dict_to_yaml(scene_dict)
 			_write_file(ch_path + "/scenes/" + scene.uuid + ".yaml", scene_yaml)
 
+	# Générer/mettre à jour i18n/fr.yaml (fichier source pour traducteurs)
+	var source_strings = StoryI18nService.extract_strings(story)
+	StoryI18nService.save_i18n(source_strings, base_path, "fr")
+
 # --- Chargement ---
 
-static func load_story(base_path: String):
+static func load_story(base_path: String, lang: String = "fr"):
 	var story_yaml_path = base_path + "/story.yaml"
 	if not FileAccess.file_exists(story_yaml_path):
 		return null
@@ -84,6 +89,12 @@ static func load_story(base_path: String):
 			full_chapters.append(ch_header)
 
 	story.chapters = full_chapters
+
+	# Appliquer les traductions si langue différente du français
+	if lang != "fr":
+		var i18n_dict = StoryI18nService.load_i18n(base_path, lang)
+		StoryI18nService.apply_to_story(story, i18n_dict)
+
 	return story
 
 # --- Utilitaires fichier ---

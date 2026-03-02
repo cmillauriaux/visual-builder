@@ -88,6 +88,8 @@ static func _build_top_bar(main: Control) -> void:
 	parametres_popup.add_item("Menu", 1)
 	parametres_popup.add_item("Galerie", 2)
 	parametres_popup.add_item("Notifications", 3)
+	parametres_popup.add_separator()
+	parametres_popup.add_item("Langues", 4)
 	main._top_bar.add_child(main._parametres_menu)
 
 	main._histoire_menu = MenuButton.new()
@@ -102,6 +104,9 @@ static func _build_top_bar(main: Control) -> void:
 	histoire_popup.add_item("Exporter", 4)
 	histoire_popup.add_separator()
 	histoire_popup.add_item("Vérifier l'histoire", 5)
+	histoire_popup.add_separator()
+	histoire_popup.add_item("Traductions — Regénérer les clés", 6)
+	histoire_popup.add_item("Traductions — Vérifier", 7)
 	main._top_bar.add_child(main._histoire_menu)
 
 	# Variable panel popup

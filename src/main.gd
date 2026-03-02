@@ -12,6 +12,9 @@ const NavigationControllerScript = preload("res://src/controllers/navigation_con
 const ExportDialogScript = preload("res://src/ui/dialogs/export_dialog.gd")
 const GalleryDialogScript = preload("res://src/ui/dialogs/gallery_dialog.gd")
 const NotificationDialogScript = preload("res://src/ui/dialogs/notification_dialog.gd")
+const LanguageManagerDialogScript = preload("res://src/ui/dialogs/language_manager_dialog.gd")
+const I18nDialogScript = preload("res://src/ui/dialogs/i18n_dialog.gd")
+const StoryI18nService = preload("res://src/services/story_i18n_service.gd")
 const UndoRedoService = preload("res://src/services/undo_redo_service.gd")
 
 # Contrôleurs
@@ -419,6 +422,54 @@ func _on_histoire_menu_pressed(id: int) -> void:
 		3: _nav_ctrl.on_save_as_pressed()
 		4: _on_export_pressed()
 		5: _nav_ctrl.on_verify_pressed()
+		6: _on_i18n_regenerate_pressed()
+		7: _on_i18n_check_pressed()
+
+
+func _on_languages_pressed() -> void:
+	if _editor_main._story == null:
+		return
+	var base_path = _get_story_base_path()
+	if base_path == "":
+		var warn = AcceptDialog.new()
+		warn.title = "Sauvegarde requise"
+		warn.dialog_text = "Veuillez sauvegarder l'histoire avant de gérer les langues."
+		add_child(warn)
+		warn.popup_centered()
+		return
+	var dialog = AcceptDialog.new()
+	dialog.set_script(LanguageManagerDialogScript)
+	add_child(dialog)
+	dialog.setup(base_path)
+	dialog.popup_centered()
+
+
+func _on_i18n_regenerate_pressed() -> void:
+	if _editor_main._story == null:
+		return
+	var base_path = _get_story_base_path()
+	if base_path == "":
+		return
+	var added = StoryI18nService.regenerate_missing_keys(_editor_main._story, base_path)
+	var dialog = AcceptDialog.new()
+	dialog.set_script(I18nDialogScript)
+	add_child(dialog)
+	dialog.show_regenerate_result(added)
+	dialog.popup_centered()
+
+
+func _on_i18n_check_pressed() -> void:
+	if _editor_main._story == null:
+		return
+	var base_path = _get_story_base_path()
+	if base_path == "":
+		return
+	var check = StoryI18nService.check_translations(_editor_main._story, base_path)
+	var dialog = AcceptDialog.new()
+	dialog.set_script(I18nDialogScript)
+	add_child(dialog)
+	dialog.show_check_result(check)
+	dialog.popup_centered()
 
 
 func _on_parametres_menu_pressed(id: int) -> void:
@@ -427,6 +478,7 @@ func _on_parametres_menu_pressed(id: int) -> void:
 		1: _nav_ctrl.on_menu_config_requested()
 		2: _on_gallery_pressed()
 		3: _on_notifications_pressed()
+		4: _on_languages_pressed()
 
 
 func _on_notifications_pressed() -> void:

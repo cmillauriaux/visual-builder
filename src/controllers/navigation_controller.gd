@@ -263,12 +263,6 @@ func _do_save(path: String) -> void:
 	_last_save_path = path
 	_main._editor_main._story.touch()
 	StorySaver.save_story(_main._editor_main._story, path)
-	_main._save_button.text = "Sauvegardé !"
-	_main._save_button.disabled = true
-	_main.get_tree().create_timer(2.0).timeout.connect(func():
-		_main._save_button.text = "Sauvegarder"
-		_main._save_button.disabled = false
-	)
 
 
 func on_load_pressed() -> void:

@@ -1,2 +1,1 @@
-- Réorganiser les boutons de la page principale
 - Système de plugin pour afficher des pages personnalisées (affinités)
