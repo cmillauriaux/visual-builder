@@ -11,6 +11,7 @@ const PlayControllerScript = preload("res://src/controllers/play_controller.gd")
 const NavigationControllerScript = preload("res://src/controllers/navigation_controller.gd")
 const ExportDialogScript = preload("res://src/ui/dialogs/export_dialog.gd")
 const GalleryDialogScript = preload("res://src/ui/dialogs/gallery_dialog.gd")
+const NotificationDialogScript = preload("res://src/ui/dialogs/notification_dialog.gd")
 const UndoRedoService = preload("res://src/services/undo_redo_service.gd")
 
 # Contrôleurs
@@ -32,6 +33,7 @@ var _top_stop_button: Button
 var _create_button: Button
 var _create_condition_button: Button
 var _variables_button: Button
+var _notifications_button: Button
 var _menu_config_button: Button
 var _gallery_button: Button
 var _variable_panel_popup: PopupPanel
@@ -74,6 +76,11 @@ var _condition_editor: VBoxContainer
 # UI — Verifier
 var _verify_button: Button
 var _verifier_report_panel: VBoxContainer
+
+# UI — Toast overlay (notifications)
+var _toast_overlay: PanelContainer
+var _toast_label: Label
+var _toast_generation: int = 0
 
 # UI — Play overlay
 var _play_overlay: PanelContainer
@@ -128,6 +135,7 @@ func _ready() -> void:
 	_create_button.pressed.connect(_nav_ctrl.on_create_pressed)
 	_create_condition_button.pressed.connect(_nav_ctrl.on_create_condition_pressed)
 	_variables_button.pressed.connect(_nav_ctrl.on_variables_pressed)
+	_notifications_button.pressed.connect(_on_notifications_pressed)
 	_menu_config_button.pressed.connect(_nav_ctrl.on_menu_config_requested)
 	_gallery_button.pressed.connect(_on_gallery_pressed)
 	_variable_panel.variables_changed.connect(_nav_ctrl.on_variables_changed)
@@ -180,6 +188,7 @@ func _ready() -> void:
 	_story_play_ctrl.sequence_play_requested.connect(_play_ctrl.on_story_play_sequence_requested)
 	_story_play_ctrl.choice_display_requested.connect(_play_ctrl.on_story_play_choice_requested)
 	_story_play_ctrl.play_finished.connect(_play_ctrl.on_story_play_finished)
+	_story_play_ctrl.notification_triggered.connect(_on_notification_triggered)
 	_sequence_editor_ctrl.play_dialogue_changed.connect(_play_ctrl.on_play_dialogue_changed)
 	_sequence_editor_ctrl.play_stopped.connect(_play_ctrl.on_play_stopped)
 
@@ -377,6 +386,7 @@ func update_view() -> void:
 		_create_button.text = _editor_main.get_create_button_label()
 	_create_condition_button.visible = (level == "sequences")
 	_variables_button.visible = (level in ["chapters", "scenes", "sequences"])
+	_notifications_button.visible = (level == "chapters")
 	_menu_config_button.visible = (level in ["chapters", "scenes", "sequences"])
 	_gallery_button.visible = (level in ["chapters", "scenes", "sequences"])
 	_verify_button.visible = (level == "chapters")
@@ -423,6 +433,27 @@ func _refresh_undo_redo_buttons() -> void:
 		_redo_button.tooltip_text = "Rétablir : " + _undo_redo.get_redo_label()
 	else:
 		_redo_button.tooltip_text = ""
+
+
+func _on_notifications_pressed() -> void:
+	if _editor_main._story == null:
+		return
+	var dialog = AcceptDialog.new()
+	dialog.set_script(NotificationDialogScript)
+	add_child(dialog)
+	dialog.setup(_editor_main._story)
+	dialog.popup_centered()
+
+
+func _on_notification_triggered(message: String) -> void:
+	_toast_label.text = message
+	_toast_overlay.visible = true
+	_toast_generation += 1
+	var gen := _toast_generation
+	get_tree().create_timer(3.0).timeout.connect(func():
+		if _toast_generation == gen:
+			_toast_overlay.visible = false
+	)
 
 
 func _on_gallery_pressed() -> void:

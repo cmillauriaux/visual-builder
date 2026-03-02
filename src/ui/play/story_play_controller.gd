@@ -8,6 +8,7 @@ enum State { IDLE, PLAYING_SEQUENCE, WAITING_FOR_CHOICE }
 signal sequence_play_requested(sequence)
 signal choice_display_requested(choices)
 signal play_finished(reason: String)
+signal notification_triggered(message: String)
 
 var _state: int = State.IDLE
 var _story = null
@@ -275,5 +276,17 @@ func _init_variables_from_story(story) -> void:
 		_variables[var_def.var_name] = var_def.initial_value
 
 func _apply_effects(effects: Array) -> void:
+	var before := _variables.duplicate()
 	for effect in effects:
 		effect.apply(_variables)
+	_check_notifications(before)
+
+
+func _check_notifications(before: Dictionary) -> void:
+	if _story == null or _story.get("notifications") == null:
+		return
+	for var_name in _variables:
+		if not before.has(var_name) or before[var_name] != _variables[var_name]:
+			for notif in _story.notifications:
+				if notif.matches(var_name):
+					notification_triggered.emit(notif.message)

@@ -16,11 +16,12 @@ func verify(story) -> Dictionary:
 		return _empty_report()
 
 	var visited_nodes := {}  # uuid -> true
-	var choice_history := {}  # sequence_uuid -> {choice_index: true}
+	var global_coverage := {}  # sequence_uuid -> {choice_index: true} — partage entre runs
+	var fallback_counters := {}  # sequence_uuid -> int — cycle quand tous les choix sont couverts
 	var runs := []
 
 	for run_index in range(MAX_RUNS):
-		var run_result := _simulate_run(story, choice_history, run_index)
+		var run_result := _simulate_run(story, global_coverage, fallback_counters, run_index)
 		runs.append(run_result)
 
 		# Marquer les noeuds visites
@@ -35,7 +36,7 @@ func verify(story) -> Dictionary:
 				all_visited = false
 				break
 
-		var has_untried := _has_untried_choices(choice_history, story)
+		var has_untried := _has_untried_choices(global_coverage, story)
 		if all_visited and not has_untried:
 			break
 		if not has_untried and run_index > 0:
@@ -74,11 +75,12 @@ func _empty_report() -> Dictionary:
 	}
 
 
-func _simulate_run(story, choice_history: Dictionary, run_index: int) -> Dictionary:
+func _simulate_run(story, global_coverage: Dictionary, fallback_counters: Dictionary, run_index: int) -> Dictionary:
 	var variables := {}
 	_init_variables(story, variables)
 	var path := []
 	var visited_in_run := {}  # state_key -> true (detection boucle)
+	var local_history := {}   # sequence_uuid -> {choice_index: true} — local a ce run
 	var step_count := 0
 
 	# Trouver le chapitre d'entree
@@ -144,7 +146,7 @@ func _simulate_run(story, choice_history: Dictionary, run_index: int) -> Diction
 			elif current_node.ending.type == "choices":
 				if current_node.ending.choices.size() == 0:
 					return _make_run_result(run_index, path, "no_ending")
-				var choice_index := _pick_choice(node_uuid, current_node.ending.choices.size(), choice_history)
+				var choice_index := _pick_choice(node_uuid, current_node.ending.choices.size(), local_history, global_coverage, fallback_counters)
 				var choice = current_node.ending.choices[choice_index]
 				path.append({
 					"uuid": node_uuid,
@@ -311,16 +313,37 @@ func _serialize_variables(variables: Dictionary) -> String:
 	return "|".join(parts)
 
 
-func _pick_choice(sequence_uuid: String, num_choices: int, choice_history: Dictionary) -> int:
-	if not choice_history.has(sequence_uuid):
-		choice_history[sequence_uuid] = {}
-	var tried: Dictionary = choice_history[sequence_uuid]
-	for i in range(num_choices):
-		if not tried.has(i):
-			tried[i] = true
-			return i
-	# Tous essayes, revenir a 0
-	return 0
+func _pick_choice(sequence_uuid: String, num_choices: int, local_history: Dictionary, global_coverage: Dictionary, fallback_counters: Dictionary) -> int:
+	if not local_history.has(sequence_uuid):
+		local_history[sequence_uuid] = {}
+	if not global_coverage.has(sequence_uuid):
+		global_coverage[sequence_uuid] = {}
+	var local_tried: Dictionary = local_history[sequence_uuid]
+	var globally_covered: Dictionary = global_coverage[sequence_uuid]
+
+	if local_tried.is_empty():
+		# Premiere visite dans ce run : priorite aux choix non couverts globalement
+		for i in range(num_choices):
+			if not globally_covered.has(i):
+				local_tried[i] = true
+				globally_covered[i] = true
+				return i
+		# Tous les choix deja couverts globalement : cycler pour explorer les chemins imbriques
+		if not fallback_counters.has(sequence_uuid):
+			fallback_counters[sequence_uuid] = 0
+		var fb: int = fallback_counters[sequence_uuid] % num_choices
+		fallback_counters[sequence_uuid] += 1
+		local_tried[fb] = true
+		return fb
+	else:
+		# Revisite dans ce run : choisir le prochain choix non encore essaye dans ce run
+		for i in range(num_choices):
+			if not local_tried.has(i):
+				local_tried[i] = true
+				globally_covered[i] = true
+				return i
+		# Tous les choix tentes dans ce run → 0 (loop detection prendra le relais)
+		return 0
 
 
 func _has_untried_choices(choice_history: Dictionary, story) -> bool:

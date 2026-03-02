@@ -2,6 +2,7 @@ extends RefCounted
 
 const ChapterScript = preload("res://src/models/chapter.gd")
 const VariableDefinitionScript = preload("res://src/models/variable_definition.gd")
+const StoryNotificationScript = preload("res://src/models/story_notification.gd")
 
 var title: String = ""
 var author: String = ""
@@ -11,6 +12,7 @@ var created_at: String = ""
 var updated_at: String = ""
 var chapters: Array = []  # Array[Chapter]
 var variables: Array = []  # Array[VariableDefinition]
+var notifications: Array = []  # Array[StoryNotification]
 var connections: Array = []  # Array[Dictionary] — {"from": uuid, "to": uuid}
 var entry_point_uuid: String = ""
 var menu_title: String = ""
@@ -37,6 +39,14 @@ func find_variable(var_name: String):
 			return v
 	return null
 
+func get_triggered_notifications(var_name: String) -> Array:
+	var result := []
+	for n in notifications:
+		if n.matches(var_name):
+			result.append(n)
+	return result
+
+
 func get_variable_names() -> Array:
 	var names := []
 	for v in variables:
@@ -52,6 +62,10 @@ func to_dict() -> Dictionary:
 	for v in variables:
 		var_arr.append(v.to_dict())
 
+	var notif_arr := []
+	for n in notifications:
+		notif_arr.append(n.to_dict())
+
 	var conn_arr := []
 	for conn in connections:
 		conn_arr.append(conn)
@@ -65,6 +79,7 @@ func to_dict() -> Dictionary:
 		"updated_at": updated_at,
 		"chapters": ch_arr,
 		"variables": var_arr,
+		"notifications": notif_arr,
 		"connections": conn_arr,
 		"entry_point": entry_point_uuid,
 		"menu_title": menu_title,
@@ -89,6 +104,10 @@ static func from_dict(d: Dictionary):
 	if d.has("variables"):
 		for var_dict in d["variables"]:
 			story.variables.append(VariableDefinitionScript.from_dict(var_dict))
+
+	if d.has("notifications"):
+		for notif_dict in d["notifications"]:
+			story.notifications.append(StoryNotificationScript.from_dict(notif_dict))
 
 	if d.has("connections"):
 		for conn in d["connections"]:

@@ -102,6 +102,10 @@ static func _build_top_bar(main: Control) -> void:
 	main._variable_panel.set_script(VariablePanelScript)
 	main._variable_panel_popup.add_child(main._variable_panel)
 
+	main._notifications_button = Button.new()
+	main._notifications_button.text = "Notifications"
+	main._top_bar.add_child(main._notifications_button)
+
 	main._verify_button = Button.new()
 	main._verify_button.text = "Verifier l'histoire"
 	main._top_bar.add_child(main._verify_button)
@@ -326,6 +330,24 @@ static func _build_play_overlay(main: Control) -> void:
 	main._choice_overlay.set_anchors_preset(Control.PRESET_CENTER)
 	main._choice_overlay.custom_minimum_size = Vector2(400, 0)
 	main._choice_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+
+	# Toast overlay (notifications)
+	main._toast_overlay = PanelContainer.new()
+	main._toast_overlay.visible = false
+	main._toast_overlay.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	main._toast_overlay.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	main._toast_overlay.grow_vertical = Control.GROW_DIRECTION_END
+	main._toast_overlay.offset_top = 8
+	main._toast_overlay.offset_right = -8
+	main._toast_overlay.custom_minimum_size = Vector2(250, 0)
+	main._toast_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	main._toast_overlay.z_index = 100
+	main.add_child(main._toast_overlay)
+
+	main._toast_label = Label.new()
+	main._toast_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	main._toast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	main._toast_overlay.add_child(main._toast_label)
 
 
 static func _build_helpers(main: Control) -> void:
