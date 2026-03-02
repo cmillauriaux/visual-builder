@@ -15,6 +15,12 @@ GODOT_BIN=""
 KEEP_TEMP=false
 LOG_FILE=""
 
+# Détecter sed (gsed sur macOS si dispo pour compatibilité GNU)
+SED_BIN="sed"
+if [[ "$OSTYPE" == "darwin"* ]] && command -v gsed &>/dev/null; then
+    SED_BIN="gsed"
+fi
+
 # --- Fonctions utilitaires ---
 
 usage() {
@@ -94,7 +100,7 @@ find_godot() {
 
 # Extrait le nom du projet depuis project.godot
 get_project_name() {
-    grep 'config/name=' "$PROJECT_DIR/project.godot" | sed 's/config\/name="//;s/"//'
+    grep 'config/name=' "$PROJECT_DIR/project.godot" | "$SED_BIN" 's/config\/name="//;s/"//'
 }
 
 # Résout un chemin user:// en chemin OS absolu
@@ -131,7 +137,11 @@ resolve_story_path() {
 # Extrait le titre de la story depuis story.yaml
 get_story_title() {
     local story_dir="$1"
-    grep '^title:' "$story_dir/story.yaml" | sed 's/^title: *"//;s/"$//' | head -1
+    if [[ -f "$story_dir/story.yaml" ]]; then
+        grep '^title:' "$story_dir/story.yaml" | "$SED_BIN" 's/^title: *"//;s/"$//' | head -1
+    else
+        echo ""
+    fi
 }
 
 # Extension de sortie selon la plateforme
@@ -271,10 +281,10 @@ run_logged "$GODOT_BIN" --headless --path "$TEMP_PROJECT" --script res://src/exp
 
 # 8. Modifier project.godot
 info "Configuration de project.godot..."
-sed -i.bak 's|run/main_scene="res://src/main.tscn"|run/main_scene="res://src/game.tscn"|' "$TEMP_PROJECT/project.godot"
-sed -i.bak "s|config/name=\"[^\"]*\"|config/name=\"$GAME_NAME\"|" "$TEMP_PROJECT/project.godot"
+"$SED_BIN" -i 's|run/main_scene="res://src/main.tscn"|run/main_scene="res://src/game.tscn"|' "$TEMP_PROJECT/project.godot"
+"$SED_BIN" -i "s|config/name=\"[^\"]*\"|config/name=\"$GAME_NAME\"|" "$TEMP_PROJECT/project.godot"
 # Désactiver le plugin GUT pour l'export
-sed -i.bak '/\[editor_plugins\]/,/^$/d' "$TEMP_PROJECT/project.godot"
+"$SED_BIN" -i '/\[editor_plugins\]/,/^$/d' "$TEMP_PROJECT/project.godot"
 
 # Activer les formats de compression texture requis selon la plateforme
 case "$PLATFORM" in
@@ -285,10 +295,9 @@ case "$PLATFORM" in
         fi
         # S'assurer que ETC2 ASTC est activé
         if grep -q 'textures/vram_compression/import_etc2_astc' "$TEMP_PROJECT/project.godot"; then
-            sed -i.bak 's|textures/vram_compression/import_etc2_astc=.*|textures/vram_compression/import_etc2_astc=true|' "$TEMP_PROJECT/project.godot"
+            "$SED_BIN" -i 's|textures/vram_compression/import_etc2_astc=.*|textures/vram_compression/import_etc2_astc=true|' "$TEMP_PROJECT/project.godot"
         else
-            sed -i.bak '/^\[rendering\]/a\
-textures/vram_compression/import_etc2_astc=true' "$TEMP_PROJECT/project.godot"
+            "$SED_BIN" -i '/^\[rendering\]/a textures/vram_compression/import_etc2_astc=true' "$TEMP_PROJECT/project.godot"
         fi
         ;;
     linux|windows)
@@ -297,21 +306,17 @@ textures/vram_compression/import_etc2_astc=true' "$TEMP_PROJECT/project.godot"
             echo -e "\n[rendering]\n" >> "$TEMP_PROJECT/project.godot"
         fi
         if grep -q 'textures/vram_compression/import_s3tc_bptc' "$TEMP_PROJECT/project.godot"; then
-            sed -i.bak 's|textures/vram_compression/import_s3tc_bptc=.*|textures/vram_compression/import_s3tc_bptc=true|' "$TEMP_PROJECT/project.godot"
+            "$SED_BIN" -i 's|textures/vram_compression/import_s3tc_bptc=.*|textures/vram_compression/import_s3tc_bptc=true|' "$TEMP_PROJECT/project.godot"
         else
-            sed -i.bak '/^\[rendering\]/a\
-textures/vram_compression/import_s3tc_bptc=true' "$TEMP_PROJECT/project.godot"
+            "$SED_BIN" -i '/^\[rendering\]/a textures/vram_compression/import_s3tc_bptc=true' "$TEMP_PROJECT/project.godot"
         fi
         ;;
 esac
 
-rm -f "$TEMP_PROJECT/project.godot.bak"
-
 # 9. Modifier game.tscn pour définir story_path
 info "Configuration de game.tscn..."
-sed -i.bak '/^script = ExtResource/a\
-story_path = "res://story"' "$TEMP_PROJECT/src/game.tscn"
-rm -f "$TEMP_PROJECT/src/game.tscn.bak"
+# On utilise une approche plus robuste pour l'insertion multi-plateforme
+"$SED_BIN" -i '/^script = ExtResource/a story_path = "res://story"' "$TEMP_PROJECT/src/game.tscn"
 
 # 10. Copier le preset d'export
 info "Configuration du preset d'export ($PLATFORM)..."

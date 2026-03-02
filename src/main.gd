@@ -16,6 +16,12 @@ const LanguageManagerDialogScript = preload("res://src/ui/dialogs/language_manag
 const I18nDialogScript = preload("res://src/ui/dialogs/i18n_dialog.gd")
 const StoryI18nService = preload("res://src/services/story_i18n_service.gd")
 const UndoRedoService = preload("res://src/services/undo_redo_service.gd")
+const ExportServiceScript = preload("res://src/services/export_service.gd")
+const NotificationServiceScript = preload("res://src/services/notification_service.gd")
+const AddDialogueCommand = preload("res://src/commands/add_dialogue_command.gd")
+const RemoveDialogueCommand = preload("res://src/commands/remove_dialogue_command.gd")
+const EditDialogueCommand = preload("res://src/commands/edit_dialogue_command.gd")
+const EditorState = preload("res://src/controllers/editor_state.gd")
 
 # Contrôleurs
 var _editor_main: Control
@@ -23,6 +29,8 @@ var _sequence_editor_ctrl: Control
 var _play_ctrl: Node
 var _nav_ctrl: Node
 var _undo_redo: RefCounted
+var _export_service: RefCounted
+var _notification_service: RefCounted
 
 # UI — Top bar
 var _vbox: VBoxContainer
@@ -102,6 +110,8 @@ func _ready() -> void:
 	_sequence_editor_ctrl.set_script(SequenceEditorScript)
 
 	_undo_redo = UndoRedoService.new()
+	_export_service = ExportServiceScript.new()
+	_notification_service = NotificationServiceScript.new()
 
 	# Construire l'arborescence UI
 	MainUIBuilder.build(self)
@@ -142,12 +152,16 @@ func _ready() -> void:
 	# Graph views → Navigation
 	_chapter_graph_view.chapter_double_clicked.connect(_nav_ctrl.on_chapter_double_clicked)
 	_chapter_graph_view.chapter_rename_requested.connect(_nav_ctrl.on_chapter_rename_requested)
+	_chapter_graph_view.chapter_delete_requested.connect(_nav_ctrl.on_chapter_delete_requested)
 	_scene_graph_view.scene_double_clicked.connect(_nav_ctrl.on_scene_double_clicked)
 	_scene_graph_view.scene_rename_requested.connect(_nav_ctrl.on_scene_rename_requested)
+	_scene_graph_view.scene_delete_requested.connect(_nav_ctrl.on_scene_delete_requested)
 	_sequence_graph_view.sequence_double_clicked.connect(_nav_ctrl.on_sequence_double_clicked)
 	_sequence_graph_view.sequence_rename_requested.connect(_nav_ctrl.on_sequence_rename_requested)
+	_sequence_graph_view.sequence_delete_requested.connect(_nav_ctrl.on_sequence_delete_requested)
 	_sequence_graph_view.condition_double_clicked.connect(_nav_ctrl.on_condition_double_clicked)
 	_sequence_graph_view.condition_rename_requested.connect(_nav_ctrl.on_condition_rename_requested)
+	_sequence_graph_view.condition_delete_requested.connect(_nav_ctrl.on_condition_delete_requested)
 
 	# Sequence toolbar → Main
 	_import_bg_button.pressed.connect(_on_import_bg_pressed)
@@ -172,7 +186,14 @@ func _ready() -> void:
 	_story_play_ctrl.sequence_play_requested.connect(_play_ctrl.on_story_play_sequence_requested)
 	_story_play_ctrl.choice_display_requested.connect(_play_ctrl.on_story_play_choice_requested)
 	_story_play_ctrl.play_finished.connect(_play_ctrl.on_story_play_finished)
-	_story_play_ctrl.notification_triggered.connect(_on_notification_triggered)
+	_notification_service.message_requested.connect(_on_notification_triggered)
+	EventBus.notification_requested.connect(_on_notification_triggered)
+	EventBus.editor_mode_changed.connect(_on_editor_mode_changed)
+	EventBus.play_started.connect(_on_play_started)
+	EventBus.play_stopped.connect(_on_play_stopped)
+	EventBus.play_dialogue_changed.connect(_on_play_dialogue_changed)
+	EventBus.play_choice_requested.connect(_on_play_choice_requested)
+	EventBus.play_finished.connect(_on_play_finished)
 	_sequence_editor_ctrl.play_dialogue_changed.connect(_play_ctrl.on_play_dialogue_changed)
 	_sequence_editor_ctrl.play_stopped.connect(_play_ctrl.on_play_stopped)
 
@@ -263,17 +284,44 @@ func _get_current_source_image(mode: int) -> String:
 
 
 func _on_add_dialogue_pressed() -> void:
-	_sequence_editor_ctrl.add_dialogue("", "")
+	var seq = _sequence_editor_ctrl.get_sequence()
+	if seq == null:
+		return
+	
+	var index = _sequence_editor_ctrl.get_selected_dialogue_index()
+	if index >= 0:
+		index += 1
+	else:
+		index = seq.dialogues.size()
+	
+	var cmd = AddDialogueCommand.new(seq, "Nouveau", "Texte", index)
+	_undo_redo.push_and_execute(cmd)
 	_rebuild_dialogue_list()
+	_on_dialogue_selected(index)
 
 
 func _on_delete_dialogue(index: int) -> void:
+	var seq = _sequence_editor_ctrl.get_sequence()
+	if seq == null:
+		return
+		
 	var confirm = ConfirmationDialog.new()
 	confirm.dialog_text = "Supprimer ce dialogue ?"
 	confirm.confirmed.connect(func():
-		_sequence_editor_ctrl.remove_dialogue(index)
+		var cmd = RemoveDialogueCommand.new(seq, index)
+		_undo_redo.push_and_execute(cmd)
+		
+		# Ajuster la sélection dans le contrôleur si nécessaire
+		var current_sel = _sequence_editor_ctrl.get_selected_dialogue_index()
+		if current_sel == index:
+			_sequence_editor_ctrl.select_dialogue(-1)
+		elif current_sel > index:
+			_sequence_editor_ctrl.select_dialogue(current_sel - 1)
+			
 		_rebuild_dialogue_list()
+		confirm.queue_free()
 	)
+	confirm.canceled.connect(func(): confirm.queue_free())
 	add_child(confirm)
 	confirm.popup_centered()
 
@@ -343,6 +391,162 @@ func load_sequence_editors(seq) -> void:
 	_play_overlay.visible = false
 
 
+# --- Play Event Handlers ---
+
+func _on_play_started(mode: String) -> void:
+	_enter_fullscreen()
+	_play_button.visible = false
+	_stop_button.visible = true
+	_play_overlay.visible = true
+	if not _play_overlay.get_parent():
+		_visual_editor._overlay_container.add_child(_play_overlay)
+	_typewriter_timer.start()
+
+
+func _on_play_stopped() -> void:
+	_play_button.visible = true
+	_stop_button.visible = false
+	_play_overlay.visible = false
+	_typewriter_timer.stop()
+	if _play_overlay.get_parent():
+		_play_overlay.get_parent().remove_child(_play_overlay)
+	_exit_fullscreen()
+
+
+func _on_play_dialogue_changed(character: String, text: String, index: int) -> void:
+	_play_character_label.text = character
+	_play_text_label.text = text
+	_play_text_label.visible_characters = 0
+
+
+func _on_play_choice_requested(choices: Array) -> void:
+	_hide_choice_overlay()
+	var container = VBoxContainer.new()
+	container.name = "ChoiceVBox"
+	var title = Label.new()
+	title.text = "Faites votre choix"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 18)
+	container.add_child(title)
+	for i in range(choices.size()):
+		var btn = Button.new()
+		btn.text = choices[i].text
+		var idx = i
+		btn.pressed.connect(func(): _on_play_choice_selected(idx))
+		container.add_child(btn)
+	_choice_overlay.add_child(container)
+	_choice_overlay.visible = true
+	if not _choice_overlay.get_parent():
+		_visual_editor._overlay_container.add_child(_choice_overlay)
+
+
+func _on_play_choice_selected(index: int) -> void:
+	_hide_choice_overlay()
+	_play_ctrl.on_choice_selected(index)
+
+
+func _on_play_finished(reason: String) -> void:
+	_hide_choice_overlay()
+	var messages = {
+		"game_over": "Fin de la lecture — Game Over",
+		"to_be_continued": "Fin de la lecture — À suivre...",
+		"no_ending": "Fin de la lecture (aucune terminaison configurée)",
+		"error": "Fin de la lecture — Erreur (cible introuvable ou contenu vide)",
+		"stopped": "Lecture arrêtée",
+	}
+	var dialog = AcceptDialog.new()
+	dialog.dialog_text = messages.get(reason, "Fin de la lecture")
+	add_child(dialog)
+	dialog.popup_centered()
+
+
+func _hide_choice_overlay() -> void:
+	_choice_overlay.visible = false
+	for child in _choice_overlay.get_children():
+		child.queue_free()
+	if _choice_overlay.get_parent():
+		_choice_overlay.get_parent().remove_child(_choice_overlay)
+
+
+var _fullscreen_layer: ColorRect = null
+
+func _enter_fullscreen() -> void:
+	if _fullscreen_layer:
+		return
+	_vbox.visible = false
+	_fullscreen_layer = ColorRect.new()
+	_fullscreen_layer.color = Color(0, 0, 0, 1)
+	_fullscreen_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(_fullscreen_layer)
+	_left_panel.remove_child(_visual_editor)
+	_fullscreen_layer.add_child(_visual_editor)
+	_visual_editor.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var fs_stop = Button.new()
+	fs_stop.text = "■ Stop"
+	fs_stop.pressed.connect(_play_ctrl.on_stop_pressed)
+	fs_stop.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	fs_stop.offset_left = -80; fs_stop.offset_right = -10; fs_stop.offset_top = 10; fs_stop.offset_bottom = 40
+	_fullscreen_layer.add_child(fs_stop)
+	call_deferred("_reset_visual_editor")
+
+
+func _exit_fullscreen() -> void:
+	if not _fullscreen_layer:
+		return
+	_fullscreen_layer.remove_child(_visual_editor)
+	_left_panel.add_child(_visual_editor)
+	_left_panel.move_child(_visual_editor, 0)
+	_visual_editor.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_visual_editor.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_fullscreen_layer.queue_free()
+	_fullscreen_layer = null
+	_vbox.visible = true
+	call_deferred("_reset_visual_editor")
+
+
+func _reset_visual_editor() -> void:
+	_visual_editor.reset_view()
+
+
+func update_editor_mode() -> void:
+	_nav_ctrl.update_editor_mode()
+
+
+func _on_editor_mode_changed(mode: int, context: Dictionary) -> void:
+	# Si le panel de verification est visible, ne pas toucher aux vues (pour l'instant)
+	if _verifier_report_panel.visible:
+		return
+		
+	var level = context.get("level", "none")
+	
+	# Visibilité des panels principaux
+	_chapter_graph_view.visible = (mode == EditorState.Mode.CHAPTER_VIEW)
+	_scene_graph_view.visible = (mode == EditorState.Mode.SCENE_VIEW)
+	_sequence_graph_view.visible = (mode == EditorState.Mode.SEQUENCE_VIEW)
+	_sequence_editor_panel.visible = (mode == EditorState.Mode.SEQUENCE_EDIT)
+	_condition_editor_panel.visible = (mode == EditorState.Mode.CONDITION_EDIT)
+	
+	# Barre d'outils et navigation
+	_back_button.visible = (mode != EditorState.Mode.CHAPTER_VIEW and mode != EditorState.Mode.NONE)
+	_create_button.visible = _editor_main.is_create_button_visible()
+	if _create_button.visible:
+		_create_button.text = _editor_main.get_create_button_label()
+	
+	_create_condition_button.visible = (mode == EditorState.Mode.SEQUENCE_VIEW)
+	_parametres_menu.visible = (mode in [EditorState.Mode.CHAPTER_VIEW, EditorState.Mode.SCENE_VIEW, EditorState.Mode.SEQUENCE_VIEW])
+	
+	_breadcrumb.set_current_level(level)
+	_breadcrumb.set_path(_editor_main.get_breadcrumb_path())
+	
+	_top_play_button.visible = (mode in [EditorState.Mode.CHAPTER_VIEW, EditorState.Mode.SCENE_VIEW, EditorState.Mode.SEQUENCE_VIEW])
+	_top_stop_button.visible = (mode == EditorState.Mode.PLAY_MODE)
+	
+	var story_open = (mode != EditorState.Mode.NONE)
+	_undo_button.visible = story_open
+	_redo_button.visible = story_open
+	_refresh_undo_redo_buttons()
+
+
 func refresh_current_view() -> void:
 	var level = _editor_main.get_current_level()
 	if level == "chapters":
@@ -351,32 +555,11 @@ func refresh_current_view() -> void:
 		_scene_graph_view.load_chapter(_editor_main._current_chapter)
 	elif level == "sequences":
 		_sequence_graph_view.load_scene(_editor_main._current_scene)
-	update_view()
+	update_editor_mode()
 
 
 func update_view() -> void:
-	# Si le panel de verification est visible, ne pas toucher aux vues
-	if _verifier_report_panel.visible:
-		return
-	var level = _editor_main.get_current_level()
-	_chapter_graph_view.visible = (level == "chapters")
-	_scene_graph_view.visible = (level == "scenes")
-	_sequence_graph_view.visible = (level == "sequences")
-	_sequence_editor_panel.visible = (level == "sequence_edit")
-	_condition_editor_panel.visible = (level == "condition_edit")
-	_back_button.visible = (level != "chapters" and level != "none")
-	_create_button.visible = _editor_main.is_create_button_visible()
-	if _create_button.visible:
-		_create_button.text = _editor_main.get_create_button_label()
-	_create_condition_button.visible = (level == "sequences")
-	_parametres_menu.visible = (level in ["chapters", "scenes", "sequences"])
-	_breadcrumb.set_current_level(level)
-	_breadcrumb.set_path(_editor_main.get_breadcrumb_path())
-	_top_play_button.visible = (level in ["chapters", "scenes", "sequences"]) and not _play_ctrl.is_story_play_mode()
-	var story_open = (level != "none")
-	_undo_button.visible = story_open
-	_redo_button.visible = story_open
-	_refresh_undo_redo_buttons()
+	update_editor_mode()
 
 
 func _input(event: InputEvent) -> void:
@@ -524,18 +707,14 @@ func _on_export_pressed() -> void:
 func _on_export_requested(platform: String, output_path: String) -> void:
 	if _editor_main._story == null:
 		return
-	var story_name = _editor_main._story.title.to_lower().replace(" ", "_")
-	var story_path = "user://stories/" + story_name
-	var game_name = _editor_main._story.menu_title if _editor_main._story.menu_title != "" else _editor_main._story.title
-	var script_path = ProjectSettings.globalize_path("res://scripts/export_story.sh")
-	var args = [story_path, "-p", platform, "-n", game_name, "-o", output_path]
-	var output = []
-	var exit_code = OS.execute(script_path, args, output, true)
-	var log_path = output_path + "/export.log"
-	if exit_code == 0:
-		_show_export_result(output_path, log_path)
+	
+	var story_path = _get_story_base_path()
+	var result = _export_service.export_story(_editor_main._story, platform, output_path, story_path)
+	
+	if result.success:
+		_show_export_result(result.output_path, result.log_path)
 	else:
-		_show_export_error(log_path)
+		_show_export_error(result.log_path, result.error_message)
 
 
 func _show_export_result(output_path: String, log_path: String) -> void:
@@ -546,46 +725,9 @@ func _show_export_result(output_path: String, log_path: String) -> void:
 	dialog.popup_centered()
 
 
-func _show_export_error(log_path: String) -> void:
-	var reason = _extract_export_error(log_path)
+func _show_export_error(log_path: String, reason: String) -> void:
 	var dialog = AcceptDialog.new()
 	dialog.title = "Erreur d'export"
 	dialog.dialog_text = reason + "\n\nLog : " + log_path
 	add_child(dialog)
 	dialog.popup_centered()
-
-
-func _extract_export_error(log_path: String) -> String:
-	var file = FileAccess.open(log_path, FileAccess.READ)
-	if file == null:
-		return "L'export a échoué (log introuvable)."
-	var content = file.get_as_text()
-	file.close()
-	# Chercher les lignes "due to configuration errors:" suivies de la raison
-	var lines = content.split("\n")
-	var reasons := []
-	var capture_next := false
-	for line in lines:
-		var stripped = line.strip_edges()
-		# Supprimer les codes ANSI
-		var clean = stripped
-		while clean.find("\u001b[") >= 0:
-			var start = clean.find("\u001b[")
-			var end = clean.find("m", start)
-			if end >= 0:
-				clean = clean.substr(0, start) + clean.substr(end + 1)
-			else:
-				break
-		if clean.find("due to configuration errors:") >= 0:
-			capture_next = true
-			continue
-		if capture_next and clean != "" and not clean.begins_with("at:"):
-			reasons.append(clean)
-			capture_next = false
-		if clean.find("ERREUR:") >= 0 and clean.find("due to configuration") < 0 and clean.find("Project export") < 0:
-			var msg = clean.replace("ERROR:", "").replace("ERREUR:", "").strip_edges()
-			if msg != "" and not msg.begins_with("at:"):
-				reasons.append(msg)
-	if reasons.is_empty():
-		return "L'export a échoué."
-	return "\n".join(reasons)
