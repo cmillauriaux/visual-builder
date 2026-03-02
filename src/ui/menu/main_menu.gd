@@ -5,9 +5,11 @@ extends Control
 const OptionsMenuScript = preload("res://src/ui/menu/options_menu.gd")
 const GameSettings = preload("res://src/ui/menu/game_settings.gd")
 const TextureLoader = preload("res://src/ui/shared/texture_loader.gd")
+const StoryI18nService = preload("res://src/services/story_i18n_service.gd")
 
 signal new_game_pressed
 signal load_game_pressed
+signal options_applied
 signal quit_pressed
 
 # UI
@@ -91,6 +93,7 @@ func build_ui() -> void:
 	_options_menu.set_script(OptionsMenuScript)
 	_options_menu.build_ui()
 	_options_menu.visible = false
+	_options_menu.applied.connect(func(): options_applied.emit())
 	add_child(_options_menu)
 
 
@@ -123,6 +126,14 @@ func _on_options_pressed() -> void:
 	if _settings:
 		_options_menu.load_from_settings(_settings)
 	_options_menu.visible = true
+
+
+func apply_ui_translations(i18n_dict: Dictionary) -> void:
+	_new_game_button.text = StoryI18nService.get_ui_string("Nouvelle partie", i18n_dict)
+	_load_game_button.text = StoryI18nService.get_ui_string("Charger partie", i18n_dict)
+	_options_button.text = StoryI18nService.get_ui_string("Options", i18n_dict)
+	_quit_button.text = StoryI18nService.get_ui_string("Quitter", i18n_dict)
+	_options_menu.apply_ui_translations(i18n_dict)
 
 
 func _create_menu_button(text: String) -> Button:

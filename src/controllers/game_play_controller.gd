@@ -3,6 +3,8 @@ extends Node
 ## Gère la logique de lecture en mode jeu standalone (sans éditeur).
 ## Version simplifiée de PlayController adaptée au contexte game-only.
 
+const StoryI18nService = preload("res://src/services/story_i18n_service.gd")
+
 var _game: Control
 var _sequence_editor_ctrl: Control
 var _story_play_ctrl: Node
@@ -18,8 +20,13 @@ var _menu_button: Button
 
 var _previous_play_foregrounds: Array = []
 var _user_stopped: bool = false
+var _i18n: Dictionary = {}
 
 signal play_finished_show_menu()
+
+
+func set_i18n(dict: Dictionary) -> void:
+	_i18n = dict
 
 
 func setup(game: Control) -> void:
@@ -99,7 +106,7 @@ func on_choice_display_requested(choices) -> void:
 	var vbox = VBoxContainer.new()
 	vbox.name = "ChoiceVBox"
 	var title_label = Label.new()
-	title_label.text = "Faites votre choix"
+	title_label.text = StoryI18nService.get_ui_string("Faites votre choix", _i18n)
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title_label.add_theme_font_size_override("font_size", 18)
 	vbox.add_child(title_label)
@@ -121,13 +128,13 @@ func on_play_finished(reason: String) -> void:
 	_hide_choice_overlay()
 	_cleanup_play()
 	var messages = {
-		"game_over": "Fin — Game Over",
-		"to_be_continued": "Fin — À suivre...",
-		"no_ending": "Fin (aucune terminaison configurée)",
-		"error": "Erreur (cible introuvable ou contenu vide)",
-		"stopped": "Lecture arrêtée",
+		"game_over": StoryI18nService.get_ui_string("Fin — Game Over", _i18n),
+		"to_be_continued": StoryI18nService.get_ui_string("Fin — À suivre...", _i18n),
+		"no_ending": StoryI18nService.get_ui_string("Fin (aucune terminaison configurée)", _i18n),
+		"error": StoryI18nService.get_ui_string("Erreur (cible introuvable ou contenu vide)", _i18n),
+		"stopped": StoryI18nService.get_ui_string("Lecture arrêtée", _i18n),
 	}
-	var msg = messages.get(reason, "Fin de la lecture")
+	var msg = messages.get(reason, StoryI18nService.get_ui_string("Fin de la lecture", _i18n))
 	var dialog = AcceptDialog.new()
 	dialog.dialog_text = msg
 	dialog.confirmed.connect(func(): play_finished_show_menu.emit())

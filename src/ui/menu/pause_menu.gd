@@ -2,6 +2,8 @@ extends Control
 
 ## Menu pause in-game : overlay avec options reprendre, sauvegarder, charger, nouvelle partie, quitter.
 
+const StoryI18nService = preload("res://src/services/story_i18n_service.gd")
+
 signal resume_pressed
 signal save_pressed
 signal load_pressed
@@ -10,6 +12,7 @@ signal quit_pressed
 
 # UI
 var _overlay: ColorRect
+var _title_label: Label
 var _resume_button: Button
 var _save_button: Button
 var _load_button: Button
@@ -43,11 +46,11 @@ func build_ui() -> void:
 	panel.add_child(vbox)
 
 	# Titre
-	var title_label = Label.new()
-	title_label.text = "Pause"
-	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title_label.add_theme_font_size_override("font_size", 32)
-	vbox.add_child(title_label)
+	_title_label = Label.new()
+	_title_label.text = "Pause"
+	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_title_label.add_theme_font_size_override("font_size", 32)
+	vbox.add_child(_title_label)
 
 	# Spacer
 	var spacer = Control.new()
@@ -74,6 +77,15 @@ func build_ui() -> void:
 	_quit_button = _create_menu_button("Quitter")
 	_quit_button.pressed.connect(func(): quit_pressed.emit())
 	vbox.add_child(_quit_button)
+
+
+func apply_ui_translations(i18n_dict: Dictionary) -> void:
+	_title_label.text = StoryI18nService.get_ui_string("Pause", i18n_dict)
+	_resume_button.text = StoryI18nService.get_ui_string("Reprendre", i18n_dict)
+	_save_button.text = StoryI18nService.get_ui_string("Sauvegarder", i18n_dict)
+	_load_button.text = StoryI18nService.get_ui_string("Charger", i18n_dict)
+	_new_game_button.text = StoryI18nService.get_ui_string("Nouvelle partie", i18n_dict)
+	_quit_button.text = StoryI18nService.get_ui_string("Quitter", i18n_dict)
 
 
 func show_menu() -> void:

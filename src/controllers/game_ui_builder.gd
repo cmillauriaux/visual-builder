@@ -108,11 +108,11 @@ static func _build_story_selector(game: Control) -> void:
 	var vbox = VBoxContainer.new()
 	game._story_selector.add_child(vbox)
 
-	var title = Label.new()
-	title.text = "Sélectionnez une histoire"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 24)
-	vbox.add_child(title)
+	game._story_selector_title = Label.new()
+	game._story_selector_title.text = "Sélectionnez une histoire"
+	game._story_selector_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	game._story_selector_title.add_theme_font_size_override("font_size", 24)
+	vbox.add_child(game._story_selector_title)
 
 	var separator = HSeparator.new()
 	vbox.add_child(separator)

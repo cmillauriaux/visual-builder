@@ -6,11 +6,61 @@
 
 const YamlParser = preload("res://src/persistence/yaml_parser.gd")
 
+## Chaînes fixes de l'interface utilisateur du jeu (incluses dans tous les fichiers i18n).
+const UI_STRINGS: Array[String] = [
+	# Bouton menu in-game
+	"☰ Menu",
+	# Sélecteur d'histoires
+	"Sélectionnez une histoire",
+	"Aucune histoire trouvée",
+	"Fonctionnalité à venir",
+	# Overlay de choix
+	"Faites votre choix",
+	# Messages de fin de partie
+	"Fin — Game Over",
+	"Fin — À suivre...",
+	"Fin (aucune terminaison configurée)",
+	"Erreur (cible introuvable ou contenu vide)",
+	"Lecture arrêtée",
+	"Fin de la lecture",
+	# Menu principal
+	"Nouvelle partie",
+	"Charger partie",
+	"Options",
+	"Quitter",
+	# Menu pause
+	"Pause",
+	"Reprendre",
+	"Sauvegarder",
+	"Charger",
+	# Menu options
+	"Affichage",
+	"Résolution",
+	"Plein écran",
+	"Audio",
+	"Musique",
+	"Volume musique",
+	"Effets sonores",
+	"Volume effets",
+	"Langue",
+	"Appliquer",
+]
+
+
+## Retourne la traduction d'une chaîne depuis un dictionnaire i18n.
+## Fallback : retourne la chaîne source si la clé est absente ou la traduction vide.
+static func get_ui_string(source: String, i18n_dict: Dictionary) -> String:
+	return _tr(source, i18n_dict)
+
 
 ## Extrait toutes les chaînes source non vides d'une histoire.
 ## Retourne un dictionnaire { source: source } (clé = valeur) pour générer fr.yaml.
 static func extract_strings(story) -> Dictionary:
 	var strings: Dictionary = {}
+
+	# Chaînes d'interface fixes
+	for s in UI_STRINGS:
+		_add(strings, s)
 
 	# Story
 	_add(strings, story.title)

@@ -13,6 +13,7 @@ const GameUIBuilder = preload("res://src/controllers/game_ui_builder.gd")
 const GamePlayControllerScript = preload("res://src/controllers/game_play_controller.gd")
 const StorySaver = preload("res://src/persistence/story_saver.gd")
 const GameSettings = preload("res://src/ui/menu/game_settings.gd")
+const StoryI18nService = preload("res://src/services/story_i18n_service.gd")
 
 ## Chemin vers la story à charger automatiquement.
 ## Si vide, affiche le sélecteur. Peut pointer vers res:// ou user://.
@@ -41,6 +42,7 @@ var _pause_menu: Control
 
 # UI — Story selector
 var _story_selector: PanelContainer
+var _story_selector_title: Label
 var _story_list: VBoxContainer
 
 # UI — Menu principal
@@ -50,6 +52,7 @@ var _main_menu: Control
 var _current_story = null
 var _current_story_path: String = ""
 var _settings: RefCounted
+var _i18n_dict: Dictionary = {}
 
 
 func _ready() -> void:
@@ -79,6 +82,7 @@ func _ready() -> void:
 	_main_menu.new_game_pressed.connect(_on_new_game)
 	_main_menu.load_game_pressed.connect(_on_load_game)
 	_main_menu.quit_pressed.connect(_on_quit)
+	_main_menu.options_applied.connect(_on_options_applied)
 	_main_menu.set_settings(_settings)
 
 	# Connecter les signaux du menu pause
@@ -101,7 +105,29 @@ func _load_story_and_show_menu(path: String) -> void:
 		return
 	_current_story = story
 	_current_story_path = path
+	_reload_i18n()
 	_show_main_menu(story)
+
+
+func _reload_i18n() -> void:
+	if _current_story_path != "":
+		_i18n_dict = StoryI18nService.load_i18n(_current_story_path, _settings.language)
+	else:
+		_i18n_dict = {}
+	_apply_ui_lang()
+
+
+func _apply_ui_lang() -> void:
+	_menu_button.text = StoryI18nService.get_ui_string("☰ Menu", _i18n_dict)
+	if _story_selector_title:
+		_story_selector_title.text = StoryI18nService.get_ui_string("Sélectionnez une histoire", _i18n_dict)
+	_main_menu.apply_ui_translations(_i18n_dict)
+	_pause_menu.apply_ui_translations(_i18n_dict)
+	_play_ctrl.set_i18n(_i18n_dict)
+
+
+func _on_options_applied() -> void:
+	_reload_i18n()
 
 
 func _show_main_menu(story) -> void:
@@ -117,7 +143,7 @@ func _on_new_game() -> void:
 
 
 func _on_load_game() -> void:
-	_show_info("Fonctionnalité à venir")
+	_show_info(StoryI18nService.get_ui_string("Fonctionnalité à venir", _i18n_dict))
 
 
 func _on_quit() -> void:
@@ -144,11 +170,11 @@ func _on_pause_resume() -> void:
 
 
 func _on_pause_save() -> void:
-	_show_info("Fonctionnalité à venir")
+	_show_info(StoryI18nService.get_ui_string("Fonctionnalité à venir", _i18n_dict))
 
 
 func _on_pause_load() -> void:
-	_show_info("Fonctionnalité à venir")
+	_show_info(StoryI18nService.get_ui_string("Fonctionnalité à venir", _i18n_dict))
 
 
 func _on_pause_new_game() -> void:
@@ -217,7 +243,7 @@ func _add_story_button(story_name: String, story_path_arg: String) -> void:
 
 func _add_no_stories_label() -> void:
 	var label = Label.new()
-	label.text = "Aucune histoire trouvée dans user://stories/"
+	label.text = StoryI18nService.get_ui_string("Aucune histoire trouvée", _i18n_dict)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.modulate.a = 0.5
 	_story_list.add_child(label)

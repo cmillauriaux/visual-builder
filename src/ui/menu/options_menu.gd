@@ -3,6 +3,7 @@ extends PanelContainer
 ## Sous-menu Options : affichage, audio, langue.
 
 const GameSettings = preload("res://src/ui/menu/game_settings.gd")
+const StoryI18nService = preload("res://src/services/story_i18n_service.gd")
 
 signal closed
 signal applied
@@ -24,6 +25,9 @@ var _language_option: OptionButton
 var _current_settings: RefCounted
 var _settings_path: String = GameSettings.SETTINGS_PATH
 
+# Paires [Control, source_string] pour les traductions UI
+var _ui_label_pairs: Array = []
+
 
 func build_ui() -> void:
 	visible = false
@@ -42,6 +46,7 @@ func build_ui() -> void:
 	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title_label.add_theme_font_size_override("font_size", 22)
 	title_bar.add_child(title_label)
+	_ui_label_pairs.append([title_label, "Options"])
 
 	_close_button = Button.new()
 	_close_button.text = "✕"
@@ -86,6 +91,7 @@ func build_ui() -> void:
 	_apply_button.text = "Appliquer"
 	_apply_button.pressed.connect(_on_apply)
 	root_vbox.add_child(_apply_button)
+	_ui_label_pairs.append([_apply_button, "Appliquer"])
 
 
 func load_from_settings(settings: RefCounted) -> void:
@@ -149,11 +155,17 @@ func _on_fx_toggled(enabled: bool) -> void:
 
 # --- Helpers UI ---
 
+func apply_ui_translations(i18n_dict: Dictionary) -> void:
+	for pair in _ui_label_pairs:
+		pair[0].text = StoryI18nService.get_ui_string(pair[1], i18n_dict)
+
+
 func _add_section_label(parent: Control, text: String) -> Label:
 	var label = Label.new()
 	label.text = text
 	label.add_theme_font_size_override("font_size", 18)
 	parent.add_child(label)
+	_ui_label_pairs.append([label, text])
 	return label
 
 
@@ -164,6 +176,7 @@ func _add_option_row(parent: Control, label_text: String, items: Array) -> Optio
 	label.text = label_text
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hbox.add_child(label)
+	_ui_label_pairs.append([label, label_text])
 	var option = OptionButton.new()
 	for item in items:
 		option.add_item(item)
@@ -178,6 +191,7 @@ func _add_check_row(parent: Control, label_text: String) -> CheckButton:
 	label.text = label_text
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hbox.add_child(label)
+	_ui_label_pairs.append([label, label_text])
 	var check = CheckButton.new()
 	hbox.add_child(check)
 	return check
@@ -190,6 +204,7 @@ func _add_slider_row(parent: Control, label_text: String) -> HSlider:
 	label.text = label_text
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hbox.add_child(label)
+	_ui_label_pairs.append([label, label_text])
 	var slider = HSlider.new()
 	slider.min_value = 0
 	slider.max_value = 100

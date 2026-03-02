@@ -170,10 +170,33 @@ func test_extract_key_equals_value_for_source() -> void:
 	var strings = StoryI18nService.extract_strings(story)
 	assert_eq(strings["Bienvenue!"], "Bienvenue!")
 
-func test_extract_empty_story_returns_empty_dict() -> void:
+func test_extract_empty_story_returns_ui_strings_only() -> void:
 	var story = Story.new()
 	var strings = StoryI18nService.extract_strings(story)
-	assert_true(strings.is_empty())
+	# Un Story vide ne contient que les chaînes UI fixes
+	assert_eq(strings.size(), StoryI18nService.UI_STRINGS.size())
+
+func test_extract_includes_all_ui_strings() -> void:
+	var story = Story.new()
+	var strings = StoryI18nService.extract_strings(story)
+	for s in StoryI18nService.UI_STRINGS:
+		assert_true(strings.has(s), "UI string manquante : " + s)
+
+func test_extract_ui_string_key_equals_value() -> void:
+	var story = Story.new()
+	var strings = StoryI18nService.extract_strings(story)
+	assert_eq(strings.get("Nouvelle partie", ""), "Nouvelle partie")
+
+func test_tr_returns_translation() -> void:
+	var i18n = {"Nouvelle partie": "New Game", "Quitter": "Quit"}
+	assert_eq(StoryI18nService.get_ui_string("Nouvelle partie", i18n), "New Game")
+
+func test_tr_falls_back_to_source_when_key_absent() -> void:
+	assert_eq(StoryI18nService.get_ui_string("Nouvelle partie", {}), "Nouvelle partie")
+
+func test_tr_falls_back_to_source_when_translation_empty() -> void:
+	var i18n = {"Nouvelle partie": ""}
+	assert_eq(StoryI18nService.get_ui_string("Nouvelle partie", i18n), "Nouvelle partie")
 
 
 # ── apply_to_story ────────────────────────────────────────────────────────────
