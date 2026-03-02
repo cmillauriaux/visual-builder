@@ -81,17 +81,28 @@ static func _build_top_bar(main: Control) -> void:
 	main._create_condition_button.text = "+ Nouvelle condition"
 	main._top_bar.add_child(main._create_condition_button)
 
-	main._variables_button = Button.new()
-	main._variables_button.text = "Variables"
-	main._top_bar.add_child(main._variables_button)
+	main._parametres_menu = MenuButton.new()
+	main._parametres_menu.text = "Paramètres"
+	var parametres_popup = main._parametres_menu.get_popup()
+	parametres_popup.add_item("Variables", 0)
+	parametres_popup.add_item("Menu", 1)
+	parametres_popup.add_item("Galerie", 2)
+	parametres_popup.add_item("Notifications", 3)
+	main._top_bar.add_child(main._parametres_menu)
 
-	main._menu_config_button = Button.new()
-	main._menu_config_button.text = "Menu"
-	main._top_bar.add_child(main._menu_config_button)
-
-	main._gallery_button = Button.new()
-	main._gallery_button.text = "Galerie"
-	main._top_bar.add_child(main._gallery_button)
+	main._histoire_menu = MenuButton.new()
+	main._histoire_menu.text = "Histoire"
+	var histoire_popup = main._histoire_menu.get_popup()
+	histoire_popup.add_item("Nouvelle histoire", 0)
+	histoire_popup.add_item("Charger", 1)
+	histoire_popup.add_separator()
+	histoire_popup.add_item("Sauvegarder", 2)
+	histoire_popup.add_item("Sauvegarder sous...", 3)
+	histoire_popup.add_separator()
+	histoire_popup.add_item("Exporter", 4)
+	histoire_popup.add_separator()
+	histoire_popup.add_item("Vérifier l'histoire", 5)
+	main._top_bar.add_child(main._histoire_menu)
 
 	# Variable panel popup
 	main._variable_panel_popup = PopupPanel.new()
@@ -101,32 +112,6 @@ static func _build_top_bar(main: Control) -> void:
 	main._variable_panel = VBoxContainer.new()
 	main._variable_panel.set_script(VariablePanelScript)
 	main._variable_panel_popup.add_child(main._variable_panel)
-
-	main._notifications_button = Button.new()
-	main._notifications_button.text = "Notifications"
-	main._top_bar.add_child(main._notifications_button)
-
-	main._verify_button = Button.new()
-	main._verify_button.text = "Verifier l'histoire"
-	main._top_bar.add_child(main._verify_button)
-
-	main._export_button = Button.new()
-	main._export_button.text = "Exporter"
-	main._top_bar.add_child(main._export_button)
-
-	main._save_button = MenuButton.new()
-	main._save_button.text = "Sauvegarder"
-	main._save_button.get_popup().add_item("Sauvegarder", 0)
-	main._save_button.get_popup().add_item("Sauvegarder sous...", 1)
-	main._top_bar.add_child(main._save_button)
-
-	main._load_button = Button.new()
-	main._load_button.text = "Charger une histoire"
-	main._top_bar.add_child(main._load_button)
-
-	main._new_story_button = Button.new()
-	main._new_story_button.text = "Nouvelle histoire"
-	main._top_bar.add_child(main._new_story_button)
 
 
 static func _build_content_area(main: Control) -> void:

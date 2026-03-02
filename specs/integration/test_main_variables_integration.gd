@@ -19,41 +19,41 @@ func before_each():
 func after_each():
 	_main.queue_free()
 
-# --- Bouton Variables ---
+# --- Menu Paramètres ---
 
-func test_variables_button_exists():
-	assert_not_null(_main._variables_button)
-	assert_eq(_main._variables_button.text, "Variables")
+func test_parametres_menu_exists():
+	assert_not_null(_main._parametres_menu)
+	assert_eq(_main._parametres_menu.text, "Paramètres")
 
-func test_variables_button_visible_at_chapters():
+func test_parametres_menu_visible_at_chapters():
 	var story = _make_story()
 	_main._editor_main.open_story(story)
 	_main.refresh_current_view()
-	assert_true(_main._variables_button.visible, "Visible au niveau chapters")
+	assert_true(_main._parametres_menu.visible, "Visible au niveau chapters")
 
-func test_variables_button_visible_at_scenes():
+func test_parametres_menu_visible_at_scenes():
 	var story = _make_story()
 	_main._editor_main.open_story(story)
 	_main._editor_main.navigate_to_chapter(story.chapters[0].uuid)
 	_main.refresh_current_view()
-	assert_true(_main._variables_button.visible, "Visible au niveau scenes")
+	assert_true(_main._parametres_menu.visible, "Visible au niveau scenes")
 
-func test_variables_button_visible_at_sequences():
+func test_parametres_menu_visible_at_sequences():
 	var story = _make_story()
 	_main._editor_main.open_story(story)
 	_main._editor_main.navigate_to_chapter(story.chapters[0].uuid)
 	_main._editor_main.navigate_to_scene(story.chapters[0].scenes[0].uuid)
 	_main.refresh_current_view()
-	assert_true(_main._variables_button.visible, "Visible au niveau sequences")
+	assert_true(_main._parametres_menu.visible, "Visible au niveau sequences")
 
-func test_variables_button_hidden_at_sequence_edit():
+func test_parametres_menu_hidden_at_sequence_edit():
 	var story = _make_story()
 	_main._editor_main.open_story(story)
 	_main._editor_main.navigate_to_chapter(story.chapters[0].uuid)
 	_main._editor_main.navigate_to_scene(story.chapters[0].scenes[0].uuid)
 	_main._editor_main.navigate_to_sequence(story.chapters[0].scenes[0].sequences[0].uuid)
 	_main.refresh_current_view()
-	assert_false(_main._variables_button.visible, "Caché au niveau sequence_edit")
+	assert_false(_main._parametres_menu.visible, "Caché au niveau sequence_edit")
 
 # --- Panneau Variables ---
 

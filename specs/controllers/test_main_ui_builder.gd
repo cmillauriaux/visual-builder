@@ -41,19 +41,16 @@ func test_builds_create_button() -> void:
 	assert_not_null(_main._create_button)
 
 
-func test_builds_save_button() -> void:
-	assert_not_null(_main._save_button)
-	assert_eq(_main._save_button.text, "Sauvegarder")
-
-
-func test_builds_load_button() -> void:
-	assert_not_null(_main._load_button)
-	assert_eq(_main._load_button.text, "Charger une histoire")
-
-
-func test_builds_new_story_button() -> void:
-	assert_not_null(_main._new_story_button)
-	assert_eq(_main._new_story_button.text, "Nouvelle histoire")
+func test_builds_histoire_menu() -> void:
+	assert_not_null(_main._histoire_menu)
+	assert_eq(_main._histoire_menu.text, "Histoire")
+	var popup = _main._histoire_menu.get_popup()
+	assert_eq(popup.get_item_text(popup.get_item_index(0)), "Nouvelle histoire")
+	assert_eq(popup.get_item_text(popup.get_item_index(1)), "Charger")
+	assert_eq(popup.get_item_text(popup.get_item_index(2)), "Sauvegarder")
+	assert_eq(popup.get_item_text(popup.get_item_index(3)), "Sauvegarder sous...")
+	assert_eq(popup.get_item_text(popup.get_item_index(4)), "Exporter")
+	assert_eq(popup.get_item_text(popup.get_item_index(5)), "Vérifier l'histoire")
 
 
 func test_builds_graph_views() -> void:
@@ -104,14 +101,14 @@ func test_builds_ending_editor() -> void:
 	assert_not_null(_main._ending_editor)
 
 
-func test_builds_variables_button() -> void:
-	assert_not_null(_main._variables_button)
-	assert_eq(_main._variables_button.text, "Variables")
-
-
-func test_builds_export_button() -> void:
-	assert_not_null(_main._export_button)
-	assert_eq(_main._export_button.text, "Exporter")
+func test_builds_parametres_menu() -> void:
+	assert_not_null(_main._parametres_menu)
+	assert_eq(_main._parametres_menu.text, "Paramètres")
+	var popup = _main._parametres_menu.get_popup()
+	assert_eq(popup.get_item_text(popup.get_item_index(0)), "Variables")
+	assert_eq(popup.get_item_text(popup.get_item_index(1)), "Menu")
+	assert_eq(popup.get_item_text(popup.get_item_index(2)), "Galerie")
+	assert_eq(popup.get_item_text(popup.get_item_index(3)), "Notifications")
 
 
 func test_builds_top_play_stop_buttons() -> void:
@@ -119,8 +116,3 @@ func test_builds_top_play_stop_buttons() -> void:
 	assert_not_null(_main._top_stop_button)
 	assert_false(_main._top_play_button.visible)
 	assert_false(_main._top_stop_button.visible)
-
-
-func test_builds_menu_config_button() -> void:
-	assert_not_null(_main._menu_config_button)
-	assert_eq(_main._menu_config_button.text, "Menu")

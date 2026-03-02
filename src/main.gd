@@ -32,16 +32,10 @@ var _top_play_button: Button
 var _top_stop_button: Button
 var _create_button: Button
 var _create_condition_button: Button
-var _variables_button: Button
-var _notifications_button: Button
-var _menu_config_button: Button
-var _gallery_button: Button
+var _histoire_menu: MenuButton
+var _parametres_menu: MenuButton
 var _variable_panel_popup: PopupPanel
 var _variable_panel: VBoxContainer
-var _export_button: Button
-var _save_button: MenuButton
-var _load_button: Button
-var _new_story_button: Button
 
 # UI — Content area
 var _content_area: Control
@@ -74,7 +68,6 @@ var _condition_editor_panel: VBoxContainer
 var _condition_editor: VBoxContainer
 
 # UI — Verifier
-var _verify_button: Button
 var _verifier_report_panel: VBoxContainer
 
 # UI — Toast overlay (notifications)
@@ -134,22 +127,10 @@ func _ready() -> void:
 	_breadcrumb.menu_config_requested.connect(_nav_ctrl.on_menu_config_requested)
 	_create_button.pressed.connect(_nav_ctrl.on_create_pressed)
 	_create_condition_button.pressed.connect(_nav_ctrl.on_create_condition_pressed)
-	_variables_button.pressed.connect(_nav_ctrl.on_variables_pressed)
-	_notifications_button.pressed.connect(_on_notifications_pressed)
-	_menu_config_button.pressed.connect(_nav_ctrl.on_menu_config_requested)
-	_gallery_button.pressed.connect(_on_gallery_pressed)
+	_histoire_menu.get_popup().id_pressed.connect(_on_histoire_menu_pressed)
+	_parametres_menu.get_popup().id_pressed.connect(_on_parametres_menu_pressed)
 	_variable_panel.variables_changed.connect(_nav_ctrl.on_variables_changed)
-	_verify_button.pressed.connect(_nav_ctrl.on_verify_pressed)
 	_verifier_report_panel.close_requested.connect(_nav_ctrl.on_verifier_close)
-	_export_button.pressed.connect(_on_export_pressed)
-	_save_button.get_popup().id_pressed.connect(func(id: int) -> void:
-		if id == 0:
-			_nav_ctrl.on_save_pressed()
-		else:
-			_nav_ctrl.on_save_as_pressed()
-	)
-	_load_button.pressed.connect(_nav_ctrl.on_load_pressed)
-	_new_story_button.pressed.connect(_nav_ctrl.on_new_story_pressed)
 
 	# Top bar → Play
 	_top_play_button.pressed.connect(_play_ctrl.on_top_play_pressed)
@@ -385,12 +366,7 @@ func update_view() -> void:
 	if _create_button.visible:
 		_create_button.text = _editor_main.get_create_button_label()
 	_create_condition_button.visible = (level == "sequences")
-	_variables_button.visible = (level in ["chapters", "scenes", "sequences"])
-	_notifications_button.visible = (level == "chapters")
-	_menu_config_button.visible = (level in ["chapters", "scenes", "sequences"])
-	_gallery_button.visible = (level in ["chapters", "scenes", "sequences"])
-	_verify_button.visible = (level == "chapters")
-	_export_button.visible = (level in ["chapters", "scenes", "sequences"])
+	_parametres_menu.visible = (level in ["chapters", "scenes", "sequences"])
 	_breadcrumb.set_current_level(level)
 	_breadcrumb.set_path(_editor_main.get_breadcrumb_path())
 	_top_play_button.visible = (level in ["chapters", "scenes", "sequences"]) and not _play_ctrl.is_story_play_mode()
@@ -433,6 +409,24 @@ func _refresh_undo_redo_buttons() -> void:
 		_redo_button.tooltip_text = "Rétablir : " + _undo_redo.get_redo_label()
 	else:
 		_redo_button.tooltip_text = ""
+
+
+func _on_histoire_menu_pressed(id: int) -> void:
+	match id:
+		0: _nav_ctrl.on_new_story_pressed()
+		1: _nav_ctrl.on_load_pressed()
+		2: _nav_ctrl.on_save_pressed()
+		3: _nav_ctrl.on_save_as_pressed()
+		4: _on_export_pressed()
+		5: _nav_ctrl.on_verify_pressed()
+
+
+func _on_parametres_menu_pressed(id: int) -> void:
+	match id:
+		0: _nav_ctrl.on_variables_pressed()
+		1: _nav_ctrl.on_menu_config_requested()
+		2: _on_gallery_pressed()
+		3: _on_notifications_pressed()
 
 
 func _on_notifications_pressed() -> void:

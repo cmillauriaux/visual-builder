@@ -35,32 +35,11 @@ func _make_story() -> RefCounted:
 	return story
 
 
-# === Bouton visibilite ===
+# === Menu Histoire ===
 
-func test_verify_button_exists():
-	assert_not_null(_main._verify_button)
-	assert_eq(_main._verify_button.text, "Verifier l'histoire")
-
-func test_verify_button_visible_at_chapters_level():
-	var story = _make_story()
-	_main._editor_main.open_story(story)
-	_main.update_view()
-	assert_true(_main._verify_button.visible, "Bouton visible au niveau chapters")
-
-func test_verify_button_hidden_at_scenes_level():
-	var story = _make_story()
-	_main._editor_main.open_story(story)
-	_main._editor_main.navigate_to_chapter(story.chapters[0].uuid)
-	_main.update_view()
-	assert_false(_main._verify_button.visible, "Bouton cache au niveau scenes")
-
-func test_verify_button_hidden_at_sequences_level():
-	var story = _make_story()
-	_main._editor_main.open_story(story)
-	_main._editor_main.navigate_to_chapter(story.chapters[0].uuid)
-	_main._editor_main.navigate_to_scene(story.chapters[0].scenes[0].uuid)
-	_main.update_view()
-	assert_false(_main._verify_button.visible, "Bouton cache au niveau sequences")
+func test_histoire_menu_contains_verify_item():
+	var popup = _main._histoire_menu.get_popup()
+	assert_eq(popup.get_item_text(popup.get_item_index(5)), "Vérifier l'histoire")
 
 
 # === Panel rapport ===
