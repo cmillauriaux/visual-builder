@@ -4,6 +4,11 @@ set -euo pipefail
 # Export d'une histoire en jeu standalone
 # Usage: ./scripts/export_story.sh <story_path> [options]
 
+# Ajouter Homebrew au PATH sur macOS au cas où
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
@@ -74,7 +79,7 @@ run_logged() {
     fi
 }
 
-# Détecte le binaire Godot
+# Détecter le binaire Godot
 find_godot() {
     if [[ -n "$GODOT_BIN" ]]; then
         if [[ ! -x "$GODOT_BIN" ]]; then
@@ -281,10 +286,10 @@ run_logged "$GODOT_BIN" --headless --path "$TEMP_PROJECT" --script res://src/exp
 
 # 8. Modifier project.godot
 info "Configuration de project.godot..."
-"$SED_BIN" -i 's|run/main_scene="res://src/main.tscn"|run/main_scene="res://src/game.tscn"|' "$TEMP_PROJECT/project.godot"
-"$SED_BIN" -i "s|config/name=\"[^\"]*\"|config/name=\"$GAME_NAME\"|" "$TEMP_PROJECT/project.godot"
+run_logged "$SED_BIN" -i.bak 's|run/main_scene="res://src/main.tscn"|run/main_scene="res://src/game.tscn"|' "$TEMP_PROJECT/project.godot"
+run_logged "$SED_BIN" -i.bak "s|config/name=\"[^\"]*\"|config/name=\"$GAME_NAME\"|" "$TEMP_PROJECT/project.godot"
 # Désactiver le plugin GUT pour l'export
-"$SED_BIN" -i '/\[editor_plugins\]/,/^$/d' "$TEMP_PROJECT/project.godot"
+run_logged "$SED_BIN" -i.bak '/\[editor_plugins\]/,/^$/d' "$TEMP_PROJECT/project.godot"
 
 # Activer les formats de compression texture requis selon la plateforme
 case "$PLATFORM" in
@@ -295,9 +300,9 @@ case "$PLATFORM" in
         fi
         # S'assurer que ETC2 ASTC est activé
         if grep -q 'textures/vram_compression/import_etc2_astc' "$TEMP_PROJECT/project.godot"; then
-            "$SED_BIN" -i 's|textures/vram_compression/import_etc2_astc=.*|textures/vram_compression/import_etc2_astc=true|' "$TEMP_PROJECT/project.godot"
+            run_logged "$SED_BIN" -i.bak 's|textures/vram_compression/import_etc2_astc=.*|textures/vram_compression/import_etc2_astc=true|' "$TEMP_PROJECT/project.godot"
         else
-            "$SED_BIN" -i '/^\[rendering\]/a textures/vram_compression/import_etc2_astc=true' "$TEMP_PROJECT/project.godot"
+            run_logged "$SED_BIN" -i.bak '/^\[rendering\]/a textures/vram_compression/import_etc2_astc=true' "$TEMP_PROJECT/project.godot"
         fi
         ;;
     linux|windows)
@@ -306,17 +311,19 @@ case "$PLATFORM" in
             echo -e "\n[rendering]\n" >> "$TEMP_PROJECT/project.godot"
         fi
         if grep -q 'textures/vram_compression/import_s3tc_bptc' "$TEMP_PROJECT/project.godot"; then
-            "$SED_BIN" -i 's|textures/vram_compression/import_s3tc_bptc=.*|textures/vram_compression/import_s3tc_bptc=true|' "$TEMP_PROJECT/project.godot"
+            run_logged "$SED_BIN" -i.bak 's|textures/vram_compression/import_s3tc_bptc=.*|textures/vram_compression/import_s3tc_bptc=true|' "$TEMP_PROJECT/project.godot"
         else
-            "$SED_BIN" -i '/^\[rendering\]/a textures/vram_compression/import_s3tc_bptc=true' "$TEMP_PROJECT/project.godot"
+            run_logged "$SED_BIN" -i.bak '/^\[rendering\]/a textures/vram_compression/import_s3tc_bptc=true' "$TEMP_PROJECT/project.godot"
         fi
         ;;
 esac
 
 # 9. Modifier game.tscn pour définir story_path
 info "Configuration de game.tscn..."
-# On utilise une approche plus robuste pour l'insertion multi-plateforme
-"$SED_BIN" -i '/^script = ExtResource/a story_path = "res://story"' "$TEMP_PROJECT/src/game.tscn"
+run_logged "$SED_BIN" -i.bak '/^script = ExtResource/a story_path = "res://story"' "$TEMP_PROJECT/src/game.tscn"
+
+# Nettoyer les fichiers .bak
+find "$TEMP_PROJECT" -name "*.bak" -delete
 
 # 10. Copier le preset d'export
 info "Configuration du preset d'export ($PLATFORM)..."
@@ -324,7 +331,7 @@ PRESET_FILE="$SCRIPT_DIR/export_presets/$PLATFORM.cfg"
 if [[ ! -f "$PRESET_FILE" ]]; then
     error "Preset introuvable : $PRESET_FILE"
 fi
-cp "$PRESET_FILE" "$TEMP_PROJECT/export_presets.cfg"
+run_logged cp "$PRESET_FILE" "$TEMP_PROJECT/export_presets.cfg"
 
 # 11. Préparer le fichier de sortie
 EXPORT_EXT="$(get_export_extension)"
