@@ -35,6 +35,7 @@ var _play_ui_ctrl: Node
 
 # UI — Top bar
 var _vbox: VBoxContainer
+var _top_bar_panel: PanelContainer
 var _top_bar: HBoxContainer
 var _back_button: Button
 var _undo_button: Button
@@ -141,8 +142,6 @@ func _ready() -> void:
 	_connect_signals()
 
 	update_view()
-	# Force initial mode change signal if starting with NONE to ensure UI is correctly hidden
-	_on_editor_mode_changed(EditorState.Mode.NONE, {"level": _editor_main.get_current_level()})
 
 
 func _setup_controllers() -> void:

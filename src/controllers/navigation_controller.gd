@@ -26,7 +26,7 @@ var _main: Control
 var _rename_dialog: ConfirmationDialog
 var _menu_config_dialog: ConfirmationDialog
 var _last_save_path: String = ""
-var _current_mode: EditorState.Mode = EditorState.Mode.NONE
+var _current_mode: int = -1
 
 
 func get_save_path() -> String:

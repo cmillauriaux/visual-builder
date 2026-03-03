@@ -42,15 +42,17 @@ static func _build_top_bar(main: Control) -> void:
 	main._vbox.add_theme_constant_override("separation", 0)
 	main.add_child(main._vbox)
 
-	var top_panel = PanelContainer.new()
-	top_panel.theme_type_variation = "TopBar"
-	main._vbox.add_child(top_panel)
+	main._top_bar_panel = PanelContainer.new()
+	main._top_bar_panel.theme_type_variation = "TopBar"
+	main._top_bar_panel.visible = false
+	main._vbox.add_child(main._top_bar_panel)
 
 	main._top_bar = HBoxContainer.new()
-	top_panel.add_child(main._top_bar)
+	main._top_bar_panel.add_child(main._top_bar)
 
 	main._back_button = Button.new()
 	main._back_button.text = "← Retour"
+	main._back_button.visible = false
 	main._top_bar.add_child(main._back_button)
 
 	main._undo_button = Button.new()
@@ -67,6 +69,7 @@ static func _build_top_bar(main: Control) -> void:
 
 	main._breadcrumb = HBoxContainer.new()
 	main._breadcrumb.set_script(BreadcrumbScript)
+	main._breadcrumb.visible = false
 	main._top_bar.add_child(main._breadcrumb)
 
 	var spacer = Control.new()
@@ -84,14 +87,17 @@ static func _build_top_bar(main: Control) -> void:
 	main._top_bar.add_child(main._top_stop_button)
 
 	main._create_button = Button.new()
+	main._create_button.visible = false
 	main._top_bar.add_child(main._create_button)
 
 	main._create_condition_button = Button.new()
 	main._create_condition_button.text = "+ Nouvelle condition"
+	main._create_condition_button.visible = false
 	main._top_bar.add_child(main._create_condition_button)
 
 	main._parametres_menu = MenuButton.new()
 	main._parametres_menu.text = "Paramètres"
+	main._parametres_menu.visible = false
 	var parametres_popup = main._parametres_menu.get_popup()
 	parametres_popup.add_item("Variables", 0)
 	parametres_popup.add_item("Menu", 1)
@@ -103,6 +109,7 @@ static func _build_top_bar(main: Control) -> void:
 
 	main._histoire_menu = MenuButton.new()
 	main._histoire_menu.text = "Histoire"
+	main._histoire_menu.visible = false
 	var histoire_popup = main._histoire_menu.get_popup()
 	var cmd_ctrl = "Cmd" if OS.get_name() == "macOS" else "Ctrl"
 	histoire_popup.add_item("Nouvelle histoire", 0)

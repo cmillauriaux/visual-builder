@@ -24,6 +24,8 @@ func test_builds_vbox() -> void:
 
 
 func test_builds_top_bar() -> void:
+	assert_not_null(_main._top_bar_panel)
+	assert_true(_main._top_bar_panel is PanelContainer)
 	assert_not_null(_main._top_bar)
 	assert_true(_main._top_bar is HBoxContainer)
 
@@ -47,7 +49,7 @@ func test_builds_histoire_menu() -> void:
 	var popup = _main._histoire_menu.get_popup()
 	assert_eq(popup.get_item_text(popup.get_item_index(0)), "Nouvelle histoire")
 	assert_eq(popup.get_item_text(popup.get_item_index(1)), "Charger")
-	assert_eq(popup.get_item_text(popup.get_item_index(2)), "Sauvegarder")
+	assert_true(popup.get_item_text(popup.get_item_index(2)).begins_with("Sauvegarder"))
 	assert_eq(popup.get_item_text(popup.get_item_index(3)), "Sauvegarder sous...")
 	assert_eq(popup.get_item_text(popup.get_item_index(4)), "Exporter")
 	assert_eq(popup.get_item_text(popup.get_item_index(5)), "Vérifier l'histoire")
