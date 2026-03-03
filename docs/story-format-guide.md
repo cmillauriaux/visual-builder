@@ -14,14 +14,17 @@ Ce guide explique comment écrire des histoires interactives au format YAML pour
 6. [Les séquences](#les-séquences)
 7. [Les dialogues](#les-dialogues)
 8. [Les avant-plans (foregrounds)](#les-avant-plans-foregrounds)
-9. [Les fins de séquence](#les-fins-de-séquence)
-10. [Les choix](#les-choix)
-11. [Les conséquences](#les-conséquences)
-12. [Les variables](#les-variables)
-13. [Les effets sur les variables](#les-effets-sur-les-variables)
-14. [Les conditions](#les-conditions)
-15. [Les connexions](#les-connexions)
-16. [Exemple complet](#exemple-complet)
+9. [Les effets visuels (FX)](#les-effets-visuels-fx)
+10. [Les fins de séquence](#les-fins-de-séquence)
+11. [Les choix](#les-choix)
+12. [Les conséquences](#les-conséquences)
+13. [Les variables](#les-variables)
+14. [Les effets sur les variables](#les-effets-sur-les-variables)
+15. [Les notifications](#les-notifications)
+16. [Les conditions](#les-conditions)
+17. [Les connexions](#les-connexions)
+18. [L'internationalisation (i18n)](#linternationalisation-i18n)
+19. [Exemple complet](#exemple-complet)
 
 ---
 
@@ -39,15 +42,19 @@ mon_histoire/
 │   └── foregrounds/                    # Images de personnages / objets
 │       ├── hero.png
 │       └── vilain.png
-└── chapters/
-    └── ch-001/
-        ├── chapter.yaml                # Définition du chapitre
-        └── scenes/
-            ├── scene-001.yaml          # Première scène
-            └── scene-002.yaml          # Deuxième scène
+├── chapters/
+│   └── ch-001/
+│       ├── chapter.yaml                # Définition du chapitre
+│       └── scenes/
+│           ├── scene-001.yaml          # Première scène
+│           └── scene-002.yaml          # Deuxième scène
+└── i18n/                               # Traductions (optionnel)
+    ├── languages.yaml                  # Configuration des langues
+    ├── fr.yaml                         # Texte source (français)
+    └── en.yaml                         # Traduction anglaise
 ```
 
-Les images (backgrounds et foregrounds) sont placées dans le dossier `assets/`. Les fichiers YAML décrivent la structure narrative.
+Les images (backgrounds et foregrounds) sont placées dans le dossier `assets/`. Les fichiers YAML décrivent la structure narrative. Le dossier `i18n/` est optionnel et permet de traduire l'histoire en plusieurs langues (voir [Internationalisation](#linternationalisation-i18n)).
 
 ---
 
@@ -83,6 +90,9 @@ version: "1.0.0"
 created_at: "2026-01-15T10:00:00Z"
 updated_at: "2026-02-27T14:30:00Z"
 entry_point: "ch-001"
+menu_title: "La Forêt Maudite"
+menu_subtitle: "Une aventure interactive"
+menu_background: "menu_bg.png"
 chapters:
   - uuid: "ch-001"
     name: "Chapitre 1 — L'entrée de la forêt"
@@ -98,6 +108,11 @@ variables:
     initial_value: "0"
   - name: "a_la_cle"
     initial_value: "false"
+notifications:
+  - pattern: "score"
+    message: "Votre score a changé !"
+  - pattern: "*_affinity"
+    message: "Une relation a évolué..."
 connections:
   - from: "ch-001"
     to: "ch-002"
@@ -112,8 +127,12 @@ connections:
 | `created_at` | non | Date de création au format ISO 8601 |
 | `updated_at` | non | Date de dernière modification |
 | `entry_point` | oui | UUID du chapitre de départ |
+| `menu_title` | non | Titre affiché sur l'écran de menu du jeu |
+| `menu_subtitle` | non | Sous-titre affiché sur l'écran de menu |
+| `menu_background` | non | Image de fond du menu (dans `assets/backgrounds/`) |
 | `chapters` | oui | Liste des en-têtes de chapitres |
 | `variables` | non | Variables globales de l'histoire |
+| `notifications` | non | Notifications déclenchées par les changements de variables |
 | `connections` | non | Liens entre chapitres (pour l'éditeur graphique) |
 
 ---
@@ -200,9 +219,15 @@ Une séquence est l'unité de base de la narration. Elle combine un décor (back
 ```yaml
 uuid: "seq-001"
 name: "Découverte"
+title: "Chapitre 1"
 subtitle: "Entrée dans la forêt"
 position: { x: 0, y: 0 }
 background: "foret.png"
+background_color: "1a3d2aff"
+transition_in_type: "fade"
+transition_in_duration: 0.8
+transition_out_type: "none"
+transition_out_duration: 0.5
 foregrounds:
   - uuid: "fg-hero"
     name: "Héros"
@@ -225,6 +250,11 @@ dialogues:
     character: "Héros"
     text: "Il fait froid ici..."
     foregrounds: []
+fx:
+  - uuid: "fx-001"
+    fx_type: "screen_shake"
+    duration: 1.0
+    intensity: 0.5
 ending:
   type: "choices"
   choices:
@@ -243,16 +273,33 @@ ending:
       conditions: {}
 ```
 
-| Champ | Obligatoire | Description |
-|-------|:-----------:|-------------|
-| `uuid` | oui | Identifiant unique |
-| `name` | oui | Nom de la séquence |
-| `subtitle` | non | Sous-titre |
-| `position` | non | Position dans l'éditeur |
-| `background` | non | Nom du fichier image de fond (dans `assets/backgrounds/`) |
-| `foregrounds` | non | Personnages/objets affichés par défaut |
-| `dialogues` | oui | Liste des lignes de dialogue |
-| `ending` | oui | Fin de la séquence (choix ou redirection) |
+| Champ | Obligatoire | Défaut | Description |
+|-------|:-----------:|:------:|-------------|
+| `uuid` | oui | — | Identifiant unique |
+| `name` | oui | — | Nom de la séquence |
+| `title` | non | `""` | Titre affiché au lecteur (par ex. un titre de chapitre) |
+| `subtitle` | non | `""` | Sous-titre |
+| `position` | non | `{x: 0, y: 0}` | Position dans l'éditeur |
+| `background` | non | `""` | Nom du fichier image de fond (dans `assets/backgrounds/`) |
+| `background_color` | non | `"00000000"` | Couleur de fond en hexadécimal RGBA (8 caractères). Transparent par défaut |
+| `foregrounds` | non | `[]` | Personnages/objets affichés par défaut |
+| `dialogues` | oui | — | Liste des lignes de dialogue |
+| `fx` | non | `[]` | Effets visuels appliqués à la séquence (voir [Effets visuels](#les-effets-visuels-fx)) |
+| `transition_in_type` | non | `"none"` | Transition d'entrée : `"none"`, `"fade"`, `"pixelate"` |
+| `transition_in_duration` | non | `0.5` | Durée de la transition d'entrée en secondes |
+| `transition_out_type` | non | `"none"` | Transition de sortie : `"none"`, `"fade"`, `"pixelate"` |
+| `transition_out_duration` | non | `0.5` | Durée de la transition de sortie en secondes |
+| `ending` | oui | — | Fin de la séquence (choix ou redirection) |
+
+### Transitions de séquence
+
+Les transitions contrôlent l'effet visuel lors du passage d'une séquence à une autre.
+
+| Type | Description |
+|------|-------------|
+| `"none"` | Changement instantané |
+| `"fade"` | Fondu au noir (entrée/sortie) |
+| `"pixelate"` | Effet de pixellisation progressif |
 
 ---
 
@@ -353,6 +400,39 @@ anchor_fg: { x: 0.5, y: 1.0 }   # Point d'ancrage du personnage : bas-centre (le
 
 ---
 
+## Les effets visuels (FX)
+
+Les effets visuels ajoutent des animations à une séquence (tremblement d'écran, fondu, clignement). Ils sont définis dans le champ `fx` de la séquence.
+
+```yaml
+fx:
+  - uuid: "fx-001"
+    fx_type: "screen_shake"
+    duration: 1.0
+    intensity: 0.8
+  - uuid: "fx-002"
+    fx_type: "fade_in"
+    duration: 0.5
+    intensity: 1.0
+```
+
+| Champ | Obligatoire | Défaut | Description |
+|-------|:-----------:|:------:|-------------|
+| `uuid` | oui | — | Identifiant unique |
+| `fx_type` | oui | `"fade_in"` | Type d'effet (voir ci-dessous) |
+| `duration` | non | `0.5` | Durée de l'effet en secondes (0.1 à 5.0) |
+| `intensity` | non | `1.0` | Intensité de l'effet (0.1 à 3.0) |
+
+### Types d'effets disponibles
+
+| Type | Description |
+|------|-------------|
+| `"screen_shake"` | Tremblement de l'écran (ex. explosion, séisme) |
+| `"fade_in"` | Fondu en apparition |
+| `"eyes_blink"` | Effet de clignement d'yeux |
+
+---
+
 ## Les fins de séquence
 
 Chaque séquence se termine d'une des deux manières :
@@ -422,6 +502,8 @@ conditions: {}                      # Conditions d'affichage (optionnel)
 | `consequence` | oui | Action déclenchée par le choix |
 | `effects` | non | Modifications de variables |
 | `conditions` | non | Conditions pour afficher ce choix |
+
+> **Limite** : une séquence peut proposer entre **1 et 8 choix** maximum.
 
 ---
 
@@ -525,6 +607,42 @@ effects:
 
 ---
 
+## Les notifications
+
+Les notifications permettent d'afficher un message au lecteur lorsqu'une variable est modifiée. Elles sont déclarées dans `story.yaml` et utilisent des **patterns glob** pour cibler une ou plusieurs variables.
+
+```yaml
+# Dans story.yaml
+notifications:
+  - pattern: "score"
+    message: "Votre score a changé !"
+  - pattern: "*_affinity"
+    message: "Une relation a évolué..."
+  - pattern: "item_*"
+    message: "Inventaire mis à jour."
+```
+
+| Champ | Obligatoire | Description |
+|-------|:-----------:|-------------|
+| `pattern` | oui | Pattern glob ciblant les noms de variables |
+| `message` | oui | Message affiché au lecteur (type toast/notification) |
+
+### Patterns glob
+
+| Caractère | Signification |
+|-----------|---------------|
+| `*` | Correspond à n'importe quelle suite de caractères (y compris vide) |
+| `?` | Correspond à un seul caractère |
+
+**Exemples** :
+- `"score"` — correspond exactement à la variable `score`
+- `"*_affinity"` — correspond à `hero_affinity`, `enemy_affinity`, etc.
+- `"item_?"` — correspond à `item_a`, `item_b`, mais pas `item_ab`
+
+Les notifications sont évaluées à chaque modification de variable. Si le pattern correspond au nom de la variable modifiée, le message est affiché.
+
+---
+
 ## Les conditions
 
 Les conditions permettent de créer des embranchements automatiques basés sur l'état des variables. Elles sont définies au niveau de la scène.
@@ -602,6 +720,74 @@ connections:
 
 ---
 
+## L'internationalisation (i18n)
+
+Le système d'internationalisation permet de traduire une histoire en plusieurs langues sans modifier les fichiers YAML d'origine. Le texte source (en français par défaut) reste dans les fichiers de l'histoire ; les traductions sont stockées dans des fichiers séparés.
+
+### Structure des fichiers
+
+```
+mon_histoire/
+└── i18n/
+    ├── languages.yaml      # Configuration des langues
+    ├── fr.yaml             # Texte source (langue par défaut)
+    └── en.yaml             # Traduction anglaise
+```
+
+### Configuration des langues — `languages.yaml`
+
+```yaml
+default: "fr"
+languages:
+  - "fr"
+  - "en"
+```
+
+| Champ | Description |
+|-------|-------------|
+| `default` | Code de la langue source (par défaut : `"fr"`) |
+| `languages` | Liste de tous les codes de langue disponibles |
+
+> Si le fichier `languages.yaml` est absent, le système détecte automatiquement les langues à partir des fichiers `*.yaml` présents dans `i18n/`.
+
+### Format des fichiers de traduction
+
+Chaque fichier de traduction est un simple dictionnaire clé-valeur où la clé est le texte source et la valeur est la traduction :
+
+```yaml
+# i18n/en.yaml
+"La Forêt Maudite": "The Cursed Forest"
+"Jean Dupont": "Jean Dupont"
+"Vous pénétrez dans une forêt sombre et silencieuse.": "You enter a dark and silent forest."
+"Il fait froid ici...": "It's cold here..."
+"Avancer prudemment": "Advance carefully"
+"Faire demi-tour": "Turn back"
+"Narrateur": "Narrator"
+"Héros": "Hero"
+```
+
+### Champs traduits
+
+Les champs suivants sont automatiquement traduits lorsqu'une langue est sélectionnée :
+
+| Modèle | Champs |
+|--------|--------|
+| Histoire | `title`, `author`, `description`, `menu_title`, `menu_subtitle` |
+| Chapitre | `name`, `subtitle` |
+| Scène | `name`, `subtitle` |
+| Séquence | `name`, `subtitle` |
+| Dialogue | `character`, `text` |
+| Choix | `text` |
+| Notification | `message` |
+
+### Fonctionnement
+
+- Si une traduction est absente ou vide, le texte source (français) est conservé.
+- Le fichier de la langue par défaut (`fr.yaml`) utilise le format `"texte": "texte"` (clé = valeur identiques) et sert de référence.
+- Les chaînes d'interface du jeu (menus, boutons) sont également incluses dans les fichiers de traduction.
+
+---
+
 ## Exemple complet
 
 Voici une petite histoire complète avec deux séquences, un choix, une variable et une condition.
@@ -616,6 +802,8 @@ version: "1.0.0"
 created_at: "2026-02-27T10:00:00Z"
 updated_at: "2026-02-27T10:00:00Z"
 entry_point: "ch-1"
+menu_title: "Le Coffre Mystérieux"
+menu_subtitle: "Une courte aventure"
 chapters:
   - uuid: "ch-1"
     name: "L'unique chapitre"
@@ -624,6 +812,9 @@ chapters:
 variables:
   - name: "a_la_cle"
     initial_value: "false"
+notifications:
+  - pattern: "a_la_cle"
+    message: "Vous avez trouvé un objet !"
 connections: []
 ```
 
@@ -654,6 +845,9 @@ sequences:
     name: "Entrée"
     position: { x: 0, y: 0 }
     background: "salle.png"
+    background_color: "2b1d0eff"
+    transition_in_type: "fade"
+    transition_in_duration: 1.0
     foregrounds: []
     dialogues:
       - uuid: "dlg-1"
@@ -687,6 +881,11 @@ sequences:
     position: { x: 300, y: 0 }
     background: "salle.png"
     foregrounds: []
+    fx:
+      - uuid: "fx-cle"
+        fx_type: "screen_shake"
+        duration: 0.3
+        intensity: 0.4
     dialogues:
       - uuid: "dlg-3"
         character: "Narrateur"
