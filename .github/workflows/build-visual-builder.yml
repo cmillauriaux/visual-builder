@@ -1,0 +1,55 @@
+name: Build Visual Builder
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  export:
+    name: Export ${{ matrix.platform }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: Windows
+            export-name: Windows
+            output-path: build/windows/visual-builder.exe
+            artifact-name: visual-builder-windows
+            artifact-path: build/windows/
+          - platform: macOS
+            export-name: macOS
+            output-path: build/macos/visual-builder.zip
+            artifact-name: visual-builder-macos
+            artifact-path: build/macos/
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Setup Godot
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.4-stable
+          use-dotnet: false
+          include-templates: true
+
+      - name: Import Resources
+        run: godot --headless --verbose --editor --quit --path .
+
+      - name: Create Build Directory
+        run: mkdir -v -p $(dirname ${{ matrix.output-path }})
+
+      - name: Export Build
+        run: godot --headless --verbose --path . --export-release "${{ matrix.export-name }}" "${{ matrix.output-path }}"
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact-name }}
+          path: ${{ matrix.artifact-path }}
