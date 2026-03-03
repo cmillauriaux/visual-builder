@@ -31,11 +31,15 @@ func _on_notification_triggered(message: String) -> void:
 
 func handle_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
-		if event.ctrl_pressed and event.keycode == KEY_Z and not event.shift_pressed:
+		var cmd_ctrl = event.is_command_or_control_pressed()
+		if cmd_ctrl and event.keycode == KEY_Z and not event.shift_pressed:
 			_main._on_undo_pressed()
 			_main.get_viewport().set_input_as_handled()
-		elif event.ctrl_pressed and (event.keycode == KEY_Y or (event.keycode == KEY_Z and event.shift_pressed)):
+		elif cmd_ctrl and (event.keycode == KEY_Y or (event.keycode == KEY_Z and event.shift_pressed)):
 			_main._on_redo_pressed()
+			_main.get_viewport().set_input_as_handled()
+		elif cmd_ctrl and event.keycode == KEY_S and not event.shift_pressed:
+			_main._nav_ctrl.on_save_pressed()
 			_main.get_viewport().set_input_as_handled()
 
 
@@ -80,12 +84,16 @@ func refresh_undo_redo_buttons() -> void:
 		return
 	_main._undo_button.disabled = not _main._undo_redo.can_undo()
 	_main._redo_button.disabled = not _main._undo_redo.can_redo()
+	
+	var cmd_ctrl = "Cmd" if OS.get_name() == "macOS" else "Ctrl"
+	
 	if _main._undo_redo.can_undo():
-		_main._undo_button.tooltip_text = "Annuler : " + _main._undo_redo.get_undo_label()
+		_main._undo_button.tooltip_text = "Annuler : %s (%s+Z)" % [_main._undo_redo.get_undo_label(), cmd_ctrl]
 	else:
 		_main._undo_button.tooltip_text = ""
+		
 	if _main._undo_redo.can_redo():
-		_main._redo_button.tooltip_text = "Rétablir : " + _main._undo_redo.get_redo_label()
+		_main._redo_button.tooltip_text = "Rétablir : %s (%s+Y / %s+Maj+Z)" % [_main._undo_redo.get_redo_label(), cmd_ctrl, cmd_ctrl]
 	else:
 		_main._redo_button.tooltip_text = ""
 

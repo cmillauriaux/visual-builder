@@ -104,10 +104,11 @@ static func _build_top_bar(main: Control) -> void:
 	main._histoire_menu = MenuButton.new()
 	main._histoire_menu.text = "Histoire"
 	var histoire_popup = main._histoire_menu.get_popup()
+	var cmd_ctrl = "Cmd" if OS.get_name() == "macOS" else "Ctrl"
 	histoire_popup.add_item("Nouvelle histoire", 0)
 	histoire_popup.add_item("Charger", 1)
 	histoire_popup.add_separator()
-	histoire_popup.add_item("Sauvegarder", 2)
+	histoire_popup.add_item("Sauvegarder (%s+S)" % cmd_ctrl, 2)
 	histoire_popup.add_item("Sauvegarder sous...", 3)
 	histoire_popup.add_separator()
 	histoire_popup.add_item("Exporter", 4)
