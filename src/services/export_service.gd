@@ -74,12 +74,17 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 	var rewrite_args = ["--path", abs_temp_project, "--headless", "--script", "res://src/export/rewrite_runner.gd", "--", "--story-folder", "res://story", "--new-base", "res://story"]
 	OS.execute(godot_bin, rewrite_args)
 
-	# 5. Configurer project.godot
+	# 5. Configurer project.godot et override.cfg
 	var project_godot_path = abs_temp_project + "/project.godot"
 	var project_content = FileAccess.get_file_as_string(project_godot_path)
 	project_content = project_content.replace('run/main_scene="res://src/main.tscn"', 'run/main_scene="res://src/game.tscn"')
 	project_content = project_content.replace('config/name="' + _get_config_project_name() + '"', 'config/name="' + game_name + '"')
-	
+
+	# Ajouter une propriété personnalisée pour le chemin de la story
+	if project_content.find("[application]") == -1:
+		project_content += "\n[application]\n"
+	project_content = project_content.replace("[application]", "[application]\nconfig/story_path=\"res://story\"")
+
 	# Désactiver les plugins
 	if project_content.find("[editor_plugins]") != -1:
 		var lines = project_content.split("\n")
@@ -95,14 +100,13 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 			if not in_plugins:
 				new_lines.append(line)
 		project_content = "\n".join(new_lines)
-	
+
 	# Rendering settings according to platform
 	if project_content.find("[rendering]") == -1:
 		project_content += "\n[rendering]\n"
-	
+
 	if platform == "macos" or platform == "android":
 		if project_content.find("textures/vram_compression/import_etc2_astc") != -1:
-			# Regex-like replace would be better, but simple replace might work if format is exact
 			project_content = project_content.replace("textures/vram_compression/import_etc2_astc=false", "textures/vram_compression/import_etc2_astc=true")
 		else:
 			project_content = project_content.replace("[rendering]", "[rendering]\ntextures/vram_compression/import_etc2_astc=true")
@@ -111,31 +115,21 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 			project_content = project_content.replace("textures/vram_compression/import_s3tc_bptc=false", "textures/vram_compression/import_s3tc_bptc=true")
 		else:
 			project_content = project_content.replace("[rendering]", "[rendering]\ntextures/vram_compression/import_s3tc_bptc=true")
-			
+
 	var f_pg = FileAccess.open(project_godot_path, FileAccess.WRITE)
 	if f_pg:
 		f_pg.store_string(project_content)
 		f_pg.close()
 
-	# 6. Configurer game.tscn pour story_path
-	var game_tscn_path = abs_temp_project + "/src/game.tscn"
-	if FileAccess.file_exists(game_tscn_path):
-		var game_content = FileAccess.get_file_as_string(game_tscn_path)
-		if game_content.find('story_path = ""') != -1:
-			game_content = game_content.replace('story_path = ""', 'story_path = "res://story"')
-		else:
-			# Si la variable n'existe pas (cas où elle n'est pas dans le .tscn car par défaut), 
-			# on l'ajoute dans la section du noeud racine "Game"
-			var game_node_pos = game_content.find('[node name="Game"')
-			if game_node_pos != -1:
-				var end_header = game_content.find("]", game_node_pos)
-				if end_header != -1:
-					game_content = game_content.insert(end_header + 1, '\nstory_path = "res://story"')
-		
-		var f_gt = FileAccess.open(game_tscn_path, FileAccess.WRITE)
-		if f_gt:
-			f_gt.store_string(game_content)
-			f_gt.close()
+	# Créer override.cfg pour forcer les paramètres à l'exécution
+	var override_path = abs_temp_project + "/override.cfg"
+	var f_ov = FileAccess.open(override_path, FileAccess.WRITE)
+	if f_ov:
+		f_ov.store_line("[application]")
+		f_ov.store_line("config/story_path=\"res://story\"")
+		f_ov.close()
+
+	# 6. (Anciennement modification de game.tscn, maintenant inutile avec override.cfg)
 
 	# 7. Copier le preset et forcer l'inclusion des fichiers .yaml
 	var preset_name = _get_preset_name(platform)
@@ -143,20 +137,20 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 	var preset_dst = abs_temp_project + "/export_presets.cfg"
 	if FileAccess.file_exists(preset_src):
 		var preset_content = FileAccess.get_file_as_string(preset_src)
-		# On cherche la ligne include_filter pour ajouter *.yaml
+
+		# Forcer l'export de toutes les ressources ET des fichiers .yaml
+		preset_content = preset_content.replace("export_filter=\"selected_scenes\"", "export_filter=\"all_resources\"")
+
 		if preset_content.find("include_filter=\"") != -1:
-			# Si include_filter existe déjà, on ajoute *.yaml (en évitant les doublons)
 			if preset_content.find("*.yaml") == -1:
 				preset_content = preset_content.replace("include_filter=\"", "include_filter=\"*.yaml,")
 		else:
-			# Sinon on l'ajoute dans la section du preset (on suppose qu'elle commence par [preset.0])
 			preset_content = preset_content.replace("[preset.0]", "[preset.0]\ninclude_filter=\"*.yaml\"")
 
 		var f_preset = FileAccess.open(preset_dst, FileAccess.WRITE)
 		if f_preset:
 			f_preset.store_string(preset_content)
 			f_preset.close()
-
 
 	# 8. Préparer le fichier de sortie
 	var export_ext = _get_export_extension(platform)
@@ -173,6 +167,7 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 
 	# 9. Import & Export
 	var output = []
+
 	# Import d'abord (nécessaire pour générer .godot/)
 	OS.execute(godot_bin, ["--path", abs_temp_project, "--headless", "--import"], output, true)
 	

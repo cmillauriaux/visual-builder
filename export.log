@@ -1,0 +1,1057 @@
+=========================================
+  Export story — 2026-03-03T21:35:34
+=========================================
+→ Godot : C:\Program Files\Godot\Godot_v4.4.1-stable_win64_console.exe
+→ Plateforme : windows
+→ Story : C:/Projets/InnheritedHearts
+
+--- DEBUG INSPECTION ---
+Vérification de game.tscn modifiée :
+[gd_scene load_steps=2 format=3 uid="uid://l8swkb8415yi"]
+
+[ext_resource type="Script" uid="uid://bsxqt5we0atf6" path="res://src/game.gd" id="1"]
+
+[node name="Game" type="Control"]
+story_path = "res://story"
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1")
+
+Liste des fichiers dans res://story du projet temporaire :
+ - .DS_Store
+ - artbook
+ - assets
+ - chapters
+ - i18n
+ - story.yaml
+--- END DEBUG ---
+
+Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org
+
+first_scan_filesystem: begin: Project initialization steps: 5
+	first_scan_filesystem: step 0: Scanning file structure...
+	first_scan_filesystem: step 1: Loading global class names...
+	first_scan_filesystem: step 2: Verifying GDExtensions...
+	first_scan_filesystem: step 3: Creating autoload scripts...
+	first_scan_filesystem: step 4: Initializing plugins...
+	first_scan_filesystem: step 5: Starting file scan...
+first_scan_filesystem: end
+update_scripts_classes: begin: Registering global classes... steps: 167
+	update_scripts_classes: step 0: 
+	update_scripts_classes: step 1: 
+	update_scripts_classes: step 2: 
+	update_scripts_classes: step 3: 
+	update_scripts_classes: step 4: 
+	update_scripts_classes: step 5: 
+	update_scripts_classes: step 6: 
+	update_scripts_classes: step 7: 
+	update_scripts_classes: step 8: 
+	update_scripts_classes: step 9: 
+	update_scripts_classes: step 10: 
+	update_scripts_classes: step 11: 
+	update_scripts_classes: step 12: 
+	update_scripts_classes: step 13: 
+	update_scripts_classes: step 14: 
+	update_scripts_classes: step 15: 
+	update_scripts_classes: step 16: 
+	update_scripts_classes: step 17: 
+	update_scripts_classes: step 18: 
+	update_scripts_classes: step 19: 
+	update_scripts_classes: step 20: 
+	update_scripts_classes: step 21: 
+	update_scripts_classes: step 22: 
+	update_scripts_classes: step 23: 
+	update_scripts_classes: step 24: 
+	update_scripts_classes: step 25: 
+	update_scripts_classes: step 26: 
+	update_scripts_classes: step 27: 
+	update_scripts_classes: step 28: 
+	update_scripts_classes: step 29: GutMain
+	update_scripts_classes: step 30: 
+	update_scripts_classes: step 31: 
+	update_scripts_classes: step 32: 
+	update_scripts_classes: step 33: 
+	update_scripts_classes: step 34: 
+	update_scripts_classes: step 35: 
+	update_scripts_classes: step 36: GutHookScript
+	update_scripts_classes: step 37: 
+	update_scripts_classes: step 38: 
+	update_scripts_classes: step 39: 
+	update_scripts_classes: step 40: 
+	update_scripts_classes: step 41: 
+	update_scripts_classes: step 42: 
+	update_scripts_classes: step 43: 
+	update_scripts_classes: step 44: 
+	update_scripts_classes: step 45: 
+	update_scripts_classes: step 46: 
+	update_scripts_classes: step 47: 
+	update_scripts_classes: step 48: 
+	update_scripts_classes: step 49: 
+	update_scripts_classes: step 50: 
+	update_scripts_classes: step 51: 
+	update_scripts_classes: step 52: 
+	update_scripts_classes: step 53: GutStringUtils
+	update_scripts_classes: step 54: 
+	update_scripts_classes: step 55: 
+	update_scripts_classes: step 56: 
+	update_scripts_classes: step 57: GutTest
+	update_scripts_classes: step 58: 
+	update_scripts_classes: step 59: 
+	update_scripts_classes: step 60: 
+	update_scripts_classes: step 61: GutUtils
+	update_scripts_classes: step 62: 
+	update_scripts_classes: step 63: 
+	update_scripts_classes: step 64: 
+	update_scripts_classes: step 65: 
+	update_scripts_classes: step 66: 
+	update_scripts_classes: step 67: 
+	update_scripts_classes: step 68: 
+	update_scripts_classes: step 69: 
+	update_scripts_classes: step 70: 
+	update_scripts_classes: step 71: 
+	update_scripts_classes: step 72: 
+	update_scripts_classes: step 73: 
+	update_scripts_classes: step 74: 
+	update_scripts_classes: step 75: 
+	update_scripts_classes: step 76: 
+	update_scripts_classes: step 77: 
+	update_scripts_classes: step 78: 
+	update_scripts_classes: step 79: 
+	update_scripts_classes: step 80: EditorState
+	update_scripts_classes: step 81: 
+	update_scripts_classes: step 82: 
+	update_scripts_classes: step 83: 
+	update_scripts_classes: step 84: 
+	update_scripts_classes: step 85: 
+	update_scripts_classes: step 86: PlayContext
+	update_scripts_classes: step 87: 
+	update_scripts_classes: step 88: 
+	update_scripts_classes: step 89: 
+	update_scripts_classes: step 90: 
+	update_scripts_classes: step 91: 
+	update_scripts_classes: step 92: 
+	update_scripts_classes: step 93: ChapterModel
+	update_scripts_classes: step 94: 
+	update_scripts_classes: step 95: 
+	update_scripts_classes: step 96: 
+	update_scripts_classes: step 97: 
+	update_scripts_classes: step 98: DialogueModel
+	update_scripts_classes: step 99: 
+	update_scripts_classes: step 100: 
+	update_scripts_classes: step 101: SceneModel
+	update_scripts_classes: step 102: SequenceModel
+	update_scripts_classes: step 103: 
+	update_scripts_classes: step 104: StoryModel
+	update_scripts_classes: step 105: 
+	update_scripts_classes: step 106: 
+	update_scripts_classes: step 107: 
+	update_scripts_classes: step 108: 
+	update_scripts_classes: step 109: 
+	update_scripts_classes: step 110: 
+	update_scripts_classes: step 111: 
+	update_scripts_classes: step 112: 
+	update_scripts_classes: step 113: ExportService
+	update_scripts_classes: step 114: 
+	update_scripts_classes: step 115: 
+	update_scripts_classes: step 116: 
+	update_scripts_classes: step 117: NotificationService
+	update_scripts_classes: step 118: StoryI18nService
+	update_scripts_classes: step 119: StoryVerifier
+	update_scripts_classes: step 120: UndoRedoService
+	update_scripts_classes: step 121: 
+	update_scripts_classes: step 122: 
+	update_scripts_classes: step 123: 
+	update_scripts_classes: step 124: 
+	update_scripts_classes: step 125: 
+	update_scripts_classes: step 126: 
+	update_scripts_classes: step 127: 
+	update_scripts_classes: step 128: 
+	update_scripts_classes: step 129: 
+	update_scripts_classes: step 130: ConditionEditor
+	update_scripts_classes: step 131: 
+	update_scripts_classes: step 132: 
+	update_scripts_classes: step 133: EndingEditor
+	update_scripts_classes: step 134: 
+	update_scripts_classes: step 135: 
+	update_scripts_classes: step 136: 
+	update_scripts_classes: step 137: 
+	update_scripts_classes: step 138: 
+	update_scripts_classes: step 139: 
+	update_scripts_classes: step 140: 
+	update_scripts_classes: step 141: 
+	update_scripts_classes: step 142: 
+	update_scripts_classes: step 143: 
+	update_scripts_classes: step 144: 
+	update_scripts_classes: step 145: 
+	update_scripts_classes: step 146: 
+	update_scripts_classes: step 147: 
+	update_scripts_classes: step 148: 
+	update_scripts_classes: step 149: 
+	update_scripts_classes: step 150: 
+	update_scripts_classes: step 151: 
+	update_scripts_classes: step 152: TextureLoader
+	update_scripts_classes: step 153: 
+	update_scripts_classes: step 154: 
+	update_scripts_classes: step 155: 
+	update_scripts_classes: step 156: 
+	update_scripts_classes: step 157: 
+	update_scripts_classes: step 158: 
+	update_scripts_classes: step 159: 
+	update_scripts_classes: step 160: 
+	update_scripts_classes: step 161: 
+	update_scripts_classes: step 162: 
+	update_scripts_classes: step 163: 
+	update_scripts_classes: step 164: 
+	update_scripts_classes: step 165: 
+	update_scripts_classes: step 166: 
+update_scripts_classes: end
+_update_scan_actions: begin: Scanning actions... steps: 104
+	_update_scan_actions: step 0: AnonymousPro-Bold.ttf
+	_update_scan_actions: step 1: AnonymousPro-BoldItalic.ttf
+	_update_scan_actions: step 2: AnonymousPro-Italic.ttf
+	_update_scan_actions: step 3: AnonymousPro-Regular.ttf
+	_update_scan_actions: step 4: CourierPrime-Bold.ttf
+	_update_scan_actions: step 5: CourierPrime-BoldItalic.ttf
+	_update_scan_actions: step 6: CourierPrime-Italic.ttf
+	_update_scan_actions: step 7: CourierPrime-Regular.ttf
+	_update_scan_actions: step 8: LobsterTwo-Bold.ttf
+	_update_scan_actions: step 9: LobsterTwo-BoldItalic.ttf
+	_update_scan_actions: step 10: LobsterTwo-Italic.ttf
+	_update_scan_actions: step 11: LobsterTwo-Regular.ttf
+	_update_scan_actions: step 12: arrow.png
+	_update_scan_actions: step 13: play.png
+	_update_scan_actions: step 14: Folder.svg
+	_update_scan_actions: step 15: green.png
+	_update_scan_actions: step 16: red.png
+	_update_scan_actions: step 17: Script.svg
+	_update_scan_actions: step 18: yellow.png
+	_update_scan_actions: step 19: icon.png
+	_update_scan_actions: step 20: source_code_pro.fnt
+	_update_scan_actions: step 21: background.jpeg
+	_update_scan_actions: step 22: Background_1.jpeg
+	_update_scan_actions: step 23: Background_3.jpeg
+	_update_scan_actions: step 24: Background_4.jpeg
+	_update_scan_actions: step 25: Background_5.jpeg
+	_update_scan_actions: step 26: Background_6.jpeg
+	_update_scan_actions: step 27: Background_basement.jpeg
+	_update_scan_actions: step 28: Background_bathroom.jpeg
+	_update_scan_actions: step 29: Background_player_bedroom.jpeg
+	_update_scan_actions: step 30: Character_1.jpeg
+	_update_scan_actions: step 31: Character_1_room.jpeg
+	_update_scan_actions: step 32: Character_2.jpeg
+	_update_scan_actions: step 33: Character_2_room.jpeg
+	_update_scan_actions: step 34: Character_3.jpeg
+	_update_scan_actions: step 35: Character_3_room.jpeg
+	_update_scan_actions: step 36: Character_4.jpeg
+	_update_scan_actions: step 37: Character_4_room.jpeg
+	_update_scan_actions: step 38: Character_5.jpeg
+	_update_scan_actions: step 39: Character_5_room.jpeg
+	_update_scan_actions: step 40: Character_6.jpeg
+	_update_scan_actions: step 41: Character_6_room.jpeg
+	_update_scan_actions: step 42: Character_6_young.jpeg
+	_update_scan_actions: step 43: Character_7.jpeg
+	_update_scan_actions: step 44: ai_1772389778_78445.png
+	_update_scan_actions: step 45: ai_1772391454_9497.png
+	_update_scan_actions: step 46: ai_1772552332_43598.png
+	_update_scan_actions: step 47: Background_1.jpeg
+	_update_scan_actions: step 48: Background_3.jpeg
+	_update_scan_actions: step 49: Background_4.jpeg
+	_update_scan_actions: step 50: Background_5.jpeg
+	_update_scan_actions: step 51: Background_6.jpeg
+	_update_scan_actions: step 52: Background_basement.jpeg
+	_update_scan_actions: step 53: Background_bathroom.jpeg
+	_update_scan_actions: step 54: Background_player_bedroom.jpeg
+	_update_scan_actions: step 55: Character_1_room.jpeg
+	_update_scan_actions: step 56: Character_2_room.jpeg
+	_update_scan_actions: step 57: Character_3_room.jpeg
+	_update_scan_actions: step 58: Character_4_room.jpeg
+	_update_scan_actions: step 59: Character_5_room.jpeg
+	_update_scan_actions: step 60: ai_1772389917_08433.png
+	_update_scan_actions: step 61: ai_1772389973_03395.png
+	_update_scan_actions: step 62: ai_1772390303_69232.png
+	_update_scan_actions: step 63: ai_1772390350_70862.png
+	_update_scan_actions: step 64: ai_1772391265_71791.png
+	_update_scan_actions: step 65: ai_1772391570_2981.png
+	_update_scan_actions: step 66: ai_1772392306_46295.png
+	_update_scan_actions: step 67: ai_1772392461_09832.png
+	_update_scan_actions: step 68: ai_1772394398_09522.png
+	_update_scan_actions: step 69: ai_1772400321_48446.png
+	_update_scan_actions: step 70: ai_1772402795_41806.png
+	_update_scan_actions: step 71: ai_1772402856_16831.png
+	_update_scan_actions: step 72: ai_1772402898_98459.png
+	_update_scan_actions: step 73: ai_1772403199_14433.png
+	_update_scan_actions: step 74: ai_1772552486_93617.png
+	_update_scan_actions: step 75: ai_1772552525_77605.png
+	_update_scan_actions: step 76: ai_1772552604_8358.png
+	_update_scan_actions: step 77: ai_1772552877_57502.png
+	_update_scan_actions: step 78: ai_1772552924_57442.png
+	_update_scan_actions: step 79: ai_1772552999_89419.png
+	_update_scan_actions: step 80: ai_1772553100_59443.png
+	_update_scan_actions: step 81: ai_1772553166_33308.png
+	_update_scan_actions: step 82: ai_1772553198_83321.png
+	_update_scan_actions: step 83: ai_1772553512_49038.png
+	_update_scan_actions: step 84: ai_1772553589_65025.png
+	_update_scan_actions: step 85: ai_1772553636_05018.png
+	_update_scan_actions: step 86: ai_1772553674_3896.png
+	_update_scan_actions: step 87: ai_1772553776_65883.png
+	_update_scan_actions: step 88: ai_1772553838_20938.png
+	_update_scan_actions: step 89: ai_1772553902_29006.png
+	_update_scan_actions: step 90: ai_1772553935_94936.png
+	_update_scan_actions: step 91: ai_1772553987_47751.png
+	_update_scan_actions: step 92: ai_1772554032_78817.png
+	_update_scan_actions: step 93: ai_1772554356_02773.png
+	_update_scan_actions: step 94: ai_1772554471_28646.png
+	_update_scan_actions: step 95: ai_1772554514_28913.png
+	_update_scan_actions: step 96: ai_1772554574_76598.png
+	_update_scan_actions: step 97: ai_1772554642_76719.png
+	_update_scan_actions: step 98: ai_1772554692_71553.png
+	_update_scan_actions: step 99: Character_2.jpeg
+	_update_scan_actions: step 100: Girard-broom-crazy.png
+	_update_scan_actions: step 101: Girard-broom-sad.png
+	_update_scan_actions: step 102: Girard-sad.png
+	_update_scan_actions: step 103: icon.svg
+_update_scan_actions: end
+reimport: begin: (Re)Importing Assets steps: 104
+	reimport: step 0: Preparing files to reimport...
+	reimport: step 1: Preparing files to reimport...
+	reimport: step 2: Preparing files to reimport...
+	reimport: step 3: Preparing files to reimport...
+	reimport: step 4: Preparing files to reimport...
+	reimport: step 5: Preparing files to reimport...
+	reimport: step 6: Preparing files to reimport...
+	reimport: step 7: Preparing files to reimport...
+	reimport: step 8: Preparing files to reimport...
+	reimport: step 9: Preparing files to reimport...
+	reimport: step 10: Preparing files to reimport...
+	reimport: step 11: Preparing files to reimport...
+	reimport: step 12: Preparing files to reimport...
+	reimport: step 13: Preparing files to reimport...
+	reimport: step 14: Preparing files to reimport...
+	reimport: step 15: Preparing files to reimport...
+	reimport: step 16: Preparing files to reimport...
+	reimport: step 17: Preparing files to reimport...
+	reimport: step 18: Preparing files to reimport...
+	reimport: step 19: Preparing files to reimport...
+	reimport: step 20: Preparing files to reimport...
+	reimport: step 21: Preparing files to reimport...
+	reimport: step 22: Preparing files to reimport...
+	reimport: step 23: Preparing files to reimport...
+	reimport: step 24: Preparing files to reimport...
+	reimport: step 25: Preparing files to reimport...
+	reimport: step 26: Preparing files to reimport...
+	reimport: step 27: Preparing files to reimport...
+	reimport: step 28: Preparing files to reimport...
+	reimport: step 29: Preparing files to reimport...
+	reimport: step 30: Preparing files to reimport...
+	reimport: step 31: Preparing files to reimport...
+	reimport: step 32: Preparing files to reimport...
+	reimport: step 33: Preparing files to reimport...
+	reimport: step 34: Preparing files to reimport...
+	reimport: step 35: Preparing files to reimport...
+	reimport: step 36: Preparing files to reimport...
+	reimport: step 37: Preparing files to reimport...
+	reimport: step 38: Preparing files to reimport...
+	reimport: step 39: Preparing files to reimport...
+	reimport: step 40: Preparing files to reimport...
+	reimport: step 41: Preparing files to reimport...
+	reimport: step 42: Preparing files to reimport...
+	reimport: step 43: Preparing files to reimport...
+	reimport: step 44: Preparing files to reimport...
+	reimport: step 45: Preparing files to reimport...
+	reimport: step 46: Preparing files to reimport...
+	reimport: step 47: Preparing files to reimport...
+	reimport: step 48: Preparing files to reimport...
+	reimport: step 49: Preparing files to reimport...
+	reimport: step 50: Preparing files to reimport...
+	reimport: step 51: Preparing files to reimport...
+	reimport: step 52: Preparing files to reimport...
+	reimport: step 53: Preparing files to reimport...
+	reimport: step 54: Preparing files to reimport...
+	reimport: step 55: Preparing files to reimport...
+	reimport: step 56: Preparing files to reimport...
+	reimport: step 57: Preparing files to reimport...
+	reimport: step 58: Preparing files to reimport...
+	reimport: step 59: Preparing files to reimport...
+	reimport: step 60: Preparing files to reimport...
+	reimport: step 61: Preparing files to reimport...
+	reimport: step 62: Preparing files to reimport...
+	reimport: step 63: Preparing files to reimport...
+	reimport: step 64: Preparing files to reimport...
+	reimport: step 65: Preparing files to reimport...
+	reimport: step 66: Preparing files to reimport...
+	reimport: step 67: Preparing files to reimport...
+	reimport: step 68: Preparing files to reimport...
+	reimport: step 69: Preparing files to reimport...
+	reimport: step 70: Preparing files to reimport...
+	reimport: step 71: Preparing files to reimport...
+	reimport: step 72: Preparing files to reimport...
+	reimport: step 73: Preparing files to reimport...
+	reimport: step 74: Preparing files to reimport...
+	reimport: step 75: Preparing files to reimport...
+	reimport: step 76: Preparing files to reimport...
+	reimport: step 77: Preparing files to reimport...
+	reimport: step 78: Preparing files to reimport...
+	reimport: step 79: Preparing files to reimport...
+	reimport: step 80: Preparing files to reimport...
+	reimport: step 81: Preparing files to reimport...
+	reimport: step 82: Preparing files to reimport...
+	reimport: step 83: Preparing files to reimport...
+	reimport: step 84: Preparing files to reimport...
+	reimport: step 85: Preparing files to reimport...
+	reimport: step 86: Preparing files to reimport...
+	reimport: step 87: Preparing files to reimport...
+	reimport: step 88: Preparing files to reimport...
+	reimport: step 89: Preparing files to reimport...
+	reimport: step 90: Preparing files to reimport...
+	reimport: step 91: Preparing files to reimport...
+	reimport: step 92: Preparing files to reimport...
+	reimport: step 93: Preparing files to reimport...
+	reimport: step 94: Preparing files to reimport...
+	reimport: step 95: Preparing files to reimport...
+	reimport: step 96: Preparing files to reimport...
+	reimport: step 97: Preparing files to reimport...
+	reimport: step 98: Preparing files to reimport...
+	reimport: step 99: Preparing files to reimport...
+	reimport: step 100: Preparing files to reimport...
+	reimport: step 101: Preparing files to reimport...
+	reimport: step 102: Preparing files to reimport...
+	reimport: step 103: Preparing files to reimport...
+	reimport: step 0: Executing pre-reimport operations...
+	reimport: step 0: source_code_pro.fnt
+	reimport: step 1: source_code_pro.fnt
+	reimport: step 2: LobsterTwo-Regular.ttf
+	reimport: step 3: LobsterTwo-Italic.ttf
+	reimport: step 4: LobsterTwo-BoldItalic.ttf
+	reimport: step 5: LobsterTwo-Bold.ttf
+	reimport: step 6: CourierPrime-Regular.ttf
+	reimport: step 7: CourierPrime-Italic.ttf
+	reimport: step 8: CourierPrime-BoldItalic.ttf
+	reimport: step 12: AnonymousPro-BoldItalic.ttf
+	reimport: step 13: source_code_pro.fnt
+	reimport: step 14: LobsterTwo-Regular.ttf
+	reimport: step 15: LobsterTwo-Italic.ttf
+	reimport: step 16: LobsterTwo-BoldItalic.ttf
+	reimport: step 17: LobsterTwo-Bold.ttf
+	reimport: step 18: CourierPrime-Regular.ttf
+	reimport: step 19: CourierPrime-Italic.ttf
+	reimport: step 20: CourierPrime-BoldItalic.ttf
+	reimport: step 21: CourierPrime-Bold.ttf
+	reimport: step 22: AnonymousPro-Regular.ttf
+	reimport: step 23: AnonymousPro-Italic.ttf
+	reimport: step 24: AnonymousPro-BoldItalic.ttf
+	reimport: step 25: AnonymousPro-Bold.ttf
+	reimport: step 26: ai_1772402795_41806.png
+	reimport: step 27: ai_1772402856_16831.png
+	reimport: step 28: ai_1772402898_98459.png
+	reimport: step 29: ai_1772403199_14433.png
+	reimport: step 30: ai_1772552486_93617.png
+	reimport: step 31: ai_1772552525_77605.png
+	reimport: step 32: ai_1772552604_8358.png
+	reimport: step 33: ai_1772552877_57502.png
+	reimport: step 34: ai_1772552924_57442.png
+	reimport: step 35: ai_1772552999_89419.png
+	reimport: step 36: ai_1772553100_59443.png
+	reimport: step 37: ai_1772400321_48446.png
+	reimport: step 38: ai_1772394398_09522.png
+	reimport: step 39: ai_1772392461_09832.png
+	reimport: step 40: ai_1772392306_46295.png
+	reimport: step 41: ai_1772391570_2981.png
+	reimport: step 42: ai_1772391265_71791.png
+	reimport: step 43: ai_1772390350_70862.png
+	reimport: step 44: ai_1772390303_69232.png
+	reimport: step 45: ai_1772389973_03395.png
+	reimport: step 46: ai_1772389917_08433.png
+	reimport: step 47: Character_5_room.jpeg
+	reimport: step 48: icon.svg
+	reimport: step 49: Girard-sad.png
+	reimport: step 50: Girard-broom-sad.png
+	reimport: step 51: Girard-broom-crazy.png
+	reimport: step 52: Character_2.jpeg
+	reimport: step 53: ai_1772554692_71553.png
+	reimport: step 54: ai_1772554642_76719.png
+	reimport: step 55: ai_1772554574_76598.png
+	reimport: step 56: ai_1772554514_28913.png
+	reimport: step 57: ai_1772554471_28646.png
+	reimport: step 58: ai_1772554356_02773.png
+	reimport: step 59: ai_1772554032_78817.png
+	reimport: step 60: ai_1772553987_47751.png
+	reimport: step 61: ai_1772553935_94936.png
+	reimport: step 62: ai_1772553902_29006.png
+	reimport: step 63: ai_1772553838_20938.png
+	reimport: step 64: ai_1772553776_65883.png
+	reimport: step 65: ai_1772553674_3896.png
+	reimport: step 66: ai_1772553636_05018.png
+	reimport: step 67: ai_1772553589_65025.png
+	reimport: step 68: ai_1772553512_49038.png
+	reimport: step 69: ai_1772553198_83321.png
+	reimport: step 70: ai_1772553166_33308.png
+	reimport: step 71: Character_3_room.jpeg
+	reimport: step 73: Character_2_room.jpeg
+	reimport: step 74: Character_2.jpeg
+	reimport: step 76: Character_1.jpeg
+	reimport: step 77: Background_player_bedroom.jpeg
+	reimport: step 78: Background_bathroom.jpeg
+	reimport: step 79: Background_basement.jpeg
+	reimport: step 80: Background_6.jpeg
+	reimport: step 81: Background_5.jpeg
+	reimport: step 82: Background_4.jpeg
+	reimport: step 83: Background_3.jpeg
+	reimport: step 84: Background_1.jpeg
+	reimport: step 85: background.jpeg
+	reimport: step 86: icon.png
+	reimport: step 87: yellow.png
+	reimport: step 88: Script.svg
+	reimport: step 89: red.png
+	reimport: step 90: green.png
+	reimport: step 91: Folder.svg
+	reimport: step 92: play.png
+	reimport: step 93: arrow.png
+	reimport: step 94: Character_4_room.jpeg
+	reimport: step 95: Character_3_room.jpeg
+	reimport: step 96: Character_2_room.jpeg
+	reimport: step 97: Character_1_room.jpeg
+	reimport: step 98: Background_player_bedroom.jpeg
+	reimport: step 99: Background_bathroom.jpeg
+	reimport: step 100: Background_basement.jpeg
+	reimport: step 101: Background_6.jpeg
+	reimport: step 102: Background_5.jpeg
+	reimport: step 103: Background_4.jpeg
+	reimport: step 104: Finalizing Asset Import...
+reimport: end
+update_script_paths_documentation: begin: Updating scripts documentation steps: 167
+	update_script_paths_documentation: step 0: gut_cli.gd
+	update_script_paths_documentation: step 1: optparse.gd
+	update_script_paths_documentation: step 2: BottomPanelShortcuts.gd
+	update_script_paths_documentation: step 3: editor_globals.gd
+	update_script_paths_documentation: step 4: GutBottomPanel.gd
+	update_script_paths_documentation: step 5: GutControl.gd
+	update_script_paths_documentation: step 6: GutRunner.gd
+	update_script_paths_documentation: step 7: gut_config_gui.gd
+	update_script_paths_documentation: step 8: gut_gui.gd
+	update_script_paths_documentation: step 9: gut_user_preferences.gd
+	update_script_paths_documentation: step 10: OutputText.gd
+	update_script_paths_documentation: step 11: panel_controls.gd
+	update_script_paths_documentation: step 12: ResizeHandle.gd
+	update_script_paths_documentation: step 13: ResultsTree.gd
+	update_script_paths_documentation: step 14: RunAtCursor.gd
+	update_script_paths_documentation: step 15: RunResults.gd
+	update_script_paths_documentation: step 16: script_text_editor_controls.gd
+	update_script_paths_documentation: step 17: ShortcutButton.gd
+	update_script_paths_documentation: step 18: autofree.gd
+	update_script_paths_documentation: step 19: awaiter.gd
+	update_script_paths_documentation: step 20: collected_script.gd
+	update_script_paths_documentation: step 21: collected_test.gd
+	update_script_paths_documentation: step 22: comparator.gd
+	update_script_paths_documentation: step 23: compare_result.gd
+	update_script_paths_documentation: step 24: diff_formatter.gd
+	update_script_paths_documentation: step 25: diff_tool.gd
+	update_script_paths_documentation: step 26: doubler.gd
+	update_script_paths_documentation: step 27: double_tools.gd
+	update_script_paths_documentation: step 28: dynamic_gdscript.gd
+	update_script_paths_documentation: step 29: gut.gd
+	update_script_paths_documentation: step 30: GutScene.gd
+	update_script_paths_documentation: step 31: gut_cmdln.gd
+	update_script_paths_documentation: step 32: gut_config.gd
+	update_script_paths_documentation: step 33: gut_plugin.gd
+	update_script_paths_documentation: step 34: gut_to_move.gd
+	update_script_paths_documentation: step 35: gut_vscode_debugger.gd
+	update_script_paths_documentation: step 36: hook_script.gd
+	update_script_paths_documentation: step 37: inner_class_registry.gd
+	update_script_paths_documentation: step 38: input_factory.gd
+	update_script_paths_documentation: step 39: input_sender.gd
+	update_script_paths_documentation: step 40: junit_xml_export.gd
+	update_script_paths_documentation: step 41: lazy_loader.gd
+	update_script_paths_documentation: step 42: logger.gd
+	update_script_paths_documentation: step 43: method_maker.gd
+	update_script_paths_documentation: step 44: one_to_many.gd
+	update_script_paths_documentation: step 45: orphan_counter.gd
+	update_script_paths_documentation: step 46: parameter_factory.gd
+	update_script_paths_documentation: step 47: parameter_handler.gd
+	update_script_paths_documentation: step 48: printers.gd
+	update_script_paths_documentation: step 49: result_exporter.gd
+	update_script_paths_documentation: step 50: script_parser.gd
+	update_script_paths_documentation: step 51: signal_watcher.gd
+	update_script_paths_documentation: step 52: spy.gd
+	update_script_paths_documentation: step 53: strutils.gd
+	update_script_paths_documentation: step 54: stubber.gd
+	update_script_paths_documentation: step 55: stub_params.gd
+	update_script_paths_documentation: step 56: summary.gd
+	update_script_paths_documentation: step 57: test.gd
+	update_script_paths_documentation: step 58: test_collector.gd
+	update_script_paths_documentation: step 59: thing_counter.gd
+	update_script_paths_documentation: step 60: UserFileViewer.gd
+	update_script_paths_documentation: step 61: utils.gd
+	update_script_paths_documentation: step 62: version_conversion.gd
+	update_script_paths_documentation: step 63: version_numbers.gd
+	update_script_paths_documentation: step 64: warnings_manager.gd
+	update_script_paths_documentation: step 65: add_chapter_command.gd
+	update_script_paths_documentation: step 66: add_condition_command.gd
+	update_script_paths_documentation: step 67: add_dialogue_command.gd
+	update_script_paths_documentation: step 68: add_scene_command.gd
+	update_script_paths_documentation: step 69: add_sequence_command.gd
+	update_script_paths_documentation: step 70: base_command.gd
+	update_script_paths_documentation: step 71: edit_dialogue_command.gd
+	update_script_paths_documentation: step 72: move_node_command.gd
+	update_script_paths_documentation: step 73: remove_chapter_command.gd
+	update_script_paths_documentation: step 74: remove_condition_command.gd
+	update_script_paths_documentation: step 75: remove_dialogue_command.gd
+	update_script_paths_documentation: step 76: remove_scene_command.gd
+	update_script_paths_documentation: step 77: remove_sequence_command.gd
+	update_script_paths_documentation: step 78: rename_node_command.gd
+	update_script_paths_documentation: step 79: set_sequence_transition_command.gd
+	update_script_paths_documentation: step 80: editor_state.gd
+	update_script_paths_documentation: step 81: game_play_controller.gd
+	update_script_paths_documentation: step 82: game_ui_builder.gd
+	update_script_paths_documentation: step 83: main_ui_builder.gd
+	update_script_paths_documentation: step 84: menu_controller.gd
+	update_script_paths_documentation: step 85: navigation_controller.gd
+	update_script_paths_documentation: step 86: play_context.gd
+	update_script_paths_documentation: step 87: play_controller.gd
+	update_script_paths_documentation: step 88: play_ui_controller.gd
+	update_script_paths_documentation: step 89: sequence_ui_controller.gd
+	update_script_paths_documentation: step 90: ui_controller.gd
+	update_script_paths_documentation: step 91: rewrite_runner.gd
+	update_script_paths_documentation: step 92: story_path_rewriter.gd
+	update_script_paths_documentation: step 93: chapter.gd
+	update_script_paths_documentation: step 94: choice.gd
+	update_script_paths_documentation: step 95: condition.gd
+	update_script_paths_documentation: step 96: condition_rule.gd
+	update_script_paths_documentation: step 97: consequence.gd
+	update_script_paths_documentation: step 98: dialogue.gd
+	update_script_paths_documentation: step 99: ending.gd
+	update_script_paths_documentation: step 100: foreground.gd
+	update_script_paths_documentation: step 101: scene_data.gd
+	update_script_paths_documentation: step 102: sequence.gd
+	update_script_paths_documentation: step 103: sequence_fx.gd
+	update_script_paths_documentation: step 104: story.gd
+	update_script_paths_documentation: step 105: story_notification.gd
+	update_script_paths_documentation: step 106: variable_definition.gd
+	update_script_paths_documentation: step 107: variable_effect.gd
+	update_script_paths_documentation: step 108: story_saver.gd
+	update_script_paths_documentation: step 109: yaml_parser.gd
+	update_script_paths_documentation: step 110: comfyui_client.gd
+	update_script_paths_documentation: step 111: comfyui_config.gd
+	update_script_paths_documentation: step 112: event_bus.gd
+	update_script_paths_documentation: step 113: export_service.gd
+	update_script_paths_documentation: step 114: gallery_cleaner_service.gd
+	update_script_paths_documentation: step 115: image_category_service.gd
+	update_script_paths_documentation: step 116: image_rename_service.gd
+	update_script_paths_documentation: step 117: notification_service.gd
+	update_script_paths_documentation: step 118: story_i18n_service.gd
+	update_script_paths_documentation: step 119: story_verifier.gd
+	update_script_paths_documentation: step 120: undo_redo_service.gd
+	update_script_paths_documentation: step 121: category_manager_dialog.gd
+	update_script_paths_documentation: step 122: export_dialog.gd
+	update_script_paths_documentation: step 123: gallery_dialog.gd
+	update_script_paths_documentation: step 124: i18n_dialog.gd
+	update_script_paths_documentation: step 125: image_picker_dialog.gd
+	update_script_paths_documentation: step 126: language_manager_dialog.gd
+	update_script_paths_documentation: step 127: menu_config_dialog.gd
+	update_script_paths_documentation: step 128: notification_dialog.gd
+	update_script_paths_documentation: step 129: rename_dialog.gd
+	update_script_paths_documentation: step 130: condition_editor.gd
+	update_script_paths_documentation: step 131: dialogue_editor.gd
+	update_script_paths_documentation: step 132: editor_main.gd
+	update_script_paths_documentation: step 133: ending_editor.gd
+	update_script_paths_documentation: step 134: variable_panel.gd
+	update_script_paths_documentation: step 135: verifier_report_panel.gd
+	update_script_paths_documentation: step 136: game_settings.gd
+	update_script_paths_documentation: step 137: main_menu.gd
+	update_script_paths_documentation: step 138: options_menu.gd
+	update_script_paths_documentation: step 139: pause_menu.gd
+	update_script_paths_documentation: step 140: breadcrumb.gd
+	update_script_paths_documentation: step 141: story_play_controller.gd
+	update_script_paths_documentation: step 142: dialogue_list_item.gd
+	update_script_paths_documentation: step 143: dialogue_list_panel.gd
+	update_script_paths_documentation: step 144: fx_panel.gd
+	update_script_paths_documentation: step 145: sequence_editor.gd
+	update_script_paths_documentation: step 146: sequence_visual_editor.gd
+	update_script_paths_documentation: step 147: transition_panel.gd
+	update_script_paths_documentation: step 148: consequence_target_helper.gd
+	update_script_paths_documentation: step 149: effect_row_builder.gd
+	update_script_paths_documentation: step 150: image_file_dialog.gd
+	update_script_paths_documentation: step 151: image_preview_popup.gd
+	update_script_paths_documentation: step 152: texture_loader.gd
+	update_script_paths_documentation: step 153: foreground_clipboard.gd
+	update_script_paths_documentation: step 154: foreground_transition.gd
+	update_script_paths_documentation: step 155: placement_grid.gd
+	update_script_paths_documentation: step 156: sequence_fx_player.gd
+	update_script_paths_documentation: step 157: chapter_graph_view.gd
+	update_script_paths_documentation: step 158: graph_node_item.gd
+	update_script_paths_documentation: step 159: scene_graph_view.gd
+	update_script_paths_documentation: step 160: sequence_graph_view.gd
+	update_script_paths_documentation: step 161: game.gd
+	update_script_paths_documentation: step 162: main.gd
+	update_script_paths_documentation: step 163: generate_epreuve_du_heros.gd
+	update_script_paths_documentation: step 164: verify_epreuve_du_heros.gd
+	update_script_paths_documentation: step 165: verify_innherited_hearts.gd
+	update_script_paths_documentation: step 166: verify_story.gd
+update_script_paths_documentation: end
+reimport: begin: (Re)Importing Assets steps: 104
+	reimport: step 0: Executing post-reimport operations...
+reimport: end
+loading_editor_layout: begin: Loading editor steps: 5
+	loading_editor_layout: step 0: Loading editor layout...
+loading_editor_layout: end
+Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org
+
+first_scan_filesystem: begin: Project initialization steps: 5
+	first_scan_filesystem: step 0: Scanning file structure...
+	first_scan_filesystem: step 1: Loading global class names...
+	first_scan_filesystem: step 2: Verifying GDExtensions...
+	first_scan_filesystem: step 3: Creating autoload scripts...
+	first_scan_filesystem: step 4: Initializing plugins...
+	first_scan_filesystem: step 5: Starting file scan...
+first_scan_filesystem: end
+savepack: begin: Packing steps: 102
+	savepack: step 2: Storing File: res://.godot/imported/ai_1772552999_89419.png-c33f2ce157c26a906b37425ffc1a4c64.ctex
+	savepack: step 2: Storing File: res://story/assets/foregrounds/ai_1772552999_89419.png.import
+	savepack: step 2: Storing File: res://.godot/imported/ai_1772552924_57442.png-e6ba1551a2582d2bdf003820d994e1ff.ctex
+	savepack: step 2: Storing File: res://story/assets/foregrounds/ai_1772552924_57442.png.import
+	savepack: step 3: Storing File: res://.godot/imported/ai_1772552877_57502.png-29a1015213d33b38a902fdec706ef868.ctex
+	savepack: step 3: Storing File: res://story/assets/foregrounds/ai_1772552877_57502.png.import
+	savepack: step 3: Storing File: res://.godot/imported/ai_1772552604_8358.png-70291bd519cc84a5971ac38bf5ee5d0b.ctex
+	savepack: step 3: Storing File: res://story/assets/foregrounds/ai_1772552604_8358.png.import
+	savepack: step 4: Storing File: res://.godot/imported/ai_1772552525_77605.png-bbd911249ef85cc48b2f5233a36f089d.ctex
+	savepack: step 4: Storing File: res://story/assets/foregrounds/ai_1772552525_77605.png.import
+	savepack: step 4: Storing File: res://.godot/imported/ai_1772552486_93617.png-b7de1166031d9e83535a29d9fa3fe819.ctex
+	savepack: step 4: Storing File: res://story/assets/foregrounds/ai_1772552486_93617.png.import
+	savepack: step 5: Storing File: res://.godot/imported/ai_1772403199_14433.png-b336af2a0c51dcd9e9162a4b8d89e655.ctex
+	savepack: step 5: Storing File: res://story/assets/foregrounds/ai_1772403199_14433.png.import
+	savepack: step 5: Storing File: res://.godot/imported/ai_1772402898_98459.png-3994034f3ac1ccffbf65268e28814715.ctex
+	savepack: step 5: Storing File: res://story/assets/foregrounds/ai_1772402898_98459.png.import
+	savepack: step 6: Storing File: res://.godot/imported/ai_1772402856_16831.png-a8b49b2a39b5acafb150867434d808de.ctex
+	savepack: step 6: Storing File: res://story/assets/foregrounds/ai_1772402856_16831.png.import
+	savepack: step 6: Storing File: res://.godot/imported/ai_1772402795_41806.png-efdb5bd37a6534f72d2d5b0ac2654ac5.ctex
+	savepack: step 6: Storing File: res://story/assets/foregrounds/ai_1772402795_41806.png.import
+	savepack: step 7: Storing File: res://.godot/imported/ai_1772400321_48446.png-21f0f5a607b6af2611571032db962948.ctex
+	savepack: step 7: Storing File: res://story/assets/foregrounds/ai_1772400321_48446.png.import
+	savepack: step 8: Storing File: res://.godot/imported/ai_1772394398_09522.png-9ec57c2945da5af95cdb19f694140f98.ctex
+	savepack: step 8: Storing File: res://story/assets/foregrounds/ai_1772394398_09522.png.import
+	savepack: step 8: Storing File: res://.godot/imported/ai_1772392461_09832.png-7ac593797fdad9c71e17787f5f5af2ba.ctex
+	savepack: step 8: Storing File: res://story/assets/foregrounds/ai_1772392461_09832.png.import
+	savepack: step 9: Storing File: res://.godot/imported/ai_1772392306_46295.png-30c1dfef0b2cb87a68f43f72db500cc4.ctex
+	savepack: step 9: Storing File: res://story/assets/foregrounds/ai_1772392306_46295.png.import
+	savepack: step 9: Storing File: res://.godot/imported/ai_1772391570_2981.png-2fc9d358ab6b5831a24080a866a8bd6f.ctex
+	savepack: step 9: Storing File: res://story/assets/foregrounds/ai_1772391570_2981.png.import
+	savepack: step 10: Storing File: res://.godot/imported/ai_1772391265_71791.png-57d7f239b94e639034d61994a7e27cdb.ctex
+	savepack: step 10: Storing File: res://story/assets/foregrounds/ai_1772391265_71791.png.import
+	savepack: step 10: Storing File: res://.godot/imported/ai_1772390350_70862.png-657e40812ba205ffbc0f41a9ee06926b.ctex
+	savepack: step 10: Storing File: res://story/assets/foregrounds/ai_1772390350_70862.png.import
+	savepack: step 11: Storing File: res://.godot/imported/ai_1772390303_69232.png-ffd8b6ac6f7527591a7464e68fa1994c.ctex
+	savepack: step 11: Storing File: res://story/assets/foregrounds/ai_1772390303_69232.png.import
+	savepack: step 11: Storing File: res://.godot/imported/ai_1772389973_03395.png-0b83a0ac712c93002e4ee57c3cbe4072.ctex
+	savepack: step 11: Storing File: res://story/assets/foregrounds/ai_1772389973_03395.png.import
+	savepack: step 12: Storing File: res://.godot/imported/ai_1772389917_08433.png-da82f04ad6b4cd48173c35f27a3823b3.ctex
+	savepack: step 12: Storing File: res://story/assets/foregrounds/ai_1772389917_08433.png.import
+	savepack: step 13: Storing File: res://.godot/imported/Character_5_room.jpeg-335cb9f7bc10db42e5455d791b4f2078.ctex
+	savepack: step 13: Storing File: res://story/assets/backgrounds/Character_5_room.jpeg.import
+	savepack: step 13: Storing File: res://.godot/imported/Character_4_room.jpeg-92bc0382d7678f2d83b98ba65caf789c.ctex
+	savepack: step 13: Storing File: res://story/assets/backgrounds/Character_4_room.jpeg.import
+	savepack: step 14: Storing File: res://.godot/imported/Character_3_room.jpeg-a66e8db7c1f5d81260070b2be28063e8.ctex
+	savepack: step 14: Storing File: res://story/assets/backgrounds/Character_3_room.jpeg.import
+	savepack: step 14: Storing File: res://.godot/imported/Character_2_room.jpeg-bd0d8551657bb3d02ac3158322d4275b.ctex
+	savepack: step 14: Storing File: res://story/assets/backgrounds/Character_2_room.jpeg.import
+	savepack: step 15: Storing File: res://.godot/imported/Character_1_room.jpeg-9ca63cbf3bc442dfc7a96f19de11a8cf.ctex
+	savepack: step 15: Storing File: res://story/assets/backgrounds/Character_1_room.jpeg.import
+	savepack: step 15: Storing File: res://.godot/imported/Background_player_bedroom.jpeg-4b67059b602ab59dde5ddf3a92f25928.ctex
+	savepack: step 15: Storing File: res://story/assets/backgrounds/Background_player_bedroom.jpeg.import
+	savepack: step 16: Storing File: res://.godot/imported/Background_bathroom.jpeg-931284627d05b561c5216ff6c41aa309.ctex
+	savepack: step 16: Storing File: res://story/assets/backgrounds/Background_bathroom.jpeg.import
+	savepack: step 16: Storing File: res://.godot/imported/Background_basement.jpeg-b8c0c671386f5d655f6ab25e7ef64d25.ctex
+	savepack: step 16: Storing File: res://story/assets/backgrounds/Background_basement.jpeg.import
+	savepack: step 17: Storing File: res://.godot/imported/Background_6.jpeg-50bc4f47e0a1d305d66e13456b96876b.ctex
+	savepack: step 17: Storing File: res://story/assets/backgrounds/Background_6.jpeg.import
+	savepack: step 18: Storing File: res://.godot/imported/Background_5.jpeg-9fafce2463a1d9db6040b04a60192eda.ctex
+	savepack: step 18: Storing File: res://story/assets/backgrounds/Background_5.jpeg.import
+	savepack: step 18: Storing File: res://.godot/imported/Background_4.jpeg-02b6172e8f2e33a3616299105e3692b9.ctex
+	savepack: step 18: Storing File: res://story/assets/backgrounds/Background_4.jpeg.import
+	savepack: step 19: Storing File: res://.godot/imported/Background_3.jpeg-b9624e0a1d32b3ef15728ebdadc2888b.ctex
+	savepack: step 19: Storing File: res://story/assets/backgrounds/Background_3.jpeg.import
+	savepack: step 19: Storing File: res://.godot/imported/Background_1.jpeg-6415de62b4a1903e33d5dd93e540b9a1.ctex
+	savepack: step 19: Storing File: res://story/assets/backgrounds/Background_1.jpeg.import
+	savepack: step 20: Storing File: res://.godot/imported/ai_1772552332_43598.png-a6d400b1d2f4c5110085694818344da9.ctex
+	savepack: step 20: Storing File: res://story/assets/backgrounds/ai_1772552332_43598.png.import
+	savepack: step 20: Storing File: res://.godot/imported/ai_1772391454_9497.png-16307f862935baca2532b3eb16aa22b0.ctex
+	savepack: step 20: Storing File: res://story/assets/backgrounds/ai_1772391454_9497.png.import
+	savepack: step 21: Storing File: res://.godot/imported/ai_1772389778_78445.png-9f10e5e9f70acb22c74cfca9fcc26d63.ctex
+	savepack: step 21: Storing File: res://story/assets/backgrounds/ai_1772389778_78445.png.import
+	savepack: step 21: Storing File: res://.godot/imported/Character_7.jpeg-a1194e86b5145bb48b41881b0ff75fbc.ctex
+	savepack: step 21: Storing File: res://story/artbook/Character_7.jpeg.import
+	savepack: step 22: Storing File: res://.godot/imported/Character_6_young.jpeg-612fceb23a2a6c4e51b32529a82fb50f.ctex
+	savepack: step 22: Storing File: res://story/artbook/Character_6_young.jpeg.import
+	savepack: step 22: Storing File: res://.godot/imported/Character_6_room.jpeg-419f2cb350a751d3273c167d9b62db56.ctex
+	savepack: step 22: Storing File: res://story/artbook/Character_6_room.jpeg.import
+	savepack: step 23: Storing File: res://.godot/imported/Character_6.jpeg-ca56f4259ee771a984804d9f567c637d.ctex
+	savepack: step 23: Storing File: res://story/artbook/Character_6.jpeg.import
+	savepack: step 24: Storing File: res://.godot/imported/Character_5_room.jpeg-80eabe549dbe540412712558ef4878c1.ctex
+	savepack: step 24: Storing File: res://story/artbook/Character_5_room.jpeg.import
+	savepack: step 24: Storing File: res://.godot/imported/Character_5.jpeg-e4e03c739ecbd26d034e5581a6bc12e6.ctex
+	savepack: step 24: Storing File: res://story/artbook/Character_5.jpeg.import
+	savepack: step 25: Storing File: res://.godot/imported/Character_4_room.jpeg-f41ad6f2693cb1a6c758a0d900b7dc1c.ctex
+	savepack: step 25: Storing File: res://story/artbook/Character_4_room.jpeg.import
+	savepack: step 25: Storing File: res://.godot/imported/Character_4.jpeg-745de6e27e141327054971463fccdf0c.ctex
+	savepack: step 25: Storing File: res://story/artbook/Character_4.jpeg.import
+	savepack: step 26: Storing File: res://.godot/imported/Character_3_room.jpeg-34f2121b5e0225cb9cb69a0a9da171ed.ctex
+	savepack: step 26: Storing File: res://story/artbook/Character_3_room.jpeg.import
+	savepack: step 26: Storing File: res://.godot/imported/Character_3.jpeg-5661ddcb4f9e66619495526dcdde0199.ctex
+	savepack: step 26: Storing File: res://story/artbook/Character_3.jpeg.import
+	savepack: step 27: Storing File: res://.godot/imported/Character_2_room.jpeg-04f9614a3b3cad4477c1046c0416e15a.ctex
+	savepack: step 27: Storing File: res://story/artbook/Character_2_room.jpeg.import
+	savepack: step 27: Storing File: res://.godot/imported/Character_2.jpeg-2c467b1206a2ab81b282a2f43641a71a.ctex
+	savepack: step 27: Storing File: res://story/artbook/Character_2.jpeg.import
+	savepack: step 28: Storing File: res://.godot/imported/Character_1_room.jpeg-84f85066cc0365375af994006a26255e.ctex
+	savepack: step 28: Storing File: res://story/artbook/Character_1_room.jpeg.import
+	savepack: step 29: Storing File: res://.godot/imported/Character_1.jpeg-e5aef97cdeb8835f66d8a54e76343cde.ctex
+	savepack: step 29: Storing File: res://story/artbook/Character_1.jpeg.import
+	savepack: step 29: Storing File: res://.godot/imported/Background_player_bedroom.jpeg-9acd61ca736f27a8907b0617072326b1.ctex
+	savepack: step 29: Storing File: res://story/artbook/Background_player_bedroom.jpeg.import
+	savepack: step 30: Storing File: res://story/i18n/languages.yaml
+	savepack: step 30: Storing File: res://story/i18n/fr.yaml
+	savepack: step 31: Storing File: res://story/i18n/es.yaml
+	savepack: step 31: Storing File: res://story/i18n/en.yaml
+	savepack: step 32: Storing File: res://story/i18n/de.yaml
+	savepack: step 32: Storing File: res://story/chapters/137daa3d-af5e-4722-8c5b-b965bf58fa36/scenes/zven0001-0000-4012-abcd-700000000001.yaml
+	savepack: step 33: Storing File: res://story/chapters/137daa3d-af5e-4722-8c5b-b965bf58fa36/scenes/pens1on1-0000-4012-abcd-200000000001.yaml
+	savepack: step 34: Storing File: res://story/chapters/137daa3d-af5e-4722-8c5b-b965bf58fa36/scenes/mary0001-0000-4012-abcd-300000000001.yaml
+	savepack: step 34: Storing File: res://story/chapters/137daa3d-af5e-4722-8c5b-b965bf58fa36/scenes/lola0001-0000-4012-abcd-500000000001.yaml
+	savepack: step 35: Storing File: res://story/chapters/137daa3d-af5e-4722-8c5b-b965bf58fa36/scenes/lise0001-0000-4012-abcd-400000000001.yaml
+	savepack: step 35: Storing File: res://story/chapters/137daa3d-af5e-4722-8c5b-b965bf58fa36/scenes/c124949a-a23d-489a-bf70-41197a4a861f.yaml
+	savepack: step 36: Storing File: res://story/chapters/137daa3d-af5e-4722-8c5b-b965bf58fa36/scenes/alic0001-0000-4012-abcd-600000000001.yaml
+	savepack: step 36: Storing File: res://story/chapters/137daa3d-af5e-4722-8c5b-b965bf58fa36/scenes/af40b119-4226-45d2-a8c7-d782f17a1112.yaml
+	savepack: step 37: Storing File: res://story/chapters/137daa3d-af5e-4722-8c5b-b965bf58fa36/scenes/a2b3c4d5-e6f7-4012-abcd-100000000001.yaml
+	savepack: step 37: Storing File: res://story/chapters/137daa3d-af5e-4722-8c5b-b965bf58fa36/scenes/9467f46a-79ce-47fe-b52b-4f18fc64248f.yaml
+	savepack: step 38: Storing File: res://story/chapters/137daa3d-af5e-4722-8c5b-b965bf58fa36/scenes/7874c0a1-6397-4a81-935b-9f65841beb60.yaml
+	savepack: step 39: Storing File: res://story/chapters/137daa3d-af5e-4722-8c5b-b965bf58fa36/scenes/75a0669c-cec6-40d0-883b-01ced9f9c789.yaml
+	savepack: step 39: Storing File: res://story/chapters/137daa3d-af5e-4722-8c5b-b965bf58fa36/scenes/4e833b39-d049-4125-82eb-60119abeb05d.yaml
+	savepack: step 40: Storing File: res://story/chapters/137daa3d-af5e-4722-8c5b-b965bf58fa36/scenes/039f1558-c83d-4a6b-b988-5cbfb4547f28.yaml
+	savepack: step 40: Storing File: res://story/chapters/137daa3d-af5e-4722-8c5b-b965bf58fa36/chapter.yaml
+	savepack: step 41: Storing File: res://story/assets/categories.yaml
+	savepack: step 41: Storing File: res://story/story.yaml
+	savepack: step 42: Storing File: res://.godot/imported/icon.svg-218a8f2b3041327d8a5756f3a245f83b.ctex
+	savepack: step 42: Storing File: res://icon.svg.import
+	savepack: step 42: Storing File: res://.gutconfig.json
+	savepack: step 43: Storing File: res://tools/verify_story.gdc
+	savepack: step 43: Storing File: res://tools/verify_innherited_hearts.gdc
+	savepack: step 44: Storing File: res://tools/verify_epreuve_du_heros.gdc
+	savepack: step 45: Storing File: res://tools/generate_epreuve_du_heros.gdc
+	savepack: step 45: Storing File: res://.godot/imported/Girard-sad.png-3428667f8e5d214564cd8ddf4baba18e.ctex
+	savepack: step 45: Storing File: res://story/assets/foregrounds/Girard-sad.png.import
+	savepack: step 46: Storing File: res://.godot/imported/Girard-broom-sad.png-e656276986a4f48d2037f36728e3ae84.ctex
+	savepack: step 46: Storing File: res://story/assets/foregrounds/Girard-broom-sad.png.import
+	savepack: step 46: Storing File: res://.godot/imported/Girard-broom-crazy.png-235c684872f03da2a3d38ba1068b4740.ctex
+	savepack: step 46: Storing File: res://story/assets/foregrounds/Girard-broom-crazy.png.import
+	savepack: step 47: Storing File: res://.godot/imported/Character_2.jpeg-8ef1bedfd93669b1491fc8e83d8ec0c5.ctex
+	savepack: step 47: Storing File: res://story/assets/foregrounds/Character_2.jpeg.import
+	savepack: step 47: Storing File: res://.godot/imported/ai_1772554692_71553.png-2e65b6c69bd21b863960f65682f63cbf.ctex
+	savepack: step 47: Storing File: res://story/assets/foregrounds/ai_1772554692_71553.png.import
+	savepack: step 48: Storing File: res://.godot/imported/ai_1772554642_76719.png-5ff29fe9d996083a7b69efb66932a235.ctex
+	savepack: step 48: Storing File: res://story/assets/foregrounds/ai_1772554642_76719.png.import
+	savepack: step 48: Storing File: res://.godot/imported/ai_1772554574_76598.png-85ead2fe1f817bc09afc5ae1b1bcf54a.ctex
+	savepack: step 48: Storing File: res://story/assets/foregrounds/ai_1772554574_76598.png.import
+	savepack: step 49: Storing File: res://.godot/imported/ai_1772554514_28913.png-c9cfc15cffbc2052e912f1f67b1c6376.ctex
+	savepack: step 49: Storing File: res://story/assets/foregrounds/ai_1772554514_28913.png.import
+	savepack: step 50: Storing File: res://.godot/imported/ai_1772554471_28646.png-2689311abf60da0856e45f7cf6901fb7.ctex
+	savepack: step 50: Storing File: res://story/assets/foregrounds/ai_1772554471_28646.png.import
+	savepack: step 50: Storing File: res://.godot/imported/ai_1772554356_02773.png-4ba009a94147a897e9947c956ff81ad0.ctex
+	savepack: step 50: Storing File: res://story/assets/foregrounds/ai_1772554356_02773.png.import
+	savepack: step 51: Storing File: res://.godot/imported/ai_1772554032_78817.png-e67bc9678c6addd7964958aaafdcab77.ctex
+	savepack: step 51: Storing File: res://story/assets/foregrounds/ai_1772554032_78817.png.import
+	savepack: step 51: Storing File: res://.godot/imported/ai_1772553987_47751.png-a26fc61e99f620a8b154ae03e97ad74c.ctex
+	savepack: step 51: Storing File: res://story/assets/foregrounds/ai_1772553987_47751.png.import
+	savepack: step 52: Storing File: res://.godot/imported/ai_1772553935_94936.png-fea2130fa153745172e0b65341c9bfbe.ctex
+	savepack: step 52: Storing File: res://story/assets/foregrounds/ai_1772553935_94936.png.import
+	savepack: step 52: Storing File: res://.godot/imported/ai_1772553902_29006.png-5150cd79138ce126f013fbd8d58e0c6f.ctex
+	savepack: step 52: Storing File: res://story/assets/foregrounds/ai_1772553902_29006.png.import
+	savepack: step 53: Storing File: res://.godot/imported/ai_1772553838_20938.png-a83262c3d24f40145e3a456f0c933bb9.ctex
+	savepack: step 53: Storing File: res://story/assets/foregrounds/ai_1772553838_20938.png.import
+	savepack: step 53: Storing File: res://.godot/imported/ai_1772553776_65883.png-526e3181e2f8f7634f3405857b1adb92.ctex
+	savepack: step 53: Storing File: res://story/assets/foregrounds/ai_1772553776_65883.png.import
+	savepack: step 54: Storing File: res://.godot/imported/ai_1772553674_3896.png-8895e60d406c051c93d7eeb5d014b383.ctex
+	savepack: step 54: Storing File: res://story/assets/foregrounds/ai_1772553674_3896.png.import
+	savepack: step 55: Storing File: res://.godot/imported/ai_1772553636_05018.png-0575e2feb5097c6c7479206aa5585f2f.ctex
+	savepack: step 55: Storing File: res://story/assets/foregrounds/ai_1772553636_05018.png.import
+	savepack: step 55: Storing File: res://.godot/imported/ai_1772553589_65025.png-a6078f288943ac029a09390ba0a1593e.ctex
+	savepack: step 55: Storing File: res://story/assets/foregrounds/ai_1772553589_65025.png.import
+	savepack: step 56: Storing File: res://.godot/imported/ai_1772553512_49038.png-db056c3a2262ab9c46dbd1f7cfda970a.ctex
+	savepack: step 56: Storing File: res://story/assets/foregrounds/ai_1772553512_49038.png.import
+	savepack: step 56: Storing File: res://.godot/imported/ai_1772553198_83321.png-c556068415fcea24d56ad164aab5279d.ctex
+	savepack: step 56: Storing File: res://story/assets/foregrounds/ai_1772553198_83321.png.import
+	savepack: step 57: Storing File: res://.godot/imported/ai_1772553166_33308.png-822810acc5ac58e121c79ff784831d82.ctex
+	savepack: step 57: Storing File: res://story/assets/foregrounds/ai_1772553166_33308.png.import
+	savepack: step 57: Storing File: res://.godot/imported/ai_1772553100_59443.png-1dcdc9999b58c118f9d20b5fec4e79e5.ctex
+	savepack: step 57: Storing File: res://story/assets/foregrounds/ai_1772553100_59443.png.import
+	savepack: step 58: Storing File: res://src/commands/add_chapter_command.gdc
+	savepack: step 58: Storing File: res://src/commands/add_condition_command.gdc
+	savepack: step 59: Storing File: res://src/commands/add_dialogue_command.gdc
+	savepack: step 60: Storing File: res://src/commands/add_scene_command.gdc
+	savepack: step 60: Storing File: res://src/commands/add_sequence_command.gdc
+	savepack: step 61: Storing File: res://src/commands/base_command.gdc
+	savepack: step 61: Storing File: res://src/commands/edit_dialogue_command.gdc
+	savepack: step 62: Storing File: res://src/commands/move_node_command.gdc
+	savepack: step 62: Storing File: res://src/commands/remove_chapter_command.gdc
+	savepack: step 63: Storing File: res://src/commands/remove_condition_command.gdc
+	savepack: step 63: Storing File: res://src/commands/remove_dialogue_command.gdc
+	savepack: step 64: Storing File: res://src/commands/remove_scene_command.gdc
+	savepack: step 64: Storing File: res://src/commands/remove_sequence_command.gdc
+	savepack: step 65: Storing File: res://src/commands/rename_node_command.gdc
+	savepack: step 66: Storing File: res://src/commands/set_sequence_transition_command.gdc
+	savepack: step 66: Storing File: res://src/controllers/editor_state.gdc
+	savepack: step 67: Storing File: res://src/controllers/game_play_controller.gdc
+	savepack: step 67: Storing File: res://src/controllers/game_ui_builder.gdc
+	savepack: step 68: Storing File: res://.godot/imported/Background_6.jpeg-8c0634a5f081343d79ce2d19ff16be28.ctex
+	savepack: step 68: Storing File: res://story/artbook/Background_6.jpeg.import
+	savepack: step 68: Storing File: res://src/controllers/menu_controller.gdc
+	savepack: step 69: Storing File: res://.godot/imported/Background_5.jpeg-d586cf0a7e95bf7df38805b6d987862e.ctex
+	savepack: step 69: Storing File: res://story/artbook/Background_5.jpeg.import
+	savepack: step 69: Storing File: res://.godot/imported/Background_4.jpeg-a162efb64afe8004aafb85f824bf498d.ctex
+	savepack: step 69: Storing File: res://story/artbook/Background_4.jpeg.import
+	savepack: step 70: Storing File: res://.godot/imported/Background_3.jpeg-67910e0b919ff65d8335a87f85c8c290.ctex
+	savepack: step 70: Storing File: res://story/artbook/Background_3.jpeg.import
+	savepack: step 71: Storing File: res://src/controllers/play_ui_controller.gdc
+	savepack: step 71: Storing File: res://src/controllers/sequence_ui_controller.gdc
+	savepack: step 72: Storing File: res://src/controllers/ui_controller.gdc
+	savepack: step 72: Storing File: res://.godot/imported/Background_1.jpeg-142be80f8f8dd474c6a8e2f43d3c2784.ctex
+	savepack: step 72: Storing File: res://story/artbook/Background_1.jpeg.import
+	savepack: step 73: Storing File: res://.godot/imported/background.jpeg-09624c9d5c8ce0f2279a7f388c0b1a07.ctex
+	savepack: step 73: Storing File: res://story/artbook/background.jpeg.import
+	savepack: step 73: Storing File: res://src/models/chapter.gdc
+	savepack: step 74: Storing File: res://src/models/choice.gdc
+	savepack: step 74: Storing File: res://src/models/condition.gdc
+	savepack: step 75: Storing File: res://src/models/condition_rule.gdc
+	savepack: step 76: Storing File: res://src/models/consequence.gdc
+	savepack: step 76: Storing File: res://src/models/dialogue.gdc
+	savepack: step 77: Storing File: res://src/models/ending.gdc
+	savepack: step 77: Storing File: res://src/models/foreground.gdc
+	savepack: step 78: Storing File: res://src/models/scene_data.gdc
+	savepack: step 78: Storing File: res://src/models/sequence.gdc
+	savepack: step 79: Storing File: res://src/models/sequence_fx.gdc
+	savepack: step 79: Storing File: res://src/models/story.gdc
+	savepack: step 80: Storing File: res://src/models/story_notification.gdc
+	savepack: step 81: Storing File: res://src/models/variable_definition.gdc
+	savepack: step 81: Storing File: res://src/models/variable_effect.gdc
+	savepack: step 82: Storing File: res://src/persistence/story_saver.gdc
+	savepack: step 82: Storing File: res://src/persistence/yaml_parser.gdc
+	savepack: step 83: Storing File: res://.godot/imported/Background_basement.jpeg-5d23502ede8dd9912a154f07bf2ece15.ctex
+	savepack: step 83: Storing File: res://story/artbook/Background_basement.jpeg.import
+	savepack: step 83: Storing File: res://.godot/imported/Background_bathroom.jpeg-4000d968814910227d7d14456784dfad.ctex
+	savepack: step 83: Storing File: res://story/artbook/Background_bathroom.jpeg.import
+	savepack: step 84: Storing File: res://src/services/event_bus.gdc
+	savepack: step 84: Storing File: res://src/services/export_service.gdc
+	savepack: step 85: Storing File: res://src/services/gallery_cleaner_service.gdc
+	savepack: step 85: Storing File: res://src/services/image_category_service.gdc
+	savepack: step 86: Storing File: res://src/services/image_rename_service.gdc
+	savepack: step 87: Storing File: res://src/services/notification_service.gdc
+	savepack: step 87: Storing File: res://src/services/story_i18n_service.gdc
+	savepack: step 88: Storing File: res://src/services/story_verifier.gdc
+	savepack: step 88: Storing File: res://src/services/undo_redo_service.gdc
+	savepack: step 89: Storing File: res://.godot/exported/133200997/export-c369a240ae45c9165bf44aee1dcd54aa-game.scn
+	savepack: step 89: Storing File: res://src/game.gdc
+	savepack: step 90: Storing File: res://src/ui/play/story_play_controller.gdc
+	savepack: step 90: Storing File: res://src/ui/sequence/dialogue_list_item.gdc
+	savepack: step 91: Storing File: res://src/ui/sequence/dialogue_list_panel.gdc
+	savepack: step 92: Storing File: res://src/ui/sequence/fx_panel.gdc
+	savepack: step 92: Storing File: res://src/ui/visual/sequence_fx_player.gdc
+	savepack: step 93: Storing File: res://src/ui/visual/placement_grid.gdc
+	savepack: step 93: Storing File: res://src/ui/visual/foreground_transition.gdc
+	savepack: step 94: Storing File: res://src/ui/visual/foreground_clipboard.gdc
+	savepack: step 94: Storing File: res://.godot/exported/133200997/export-baadd010562bdb35b3786ec821b86b8f-editor_main.res
+	savepack: step 95: Storing File: res://src/ui/shared/texture_loader.gdc
+	savepack: step 95: Storing File: res://src/ui/shared/image_preview_popup.gdc
+	savepack: step 96: Storing File: res://src/ui/shared/image_file_dialog.gdc
+	savepack: step 97: Storing File: res://src/ui/shared/effect_row_builder.gdc
+	savepack: step 97: Storing File: res://src/ui/shared/consequence_target_helper.gdc
+	savepack: step 98: Storing File: res://src/ui/sequence/transition_panel.gdc
+	savepack: step 98: Storing File: res://src/ui/sequence/sequence_visual_editor.gdc
+	savepack: step 99: Storing File: res://src/ui/menu/game_settings.gdc
+	savepack: step 99: Storing File: res://src/ui/menu/main_menu.gdc
+	savepack: step 100: Storing File: res://src/ui/menu/options_menu.gdc
+	savepack: step 100: Storing File: res://src/ui/menu/pause_menu.gdc
+	savepack: step 101: Storing File: res://src/ui/sequence/sequence_editor.gdc
+	savepack: step 101: Storing File: res://tools/verify_story.gd.remap
+	savepack: step 101: Storing File: res://tools/verify_innherited_hearts.gd.remap
+	savepack: step 101: Storing File: res://tools/verify_epreuve_du_heros.gd.remap
+	savepack: step 101: Storing File: res://tools/generate_epreuve_du_heros.gd.remap
+	savepack: step 101: Storing File: res://src/commands/add_chapter_command.gd.remap
+	savepack: step 101: Storing File: res://src/commands/add_condition_command.gd.remap
+	savepack: step 101: Storing File: res://src/commands/add_dialogue_command.gd.remap
+	savepack: step 101: Storing File: res://src/commands/add_scene_command.gd.remap
+	savepack: step 101: Storing File: res://src/commands/add_sequence_command.gd.remap
+	savepack: step 101: Storing File: res://src/commands/base_command.gd.remap
+	savepack: step 101: Storing File: res://src/commands/edit_dialogue_command.gd.remap
+	savepack: step 101: Storing File: res://src/commands/move_node_command.gd.remap
+	savepack: step 101: Storing File: res://src/commands/remove_chapter_command.gd.remap
+	savepack: step 101: Storing File: res://src/commands/remove_condition_command.gd.remap
+	savepack: step 101: Storing File: res://src/commands/remove_dialogue_command.gd.remap
+	savepack: step 101: Storing File: res://src/commands/remove_scene_command.gd.remap
+	savepack: step 101: Storing File: res://src/commands/remove_sequence_command.gd.remap
+	savepack: step 101: Storing File: res://src/commands/rename_node_command.gd.remap
+	savepack: step 101: Storing File: res://src/commands/set_sequence_transition_command.gd.remap
+	savepack: step 101: Storing File: res://src/controllers/editor_state.gd.remap
+	savepack: step 101: Storing File: res://src/controllers/game_play_controller.gd.remap
+	savepack: step 101: Storing File: res://src/controllers/game_ui_builder.gd.remap
+	savepack: step 101: Storing File: res://src/controllers/menu_controller.gd.remap
+	savepack: step 101: Storing File: res://src/controllers/play_ui_controller.gd.remap
+	savepack: step 101: Storing File: res://src/controllers/sequence_ui_controller.gd.remap
+	savepack: step 101: Storing File: res://src/controllers/ui_controller.gd.remap
+	savepack: step 101: Storing File: res://src/models/chapter.gd.remap
+	savepack: step 101: Storing File: res://src/models/choice.gd.remap
+	savepack: step 101: Storing File: res://src/models/condition.gd.remap
+	savepack: step 101: Storing File: res://src/models/condition_rule.gd.remap
+	savepack: step 101: Storing File: res://src/models/consequence.gd.remap
+	savepack: step 101: Storing File: res://src/models/dialogue.gd.remap
+	savepack: step 101: Storing File: res://src/models/ending.gd.remap
+	savepack: step 101: Storing File: res://src/models/foreground.gd.remap
+	savepack: step 101: Storing File: res://src/models/scene_data.gd.remap
+	savepack: step 101: Storing File: res://src/models/sequence.gd.remap
+	savepack: step 101: Storing File: res://src/models/sequence_fx.gd.remap
+	savepack: step 101: Storing File: res://src/models/story.gd.remap
+	savepack: step 101: Storing File: res://src/models/story_notification.gd.remap
+	savepack: step 101: Storing File: res://src/models/variable_definition.gd.remap
+	savepack: step 101: Storing File: res://src/models/variable_effect.gd.remap
+	savepack: step 101: Storing File: res://src/persistence/story_saver.gd.remap
+	savepack: step 101: Storing File: res://src/persistence/yaml_parser.gd.remap
+	savepack: step 101: Storing File: res://src/services/event_bus.gd.remap
+	savepack: step 101: Storing File: res://src/services/export_service.gd.remap
+	savepack: step 101: Storing File: res://src/services/gallery_cleaner_service.gd.remap
+	savepack: step 101: Storing File: res://src/services/image_category_service.gd.remap
+	savepack: step 101: Storing File: res://src/services/image_rename_service.gd.remap
+	savepack: step 101: Storing File: res://src/services/notification_service.gd.remap
+	savepack: step 101: Storing File: res://src/services/story_i18n_service.gd.remap
+	savepack: step 101: Storing File: res://src/services/story_verifier.gd.remap
+	savepack: step 101: Storing File: res://src/services/undo_redo_service.gd.remap
+	savepack: step 101: Storing File: res://src/game.tscn.remap
+	savepack: step 101: Storing File: res://src/game.gd.remap
+	savepack: step 101: Storing File: res://src/ui/play/story_play_controller.gd.remap
+	savepack: step 101: Storing File: res://src/ui/sequence/dialogue_list_item.gd.remap
+	savepack: step 101: Storing File: res://src/ui/sequence/dialogue_list_panel.gd.remap
+	savepack: step 101: Storing File: res://src/ui/sequence/fx_panel.gd.remap
+	savepack: step 101: Storing File: res://src/ui/visual/sequence_fx_player.gd.remap
+	savepack: step 101: Storing File: res://src/ui/visual/placement_grid.gd.remap
+	savepack: step 101: Storing File: res://src/ui/visual/foreground_transition.gd.remap
+	savepack: step 101: Storing File: res://src/ui/visual/foreground_clipboard.gd.remap
+	savepack: step 101: Storing File: res://src/ui/themes/editor_main.tres.remap
+	savepack: step 101: Storing File: res://src/ui/shared/texture_loader.gd.remap
+	savepack: step 101: Storing File: res://src/ui/shared/image_preview_popup.gd.remap
+	savepack: step 101: Storing File: res://src/ui/shared/image_file_dialog.gd.remap
+	savepack: step 101: Storing File: res://src/ui/shared/effect_row_builder.gd.remap
+	savepack: step 101: Storing File: res://src/ui/shared/consequence_target_helper.gd.remap
+	savepack: step 101: Storing File: res://src/ui/sequence/transition_panel.gd.remap
+	savepack: step 101: Storing File: res://src/ui/sequence/sequence_visual_editor.gd.remap
+	savepack: step 101: Storing File: res://src/ui/menu/game_settings.gd.remap
+	savepack: step 101: Storing File: res://src/ui/menu/main_menu.gd.remap
+	savepack: step 101: Storing File: res://src/ui/menu/options_menu.gd.remap
+	savepack: step 101: Storing File: res://src/ui/menu/pause_menu.gd.remap
+	savepack: step 101: Storing File: res://src/ui/sequence/sequence_editor.gd.remap
+	savepack: step 101: Storing File: res://.godot/global_script_class_cache.cfg
+	savepack: step 101: Storing File: res://icon.svg
+	savepack: step 101: Storing File: res://.godot/uid_cache.bin
+	savepack: step 101: Storing File: res://project.binary
+savepack: end
+loading_editor_layout: begin: Loading editor steps: 5
+	loading_editor_layout: step 0: Loading editor layout...
+loading_editor_layout: end

@@ -66,6 +66,11 @@ func _ready() -> void:
 
 	GameUIBuilder.build(self)
 
+	# Vérifier si un chemin de story est défini dans les paramètres du projet (via override.cfg)
+	var overridden_path = ProjectSettings.get_setting("application/config/story_path", "")
+	if overridden_path != "":
+		story_path = overridden_path
+
 	_play_ctrl = Node.new()
 	_play_ctrl.set_script(GamePlayControllerScript)
 	_play_ctrl.setup(self)
@@ -95,6 +100,11 @@ func _ready() -> void:
 	_pause_menu.new_game_pressed.connect(_on_pause_new_game)
 	_pause_menu.quit_pressed.connect(_on_pause_quit)
 
+	# Chercher si un chemin est forcé via override.cfg/settings
+	var override_path = ProjectSettings.get_setting("application/config/story_path", "")
+	if override_path != "":
+		story_path = override_path
+
 	if story_path != "":
 		_load_story_and_show_menu(story_path)
 	else:
@@ -102,11 +112,23 @@ func _ready() -> void:
 
 
 func _load_story_and_show_menu(path: String) -> void:
+	print("Game: Tentative de chargement de la story : ", path)
 	TextureLoader.base_dir = path
 	var story = StorySaver.load_story(path)
+	
+	if story == null and path != "res://story":
+		# Tentative désespérée si on ne trouve pas à l'endroit prévu (ex: export PCK interne)
+		print("Game: Échec chargement ", path, ". Essai fallback res://story")
+		path = "res://story"
+		TextureLoader.base_dir = path
+		story = StorySaver.load_story(path)
+		
 	if story == null:
-		_show_error("Impossible de charger l'histoire depuis : " + path)
+		printerr("Game: Erreur critique - Impossible de charger story.yaml à ", path)
+		_show_error("Erreur de chargement de l'histoire.\nChemin : " + path + "\n\nAssurez-vous que le dossier story contient un fichier story.yaml valide.")
+		_show_story_selector()
 		return
+		
 	_current_story = story
 	_current_story_path = path
 	_reload_i18n()
