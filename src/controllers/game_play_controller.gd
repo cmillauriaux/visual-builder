@@ -22,6 +22,7 @@ var _previous_play_foregrounds: Array = []
 var _user_stopped: bool = false
 var _i18n: Dictionary = {}
 var _current_playing_sequence = null
+var _is_showing_title: bool = false
 
 signal play_finished_show_menu()
 
@@ -103,6 +104,14 @@ func _on_trans_in_finished_play_fx() -> void:
 
 
 func _start_sequence_play() -> void:
+	var seq = _current_playing_sequence
+	if seq and (seq.title != "" or seq.subtitle != ""):
+		_show_title_screen(seq)
+	else:
+		_start_sequence_actually()
+
+
+func _start_sequence_actually() -> void:
 	_sequence_editor_ctrl.start_play()
 	if _sequence_editor_ctrl.is_playing():
 		_play_overlay.visible = true
@@ -110,6 +119,23 @@ func _start_sequence_play() -> void:
 		_typewriter_timer.start()
 	else:
 		_handle_play_stopped()
+
+
+func _show_title_screen(seq) -> void:
+	_is_showing_title = true
+	_game._play_title_label.text = seq.title
+	_game._play_subtitle_label.text = seq.subtitle
+	_game._play_title_overlay.visible = true
+	if not _game._play_title_overlay.get_parent():
+		_visual_editor._overlay_container.add_child(_game._play_title_overlay)
+
+
+func _hide_title_screen() -> void:
+	_is_showing_title = false
+	_game._play_title_overlay.visible = false
+	if _game._play_title_overlay.get_parent():
+		_game._play_title_overlay.get_parent().remove_child(_game._play_title_overlay)
+	_start_sequence_actually()
 
 
 func _on_fx_finished_start_sequence() -> void:
@@ -259,6 +285,12 @@ func on_typewriter_tick() -> void:
 # --- Input ---
 
 func _input(event: InputEvent) -> void:
+	if _is_showing_title:
+		if event is InputEventKey and event.pressed and event.keycode == KEY_SPACE:
+			_hide_title_screen()
+			get_viewport().set_input_as_handled()
+		return
+
 	if not _sequence_editor_ctrl.is_playing():
 		return
 	if event is InputEventKey and event.pressed and event.keycode == KEY_SPACE:
@@ -314,6 +346,11 @@ func _hide_choice_overlay() -> void:
 
 
 func _cleanup_play() -> void:
+	_is_showing_title = false
+	_game._play_title_overlay.visible = false
+	if _game._play_title_overlay.get_parent():
+		_game._play_title_overlay.get_parent().remove_child(_game._play_title_overlay)
+	
 	_menu_button.visible = false
 	_play_overlay.visible = false
 	_typewriter_timer.stop()

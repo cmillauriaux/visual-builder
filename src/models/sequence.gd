@@ -9,9 +9,11 @@ const SequenceFxScript = preload("res://src/models/sequence_fx.gd")
 
 var uuid: String = ""
 var seq_name: String = ""
+var title: String = ""
 var subtitle: String = ""
 var position: Vector2 = Vector2.ZERO
 var background: String = ""
+var background_color: String = "00000000" # Transparent par défaut
 var foregrounds: Array = []  # Array[Foreground]
 var dialogues: Array = []  # Array[Dialogue]
 var ending = null  # Ending
@@ -61,9 +63,11 @@ func to_dict() -> Dictionary:
 	var d := {
 		"uuid": uuid,
 		"name": seq_name,
+		"title": title,
 		"subtitle": subtitle,
 		"position": {"x": position.x, "y": position.y},
 		"background": background,
+		"background_color": background_color,
 		"foregrounds": fg_arr,
 		"dialogues": dlg_arr,
 		"fx": fx_arr,
@@ -83,10 +87,12 @@ static func from_dict(d: Dictionary):
 	var seq = script.new()
 	seq.uuid = d.get("uuid", seq.uuid)
 	seq.seq_name = d.get("name", "")
+	seq.title = d.get("title", "")
 	seq.subtitle = d.get("subtitle", "")
 	if d.has("position"):
 		seq.position = Vector2(d["position"]["x"], d["position"]["y"])
 	seq.background = d.get("background", "")
+	seq.background_color = d.get("background_color", "00000000")
 
 	# Transitions
 	seq.transition_in_type = d.get("transition_in_type", "none")

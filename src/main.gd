@@ -98,6 +98,9 @@ var _play_character_label: Label
 var _play_text_label: RichTextLabel
 var _typewriter_timer: Timer
 var _choice_overlay: PanelContainer
+var _play_title_overlay: CenterContainer
+var _play_title_label: Label
+var _play_subtitle_label: Label
 
 # Helpers
 var _foreground_transition: Node
@@ -109,6 +112,9 @@ var _fx_panel: VBoxContainer
 
 # Sequence Transitions UI
 var _sequence_transition_panel: VBoxContainer
+var _seq_title_edit: LineEdit
+var _seq_subtitle_edit: LineEdit
+var _seq_bg_color_picker: ColorPickerButton
 var _seq_trans_in_type: OptionButton
 var _seq_trans_in_dur: SpinBox
 var _seq_trans_out_type: OptionButton
@@ -245,6 +251,9 @@ func _connect_signals() -> void:
 	_fx_panel.fx_changed.connect(_on_fx_changed)
 
 	# Sequence Transitions
+	_seq_title_edit.text_changed.connect(_on_sequence_transition_changed)
+	_seq_subtitle_edit.text_changed.connect(_on_sequence_transition_changed)
+	_seq_bg_color_picker.color_changed.connect(_on_sequence_transition_changed)
 	_seq_trans_in_type.item_selected.connect(_on_sequence_transition_changed)
 	_seq_trans_in_dur.value_changed.connect(_on_sequence_transition_changed)
 	_seq_trans_out_type.item_selected.connect(_on_sequence_transition_changed)
@@ -314,6 +323,10 @@ func _on_sequence_transition_changed(_value = null) -> void:
 	var seq = _sequence_editor_ctrl.get_sequence()
 	if seq == null: return
 	
+	seq.title = _seq_title_edit.text
+	seq.subtitle = _seq_subtitle_edit.text
+	seq.background_color = _seq_bg_color_picker.color.to_html()
+	
 	var in_types = ["none", "fade", "pixelate"]
 	var in_idx = _seq_trans_in_type.selected
 	if in_idx >= 0 and in_idx < in_types.size():
@@ -328,6 +341,7 @@ func _on_sequence_transition_changed(_value = null) -> void:
 		
 	seq.transition_out_duration = _seq_trans_out_dur.value
 	
+	_visual_editor._update_visual()
 	EventBus.story_modified.emit()
 
 
@@ -340,6 +354,14 @@ func load_sequence_editors(seq) -> void:
 	_ending_editor.load_sequence(seq)
 	_fx_panel.load_sequence(seq)
 	
+	# Load params
+	_seq_title_edit.text = seq.title
+	_seq_subtitle_edit.text = seq.subtitle
+	if seq.background_color != "":
+		_seq_bg_color_picker.color = Color.from_string(seq.background_color, Color(0,0,0,0))
+	else:
+		_seq_bg_color_picker.color = Color(0,0,0,0)
+
 	# Load transitions
 	var in_types = ["none", "fade", "pixelate"]
 	var in_idx = in_types.find(seq.transition_in_type)

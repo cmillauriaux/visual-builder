@@ -35,6 +35,9 @@ var _play_character_label: Label
 var _play_text_label: RichTextLabel
 var _typewriter_timer: Timer
 var _choice_overlay: PanelContainer
+var _play_title_overlay: CenterContainer
+var _play_title_label: Label
+var _play_subtitle_label: Label
 
 # UI — Menu button & Pause menu
 var _menu_button: Button

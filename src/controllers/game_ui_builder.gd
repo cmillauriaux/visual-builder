@@ -60,6 +60,26 @@ static func _build_play_overlay(game: Control) -> void:
 	game._choice_overlay.custom_minimum_size = Vector2(400, 0)
 	game._choice_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 
+	# --- Play Title Overlay ---
+	game._play_title_overlay = CenterContainer.new()
+	game._play_title_overlay.visible = false
+	game._play_title_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	game._play_title_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	
+	var title_vbox = VBoxContainer.new()
+	game._play_title_overlay.add_child(title_vbox)
+	
+	game._play_title_label = Label.new()
+	game._play_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	game._play_title_label.add_theme_font_size_override("font_size", 48)
+	title_vbox.add_child(game._play_title_label)
+	
+	game._play_subtitle_label = Label.new()
+	game._play_subtitle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	game._play_subtitle_label.add_theme_font_size_override("font_size", 24)
+	game._play_subtitle_label.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8))
+	title_vbox.add_child(game._play_subtitle_label)
+
 
 static func _build_menu_button(game: Control) -> void:
 	game._menu_button = Button.new()

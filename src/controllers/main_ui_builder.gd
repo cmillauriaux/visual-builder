@@ -272,9 +272,9 @@ static func _build_sequence_editor(main: Control) -> void:
 	main._fx_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	main._tab_container.add_child(main._fx_panel)
 
-	# Tab 4: Transitions (Séquence)
+	# Tab 4: Paramètres / Transitions (Séquence)
 	main._sequence_transition_panel = VBoxContainer.new()
-	main._sequence_transition_panel.name = "Transitions"
+	main._sequence_transition_panel.name = "Paramètres"
 	main._tab_container.add_child(main._sequence_transition_panel)
 	_build_sequence_transition_tab(main)
 
@@ -288,6 +288,45 @@ static func _build_sequence_editor(main: Control) -> void:
 static func _build_sequence_transition_tab(main: Control) -> void:
 	var container = main._sequence_transition_panel
 	container.add_theme_constant_override("separation", 10)
+
+	# --- Titre de la séquence ---
+	var title_sec = Label.new()
+	title_sec.text = "Titre de séquence"
+	title_sec.add_theme_font_size_override("font_size", 16)
+	container.add_child(title_sec)
+
+	var title_hbox = HBoxContainer.new()
+	container.add_child(title_hbox)
+	var title_label = Label.new()
+	title_label.text = "Titre :"
+	title_label.custom_minimum_size = Vector2(80, 0)
+	title_hbox.add_child(title_label)
+	main._seq_title_edit = LineEdit.new()
+	main._seq_title_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title_hbox.add_child(main._seq_title_edit)
+
+	var sub_hbox = HBoxContainer.new()
+	container.add_child(sub_hbox)
+	var sub_label = Label.new()
+	sub_label.text = "Sous-titre :"
+	sub_label.custom_minimum_size = Vector2(80, 0)
+	sub_hbox.add_child(sub_label)
+	main._seq_subtitle_edit = LineEdit.new()
+	main._seq_subtitle_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sub_hbox.add_child(main._seq_subtitle_edit)
+
+	var color_hbox = HBoxContainer.new()
+	container.add_child(color_hbox)
+	var color_label = Label.new()
+	color_label.text = "Fond :"
+	color_label.custom_minimum_size = Vector2(80, 0)
+	color_hbox.add_child(color_label)
+	main._seq_bg_color_picker = ColorPickerButton.new()
+	main._seq_bg_color_picker.text = "Couleur"
+	main._seq_bg_color_picker.custom_minimum_size = Vector2(100, 0)
+	color_hbox.add_child(main._seq_bg_color_picker)
+
+	container.add_child(HSeparator.new())
 
 	var in_title = Label.new()
 	in_title.text = "Transition d'entrée"
@@ -421,6 +460,26 @@ static func _build_play_overlay(main: Control) -> void:
 	main._toast_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 	main._toast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	main._toast_overlay.add_child(main._toast_label)
+
+	# --- Play Title Overlay ---
+	main._play_title_overlay = CenterContainer.new()
+	main._play_title_overlay.visible = false
+	main._play_title_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	main._play_title_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	
+	var title_vbox = VBoxContainer.new()
+	main._play_title_overlay.add_child(title_vbox)
+	
+	main._play_title_label = Label.new()
+	main._play_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	main._play_title_label.add_theme_font_size_override("font_size", 48)
+	title_vbox.add_child(main._play_title_label)
+	
+	main._play_subtitle_label = Label.new()
+	main._play_subtitle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	main._play_subtitle_label.add_theme_font_size_override("font_size", 24)
+	main._play_subtitle_label.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8))
+	title_vbox.add_child(main._play_subtitle_label)
 
 
 static func _build_helpers(main: Control) -> void:

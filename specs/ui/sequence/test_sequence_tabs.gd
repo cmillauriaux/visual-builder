@@ -64,7 +64,7 @@ func test_tab_names():
 	assert_eq(_main._tab_container.get_tab_title(1), "Terminaison")
 	assert_eq(_main._tab_container.get_tab_title(2), "Musique")
 	assert_eq(_main._tab_container.get_tab_title(3), "FX")
-	assert_eq(_main._tab_container.get_tab_title(4), "Transitions")
+	assert_eq(_main._tab_container.get_tab_title(4), "Paramètres")
 
 # --- Contenu de l'onglet Dialogues ---
 

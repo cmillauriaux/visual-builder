@@ -15,6 +15,7 @@ var _sequence = null
 # --- Visual layer ---
 var _letterbox_bg: ColorRect
 var _canvas: Control
+var _bg_color_rect: ColorRect
 var _bg_rect: TextureRect
 var _grid_overlay: Control
 var _fg_container: Control
@@ -64,6 +65,13 @@ func _ready() -> void:
 	_canvas.name = "Canvas"
 	_canvas.size = DESIGN_RESOLUTION
 	add_child(_canvas)
+
+	_bg_color_rect = ColorRect.new()
+	_bg_color_rect.name = "BackgroundColorRect"
+	_bg_color_rect.color = Color(0, 0, 0, 0)
+	_bg_color_rect.set_anchors_preset(PRESET_FULL_RECT)
+	_bg_color_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_canvas.add_child(_bg_color_rect)
 
 	_bg_rect = TextureRect.new()
 	_bg_rect.name = "BackgroundRect"
@@ -199,7 +207,20 @@ func _input(event: InputEvent) -> void:
 func _update_visual() -> void:
 	if _bg_rect == null:
 		return
-	if _sequence == null or _sequence.background == "":
+	if _sequence == null:
+		_bg_rect.visible = false
+		_bg_color_rect.color = Color(0, 0, 0, 0)
+		_update_grid_overlay()
+		return
+
+	# Background color
+	if _sequence.background_color != "":
+		_bg_color_rect.color = Color.from_string(_sequence.background_color, Color(0, 0, 0, 0))
+	else:
+		_bg_color_rect.color = Color(0, 0, 0, 0)
+
+	# Background image
+	if _sequence.background == "":
 		_bg_rect.visible = false
 		_update_grid_overlay()
 		return
