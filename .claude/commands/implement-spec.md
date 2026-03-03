@@ -68,7 +68,7 @@ Pour chaque composant du plan, applique strictement le cycle Red-Green-Refactor 
 - Ne rajoute rien de plus que ce que les tests exigent
 - Lance les tests pour vérifier qu'ils passent :
   ```bash
-  GODOT=$(command -v godot || echo "/Applications/Godot.app/Contents/MacOS/Godot")
+  GODOT=${GODOT_PATH:-$(command -v godot || echo "/Applications/Godot.app/Contents/MacOS/Godot")}
   $GODOT --headless --path . -s addons/gut/gut_cmdln.gd
   ```
 
@@ -150,7 +150,7 @@ src/
 Commande pour lancer les tests GUT en ligne de commande :
 
 ```bash
-GODOT=$(command -v godot || echo "/Applications/Godot.app/Contents/MacOS/Godot")
+GODOT=${GODOT_PATH:-$(command -v godot || echo "/Applications/Godot.app/Contents/MacOS/Godot")}
 
 # Tous les tests
 $GODOT --headless --path . -s addons/gut/gut_cmdln.gd

@@ -29,7 +29,7 @@ Pour **chaque** critère d'acceptation, effectue une vérification concrète :
 - Identifie les tests GUT dans `specs/test_*.gd` qui couvrent ce critère
 - Lance ces tests spécifiques :
   ```bash
-  GODOT=$(command -v godot || echo "/Applications/Godot.app/Contents/MacOS/Godot")
+  GODOT=${GODOT_PATH:-$(command -v godot || echo "/Applications/Godot.app/Contents/MacOS/Godot")}
   timeout 120 $GODOT --headless --path . -s addons/gut/gut_cmdln.gd -gtest=specs/<fichier_test>.gd -glog=2 2>&1
   ```
 - Si les tests passent → preuve que le critère est satisfait

@@ -5,7 +5,7 @@ Tu es un vérificateur qualité pour le projet Godot 4.4 "visual-builder". Ta mi
 Avant toute vérification, détermine le binaire Godot à utiliser :
 
 ```bash
-GODOT=$(command -v godot || echo "/Applications/Godot.app/Contents/MacOS/Godot")
+GODOT=${GODOT_PATH:-$(command -v godot || echo "/Applications/Godot.app/Contents/MacOS/Godot")}
 ```
 
 ## Vérifications à effectuer

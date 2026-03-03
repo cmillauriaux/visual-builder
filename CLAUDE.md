@@ -8,16 +8,25 @@ Godot 4.4 project ("visual-builder") using GL Compatibility renderer (supports w
 
 ## Environnement Godot
 
-Le binaire Godot est installé automatiquement via le hook SessionStart (`.claude/hooks/install-godot.sh`).
+Le binaire Godot est installé automatiquement via le hook SessionStart (`.claude/hooks/install-godot.sh`) sur les environnements distants/Linux.
 
-- **Local (macOS)** : `/Applications/Godot.app/Contents/MacOS/Godot`
-- **Remote (Linux / Claude Code web)** : `godot` (installé dans `/usr/local/bin/godot`)
+- **Priorité** : La variable d'environnement `GODOT_PATH` est utilisée en priorité si elle est définie.
+- **Local (macOS)** : `/Applications/Godot.app/Contents/MacOS/Godot` par défaut.
+- **Remote (Linux / Claude Code web)** : `godot` (installé dans `/usr/local/bin/godot`).
+- **Windows** : Définir `GODOT_PATH` dans un fichier `.env` ou via `$env:GODOT_PATH = "C:\chemin\vers\godot.exe"`.
 
-Pour déterminer quel binaire utiliser :
+Pour déterminer quel binaire utiliser dans les scripts (bash) :
 
 ```bash
-# Détection automatique
-GODOT=$(command -v godot || echo "/Applications/Godot.app/Contents/MacOS/Godot")
+# Détection automatique (Bash)
+GODOT=${GODOT_PATH:-$(command -v godot || echo "/Applications/Godot.app/Contents/MacOS/Godot")}
+```
+
+Pour PowerShell (Windows) :
+
+```powershell
+# Détection automatique (PowerShell)
+$GODOT = if ($env:GODOT_PATH) { $env:GODOT_PATH } else { (Get-Command godot -ErrorAction SilentlyContinue).Source ?? "C:\Path\To\Godot.exe" }
 ```
 
 ## Running the Project
@@ -27,6 +36,7 @@ GODOT=$(command -v godot || echo "/Applications/Godot.app/Contents/MacOS/Godot")
 /Applications/Godot.app/Contents/MacOS/Godot --editor --path .
 
 # Run the project directly
+GODOT=${GODOT_PATH:-$(command -v godot || echo "/Applications/Godot.app/Contents/MacOS/Godot")}
 $GODOT --path .
 ```
 
@@ -36,11 +46,11 @@ GUT est configuré avec `"should_exit": true` dans `.gutconfig.json`, ce qui fai
 
 ```bash
 # Détection du binaire Godot
-GODOT=$(command -v godot || echo "/Applications/Godot.app/Contents/MacOS/Godot")
+GODOT=${GODOT_PATH:-$(command -v godot || echo "/Applications/Godot.app/Contents/MacOS/Godot")}
 
 # Lancer tous les tests GUT
 timeout 120 $GODOT --headless --path . -s addons/gut/gut_cmdln.gd
-
+```
 # Lancer un fichier de test spécifique
 timeout 30 $GODOT --headless --path . -s addons/gut/gut_cmdln.gd -gtest=res://specs/test_example.gd
 ```

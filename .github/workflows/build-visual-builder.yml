@@ -73,30 +73,37 @@ jobs:
           name: visual-builder-macos
           path: build/macos
 
-      - name: Create Tag
-        id: create_tag
+      - name: Prepare Release and Rename Files
+        id: prep
         run: |
           TAG_NAME="v$(date +'%Y.%m.%d')-b${{ github.run_number }}"
           echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+          
+          # Renommage des fichiers avec le tag de release
+          mv build/windows/visual-builder.exe build/windows/visual-builder-$TAG_NAME.exe
+          mv build/macos/visual-builder.zip build/macos/visual-builder-$TAG_NAME.zip
+          
+          # Export des chemins pour l'étape suivante
+          echo "win_file=build/windows/visual-builder-$TAG_NAME.exe" >> $GITHUB_OUTPUT
+          echo "mac_file=build/macos/visual-builder-$TAG_NAME.zip" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.create_tag.outputs.tag_name }}
-          name: Visual Builder ${{ steps.create_tag.outputs.tag_name }}
+          tag_name: ${{ steps.prep.outputs.tag_name }}
+          name: Visual Builder ${{ steps.prep.outputs.tag_name }}
           body: |
-            Automatic build for version ${{ steps.create_tag.outputs.tag_name }}
-
+            Automatic build for version ${{ steps.prep.outputs.tag_name }}
+            
             ### Downloads
-            * **Windows**: `visual-builder.exe`
-            * **macOS**: `visual-builder.zip`
+            * **Windows**: `visual-builder-${{ steps.prep.outputs.tag_name }}.exe`
+            * **macOS**: `visual-builder-${{ steps.prep.outputs.tag_name }}.zip`
           draft: false
           prerelease: false
           generate_release_notes: true
           fail_on_unmatched_files: true
           files: |
-            build/windows/visual-builder.exe
-            build/macos/visual-builder.zip
+            ${{ steps.prep.outputs.win_file }}
+            ${{ steps.prep.outputs.mac_file }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-

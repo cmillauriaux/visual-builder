@@ -211,7 +211,7 @@ Crée ou modifie les fichiers dans l'ordre :
 Après chaque modification, lance le vérificateur d'histoire :
 
 ```bash
-GODOT=$(command -v godot || echo "/Applications/Godot.app/Contents/MacOS/Godot")
+GODOT=${GODOT_PATH:-$(command -v godot || echo "/Applications/Godot.app/Contents/MacOS/Godot")}
 timeout 30 $GODOT --headless --path . -s tools/verify_story.gd -- --story-path=stories/<story-slug>
 ```
 
@@ -220,7 +220,7 @@ Si le vérificateur n'existe pas pour cette histoire spécifique, crée un scrip
 **Alternative** : utilise directement le pattern du vérificateur existant :
 
 ```bash
-GODOT=$(command -v godot || echo "/Applications/Godot.app/Contents/MacOS/Godot")
+GODOT=${GODOT_PATH:-$(command -v godot || echo "/Applications/Godot.app/Contents/MacOS/Godot")}
 timeout 30 $GODOT --headless --path . -s tools/verify_epreuve_du_heros.gd
 ```
 

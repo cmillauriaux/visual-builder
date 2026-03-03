@@ -8,7 +8,16 @@ GODOT_ZIP="${GODOT_BINARY_NAME}.zip"
 GODOT_URL="https://github.com/godotengine/godot/releases/download/${GODOT_RELEASE}/${GODOT_ZIP}"
 INSTALL_PATH="/usr/local/bin/godot"
 
-# Check if Godot is already installed with correct version
+# Check if GODOT_PATH is already set and valid
+if [ -n "$GODOT_PATH" ] && [ -x "$GODOT_PATH" ]; then
+    INSTALLED_VERSION=$("$GODOT_PATH" --version 2>/dev/null | cut -d. -f1-2)
+    if [ "$INSTALLED_VERSION" = "$GODOT_VERSION" ]; then
+        echo "Godot $GODOT_VERSION already available at $GODOT_PATH."
+        exit 0
+    fi
+fi
+
+# Check if Godot is already installed in PATH with correct version
 if command -v godot &> /dev/null; then
     INSTALLED_VERSION=$(godot --version 2>/dev/null | cut -d. -f1-2)
     if [ "$INSTALLED_VERSION" = "$GODOT_VERSION" ]; then
