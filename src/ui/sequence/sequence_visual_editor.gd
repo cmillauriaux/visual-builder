@@ -111,8 +111,13 @@ func _ready() -> void:
 	_update_context_menu_state()
 	add_child(_context_menu)
 
+	EventBus.play_started.connect(_on_play_started)
+
 	resized.connect(_on_resized)
 	_apply_transform()
+
+func _on_play_started(_mode: String) -> void:
+	_deselect_foreground()
 
 # --- Auto-fit ---
 

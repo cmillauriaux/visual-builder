@@ -6,6 +6,7 @@ signal double_clicked(uuid: String)
 signal rename_requested(uuid: String)
 signal delete_requested(uuid: String)
 signal entry_point_toggled(uuid: String, checked: bool)
+signal transition_selected(uuid: String, property: String, value: String)
 
 var _uuid: String = ""
 var _item_name: String = ""
@@ -16,6 +17,8 @@ var _is_choice_sequence: bool = false
 var _has_effects: bool = false
 var _choice_count: int = 0
 var _popup_menu: PopupMenu
+var _in_trans_menu: PopupMenu
+var _out_trans_menu: PopupMenu
 
 func setup(uuid: String, item_name: String, pos: Vector2, subtitle: String = "", is_terminal: bool = false, has_effects: bool = false) -> void:
 	_uuid = uuid
@@ -54,6 +57,40 @@ func setup(uuid: String, item_name: String, pos: Vector2, subtitle: String = "",
 		_popup_menu.add_item("Supprimer", 2)
 		_popup_menu.id_pressed.connect(_on_popup_id_pressed)
 		add_child(_popup_menu)
+
+func setup_sequence_options() -> void:
+	if _popup_menu == null:
+		return
+		
+	_popup_menu.add_separator()
+	
+	_in_trans_menu = PopupMenu.new()
+	_in_trans_menu.name = "InTransitionMenu"
+	_in_trans_menu.add_item("Aucune", 0)
+	_in_trans_menu.add_item("Fondu", 1)
+	_in_trans_menu.add_item("Pixellisation", 2)
+	_in_trans_menu.id_pressed.connect(_on_in_trans_selected)
+	_popup_menu.add_child(_in_trans_menu)
+	_popup_menu.add_submenu_item("Transition d'entrée", "InTransitionMenu")
+	
+	_out_trans_menu = PopupMenu.new()
+	_out_trans_menu.name = "OutTransitionMenu"
+	_out_trans_menu.add_item("Aucune", 0)
+	_out_trans_menu.add_item("Fondu", 1)
+	_out_trans_menu.add_item("Pixellisation", 2)
+	_out_trans_menu.id_pressed.connect(_on_out_trans_selected)
+	_popup_menu.add_child(_out_trans_menu)
+	_popup_menu.add_submenu_item("Transition de sortie", "OutTransitionMenu")
+
+func _on_in_trans_selected(id: int) -> void:
+	var types = ["none", "fade", "pixelate"]
+	if id >= 0 and id < types.size():
+		transition_selected.emit(_uuid, "transition_in_type", types[id])
+
+func _on_out_trans_selected(id: int) -> void:
+	var types = ["none", "fade", "pixelate"]
+	if id >= 0 and id < types.size():
+		transition_selected.emit(_uuid, "transition_out_type", types[id])
 
 func setup_as_choice_sequence(uuid: String, item_name: String, pos: Vector2, subtitle: String, choices: Array) -> void:
 	_uuid = uuid

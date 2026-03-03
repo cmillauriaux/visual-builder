@@ -34,6 +34,7 @@ signal condition_rename_requested(condition_uuid: String)
 signal sequence_delete_requested(sequence_uuid: String)
 signal condition_delete_requested(condition_uuid: String)
 signal entry_point_changed(uuid: String)
+signal sequences_transition_requested(uuids: Array, property: String, value: String)
 
 var _scene_data = null
 var _node_map: Dictionary = {}  # uuid → GraphNode
@@ -408,11 +409,38 @@ func _create_node(uuid: String, item_name: String, pos: Vector2, subtitle: Strin
 		_choice_sequence_uuids[uuid] = true
 	else:
 		node.setup(uuid, item_name, pos, subtitle, false, _has_effects(seq_model) if seq_model else false)
+	
+	node.setup_sequence_options()
 	node.double_clicked.connect(_on_node_double_clicked)
 	node.rename_requested.connect(_on_node_rename_requested)
 	node.delete_requested.connect(_on_sequence_delete_requested)
 	node.entry_point_toggled.connect(_on_entry_point_toggled)
+	node.transition_selected.connect(_on_node_transition_selected)
 	_node_map[uuid] = node
+
+func _on_node_transition_selected(uuid: String, property: String, value: String) -> void:
+	var selected_uuids = []
+	var selected_nodes = []
+	for child in get_children():
+		if child is GraphNode and child.selected:
+			selected_nodes.append(child)
+	
+	# Si le nœud cliqué n'est pas sélectionné, on ne change que lui
+	var target_is_selected = false
+	for n in selected_nodes:
+		if n.name == uuid:
+			target_is_selected = true
+			break
+	
+	if target_is_selected:
+		for n in selected_nodes:
+			# Ne prendre que les séquences (pas les conditions ou terminaux)
+			if _node_map.has(n.name) and not _condition_uuids.has(n.name) and not _terminal_uuids.has(n.name):
+				selected_uuids.append(n.name)
+	else:
+		selected_uuids = [uuid]
+	
+	sequences_transition_requested.emit(selected_uuids, property, value)
 
 func _create_condition_node(uuid: String, item_name: String, pos: Vector2, subtitle: String = "") -> void:
 	var node = GraphNode.new()

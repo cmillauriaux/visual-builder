@@ -196,6 +196,16 @@ func test_deselect_foreground():
 	_editor._deselect_foreground()
 	assert_eq(_editor._selected_fg_uuid, "")
 
+func test_on_play_started_deselects_foreground():
+	_editor.load_sequence(_sequence)
+	_editor.add_foreground("Hero", "hero.png")
+	var uuid = _sequence.foregrounds[0].uuid
+	_editor._select_foreground(uuid)
+	assert_eq(_editor._selected_fg_uuid, uuid)
+	
+	EventBus.play_started.emit("sequence")
+	assert_eq(_editor._selected_fg_uuid, "")
+
 # --- Context menu (right-click delete) ---
 
 func test_context_menu_created():

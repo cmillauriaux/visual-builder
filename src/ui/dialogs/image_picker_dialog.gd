@@ -16,6 +16,7 @@ const ImagePreviewPopup = preload("res://src/ui/shared/image_preview_popup.gd")
 const ImageCategoryService = preload("res://src/services/image_category_service.gd")
 const CategoryManagerDialogScript = preload("res://src/ui/dialogs/category_manager_dialog.gd")
 const ImageRenameService = preload("res://src/services/image_rename_service.gd")
+const ImageFileDialog = preload("res://src/ui/shared/image_file_dialog.gd")
 
 signal image_renamed(old_path: String, new_path: String)
 
@@ -500,13 +501,10 @@ func _on_gallery_item_selected(container: Panel, path: String) -> void:
 	_validate_btn.disabled = false
 
 func _on_browse_file() -> void:
-	var dialog = FileDialog.new()
-	dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
-	dialog.access = FileDialog.ACCESS_FILESYSTEM
-	dialog.filters = PackedStringArray(["*.png ; PNG", "*.jpg ; JPG", "*.jpeg ; JPEG", "*.webp ; WEBP"])
+	var dialog = ImageFileDialog.new()
 	dialog.file_selected.connect(_on_file_selected_from_dialog)
 	add_child(dialog)
-	dialog.popup_centered(Vector2i(800, 600))
+	dialog.popup_centered(Vector2i(900, 600))
 
 func _on_file_selected_from_dialog(source_path: String) -> void:
 	if _story_base_path == "":
@@ -761,10 +759,7 @@ func _ia_set_inputs_enabled(enabled: bool) -> void:
 	_ia_choose_gallery_btn.disabled = not enabled
 
 func _on_ia_choose_source() -> void:
-	var dialog = FileDialog.new()
-	dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
-	dialog.access = FileDialog.ACCESS_FILESYSTEM
-	dialog.filters = PackedStringArray(["*.png ; PNG", "*.jpg ; JPG", "*.jpeg ; JPEG", "*.webp ; WEBP"])
+	var dialog = ImageFileDialog.new()
 	dialog.file_selected.connect(func(path: String):
 		_ia_source_image_path = path
 		_ia_source_path_label.text = path.get_file()
@@ -772,7 +767,7 @@ func _on_ia_choose_source() -> void:
 		_ia_update_generate_button_state()
 	)
 	add_child(dialog)
-	dialog.popup_centered(Vector2i(800, 600))
+	dialog.popup_centered(Vector2i(900, 600))
 
 func _on_ia_choose_from_gallery() -> void:
 	var gallery_window = Window.new()

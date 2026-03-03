@@ -20,6 +20,7 @@ const RemoveChapterCommand = preload("res://src/commands/remove_chapter_command.
 const RemoveSceneCommand = preload("res://src/commands/remove_scene_command.gd")
 const RemoveSequenceCommand = preload("res://src/commands/remove_sequence_command.gd")
 const RemoveConditionCommand = preload("res://src/commands/remove_condition_command.gd")
+const SetSequenceTransitionCommand = preload("res://src/commands/set_sequence_transition_command.gd")
 const EditorState = preload("res://src/controllers/editor_state.gd")
 
 var _main: Control
@@ -135,6 +136,25 @@ func on_condition_delete_requested(uuid: String) -> void:
 		_main._undo_redo.push_and_execute(cmd)
 		_main._sequence_graph_view.load_scene(_main._editor_main._current_scene)
 		notify_targets_changed()
+
+
+func on_sequences_transition_requested(uuids: Array, property: String, value: String) -> void:
+	if _main._editor_main._current_scene == null:
+		return
+		
+	var sequences = []
+	for uuid in uuids:
+		var seq = _main._editor_main._current_scene.find_sequence(uuid)
+		if seq:
+			sequences.append(seq)
+	
+	if sequences.is_empty():
+		return
+		
+	var cmd = SetSequenceTransitionCommand.new(sequences, property, value)
+	_main._undo_redo.push_and_execute(cmd)
+	# Pas besoin de recharger tout le graphe, mais on notifie d'une modification
+	EventBus.story_modified.emit()
 
 
 func notify_targets_changed() -> void:
