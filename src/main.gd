@@ -572,7 +572,7 @@ func _on_editor_mode_changed(mode: int, context: Dictionary) -> void:
 		_create_button.text = _editor_main.get_create_button_label()
 	
 	_create_condition_button.visible = (mode == EditorState.Mode.SEQUENCE_VIEW)
-	_parametres_menu.visible = (mode in [EditorState.Mode.CHAPTER_VIEW, EditorState.Mode.SCENE_VIEW, EditorState.Mode.SEQUENCE_VIEW, EditorState.Mode.SEQUENCE_EDIT, EditorState.Mode.CONDITION_EDIT])
+	_parametres_menu.visible = (mode in [EditorState.Mode.CHAPTER_VIEW, EditorState.Mode.SCENE_VIEW, EditorState.Mode.SEQUENCE_VIEW])
 	
 	_breadcrumb.set_current_level(level)
 	_breadcrumb.set_path(_editor_main.get_breadcrumb_path())
