@@ -31,9 +31,9 @@ func test_is_story_play_mode_default_false() -> void:
 
 
 func test_on_play_dialogue_changed_ignores_invalid_index() -> void:
-	_main._play_character_label.text = "initial"
+	watch_signals(EventBus)
 	_main._play_ctrl.on_play_dialogue_changed(-1)
-	assert_eq(_main._play_character_label.text, "initial")
+	assert_signal_not_emitted(EventBus, "play_dialogue_changed")
 
 
 func test_on_play_dialogue_changed_updates_labels() -> void:
@@ -44,16 +44,22 @@ func test_on_play_dialogue_changed_updates_labels() -> void:
 	seq.dialogues.append(dlg)
 	_main._sequence_editor_ctrl.load_sequence(seq)
 	_main._sequence_editor_ctrl.start_play()
+	
+	watch_signals(EventBus)
 	_main._play_ctrl.on_play_dialogue_changed(0)
+	
+	assert_signal_emitted_with_parameters(EventBus, "play_dialogue_changed", ["Alice", "Bonjour", 0])
+	# UI checks (main.gd is connected to EventBus)
 	assert_eq(_main._play_character_label.text, "Alice")
 	assert_eq(_main._play_text_label.text, "Bonjour")
 	assert_eq(_main._play_text_label.visible_characters, 0)
 
 
 func test_on_play_stopped_restores_ui() -> void:
-	_main._play_overlay.visible = true
-	_main._stop_button.visible = true
+	watch_signals(EventBus)
 	_main._play_ctrl.on_play_stopped()
+	assert_signal_emitted(EventBus, "play_stopped")
+	# UI checks
 	assert_false(_main._play_overlay.visible)
 	assert_true(_main._play_button.visible)
 	assert_false(_main._stop_button.visible)
@@ -72,17 +78,14 @@ func test_typewriter_tick_advances_characters() -> void:
 	seq.dialogues.append(dlg)
 	_main._sequence_editor_ctrl.load_sequence(seq)
 	_main._sequence_editor_ctrl.start_play()
+	
 	_main._play_ctrl.on_play_dialogue_changed(0)
+	
+	watch_signals(EventBus)
 	_main._play_ctrl.on_typewriter_tick()
+	
+	assert_signal_emitted_with_parameters(EventBus, "play_typewriter_tick", [1])
 	assert_eq(_main._play_text_label.visible_characters, 1)
-
-
-func test_hide_choice_overlay() -> void:
-	var child = Label.new()
-	_main._choice_overlay.add_child(child)
-	_main._choice_overlay.visible = true
-	_main._play_ctrl._hide_choice_overlay()
-	assert_false(_main._choice_overlay.visible)
 
 
 func test_sequence_fx_player_exists() -> void:

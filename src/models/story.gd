@@ -1,5 +1,7 @@
 extends RefCounted
 
+class_name StoryModel
+
 const ChapterScript = preload("res://src/models/chapter.gd")
 const VariableDefinitionScript = preload("res://src/models/variable_definition.gd")
 const StoryNotificationScript = preload("res://src/models/story_notification.gd")

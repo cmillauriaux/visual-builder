@@ -16,8 +16,13 @@ var _main = null
 func before_each():
 	_main = Control.new()
 	_main.set_script(MainScript)
-	add_child_autofree(_main)
+	add_child(_main)
 	await get_tree().process_frame
+
+func after_each():
+	if _main:
+		_main.queue_free()
+		_main = null
 
 func _navigate_to_sequence(seq: Sequence = null) -> Sequence:
 	var story = Story.new()
@@ -135,7 +140,7 @@ func test_dialogues_tab_reset_on_sequence_load():
 func test_terminaison_tab_no_indicator_when_no_ending():
 	var seq = _navigate_to_sequence()
 	seq.ending = null
-	_main._nav_ctrl._update_ending_tab_indicator()
+	_main._update_ending_tab_indicator()
 	assert_eq(_main._tab_container.get_tab_title(1), "Terminaison")
 
 func test_terminaison_tab_indicator_when_ending_configured():
@@ -146,7 +151,7 @@ func test_terminaison_tab_indicator_when_ending_configured():
 	cons.type = "game_over"
 	ending.auto_consequence = cons
 	seq.ending = ending
-	_main._nav_ctrl._update_ending_tab_indicator()
+	_main._update_ending_tab_indicator()
 	assert_eq(_main._tab_container.get_tab_title(1), "Terminaison ●")
 
 func test_indicator_updates_on_ending_changed():
@@ -157,8 +162,12 @@ func test_indicator_updates_on_ending_changed():
 	var ending = Ending.new()
 	ending.type = "choices"
 	seq.ending = ending
-	# Simulate ending_changed signal
-	_main._ending_editor.ending_changed.emit()
+	# Simulate ending_changed signal (emits EventBus.story_modified via _notify_change)
+	_main._ending_editor._notify_change()
+	
+	# Attendre que l'EventBus propage le signal à main.gd
+	await wait_frames(1)
+	
 	assert_eq(_main._tab_container.get_tab_title(1), "Terminaison ●")
 
 func test_indicator_removed_when_ending_cleared():
@@ -170,11 +179,11 @@ func test_indicator_removed_when_ending_cleared():
 	cons.type = "game_over"
 	ending.auto_consequence = cons
 	seq.ending = ending
-	_main._nav_ctrl._update_ending_tab_indicator()
+	_main._update_ending_tab_indicator()
 	assert_eq(_main._tab_container.get_tab_title(1), "Terminaison ●")
 	# Clear ending
 	seq.ending = null
-	_main._nav_ctrl._update_ending_tab_indicator()
+	_main._update_ending_tab_indicator()
 	assert_eq(_main._tab_container.get_tab_title(1), "Terminaison")
 
 # --- Fonctionnalités existantes ---

@@ -2,12 +2,15 @@ extends VBoxContainer
 
 ## Éditeur de terminaison pour une séquence — avec UI complète.
 
+class_name EndingEditor
+
 const EndingScript = preload("res://src/models/ending.gd")
 const ConsequenceScript = preload("res://src/models/consequence.gd")
 const ChoiceScript = preload("res://src/models/choice.gd")
 const VariableEffectScript = preload("res://src/models/variable_effect.gd")
 const ConsequenceTargetHelperScript = preload("res://src/ui/shared/consequence_target_helper.gd")
 const EffectRowBuilderScript = preload("res://src/ui/shared/effect_row_builder.gd")
+const EditorState = preload("res://src/controllers/editor_state.gd")
 
 const OPERATION_TYPES = VariableEffectScript.VALID_OPERATIONS
 const OPERATION_LABELS = VariableEffectScript.OPERATION_LABELS
@@ -19,18 +22,18 @@ var _sequence = null
 var _target_helper = ConsequenceTargetHelperScript.new()
 
 # UI references
-var _mode_none_btn: Button
-var _mode_redirect_btn: Button
-var _mode_choices_btn: Button
-var _redirect_container: VBoxContainer
-var _choices_container: VBoxContainer
-var _redirect_type_dropdown: OptionButton
-var _redirect_target_dropdown: OptionButton
-var _redirect_summary: Label
-var _choices_list: VBoxContainer
-var _add_choice_btn: Button
-var _redirect_effects_list: VBoxContainer
-var _add_redirect_effect_btn: Button
+@onready var _mode_none_btn: Button = %NoneBtn
+@onready var _mode_redirect_btn: Button = %RedirectBtn
+@onready var _mode_choices_btn: Button = %ChoicesBtn
+@onready var _redirect_container: VBoxContainer = %RedirectContainer
+@onready var _choices_container: VBoxContainer = %ChoicesContainer
+@onready var _redirect_type_dropdown: OptionButton = %TypeDropdown
+@onready var _redirect_target_dropdown: OptionButton = %TargetDropdown
+@onready var _redirect_summary: Label = %Summary
+@onready var _choices_list: VBoxContainer = %ChoicesList
+@onready var _add_choice_btn: Button = %AddChoiceBtn
+@onready var _redirect_effects_list: VBoxContainer = %RedirectEffectsList
+@onready var _add_redirect_effect_btn: Button = %AddRedirectEffectBtn
 
 # Consequence type labels (delegated to helper)
 var CONSEQUENCE_TYPES: Array:
@@ -41,89 +44,43 @@ var REDIRECT_TYPES: Array:
 	get: return ConsequenceTargetHelperScript.REDIRECT_TYPES
 
 func _ready() -> void:
-	_build_ui()
-
-func _build_ui() -> void:
-	# Separator label
-	var sep = Label.new()
-	sep.text = "— Terminaison —"
-	sep.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	add_child(sep)
-
-	# Mode selector
-	var mode_bar = HBoxContainer.new()
-	add_child(mode_bar)
-
-	_mode_none_btn = Button.new()
-	_mode_none_btn.text = "Aucune"
-	_mode_none_btn.toggle_mode = true
-	_mode_none_btn.button_pressed = true
-	_mode_none_btn.pressed.connect(_on_mode_none)
-	mode_bar.add_child(_mode_none_btn)
-
-	_mode_redirect_btn = Button.new()
-	_mode_redirect_btn.text = "Redirection"
-	_mode_redirect_btn.toggle_mode = true
-	_mode_redirect_btn.pressed.connect(_on_mode_redirect)
-	mode_bar.add_child(_mode_redirect_btn)
-
-	_mode_choices_btn = Button.new()
-	_mode_choices_btn.text = "Choix"
-	_mode_choices_btn.toggle_mode = true
-	_mode_choices_btn.pressed.connect(_on_mode_choices)
-	mode_bar.add_child(_mode_choices_btn)
-
-	# --- Redirect container ---
-	_redirect_container = VBoxContainer.new()
-	_redirect_container.visible = false
-	add_child(_redirect_container)
-
-	_redirect_type_dropdown = OptionButton.new()
+	# Initialiser les dropdowns statiques
+	_redirect_type_dropdown.clear()
 	for label in CONSEQUENCE_LABELS:
 		_redirect_type_dropdown.add_item(label)
+	
+	# Connecter les signaux
+	_mode_none_btn.pressed.connect(_on_mode_none)
+	_mode_redirect_btn.pressed.connect(_on_mode_redirect)
+	_mode_choices_btn.pressed.connect(_on_mode_choices)
 	_redirect_type_dropdown.item_selected.connect(_on_redirect_type_changed)
-	_redirect_container.add_child(_redirect_type_dropdown)
-
-	_redirect_target_dropdown = OptionButton.new()
 	_redirect_target_dropdown.item_selected.connect(_on_redirect_target_changed)
-	_redirect_container.add_child(_redirect_target_dropdown)
-
-	_redirect_summary = Label.new()
-	_redirect_summary.text = ""
-	_redirect_container.add_child(_redirect_summary)
-
-	# Redirect effects section
-	var redirect_effects_label = Label.new()
-	redirect_effects_label.text = "Effets sur les variables :"
-	_redirect_container.add_child(redirect_effects_label)
-
-	_redirect_effects_list = VBoxContainer.new()
-	_redirect_effects_list.name = "RedirectEffectsList"
-	_redirect_container.add_child(_redirect_effects_list)
-
-	_add_redirect_effect_btn = Button.new()
-	_add_redirect_effect_btn.text = "+ Ajouter un effet"
 	_add_redirect_effect_btn.pressed.connect(_on_add_redirect_effect_pressed)
-	_redirect_container.add_child(_add_redirect_effect_btn)
-
-	# --- Choices container ---
-	_choices_container = VBoxContainer.new()
-	_choices_container.visible = false
-	add_child(_choices_container)
-
-	var choices_scroll = ScrollContainer.new()
-	choices_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	choices_scroll.custom_minimum_size.y = 100
-	_choices_container.add_child(choices_scroll)
-
-	_choices_list = VBoxContainer.new()
-	_choices_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	choices_scroll.add_child(_choices_list)
-
-	_add_choice_btn = Button.new()
-	_add_choice_btn.text = "+ Ajouter un choix"
 	_add_choice_btn.pressed.connect(_on_add_choice_pressed)
-	_choices_container.add_child(_add_choice_btn)
+
+	EventBus.story_loaded.connect(_on_story_loaded)
+	EventBus.story_modified.connect(_on_story_modified)
+	EventBus.editor_mode_changed.connect(_on_editor_mode_changed)
+	EventBus.targets_updated.connect(set_available_targets)
+
+
+func _on_story_loaded(story: StoryModel) -> void:
+	set_variable_names(story.get_variable_names())
+
+
+func _on_story_modified() -> void:
+	# Note: On ne peut pas récupérer la story ici facilement sans référence
+	pass
+
+
+func _on_editor_mode_changed(mode: int, context: Dictionary) -> void:
+	if mode == EditorState.Mode.SEQUENCE_EDIT:
+		# On rafraîchit les cibles disponibles quand on entre dans l'éditeur de séquence
+		_request_target_refresh()
+
+
+func _request_target_refresh() -> void:
+	pass
 
 # --- Public API ---
 
@@ -207,7 +164,7 @@ func add_redirect_effect() -> void:
 	_sequence.ending.auto_consequence.effects.append(e)
 	if _redirect_container.visible:
 		_rebuild_redirect_effects()
-	ending_changed.emit()
+	_notify_change()
 
 func remove_redirect_effect(index: int) -> void:
 	if _sequence == null or _sequence.ending == null or _sequence.ending.auto_consequence == null:
@@ -217,7 +174,7 @@ func remove_redirect_effect(index: int) -> void:
 	_sequence.ending.auto_consequence.effects.remove_at(index)
 	if _redirect_container.visible:
 		_rebuild_redirect_effects()
-	ending_changed.emit()
+	_notify_change()
 
 func update_redirect_effect(index: int, field: String, value: String) -> void:
 	if _sequence == null or _sequence.ending == null or _sequence.ending.auto_consequence == null:
@@ -232,7 +189,7 @@ func update_redirect_effect(index: int, field: String, value: String) -> void:
 			e.operation = value
 		"value":
 			e.value = value
-	ending_changed.emit()
+	_notify_change()
 
 func add_choice_effect(choice_index: int) -> void:
 	if _sequence == null or _sequence.ending == null:
@@ -244,7 +201,7 @@ func add_choice_effect(choice_index: int) -> void:
 	_sequence.ending.choices[choice_index].effects.append(e)
 	if _choices_container.visible:
 		_rebuild_choices_list()
-	ending_changed.emit()
+	_notify_change()
 
 func remove_choice_effect(choice_index: int, effect_index: int) -> void:
 	if _sequence == null or _sequence.ending == null:
@@ -257,7 +214,7 @@ func remove_choice_effect(choice_index: int, effect_index: int) -> void:
 	choice.effects.remove_at(effect_index)
 	if _choices_container.visible:
 		_rebuild_choices_list()
-	ending_changed.emit()
+	_notify_change()
 
 func update_choice_effect(choice_index: int, effect_index: int, field: String, value: String) -> void:
 	if _sequence == null or _sequence.ending == null:
@@ -275,7 +232,7 @@ func update_choice_effect(choice_index: int, effect_index: int, field: String, v
 			e.operation = value
 		"value":
 			e.value = value
-	ending_changed.emit()
+	_notify_change()
 
 # --- Mode handlers ---
 
@@ -286,7 +243,7 @@ func _on_mode_none() -> void:
 	_update_mode_buttons("none")
 	_redirect_container.visible = false
 	_choices_container.visible = false
-	ending_changed.emit()
+	_notify_change()
 
 func _on_mode_redirect() -> void:
 	if _sequence == null:
@@ -297,7 +254,7 @@ func _on_mode_redirect() -> void:
 	_choices_container.visible = false
 	_redirect_type_dropdown.selected = 0
 	_apply_redirect_type(0)
-	ending_changed.emit()
+	_notify_change()
 
 func _on_mode_choices() -> void:
 	if _sequence == null:
@@ -307,7 +264,7 @@ func _on_mode_choices() -> void:
 	_redirect_container.visible = false
 	_choices_container.visible = true
 	_rebuild_choices_list()
-	ending_changed.emit()
+	_notify_change()
 
 func _update_mode_buttons(mode: String) -> void:
 	_mode_none_btn.button_pressed = (mode == "none")
@@ -318,7 +275,7 @@ func _update_mode_buttons(mode: String) -> void:
 
 func _on_redirect_type_changed(index: int) -> void:
 	_apply_redirect_type(index)
-	ending_changed.emit()
+	_notify_change()
 
 func _apply_redirect_type(index: int) -> void:
 	if _sequence == null or _sequence.ending == null:
@@ -350,12 +307,12 @@ func _on_redirect_target_changed(index: int) -> void:
 				_populate_redirect_target()
 				_select_target_in_dropdown(_redirect_target_dropdown, new_uuid)
 				_update_redirect_summary()
-				ending_changed.emit()
+				_notify_change()
 			)
 			return
 		_sequence.ending.auto_consequence.target = meta
 	_update_redirect_summary()
-	ending_changed.emit()
+	_notify_change()
 
 func _populate_redirect_target() -> void:
 	var type_index = _redirect_type_dropdown.selected
@@ -429,7 +386,7 @@ func _on_add_choice_pressed() -> void:
 		return
 	add_choice("", "redirect_sequence", "")
 	_rebuild_choices_list()
-	ending_changed.emit()
+	_notify_change()
 
 func _rebuild_choices_list() -> void:
 	# Clear existing UI
@@ -534,7 +491,7 @@ func _on_choice_text_changed(new_text: String, index: int) -> void:
 	if index < 0 or index >= _sequence.ending.choices.size():
 		return
 	_sequence.ending.choices[index].text = new_text
-	ending_changed.emit()
+	_notify_change()
 
 func _on_choice_type_changed(type_index: int, choice_index: int) -> void:
 	if _sequence == null or _sequence.ending == null:
@@ -552,7 +509,7 @@ func _on_choice_type_changed(type_index: int, choice_index: int) -> void:
 		var items = _get_targets_for_type(ctype)
 		choice.consequence.target = items[0]["uuid"] if items.size() > 0 else ""
 	_rebuild_choices_list()
-	ending_changed.emit()
+	_notify_change()
 
 func _on_choice_target_changed(target_index: int, choice_index: int) -> void:
 	if _sequence == null or _sequence.ending == null:
@@ -563,21 +520,20 @@ func _on_choice_target_changed(target_index: int, choice_index: int) -> void:
 	if choice.consequence == null:
 		return
 	# Find the target dropdown in the choice row
-	var ctype = choice.consequence.type
-	# Get metadata from the dropdown to check for __new__
 	var choice_row = _choices_list.get_child(choice_index)
 	var target_dropdown = _find_target_dropdown_in_choice(choice_row)
 	if target_dropdown and target_index >= 0 and target_index < target_dropdown.item_count:
 		var meta = target_dropdown.get_item_metadata(target_index)
 		if ConsequenceTargetHelperScript.is_new_target_meta(meta):
+			var ctype = choice.consequence.type
 			new_target_requested.emit(ctype, func(new_uuid: String) -> void:
 				choice.consequence.target = new_uuid
 				_rebuild_choices_list()
-				ending_changed.emit()
+				_notify_change()
 			)
 			return
 		choice.consequence.target = meta
-	ending_changed.emit()
+	_notify_change()
 
 func _find_target_dropdown_in_choice(choice_row) -> OptionButton:
 	if choice_row == null:
@@ -604,7 +560,11 @@ func _find_first_real_target_index(dropdown: OptionButton) -> int:
 func _on_delete_choice(index: int) -> void:
 	remove_choice(index)
 	_rebuild_choices_list()
+	_notify_change()
+
+func _notify_change() -> void:
 	ending_changed.emit()
+	EventBus.story_modified.emit()
 
 # --- Refresh UI from model ---
 

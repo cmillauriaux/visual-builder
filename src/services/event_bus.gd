@@ -7,6 +7,7 @@ extends Node
 signal story_loaded(story: RefCounted)
 signal story_modified()
 signal story_saved(path: String)
+signal targets_updated(sequences: Array, scenes: Array, chapters: Array, conditions: Array)
 
 # --- Navigation Events ---
 ## Émis pour demander un changement de vue (ex: de chapitre à scène).
@@ -23,6 +24,7 @@ signal undo_redo_state_changed(can_undo: bool, can_redo: bool)
 signal play_started(mode: String) # "sequence" or "story"
 signal play_stopped()
 signal play_dialogue_changed(character: String, text: String, index: int)
+signal play_typewriter_tick(visible_chars: int)
 signal play_choice_requested(choices: Array) # Array[ChoiceModel]
 signal play_finished(reason: String)
 

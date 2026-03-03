@@ -15,6 +15,10 @@ run/main_scene="res://src/main.tscn"
 config/features=PackedStringArray("4.4", "GL Compatibility")
 config/icon="res://icon.svg"
 
+[autoload]
+
+EventBus="*res://src/services/event_bus.gd"
+
 [display]
 
 window/size/viewport_width=1920

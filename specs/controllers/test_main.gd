@@ -59,7 +59,7 @@ func test_get_story_base_path_returns_save_path() -> void:
 
 
 func test_extract_export_error_no_file() -> void:
-	var result = _main._extract_export_error("res://nonexistent_log_12345.txt")
+	var result = _main._export_service.extract_export_error("res://nonexistent_log_12345.txt")
 	assert_eq(result, "L'export a échoué (log introuvable).")
 
 

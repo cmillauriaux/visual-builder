@@ -7,31 +7,12 @@ const VariableDefinitionScript = preload("res://src/models/variable_definition.g
 signal variables_changed
 
 var _story = null
-var _vars_list: VBoxContainer
-var _add_btn: Button
+
+@onready var _vars_list: VBoxContainer = $Scroll/VarsList
+@onready var _add_btn: Button = $AddBtn
 
 func _ready() -> void:
-	_build_ui()
-
-func _build_ui() -> void:
-	var title = Label.new()
-	title.text = "Variables de l'histoire"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	add_child(title)
-
-	var scroll = ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.custom_minimum_size = Vector2(300, 200)
-	add_child(scroll)
-
-	_vars_list = VBoxContainer.new()
-	_vars_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.add_child(_vars_list)
-
-	_add_btn = Button.new()
-	_add_btn.text = "+ Ajouter une variable"
 	_add_btn.pressed.connect(_on_add_pressed)
-	add_child(_add_btn)
 
 # --- Public API ---
 

@@ -4,6 +4,7 @@ extends GraphNode
 
 signal double_clicked(uuid: String)
 signal rename_requested(uuid: String)
+signal delete_requested(uuid: String)
 signal entry_point_toggled(uuid: String, checked: bool)
 
 var _uuid: String = ""
@@ -44,6 +45,8 @@ func setup(uuid: String, item_name: String, pos: Vector2, subtitle: String = "",
 		_popup_menu.name = "ContextMenu"
 		_popup_menu.add_item("Renommer", 0)
 		_popup_menu.add_check_item("Point d'entrée", 1)
+		_popup_menu.add_separator()
+		_popup_menu.add_item("Supprimer", 2)
 		_popup_menu.id_pressed.connect(_on_popup_id_pressed)
 		add_child(_popup_menu)
 
@@ -84,6 +87,8 @@ func setup_as_choice_sequence(uuid: String, item_name: String, pos: Vector2, sub
 	_popup_menu.name = "ContextMenu"
 	_popup_menu.add_item("Renommer", 0)
 	_popup_menu.add_check_item("Point d'entrée", 1)
+	_popup_menu.add_separator()
+	_popup_menu.add_item("Supprimer", 2)
 	_popup_menu.id_pressed.connect(_on_popup_id_pressed)
 	add_child(_popup_menu)
 
@@ -155,3 +160,5 @@ func _on_popup_id_pressed(id: int) -> void:
 		var new_checked = not _is_entry_point
 		set_entry_point(new_checked)
 		entry_point_toggled.emit(_uuid, new_checked)
+	elif id == 2:
+		delete_requested.emit(_uuid)

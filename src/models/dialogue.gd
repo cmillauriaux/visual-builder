@@ -1,5 +1,7 @@
 extends RefCounted
 
+class_name DialogueModel
+
 const ForegroundScript = preload("res://src/models/foreground.gd")
 
 var uuid: String = ""

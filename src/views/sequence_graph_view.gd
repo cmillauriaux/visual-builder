@@ -31,6 +31,8 @@ signal sequence_double_clicked(sequence_uuid: String)
 signal condition_double_clicked(condition_uuid: String)
 signal sequence_rename_requested(sequence_uuid: String)
 signal condition_rename_requested(condition_uuid: String)
+signal sequence_delete_requested(sequence_uuid: String)
+signal condition_delete_requested(condition_uuid: String)
 signal entry_point_changed(uuid: String)
 
 var _scene_data = null
@@ -383,6 +385,7 @@ func _create_node(uuid: String, item_name: String, pos: Vector2, subtitle: Strin
 		node.setup(uuid, item_name, pos, subtitle)
 	node.double_clicked.connect(_on_node_double_clicked)
 	node.rename_requested.connect(_on_node_rename_requested)
+	node.delete_requested.connect(_on_sequence_delete_requested)
 	node.entry_point_toggled.connect(_on_entry_point_toggled)
 	_node_map[uuid] = node
 
@@ -402,6 +405,7 @@ func _create_condition_node(uuid: String, item_name: String, pos: Vector2, subti
 	node.add_theme_stylebox_override("titlebar_selected", stylebox_sel)
 	node.double_clicked.connect(_on_condition_double_clicked)
 	node.rename_requested.connect(_on_condition_rename_requested)
+	node.delete_requested.connect(_on_condition_delete_requested)
 	node.entry_point_toggled.connect(_on_entry_point_toggled)
 	_node_map[uuid] = node
 	_condition_uuids[uuid] = true
@@ -417,6 +421,12 @@ func _on_node_rename_requested(uuid: String) -> void:
 
 func _on_condition_rename_requested(uuid: String) -> void:
 	condition_rename_requested.emit(uuid)
+
+func _on_sequence_delete_requested(uuid: String) -> void:
+	sequence_delete_requested.emit(uuid)
+
+func _on_condition_delete_requested(uuid: String) -> void:
+	condition_delete_requested.emit(uuid)
 
 func _on_entry_point_toggled(uuid: String, checked: bool) -> void:
 	if checked:

@@ -2,7 +2,7 @@ extends GutTest
 
 # Tests pour l'éditeur de terminaison (UI + API)
 
-const EndingEditor = preload("res://src/ui/editors/ending_editor.gd")
+const EndingEditorScene = preload("res://src/ui/editors/ending_editor.tscn")
 const Sequence = preload("res://src/models/sequence.gd")
 const Ending = preload("res://src/models/ending.gd")
 const Consequence = preload("res://src/models/consequence.gd")
@@ -13,14 +13,18 @@ const SceneDataScript = preload("res://src/models/scene_data.gd")
 const ChapterScript = preload("res://src/models/chapter.gd")
 const StoryScript = preload("res://src/models/story.gd")
 
-var _editor: VBoxContainer = null
+var _editor = null
 var _sequence = null
 
 func before_each():
-	_editor = VBoxContainer.new()
-	_editor.set_script(EndingEditor)
-	add_child_autofree(_editor)
+	_editor = EndingEditorScene.instantiate()
+	add_child(_editor)
 	_sequence = Sequence.new()
+
+func after_each():
+	if _editor:
+		_editor.queue_free()
+		_editor = null
 
 # === API Tests (backward compat) ===
 

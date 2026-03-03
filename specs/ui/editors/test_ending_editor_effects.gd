@@ -1,21 +1,22 @@
 extends GutTest
 
-const EndingEditorScript = preload("res://src/ui/editors/ending_editor.gd")
+const EndingEditorScene = preload("res://src/ui/editors/ending_editor.tscn")
 const SequenceScript = preload("res://src/models/sequence.gd")
 const EndingScript = preload("res://src/models/ending.gd")
 const ConsequenceScript = preload("res://src/models/consequence.gd")
 const ChoiceScript = preload("res://src/models/choice.gd")
 const VariableEffectScript = preload("res://src/models/variable_effect.gd")
 
-var _editor: VBoxContainer
+var _editor = null
 
 func before_each():
-	_editor = VBoxContainer.new()
-	_editor.set_script(EndingEditorScript)
+	_editor = EndingEditorScene.instantiate()
 	add_child(_editor)
 
 func after_each():
-	_editor.queue_free()
+	if _editor:
+		_editor.queue_free()
+		_editor = null
 
 # --- Effets sur auto_redirect ---
 

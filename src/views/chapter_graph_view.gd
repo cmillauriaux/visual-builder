@@ -13,6 +13,7 @@ const BEZIER_SAMPLE_COUNT = 20
 
 signal chapter_double_clicked(chapter_uuid: String)
 signal chapter_rename_requested(chapter_uuid: String)
+signal chapter_delete_requested(chapter_uuid: String)
 signal entry_point_changed(uuid: String)
 
 var _story = null
@@ -260,6 +261,7 @@ func _create_node(uuid: String, item_name: String, pos: Vector2, subtitle: Strin
 	node.setup(uuid, item_name, pos, subtitle)
 	node.double_clicked.connect(_on_node_double_clicked)
 	node.rename_requested.connect(_on_node_rename_requested)
+	node.delete_requested.connect(_on_node_delete_requested)
 	node.entry_point_toggled.connect(_on_entry_point_toggled)
 	_node_map[uuid] = node
 
@@ -268,6 +270,9 @@ func _on_node_double_clicked(uuid: String) -> void:
 
 func _on_node_rename_requested(uuid: String) -> void:
 	chapter_rename_requested.emit(uuid)
+
+func _on_node_delete_requested(uuid: String) -> void:
+	chapter_delete_requested.emit(uuid)
 
 func _on_entry_point_toggled(uuid: String, checked: bool) -> void:
 	if checked:

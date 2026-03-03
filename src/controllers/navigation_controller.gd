@@ -16,11 +16,17 @@ const AddSceneCommand = preload("res://src/commands/add_scene_command.gd")
 const AddSequenceCommand = preload("res://src/commands/add_sequence_command.gd")
 const AddConditionCommand = preload("res://src/commands/add_condition_command.gd")
 const RenameNodeCommand = preload("res://src/commands/rename_node_command.gd")
+const RemoveChapterCommand = preload("res://src/commands/remove_chapter_command.gd")
+const RemoveSceneCommand = preload("res://src/commands/remove_scene_command.gd")
+const RemoveSequenceCommand = preload("res://src/commands/remove_sequence_command.gd")
+const RemoveConditionCommand = preload("res://src/commands/remove_condition_command.gd")
+const EditorState = preload("res://src/controllers/editor_state.gd")
 
 var _main: Control
 var _rename_dialog: ConfirmationDialog
 var _menu_config_dialog: ConfirmationDialog
 var _last_save_path: String = ""
+var _current_mode: EditorState.Mode = EditorState.Mode.NONE
 
 
 func get_save_path() -> String:
@@ -31,6 +37,31 @@ func setup(main: Control) -> void:
 	_main = main
 
 
+func update_editor_mode() -> void:
+	var level = _main._editor_main.get_current_level()
+	var new_mode = EditorState.Mode.NONE
+	
+	if _main._play_ctrl and _main._play_ctrl.is_story_play_mode():
+		new_mode = EditorState.Mode.PLAY_MODE
+	else:
+		match level:
+			"chapters": new_mode = EditorState.Mode.CHAPTER_VIEW
+			"scenes": new_mode = EditorState.Mode.SCENE_VIEW
+			"sequences": new_mode = EditorState.Mode.SEQUENCE_VIEW
+			"sequence_edit": new_mode = EditorState.Mode.SEQUENCE_EDIT
+			"condition_edit": new_mode = EditorState.Mode.CONDITION_EDIT
+	
+	if new_mode != _current_mode:
+		_current_mode = new_mode
+		EventBus.editor_mode_changed.emit(_current_mode, {
+			"level": level,
+			"chapter": _main._editor_main._current_chapter,
+			"scene": _main._editor_main._current_scene,
+			"sequence": _main._editor_main._current_sequence,
+			"condition": _main._editor_main._current_condition
+		})
+
+
 # --- Create ---
 
 func on_create_pressed() -> void:
@@ -39,21 +70,21 @@ func on_create_pressed() -> void:
 	if level == "chapters":
 		var pos = _main._editor_main.compute_next_position(_main._editor_main._story.chapters)
 		var cmd = AddChapterCommand.new(_main._editor_main._story, item_name, pos)
-		_main._undo_redo.push(cmd)
+		_main._undo_redo.push_and_execute(cmd)
 		_main._chapter_graph_view.load_story(_main._editor_main._story)
-		_main._refresh_undo_redo_buttons()
+		notify_targets_changed()
 	elif level == "scenes":
 		var pos = _main._editor_main.compute_next_position(_main._editor_main._current_chapter.scenes)
 		var cmd = AddSceneCommand.new(_main._editor_main._current_chapter, item_name, pos)
-		_main._undo_redo.push(cmd)
+		_main._undo_redo.push_and_execute(cmd)
 		_main._scene_graph_view.load_chapter(_main._editor_main._current_chapter)
-		_main._refresh_undo_redo_buttons()
+		notify_targets_changed()
 	elif level == "sequences":
 		var pos = _main._editor_main.compute_next_position(_main._editor_main._current_scene.sequences)
 		var cmd = AddSequenceCommand.new(_main._editor_main._current_scene, item_name, pos)
-		_main._undo_redo.push(cmd)
+		_main._undo_redo.push_and_execute(cmd)
 		_main._sequence_graph_view.load_scene(_main._editor_main._current_scene)
-		_main._refresh_undo_redo_buttons()
+		notify_targets_changed()
 
 
 func on_create_condition_pressed() -> void:
@@ -65,9 +96,50 @@ func on_create_condition_pressed() -> void:
 	all_items.append_array(_main._editor_main._current_scene.conditions)
 	var pos = _main._editor_main.compute_next_position(all_items)
 	var cmd = AddConditionCommand.new(_main._editor_main._current_scene, cond_name, pos)
-	_main._undo_redo.push(cmd)
+	_main._undo_redo.push_and_execute(cmd)
 	_main._sequence_graph_view.load_scene(_main._editor_main._current_scene)
-	_main._refresh_undo_redo_buttons()
+	notify_targets_changed()
+
+
+func on_chapter_delete_requested(uuid: String) -> void:
+	var chapter = _main._editor_main._story.find_chapter(uuid)
+	if chapter:
+		var cmd = RemoveChapterCommand.new(_main._editor_main._story, chapter)
+		_main._undo_redo.push_and_execute(cmd)
+		_main._chapter_graph_view.load_story(_main._editor_main._story)
+		notify_targets_changed()
+
+
+func on_scene_delete_requested(uuid: String) -> void:
+	var scene = _main._editor_main._current_chapter.find_scene(uuid)
+	if scene:
+		var cmd = RemoveSceneCommand.new(_main._editor_main._current_chapter, scene)
+		_main._undo_redo.push_and_execute(cmd)
+		_main._scene_graph_view.load_chapter(_main._editor_main._current_chapter)
+		notify_targets_changed()
+
+
+func on_sequence_delete_requested(uuid: String) -> void:
+	var seq = _main._editor_main._current_scene.find_sequence(uuid)
+	if seq:
+		var cmd = RemoveSequenceCommand.new(_main._editor_main._current_scene, seq)
+		_main._undo_redo.push_and_execute(cmd)
+		_main._sequence_graph_view.load_scene(_main._editor_main._current_scene)
+		notify_targets_changed()
+
+
+func on_condition_delete_requested(uuid: String) -> void:
+	var cond = _main._editor_main._current_scene.find_condition(uuid)
+	if cond:
+		var cmd = RemoveConditionCommand.new(_main._editor_main._current_scene, cond)
+		_main._undo_redo.push_and_execute(cmd)
+		_main._sequence_graph_view.load_scene(_main._editor_main._current_scene)
+		notify_targets_changed()
+
+
+func notify_targets_changed() -> void:
+	var targets = _build_available_targets()
+	EventBus.targets_updated.emit(targets["sequences"], targets["scenes"], targets["chapters"], targets["conditions"])
 
 
 # --- Navigation ---
@@ -251,6 +323,8 @@ func _open_save_dialog() -> void:
 	dialog.access = FileDialog.ACCESS_FILESYSTEM
 	dialog.current_dir = _last_save_path if _last_save_path != "" else OS.get_environment("HOME")
 	dialog.dir_selected.connect(_on_save_dir_selected)
+	dialog.confirmed.connect(dialog.queue_free)
+	dialog.canceled.connect(dialog.queue_free)
 	_main.add_child(dialog)
 	dialog.popup_centered(Vector2i(800, 600))
 
@@ -271,6 +345,8 @@ func on_load_pressed() -> void:
 	dialog.access = FileDialog.ACCESS_FILESYSTEM
 	dialog.current_dir = OS.get_environment("HOME")
 	dialog.dir_selected.connect(_on_load_dir_selected)
+	dialog.confirmed.connect(dialog.queue_free)
+	dialog.canceled.connect(dialog.queue_free)
 	_main.add_child(dialog)
 	dialog.popup_centered(Vector2i(800, 600))
 
@@ -280,6 +356,7 @@ func _on_load_dir_selected(path: String) -> void:
 	if loaded_story == null:
 		var err_dialog = AcceptDialog.new()
 		err_dialog.dialog_text = "Impossible de charger l'histoire : fichier story.yaml introuvable dans le dossier sélectionné."
+		err_dialog.confirmed.connect(err_dialog.queue_free)
 		_main.add_child(err_dialog)
 		err_dialog.popup_centered()
 		return
@@ -309,6 +386,11 @@ func on_new_story_pressed() -> void:
 	seq.seq_name = "Séquence 1"
 	seq.position = Vector2(100, 100)
 	scene.sequences.append(seq)
+
+	var dlg = DialogueModel.new()
+	dlg.character = "Narrateur"
+	dlg.text = "Bienvenue dans votre nouvelle histoire."
+	seq.dialogues.append(dlg)
 
 	_main._undo_redo.clear()
 	_main._editor_main.open_story(story)
@@ -344,31 +426,13 @@ func _on_menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_b
 
 
 func on_variables_changed() -> void:
-	if _main._editor_main._story:
-		var names = _main._editor_main._story.get_variable_names()
-		_main._ending_editor.set_variable_names(names)
+	EventBus.story_modified.emit()
 
 
 # --- Ending ---
 
 func on_ending_changed() -> void:
 	_update_ending_connections()
-	_update_ending_tab_indicator()
-
-
-func _update_ending_tab_indicator() -> void:
-	if _main._tab_container == null:
-		return
-	var seq = _main._sequence_editor_ctrl.get_sequence() if _main._sequence_editor_ctrl else null
-	if seq and seq.ending != null:
-		_main._tab_container.set_tab_title(1, "Terminaison ●")
-	else:
-		_main._tab_container.set_tab_title(1, "Terminaison")
-
-
-func update_ending_targets() -> void:
-	var targets = _build_available_targets()
-	_main._ending_editor.set_available_targets(targets["sequences"], targets["scenes"], targets["chapters"], targets["conditions"])
 
 
 func _update_ending_connections() -> void:
@@ -383,15 +447,8 @@ func on_condition_changed() -> void:
 
 
 func load_condition_editor(cond) -> void:
-	_update_condition_targets()
-	if _main._editor_main._story:
-		_main._condition_editor.set_variable_names(_main._editor_main._story.get_variable_names())
+	notify_targets_changed()
 	_main._condition_editor.load_condition(cond)
-
-
-func _update_condition_targets() -> void:
-	var targets = _build_available_targets()
-	_main._condition_editor.set_available_targets(targets["sequences"], targets["scenes"], targets["chapters"], targets["conditions"])
 
 
 # --- Verifier ---
@@ -426,39 +483,33 @@ func _on_new_target_requested(ctype: String, callback: Callable) -> void:
 			all_items.append_array(_main._editor_main._current_scene.conditions)
 			var pos = _main._editor_main.compute_next_position(all_items)
 			var cmd = AddSequenceCommand.new(_main._editor_main._current_scene, name, pos)
-			_main._undo_redo.push(cmd)
+			_main._undo_redo.push_and_execute(cmd)
 			var new_uuid = _main._editor_main._current_scene.sequences.back().uuid
-			update_ending_targets()
-			_update_condition_targets()
+			notify_targets_changed()
 			callback.call(new_uuid)
 			_update_ending_connections()
-			_main._refresh_undo_redo_buttons()
 		"redirect_scene":
 			if _main._editor_main._current_chapter == null:
 				return
 			var name = "Scène %d" % (_main._editor_main._current_chapter.scenes.size() + 1)
 			var pos = _main._editor_main.compute_next_position(_main._editor_main._current_chapter.scenes)
 			var cmd = AddSceneCommand.new(_main._editor_main._current_chapter, name, pos)
-			_main._undo_redo.push(cmd)
+			_main._undo_redo.push_and_execute(cmd)
 			var new_uuid = _main._editor_main._current_chapter.scenes.back().uuid
-			update_ending_targets()
-			_update_condition_targets()
+			notify_targets_changed()
 			callback.call(new_uuid)
 			_update_ending_connections()
-			_main._refresh_undo_redo_buttons()
 		"redirect_chapter":
 			if _main._editor_main._story == null:
 				return
 			var name = "Chapitre %d" % (_main._editor_main._story.chapters.size() + 1)
 			var pos = _main._editor_main.compute_next_position(_main._editor_main._story.chapters)
 			var cmd = AddChapterCommand.new(_main._editor_main._story, name, pos)
-			_main._undo_redo.push(cmd)
+			_main._undo_redo.push_and_execute(cmd)
 			var new_uuid = _main._editor_main._story.chapters.back().uuid
-			update_ending_targets()
-			_update_condition_targets()
+			notify_targets_changed()
 			callback.call(new_uuid)
 			_update_ending_connections()
-			_main._refresh_undo_redo_buttons()
 
 
 func _build_available_targets() -> Dictionary:

@@ -1,0 +1,22 @@
+=========================================
+  Export story — 2026-03-03 00:08:52
+=========================================
+→ Godot : /Applications/Godot.app/Contents/MacOS/Godot
+→ Plateforme : macos
+→ Story : /Users/cedric/Stories/InnheritedHearts
+→ Nom du jeu : Innherited Hearts
+→ Dossier temporaire : /var/folders/q4/8gcj_t0j17gd181yfscp0b440000gn/T/tmp.fcrH6HYzRU
+→ Copie du projet...
+→ Copie de la story...
+→ Réécriture des chemins images...
+Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org
+
+StoryPathRewriter: rewriting paths in 'res://story' with base 'res://story'
+StoryPathRewriter: paths rewritten successfully
+[1;35mSCRIPT ERROR:[0;95m Parse Error: Could not find type "StoryModel" in the current scope.
+[0;90m          at: GDScript::reload (res://src/services/event_bus.gd:7)[0m
+[1;31mERROR:[0;91m Failed to load script "res://src/services/event_bus.gd" with error "Parse error".
+[0;90m   at: load (modules/gdscript/gdscript.cpp:3022)[0m
+[1;31mERROR:[0;91m Failed to instantiate an autoload, script 'res://src/services/event_bus.gd' does not inherit from 'Node'.
+[0;90m   at: start (main/main.cpp:4075)[0m
+→ Configuration de project.godot...

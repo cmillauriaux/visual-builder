@@ -2,7 +2,9 @@ extends RefCounted
 
 ## Utilitaire partagé de chargement de textures (ressources Godot ou fichiers externes).
 
-static func load_texture(path: String):
+class_name TextureLoader
+
+static func load_texture(path: String) -> Texture2D:
 	if path == "":
 		return null
 	# Try as Godot resource first

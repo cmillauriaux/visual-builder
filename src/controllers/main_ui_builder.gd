@@ -10,19 +10,22 @@ const SceneGraphViewScript = preload("res://src/views/scene_graph_view.gd")
 const SequenceGraphViewScript = preload("res://src/views/sequence_graph_view.gd")
 const SequenceVisualEditorScript = preload("res://src/ui/sequence/sequence_visual_editor.gd")
 const DialogueListPanelScript = preload("res://src/ui/sequence/dialogue_list_panel.gd")
-const EndingEditorScript = preload("res://src/ui/editors/ending_editor.gd")
+const EndingEditorScene = preload("res://src/ui/editors/ending_editor.tscn")
 const TransitionPanelScript = preload("res://src/ui/sequence/transition_panel.gd")
 const ForegroundTransitionScript = preload("res://src/ui/visual/foreground_transition.gd")
 const SequenceFxPlayerScript = preload("res://src/ui/visual/sequence_fx_player.gd")
 const FxPanelScript = preload("res://src/ui/sequence/fx_panel.gd")
 const DialogueEditorScript = preload("res://src/ui/editors/dialogue_editor.gd")
 const StoryPlayControllerScript = preload("res://src/ui/play/story_play_controller.gd")
-const ConditionEditorScript = preload("res://src/ui/editors/condition_editor.gd")
-const VariablePanelScript = preload("res://src/ui/editors/variable_panel.gd")
+const ConditionEditorScene = preload("res://src/ui/editors/condition_editor.tscn")
+const VariablePanelScene = preload("res://src/ui/editors/variable_panel.tscn")
 const VerifierReportPanelScript = preload("res://src/ui/editors/verifier_report_panel.gd")
+
+const MainTheme = preload("res://src/ui/themes/editor_main.tres")
 
 
 static func build(main: Control) -> void:
+	main.theme = MainTheme
 	_build_top_bar(main)
 	_build_content_area(main)
 	_build_sequence_editor(main)
@@ -35,10 +38,15 @@ static func build(main: Control) -> void:
 static func _build_top_bar(main: Control) -> void:
 	main._vbox = VBoxContainer.new()
 	main._vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	main._vbox.add_theme_constant_override("separation", 0)
 	main.add_child(main._vbox)
 
+	var top_panel = PanelContainer.new()
+	top_panel.theme_type_variation = "TopBar"
+	main._vbox.add_child(top_panel)
+
 	main._top_bar = HBoxContainer.new()
-	main._vbox.add_child(main._top_bar)
+	top_panel.add_child(main._top_bar)
 
 	main._back_button = Button.new()
 	main._back_button.text = "← Retour"
@@ -114,13 +122,12 @@ static func _build_top_bar(main: Control) -> void:
 	main._variable_panel_popup.size = Vector2i(400, 350)
 	main.add_child(main._variable_panel_popup)
 
-	main._variable_panel = VBoxContainer.new()
-	main._variable_panel.set_script(VariablePanelScript)
+	main._variable_panel = VariablePanelScene.instantiate()
 	main._variable_panel_popup.add_child(main._variable_panel)
 
 
 static func _build_content_area(main: Control) -> void:
-	main._content_area = Control.new()
+	main._content_area = PanelContainer.new()
 	main._content_area.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	main._vbox.add_child(main._content_area)
 
@@ -239,9 +246,7 @@ static func _build_sequence_editor(main: Control) -> void:
 	terminaison_tab.name = "Terminaison"
 	main._tab_container.add_child(terminaison_tab)
 
-	main._ending_editor = VBoxContainer.new()
-	main._ending_editor.set_script(EndingEditorScript)
-	main._ending_editor.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	main._ending_editor = EndingEditorScene.instantiate()
 	terminaison_tab.add_child(main._ending_editor)
 
 	# Tab 2: Musique (placeholder)
@@ -275,9 +280,7 @@ static func _build_condition_editor(main: Control) -> void:
 	main._condition_editor_panel.visible = false
 	main._content_area.add_child(main._condition_editor_panel)
 
-	main._condition_editor = VBoxContainer.new()
-	main._condition_editor.set_script(ConditionEditorScript)
-	main._condition_editor.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	main._condition_editor = ConditionEditorScene.instantiate()
 	main._condition_editor_panel.add_child(main._condition_editor)
 
 
@@ -300,7 +303,7 @@ static func _build_play_overlay(main: Control) -> void:
 	main._play_overlay.add_child(play_vbox)
 
 	main._play_character_label = Label.new()
-	main._play_character_label.add_theme_font_size_override("font_size", 20)
+	# Size is now handled by theme
 	play_vbox.add_child(main._play_character_label)
 
 	main._play_text_label = RichTextLabel.new()
@@ -354,4 +357,5 @@ static func _build_helpers(main: Control) -> void:
 	# Story Play Controller
 	main._story_play_ctrl = Node.new()
 	main._story_play_ctrl.set_script(StoryPlayControllerScript)
+	main._story_play_ctrl.setup(main._notification_service)
 	main.add_child(main._story_play_ctrl)

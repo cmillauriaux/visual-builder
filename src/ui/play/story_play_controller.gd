@@ -17,6 +17,11 @@ var _current_scene = null
 var _current_sequence = null
 var _user_stopped: bool = false
 var _variables: Dictionary = {}  # String → Variant
+var _notification_service: RefCounted
+
+
+func setup(notification_service: RefCounted) -> void:
+	_notification_service = notification_service
 
 func get_state() -> int:
 	return _state
@@ -289,4 +294,7 @@ func _check_notifications(before: Dictionary) -> void:
 		if not before.has(var_name) or before[var_name] != _variables[var_name]:
 			for notif in _story.notifications:
 				if notif.matches(var_name):
-					notification_triggered.emit(notif.message)
+					if _notification_service:
+						_notification_service.show_notification(notif.message)
+					else:
+						notification_triggered.emit(notif.message)

@@ -4,6 +4,8 @@
 ## Un fichier i18n/{lang}.yaml mappe chaque chaîne source vers sa traduction.
 ## Format : { "chaîne source": "traduction" }
 
+class_name StoryI18nService
+
 const YamlParser = preload("res://src/persistence/yaml_parser.gd")
 
 ## Chaînes fixes de l'interface utilisateur du jeu (incluses dans tous les fichiers i18n).
@@ -55,7 +57,7 @@ static func get_ui_string(source: String, i18n_dict: Dictionary) -> String:
 
 ## Extrait toutes les chaînes source non vides d'une histoire.
 ## Retourne un dictionnaire { source: source } (clé = valeur) pour générer fr.yaml.
-static func extract_strings(story) -> Dictionary:
+static func extract_strings(story: RefCounted) -> Dictionary:
 	var strings: Dictionary = {}
 
 	# Chaînes d'interface fixes
@@ -124,7 +126,7 @@ static func save_i18n(strings_dict: Dictionary, story_path: String, lang: String
 
 ## Applique les traductions de i18n_dict aux champs texte de l'histoire en mémoire.
 ## Si une clé est absente ou si la traduction est vide, la valeur source est conservée.
-static func apply_to_story(story, i18n_dict: Dictionary) -> void:
+static func apply_to_story(story: RefCounted, i18n_dict: Dictionary) -> void:
 	if i18n_dict.is_empty():
 		return
 
@@ -200,7 +202,7 @@ static func get_available_languages(story_path: String) -> Array:
 ## Retourne un dictionnaire par langue non-défaut :
 ##   { lang: { "missing": [...], "orphans": [...], "total": int, "translated": int } }
 ## La langue par défaut (source) est ignorée.
-static func check_translations(story, story_path: String) -> Dictionary:
+static func check_translations(story: RefCounted, story_path: String) -> Dictionary:
 	var source_strings = extract_strings(story)
 	var config = load_languages_config(story_path)
 	var default_lang: String = config.get("default", "fr")
@@ -239,7 +241,7 @@ static func check_translations(story, story_path: String) -> Dictionary:
 ## Pour la langue par défaut : clé = valeur (chaîne source).
 ## Pour les autres langues : clé = "" (à traduire).
 ## Crée les fichiers manquants. Retourne { lang: added_count }.
-static func regenerate_missing_keys(story, story_path: String) -> Dictionary:
+static func regenerate_missing_keys(story: RefCounted, story_path: String) -> Dictionary:
 	var source_strings = extract_strings(story)
 	var config = load_languages_config(story_path)
 	var default_lang: String = config.get("default", "fr")

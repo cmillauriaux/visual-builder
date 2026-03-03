@@ -1,20 +1,24 @@
 extends GutTest
 
-const ConditionEditorScript = preload("res://src/ui/editors/condition_editor.gd")
+const ConditionEditorScene = preload("res://src/ui/editors/condition_editor.tscn")
 const ConditionScript = preload("res://src/models/condition.gd")
 const ConditionRuleScript = preload("res://src/models/condition_rule.gd")
 const ConsequenceScript = preload("res://src/models/consequence.gd")
 
-var _editor: VBoxContainer
+var _editor = null
 var _condition: Object
 
 func before_each():
-	_editor = VBoxContainer.new()
-	_editor.set_script(ConditionEditorScript)
-	add_child_autofree(_editor)
+	_editor = ConditionEditorScene.instantiate()
+	add_child(_editor)
 
 	_condition = ConditionScript.new()
 	_condition.condition_name = "Test Condition"
+
+func after_each():
+	if _editor:
+		_editor.queue_free()
+		_editor = null
 
 func _make_targets() -> void:
 	_editor.set_available_targets(
@@ -172,8 +176,11 @@ func test_load_condition_with_existing_rules():
 # --- Opérateur exists masque la valeur ---
 
 func test_operator_labels():
-	assert_eq(ConditionEditorScript.OPERATOR_TYPES.size(), 8)
-	assert_eq(ConditionEditorScript.OPERATOR_LABELS.size(), 8)
+	# Use preload to access static constants if needed, or via the instance
+	# Since it's a scene, we might need to access the script
+	var script = _editor.get_script()
+	assert_eq(script.OPERATOR_TYPES.size(), 8)
+	assert_eq(script.OPERATOR_LABELS.size(), 8)
 
 # === "Nouveau..." signal tests ===
 

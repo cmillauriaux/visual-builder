@@ -1,5 +1,7 @@
 extends RefCounted
 
+class_name SceneModel
+
 const SequenceScript = preload("res://src/models/sequence.gd")
 const ConditionScript = preload("res://src/models/condition.gd")
 

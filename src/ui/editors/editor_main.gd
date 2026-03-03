@@ -22,6 +22,7 @@ func open_story(story) -> void:
 	_current_scene = null
 	_current_sequence = null
 	_current_condition = null
+	EventBus.story_loaded.emit(_story)
 
 func navigate_to_chapter(chapter_uuid: String) -> void:
 	if _story == null:

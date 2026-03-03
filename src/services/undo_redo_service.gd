@@ -3,15 +3,26 @@ extends RefCounted
 ## Service de gestion de l'historique undo/redo.
 ## Implémente le pattern Command avec une pile limitée à MAX_HISTORY entrées.
 
+class_name UndoRedoService
+
 const MAX_HISTORY: int = 50
 
-var _undo_stack: Array = []  # Array[BaseCommand]
-var _redo_stack: Array = []  # Array[BaseCommand]
+var _undo_stack: Array[RefCounted] = []
+var _redo_stack: Array[RefCounted] = []
 
 
 ## Pousse une commande, l'exécute, et vide la pile redo.
-func push(command) -> void:
+func push(command: RefCounted) -> void:
 	command.execute()
+	_undo_redo_internal(command)
+
+
+func push_and_execute(command: RefCounted) -> void:
+	command.execute()
+	_undo_redo_internal(command)
+
+
+func _undo_redo_internal(command: RefCounted) -> void:
 	_undo_stack.append(command)
 	if _undo_stack.size() > MAX_HISTORY:
 		_undo_stack.remove_at(0)

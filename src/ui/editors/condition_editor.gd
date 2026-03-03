@@ -2,9 +2,12 @@ extends VBoxContainer
 
 ## Éditeur de condition — UI complète pour configurer les règles et le default.
 
+class_name ConditionEditor
+
 const ConditionRuleScript = preload("res://src/models/condition_rule.gd")
 const ConsequenceScript = preload("res://src/models/consequence.gd")
 const ConsequenceTargetHelperScript = preload("res://src/ui/shared/consequence_target_helper.gd")
+const EditorState = preload("res://src/controllers/editor_state.gd")
 
 signal condition_changed
 signal new_target_requested(ctype: String, callback: Callable)
@@ -23,60 +26,37 @@ var _condition = null
 var _target_helper = ConsequenceTargetHelperScript.new()
 
 # UI references
-var _rules_list: VBoxContainer
-var _add_rule_btn: Button
-var _default_container: VBoxContainer
-var _default_type_dropdown: OptionButton
-var _default_target_dropdown: OptionButton
+@onready var _rules_list: VBoxContainer = %RulesList
+@onready var _add_rule_btn: Button = %AddRuleBtn
+@onready var _default_container: VBoxContainer = %DefaultContainer
+@onready var _default_type_dropdown: OptionButton = %DefaultTypeDropdown
+@onready var _default_target_dropdown: OptionButton = %DefaultTargetDropdown
 
 func _ready() -> void:
-	_build_ui()
-
-func _build_ui() -> void:
-	# Rules section
-	var rules_label = Label.new()
-	rules_label.text = "— Règles —"
-	rules_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	add_child(rules_label)
-
-	var rules_scroll = ScrollContainer.new()
-	rules_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	rules_scroll.custom_minimum_size.y = 150
-	add_child(rules_scroll)
-
-	_rules_list = VBoxContainer.new()
-	_rules_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	rules_scroll.add_child(_rules_list)
-
-	_add_rule_btn = Button.new()
-	_add_rule_btn.text = "+ Ajouter une règle"
-	_add_rule_btn.pressed.connect(_on_add_rule_pressed)
-	add_child(_add_rule_btn)
-
-	# Default section
-	add_child(HSeparator.new())
-
-	var default_label = Label.new()
-	default_label.text = "— Default —"
-	default_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	add_child(default_label)
-
-	_default_container = VBoxContainer.new()
-	add_child(_default_container)
-
-	var default_row = HBoxContainer.new()
-	_default_container.add_child(default_row)
-
-	_default_type_dropdown = OptionButton.new()
+	# Initialiser les dropdowns statiques
+	_default_type_dropdown.clear()
 	for label in CONSEQUENCE_LABELS:
 		_default_type_dropdown.add_item(label)
+	
+	# Connecter les signaux
+	_add_rule_btn.pressed.connect(_on_add_rule_pressed)
 	_default_type_dropdown.item_selected.connect(_on_default_type_changed)
-	default_row.add_child(_default_type_dropdown)
-
-	_default_target_dropdown = OptionButton.new()
-	_default_target_dropdown.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_default_target_dropdown.item_selected.connect(_on_default_target_changed)
-	default_row.add_child(_default_target_dropdown)
+
+	EventBus.story_loaded.connect(_on_story_loaded)
+	EventBus.story_modified.connect(_on_story_modified)
+	EventBus.targets_updated.connect(set_available_targets)
+
+
+func _on_story_loaded(story: StoryModel) -> void:
+	set_variable_names(story.get_variable_names())
+
+
+func _on_story_modified() -> void:
+	# Note: On ne peut pas récupérer la story ici facilement sans référence
+	# Mais NavigationController appelle set_variable_names s'il a la main.
+	# L'idéal serait d'avoir la story dans l'EventBus.story_modified(story)
+	pass
 
 # --- Public API ---
 

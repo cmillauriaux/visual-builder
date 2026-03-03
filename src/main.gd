@@ -192,8 +192,10 @@ func _ready() -> void:
 	EventBus.play_started.connect(_on_play_started)
 	EventBus.play_stopped.connect(_on_play_stopped)
 	EventBus.play_dialogue_changed.connect(_on_play_dialogue_changed)
+	EventBus.play_typewriter_tick.connect(_on_play_typewriter_tick)
 	EventBus.play_choice_requested.connect(_on_play_choice_requested)
 	EventBus.play_finished.connect(_on_play_finished)
+	EventBus.story_modified.connect(_on_story_modified)
 	_sequence_editor_ctrl.play_dialogue_changed.connect(_play_ctrl.on_play_dialogue_changed)
 	_sequence_editor_ctrl.play_stopped.connect(_play_ctrl.on_play_stopped)
 
@@ -368,6 +370,16 @@ func highlight_dialogue_in_list(index: int) -> void:
 	_dialogue_list_container.highlight_item(index)
 
 
+func _update_ending_tab_indicator() -> void:
+	if _tab_container == null:
+		return
+	var seq = _sequence_editor_ctrl.get_sequence()
+	if seq and seq.ending != null:
+		_tab_container.set_tab_title(1, "Terminaison ●")
+	else:
+		_tab_container.set_tab_title(1, "Terminaison")
+
+
 func _rebuild_dialogue_list() -> void:
 	_dialogue_list_container.setup(_sequence_editor_ctrl)
 
@@ -377,15 +389,13 @@ func _rebuild_dialogue_list() -> void:
 func load_sequence_editors(seq) -> void:
 	_visual_editor.load_sequence(seq)
 	_dialogue_editor.load_sequence(seq)
-	_nav_ctrl.update_ending_targets()
-	if _editor_main._story:
-		_ending_editor.set_variable_names(_editor_main._story.get_variable_names())
+	_nav_ctrl.notify_targets_changed()
 	_ending_editor.load_sequence(seq)
 	_fx_panel.load_sequence(seq)
 	_sequence_editor_ctrl.load_sequence(seq)
+	_update_ending_tab_indicator()
 	_rebuild_dialogue_list()
 	_tab_container.current_tab = 0
-	_nav_ctrl._update_ending_tab_indicator()
 	_play_button.visible = true
 	_stop_button.visible = false
 	_play_overlay.visible = false
@@ -417,6 +427,10 @@ func _on_play_dialogue_changed(character: String, text: String, index: int) -> v
 	_play_character_label.text = character
 	_play_text_label.text = text
 	_play_text_label.visible_characters = 0
+
+
+func _on_play_typewriter_tick(visible_chars: int) -> void:
+	_play_text_label.visible_characters = visible_chars
 
 
 func _on_play_choice_requested(choices: Array) -> void:
@@ -456,8 +470,13 @@ func _on_play_finished(reason: String) -> void:
 	}
 	var dialog = AcceptDialog.new()
 	dialog.dialog_text = messages.get(reason, "Fin de la lecture")
+	dialog.confirmed.connect(dialog.queue_free)
 	add_child(dialog)
 	dialog.popup_centered()
+
+
+func _on_story_modified() -> void:
+	_update_ending_tab_indicator()
 
 
 func _hide_choice_overlay() -> void:
@@ -617,11 +636,13 @@ func _on_languages_pressed() -> void:
 		var warn = AcceptDialog.new()
 		warn.title = "Sauvegarde requise"
 		warn.dialog_text = "Veuillez sauvegarder l'histoire avant de gérer les langues."
+		warn.confirmed.connect(warn.queue_free)
 		add_child(warn)
 		warn.popup_centered()
 		return
 	var dialog = AcceptDialog.new()
 	dialog.set_script(LanguageManagerDialogScript)
+	dialog.confirmed.connect(dialog.queue_free)
 	add_child(dialog)
 	dialog.setup(base_path)
 	dialog.popup_centered()
@@ -636,6 +657,7 @@ func _on_i18n_regenerate_pressed() -> void:
 	var added = StoryI18nService.regenerate_missing_keys(_editor_main._story, base_path)
 	var dialog = AcceptDialog.new()
 	dialog.set_script(I18nDialogScript)
+	dialog.confirmed.connect(dialog.queue_free)
 	add_child(dialog)
 	dialog.show_regenerate_result(added)
 	dialog.popup_centered()
@@ -650,6 +672,7 @@ func _on_i18n_check_pressed() -> void:
 	var check = StoryI18nService.check_translations(_editor_main._story, base_path)
 	var dialog = AcceptDialog.new()
 	dialog.set_script(I18nDialogScript)
+	dialog.confirmed.connect(dialog.queue_free)
 	add_child(dialog)
 	dialog.show_check_result(check)
 	dialog.popup_centered()
@@ -669,6 +692,7 @@ func _on_notifications_pressed() -> void:
 		return
 	var dialog = AcceptDialog.new()
 	dialog.set_script(NotificationDialogScript)
+	dialog.confirmed.connect(dialog.queue_free)
 	add_child(dialog)
 	dialog.setup(_editor_main._story)
 	dialog.popup_centered()
@@ -690,6 +714,7 @@ func _on_gallery_pressed() -> void:
 		return
 	var dialog = Window.new()
 	dialog.set_script(GalleryDialogScript)
+	dialog.close_requested.connect(dialog.queue_free)
 	add_child(dialog)
 	dialog.setup(_editor_main._story, _get_story_base_path())
 	dialog.popup_centered()
@@ -698,6 +723,8 @@ func _on_gallery_pressed() -> void:
 func _on_export_pressed() -> void:
 	var dialog = ConfirmationDialog.new()
 	dialog.set_script(ExportDialogScript)
+	dialog.confirmed.connect(dialog.queue_free)
+	dialog.canceled.connect(dialog.queue_free)
 	add_child(dialog)
 	dialog.setup(_editor_main._story)
 	dialog.export_requested.connect(_on_export_requested)
@@ -721,6 +748,7 @@ func _show_export_result(output_path: String, log_path: String) -> void:
 	var dialog = AcceptDialog.new()
 	dialog.title = "Export terminé"
 	dialog.dialog_text = "Le jeu a été exporté dans :\n%s\n\nLog : %s" % [output_path, log_path]
+	dialog.confirmed.connect(dialog.queue_free)
 	add_child(dialog)
 	dialog.popup_centered()
 
@@ -729,5 +757,6 @@ func _show_export_error(log_path: String, reason: String) -> void:
 	var dialog = AcceptDialog.new()
 	dialog.title = "Erreur d'export"
 	dialog.dialog_text = reason + "\n\nLog : " + log_path
+	dialog.confirmed.connect(dialog.queue_free)
 	add_child(dialog)
 	dialog.popup_centered()

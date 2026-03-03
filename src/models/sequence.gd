@@ -1,5 +1,7 @@
 extends RefCounted
 
+class_name SequenceModel
+
 const ForegroundScript = preload("res://src/models/foreground.gd")
 const DialogueScript = preload("res://src/models/dialogue.gd")
 const EndingScript = preload("res://src/models/ending.gd")

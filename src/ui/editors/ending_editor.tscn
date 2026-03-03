@@ -1,0 +1,89 @@
+[gd_scene load_steps=2 format=3 uid="uid://b8q7kxqy8xp1"]
+
+[ext_resource type="Script" path="res://src/ui/editors/ending_editor.gd" id="1_script"]
+
+[node name="EndingEditor" type="VBoxContainer"]
+offset_right = 400.0
+offset_bottom = 600.0
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource("1_script")
+
+[node name="Separator" type="Label" parent="."]
+layout_mode = 2
+text = "— Terminaison —"
+horizontal_alignment = 1
+
+[node name="ModeBar" type="HBoxContainer" parent="."]
+layout_mode = 2
+alignment = 1
+
+[node name="NoneBtn" type="Button" parent="ModeBar"]
+unique_name_in_owner = true
+layout_mode = 2
+toggle_mode = true
+button_pressed = true
+text = "Aucune"
+
+[node name="RedirectBtn" type="Button" parent="ModeBar"]
+unique_name_in_owner = true
+layout_mode = 2
+toggle_mode = true
+text = "Redirection"
+
+[node name="ChoicesBtn" type="Button" parent="ModeBar"]
+unique_name_in_owner = true
+layout_mode = 2
+toggle_mode = true
+text = "Choix"
+
+[node name="RedirectContainer" type="VBoxContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
+[node name="TypeDropdown" type="OptionButton" parent="RedirectContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="TargetDropdown" type="OptionButton" parent="RedirectContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Summary" type="Label" parent="RedirectContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="EffectsLabel" type="Label" parent="RedirectContainer"]
+layout_mode = 2
+text = "Effets sur les variables :"
+
+[node name="RedirectEffectsList" type="VBoxContainer" parent="RedirectContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="AddRedirectEffectBtn" type="Button" parent="RedirectContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "+ Ajouter un effet"
+
+[node name="ChoicesContainer" type="VBoxContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Scroll" type="ScrollContainer" parent="ChoicesContainer"]
+custom_minimum_size = Vector2(0, 100)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ChoicesList" type="VBoxContainer" parent="ChoicesContainer/Scroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="AddChoiceBtn" type="Button" parent="ChoicesContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "+ Ajouter un choix"

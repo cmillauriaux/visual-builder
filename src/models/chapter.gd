@@ -1,5 +1,7 @@
 extends RefCounted
 
+class_name ChapterModel
+
 const SceneDataScript = preload("res://src/models/scene_data.gd")
 
 var uuid: String = ""

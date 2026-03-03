@@ -3,11 +3,13 @@ extends RefCounted
 ## Verificateur d'histoire — simule plusieurs parcours pour valider
 ## que tous les chemins menent a une fin valide et que tous les noeuds sont atteignables.
 
+class_name StoryVerifier
+
 const MAX_RUNS := 100
 const MAX_STEPS := 10000
 
 
-func verify(story) -> Dictionary:
+func verify(story: RefCounted) -> Dictionary:
 	if story == null:
 		return _empty_report()
 
@@ -75,7 +77,7 @@ func _empty_report() -> Dictionary:
 	}
 
 
-func _simulate_run(story, global_coverage: Dictionary, fallback_counters: Dictionary, run_index: int) -> Dictionary:
+func _simulate_run(story: RefCounted, global_coverage: Dictionary, fallback_counters: Dictionary, run_index: int) -> Dictionary:
 	var variables := {}
 	_init_variables(story, variables)
 	var path := []
@@ -181,7 +183,7 @@ func _make_run_result(run_index: int, path: Array, ending_reason: String) -> Dic
 
 # --- Resolution des consequences (synchrone) ---
 
-func _resolve_consequence(consequence, story, chapter, scene) -> Dictionary:
+func _resolve_consequence(consequence: RefCounted, story: RefCounted, chapter: RefCounted, scene: RefCounted) -> Dictionary:
 	match consequence.type:
 		"redirect_sequence":
 			var target = scene.find_sequence(consequence.target)
@@ -223,7 +225,7 @@ func _resolve_consequence(consequence, story, chapter, scene) -> Dictionary:
 
 # --- Utilitaires ---
 
-func _collect_all_nodes(story) -> Array:
+func _collect_all_nodes(story: RefCounted) -> Array:
 	var nodes := []
 	for chapter in story.chapters:
 		for scene in chapter.scenes:
@@ -247,7 +249,7 @@ func _collect_all_nodes(story) -> Array:
 	return nodes
 
 
-func _init_variables(story, variables: Dictionary) -> void:
+func _init_variables(story: RefCounted, variables: Dictionary) -> void:
 	if story.get("variables") == null:
 		return
 	for var_def in story.variables:
@@ -346,7 +348,7 @@ func _pick_choice(sequence_uuid: String, num_choices: int, local_history: Dictio
 		return 0
 
 
-func _has_untried_choices(choice_history: Dictionary, story) -> bool:
+func _has_untried_choices(choice_history: Dictionary, story: RefCounted) -> bool:
 	for chapter in story.chapters:
 		for scene in chapter.scenes:
 			for seq in scene.sequences:
