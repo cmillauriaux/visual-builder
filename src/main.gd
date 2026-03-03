@@ -81,6 +81,11 @@ var _condition_editor: VBoxContainer
 # UI — Verifier
 var _verifier_report_panel: VBoxContainer
 
+# UI — Welcome Screen
+var _welcome_screen: VBoxContainer
+var _new_story_button: Button
+var _load_story_button: Button
+
 # UI — Toast overlay (notifications)
 var _toast_overlay: PanelContainer
 var _toast_label: Label
@@ -144,6 +149,10 @@ func _ready() -> void:
 	_parametres_menu.get_popup().id_pressed.connect(_on_parametres_menu_pressed)
 	_variable_panel.variables_changed.connect(_nav_ctrl.on_variables_changed)
 	_verifier_report_panel.close_requested.connect(_nav_ctrl.on_verifier_close)
+
+	# Welcome Screen signals
+	_new_story_button.pressed.connect(_nav_ctrl.on_new_story_pressed)
+	_load_story_button.pressed.connect(_nav_ctrl.on_load_pressed)
 
 	# Top bar → Play
 	_top_play_button.pressed.connect(_play_ctrl.on_top_play_pressed)
@@ -210,6 +219,8 @@ func _ready() -> void:
 	_fx_panel.fx_changed.connect(_on_fx_changed)
 
 	update_view()
+	# Force initial mode change signal if starting with NONE to ensure UI is correctly hidden
+	_on_editor_mode_changed(EditorState.Mode.NONE, {"level": _editor_main.get_current_level()})
 
 
 # --- Grid & Snap toggles ---
@@ -552,6 +563,7 @@ func _on_editor_mode_changed(mode: int, context: Dictionary) -> void:
 	_sequence_graph_view.visible = (mode == EditorState.Mode.SEQUENCE_VIEW)
 	_sequence_editor_panel.visible = (mode == EditorState.Mode.SEQUENCE_EDIT or mode == EditorState.Mode.PLAY_MODE)
 	_condition_editor_panel.visible = (mode == EditorState.Mode.CONDITION_EDIT)
+	_welcome_screen.visible = (mode == EditorState.Mode.NONE)
 	
 	# Barre d'outils et navigation
 	_back_button.visible = (mode != EditorState.Mode.CHAPTER_VIEW and mode != EditorState.Mode.NONE)
@@ -560,10 +572,11 @@ func _on_editor_mode_changed(mode: int, context: Dictionary) -> void:
 		_create_button.text = _editor_main.get_create_button_label()
 	
 	_create_condition_button.visible = (mode == EditorState.Mode.SEQUENCE_VIEW)
-	_parametres_menu.visible = (mode in [EditorState.Mode.CHAPTER_VIEW, EditorState.Mode.SCENE_VIEW, EditorState.Mode.SEQUENCE_VIEW])
+	_parametres_menu.visible = (mode in [EditorState.Mode.CHAPTER_VIEW, EditorState.Mode.SCENE_VIEW, EditorState.Mode.SEQUENCE_VIEW, EditorState.Mode.SEQUENCE_EDIT, EditorState.Mode.CONDITION_EDIT])
 	
 	_breadcrumb.set_current_level(level)
 	_breadcrumb.set_path(_editor_main.get_breadcrumb_path())
+	_breadcrumb.visible = (mode != EditorState.Mode.NONE)
 	
 	_top_play_button.visible = (mode in [EditorState.Mode.CHAPTER_VIEW, EditorState.Mode.SCENE_VIEW, EditorState.Mode.SEQUENCE_VIEW])
 	_top_stop_button.visible = (mode == EditorState.Mode.PLAY_MODE)

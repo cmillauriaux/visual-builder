@@ -31,6 +31,7 @@ static func build(main: Control) -> void:
 	_build_sequence_editor(main)
 	_build_condition_editor(main)
 	_build_verifier_panel(main)
+	_build_welcome_screen(main)
 	_build_play_overlay(main)
 	_build_helpers(main)
 
@@ -135,18 +136,21 @@ static func _build_content_area(main: Control) -> void:
 	main._chapter_graph_view = GraphEdit.new()
 	main._chapter_graph_view.set_script(ChapterGraphViewScript)
 	main._chapter_graph_view.set_anchors_preset(Control.PRESET_FULL_RECT)
+	main._chapter_graph_view.visible = false
 	main._content_area.add_child(main._chapter_graph_view)
 
 	# Scene Graph View
 	main._scene_graph_view = GraphEdit.new()
 	main._scene_graph_view.set_script(SceneGraphViewScript)
 	main._scene_graph_view.set_anchors_preset(Control.PRESET_FULL_RECT)
+	main._scene_graph_view.visible = false
 	main._content_area.add_child(main._scene_graph_view)
 
 	# Sequence Graph View
 	main._sequence_graph_view = GraphEdit.new()
 	main._sequence_graph_view.set_script(SequenceGraphViewScript)
 	main._sequence_graph_view.set_anchors_preset(Control.PRESET_FULL_RECT)
+	main._sequence_graph_view.visible = false
 	main._content_area.add_child(main._sequence_graph_view)
 
 
@@ -154,6 +158,7 @@ static func _build_sequence_editor(main: Control) -> void:
 	# --- Sequence Editor Panel (VBox: toolbar + content) ---
 	main._sequence_editor_panel = VBoxContainer.new()
 	main._sequence_editor_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	main._sequence_editor_panel.visible = false
 	main._content_area.add_child(main._sequence_editor_panel)
 
 	# Sequence Toolbar
@@ -359,3 +364,42 @@ static func _build_helpers(main: Control) -> void:
 	main._story_play_ctrl.set_script(StoryPlayControllerScript)
 	main._story_play_ctrl.setup(main._notification_service)
 	main.add_child(main._story_play_ctrl)
+
+
+static func _build_welcome_screen(main: Control) -> void:
+	main._welcome_screen = VBoxContainer.new()
+	main._welcome_screen.set_anchors_preset(Control.PRESET_CENTER)
+	main._welcome_screen.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	main._welcome_screen.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	main._welcome_screen.add_theme_constant_override("separation", 20)
+	main._content_area.add_child(main._welcome_screen)
+
+	var title = Label.new()
+	title.text = "Visual Builder"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 32)
+	main._welcome_screen.add_child(title)
+
+	var subtitle = Label.new()
+	subtitle.text = "Éditeur de Visual Novel pour Godot 4"
+	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	subtitle.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
+	main._welcome_screen.add_child(subtitle)
+
+	var spacer = Control.new()
+	spacer.custom_minimum_size = Vector2(0, 10)
+	main._welcome_screen.add_child(spacer)
+
+	var btn_vbox = VBoxContainer.new()
+	btn_vbox.add_theme_constant_override("separation", 10)
+	main._welcome_screen.add_child(btn_vbox)
+
+	main._new_story_button = Button.new()
+	main._new_story_button.text = "Créer une nouvelle histoire"
+	main._new_story_button.custom_minimum_size = Vector2(250, 40)
+	btn_vbox.add_child(main._new_story_button)
+
+	main._load_story_button = Button.new()
+	main._load_story_button.text = "Charger une histoire existante"
+	main._load_story_button.custom_minimum_size = Vector2(250, 40)
+	btn_vbox.add_child(main._load_story_button)
