@@ -167,6 +167,28 @@ func load_scene(scene_data) -> void:
 	_connect_all_from_map()
 	_update_node_colors()
 
+func _has_effects(item) -> bool:
+	if item.get("rules") != null:
+		# Condition
+		for rule in item.rules:
+			if rule.consequence and rule.consequence.effects.size() > 0:
+				return true
+		if item.default_consequence and item.default_consequence.effects.size() > 0:
+			return true
+	elif item.get("dialogues") != null:
+		# Sequence
+		if item.ending:
+			if item.ending.type == "auto_redirect" and item.ending.auto_consequence:
+				if item.ending.auto_consequence.effects.size() > 0:
+					return true
+			elif item.ending.type == "choices":
+				for choice in item.ending.choices:
+					if choice.effects.size() > 0:
+						return true
+					if choice.consequence and choice.consequence.effects.size() > 0:
+						return true
+	return false
+
 func get_scene_data():
 	return _scene_data
 
@@ -374,15 +396,18 @@ func _create_node(uuid: String, item_name: String, pos: Vector2, subtitle: Strin
 	add_child(node)
 	# Détecter si c'est une séquence de type "choices" pour afficher les ports multi-choix
 	var seq_choices = []
+	var seq_model = null
 	for seq in _scene_data.sequences:
-		if seq.uuid == uuid and seq.ending != null and seq.ending.type == "choices":
-			seq_choices = seq.ending.choices
+		if seq.uuid == uuid:
+			seq_model = seq
+			if seq.ending != null and seq.ending.type == "choices":
+				seq_choices = seq.ending.choices
 			break
 	if seq_choices.size() > 0:
 		node.setup_as_choice_sequence(uuid, item_name, pos, subtitle, seq_choices)
 		_choice_sequence_uuids[uuid] = true
 	else:
-		node.setup(uuid, item_name, pos, subtitle)
+		node.setup(uuid, item_name, pos, subtitle, false, _has_effects(seq_model) if seq_model else false)
 	node.double_clicked.connect(_on_node_double_clicked)
 	node.rename_requested.connect(_on_node_rename_requested)
 	node.delete_requested.connect(_on_sequence_delete_requested)
@@ -393,7 +418,12 @@ func _create_condition_node(uuid: String, item_name: String, pos: Vector2, subti
 	var node = GraphNode.new()
 	node.set_script(GraphNodeItem)
 	add_child(node)
-	node.setup(uuid, item_name, pos, subtitle)
+	var cond_model = null
+	for cond in _scene_data.conditions:
+		if cond.uuid == uuid:
+			cond_model = cond
+			break
+	node.setup(uuid, item_name, pos, subtitle, false, _has_effects(cond_model) if cond_model else false)
 	# Couleur distincte pour les nœuds condition
 	var stylebox = StyleBoxFlat.new()
 	stylebox.bg_color = Color(0.25, 0.2, 0.45)

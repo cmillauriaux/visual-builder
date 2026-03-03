@@ -6,7 +6,9 @@ class_name ConditionEditor
 
 const ConditionRuleScript = preload("res://src/models/condition_rule.gd")
 const ConsequenceScript = preload("res://src/models/consequence.gd")
+const VariableEffectScript = preload("res://src/models/variable_effect.gd")
 const ConsequenceTargetHelperScript = preload("res://src/ui/shared/consequence_target_helper.gd")
+const EffectRowBuilderScript = preload("res://src/ui/shared/effect_row_builder.gd")
 const EditorState = preload("res://src/controllers/editor_state.gd")
 
 signal condition_changed
@@ -31,6 +33,8 @@ var _target_helper = ConsequenceTargetHelperScript.new()
 @onready var _default_container: VBoxContainer = %DefaultContainer
 @onready var _default_type_dropdown: OptionButton = %DefaultTypeDropdown
 @onready var _default_target_dropdown: OptionButton = %DefaultTargetDropdown
+@onready var _default_effects_list: VBoxContainer = %DefaultEffectsList
+@onready var _add_default_effect_btn: Button = %AddDefaultEffectBtn
 
 func _ready() -> void:
 	# Initialiser les dropdowns statiques
@@ -42,6 +46,7 @@ func _ready() -> void:
 	_add_rule_btn.pressed.connect(_on_add_rule_pressed)
 	_default_type_dropdown.item_selected.connect(_on_default_type_changed)
 	_default_target_dropdown.item_selected.connect(_on_default_target_changed)
+	_add_default_effect_btn.pressed.connect(_on_add_default_effect_pressed)
 
 	EventBus.story_loaded.connect(_on_story_loaded)
 	EventBus.story_modified.connect(_on_story_modified)
@@ -128,6 +133,81 @@ func set_variable_names(names: Array) -> void:
 
 func get_variable_names() -> Array:
 	return _target_helper.variable_names
+
+# --- Effects API ---
+
+func add_rule_effect(rule_index: int) -> void:
+	if _condition == null or rule_index >= _condition.rules.size():
+		return
+	var rule = _condition.rules[rule_index]
+	if rule.consequence == null:
+		rule.consequence = ConsequenceScript.new()
+	var e = VariableEffectScript.new()
+	e.operation = "set"
+	rule.consequence.effects.append(e)
+	_rebuild_rules_list()
+	condition_changed.emit()
+
+func remove_rule_effect(rule_index: int, effect_index: int) -> void:
+	if _condition == null or rule_index >= _condition.rules.size():
+		return
+	var rule = _condition.rules[rule_index]
+	if rule.consequence == null or effect_index >= rule.consequence.effects.size():
+		return
+	rule.consequence.effects.remove_at(effect_index)
+	_rebuild_rules_list()
+	condition_changed.emit()
+
+func update_rule_effect(rule_index: int, effect_index: int, field: String, value: String) -> void:
+	if _condition == null or rule_index >= _condition.rules.size():
+		return
+	var rule = _condition.rules[rule_index]
+	if rule.consequence == null or effect_index >= rule.consequence.effects.size():
+		return
+	var e = rule.consequence.effects[effect_index]
+	match field:
+		"variable":
+			e.variable = value
+		"operation":
+			e.operation = value
+		"value":
+			e.value = value
+	condition_changed.emit()
+
+func add_default_effect() -> void:
+	if _condition == null:
+		return
+	if _condition.default_consequence == null:
+		_condition.default_consequence = ConsequenceScript.new()
+	var e = VariableEffectScript.new()
+	e.operation = "set"
+	_condition.default_consequence.effects.append(e)
+	_refresh_default_ui()
+	condition_changed.emit()
+
+func remove_default_effect(effect_index: int) -> void:
+	if _condition == null or _condition.default_consequence == null:
+		return
+	if effect_index >= _condition.default_consequence.effects.size():
+		return
+	_condition.default_consequence.effects.remove_at(effect_index)
+	_refresh_default_ui()
+	condition_changed.emit()
+
+func update_default_effect(effect_index: int, field: String, value: String) -> void:
+	if _condition == null or _condition.default_consequence == null:
+		return
+	if effect_index >= _condition.default_consequence.effects.size():
+		return
+	var e = _condition.default_consequence.effects[effect_index]
+	match field:
+		"variable":
+			e.variable = value
+		"operation":
+			e.operation = value
+		"value":
+			e.value = value
+	condition_changed.emit()
 
 # --- Private ---
 
@@ -242,10 +322,46 @@ func _create_rule_row(index: int, rule) -> VBoxContainer:
 	target_dropdown.item_selected.connect(_on_rule_cons_target_changed.bind(index))
 	cons_row.add_child(target_dropdown)
 
+	# Effects section for this rule
+	var effects_label = Label.new()
+	effects_label.text = "Effets sur les variables :"
+	container.add_child(effects_label)
+
+	var effects_list = VBoxContainer.new()
+	effects_list.name = "EffectsList"
+	container.add_child(effects_list)
+	if rule.consequence:
+		for ei in range(rule.consequence.effects.size()):
+			var effect_row = _create_effect_row(rule.consequence.effects[ei], "rule", index, ei)
+			effects_list.add_child(effect_row)
+
+	var add_effect_btn = Button.new()
+	add_effect_btn.text = "+ Ajouter un effet"
+	add_effect_btn.pressed.connect(func(): add_rule_effect(index))
+	container.add_child(add_effect_btn)
+
 	# Separator
 	container.add_child(HSeparator.new())
 
 	return container
+
+func _create_effect_row(effect, context: String, rule_index: int, effect_index: int) -> HBoxContainer:
+	if context == "rule":
+		return EffectRowBuilderScript.create_effect_row(
+			effect, _target_helper.variable_names,
+			func(t): update_rule_effect(rule_index, effect_index, "variable", t),
+			func(op): update_rule_effect(rule_index, effect_index, "operation", op); _rebuild_rules_list(),
+			func(t): update_rule_effect(rule_index, effect_index, "value", t),
+			func(): remove_rule_effect(rule_index, effect_index)
+		)
+	else:
+		return EffectRowBuilderScript.create_effect_row(
+			effect, _target_helper.variable_names,
+			func(t): update_default_effect(effect_index, "variable", t),
+			func(op): update_default_effect(effect_index, "operation", op); _refresh_default_ui(),
+			func(t): update_default_effect(effect_index, "value", t),
+			func(): remove_default_effect(effect_index)
+		)
 
 func _on_delete_rule(index: int) -> void:
 	remove_rule(index)
@@ -347,6 +463,22 @@ func _refresh_default_ui() -> void:
 			if _default_target_dropdown.get_item_metadata(t) == _condition.default_consequence.target:
 				_default_target_dropdown.selected = t
 				break
+	
+	_rebuild_default_effects()
+
+func _rebuild_default_effects() -> void:
+	if _default_effects_list == null:
+		return
+	for child in _default_effects_list.get_children():
+		child.queue_free()
+	if _condition == null or _condition.default_consequence == null:
+		return
+	for i in range(_condition.default_consequence.effects.size()):
+		var row = _create_effect_row(_condition.default_consequence.effects[i], "default", -1, i)
+		_default_effects_list.add_child(row)
+
+func _on_add_default_effect_pressed() -> void:
+	add_default_effect()
 
 func _on_default_type_changed(type_index: int) -> void:
 	if _condition == null:

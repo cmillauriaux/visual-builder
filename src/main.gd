@@ -396,9 +396,16 @@ func load_sequence_editors(seq) -> void:
 	_update_ending_tab_indicator()
 	_rebuild_dialogue_list()
 	_tab_container.current_tab = 0
-	_play_button.visible = true
+	
+	var is_playing = _play_ctrl.is_story_play_mode()
+	_play_button.visible = not is_playing
 	_stop_button.visible = false
-	_play_overlay.visible = false
+	_play_overlay.visible = is_playing
+	
+	if is_playing:
+		if _play_overlay.get_parent():
+			_play_overlay.get_parent().remove_child(_play_overlay)
+		_visual_editor._overlay_container.add_child(_play_overlay)
 
 
 # --- Play Event Handlers ---
@@ -408,8 +415,9 @@ func _on_play_started(mode: String) -> void:
 	_play_button.visible = false
 	_stop_button.visible = true
 	_play_overlay.visible = true
-	if not _play_overlay.get_parent():
-		_visual_editor._overlay_container.add_child(_play_overlay)
+	if _play_overlay.get_parent():
+		_play_overlay.get_parent().remove_child(_play_overlay)
+	_visual_editor._overlay_container.add_child(_play_overlay)
 	_typewriter_timer.start()
 
 
@@ -542,7 +550,7 @@ func _on_editor_mode_changed(mode: int, context: Dictionary) -> void:
 	_chapter_graph_view.visible = (mode == EditorState.Mode.CHAPTER_VIEW)
 	_scene_graph_view.visible = (mode == EditorState.Mode.SCENE_VIEW)
 	_sequence_graph_view.visible = (mode == EditorState.Mode.SEQUENCE_VIEW)
-	_sequence_editor_panel.visible = (mode == EditorState.Mode.SEQUENCE_EDIT)
+	_sequence_editor_panel.visible = (mode == EditorState.Mode.SEQUENCE_EDIT or mode == EditorState.Mode.PLAY_MODE)
 	_condition_editor_panel.visible = (mode == EditorState.Mode.CONDITION_EDIT)
 	
 	# Barre d'outils et navigation

@@ -13,21 +13,26 @@ var _subtitle: String = ""
 var _is_entry_point: bool = false
 var _is_terminal: bool = false
 var _is_choice_sequence: bool = false
+var _has_effects: bool = false
 var _choice_count: int = 0
 var _popup_menu: PopupMenu
 
-func setup(uuid: String, item_name: String, pos: Vector2, subtitle: String = "", is_terminal: bool = false) -> void:
+func setup(uuid: String, item_name: String, pos: Vector2, subtitle: String = "", is_terminal: bool = false, has_effects: bool = false) -> void:
 	_uuid = uuid
 	_item_name = item_name
 	_subtitle = subtitle
 	_is_terminal = is_terminal
+	_has_effects = has_effects
 	title = item_name
+	if _has_effects:
+		title += " ⚡"
 	position_offset = pos
 	name = uuid
 
 	# Ajouter un label comme contenu (requis pour avoir un slot)
 	var label = Label.new()
-	label.text = subtitle if subtitle != "" else item_name
+	var display_text = subtitle if subtitle != "" else item_name
+	label.text = display_text
 	label.name = "ContentLabel"
 	add_child(label)
 
@@ -71,7 +76,17 @@ func setup_as_choice_sequence(uuid: String, item_name: String, pos: Vector2, sub
 
 	# Un slot de sortie par choix
 	for i in range(choices.size()):
-		var text = choices[i].text if choices[i].text != "" else "Choix %d" % (i + 1)
+		var choice = choices[i]
+		var text = choice.text if choice.text != "" else "Choix %d" % (i + 1)
+		var choice_has_effects = false
+		if choice.effects.size() > 0:
+			choice_has_effects = true
+		elif choice.consequence and choice.consequence.effects.size() > 0:
+			choice_has_effects = true
+		
+		if choice_has_effects:
+			text += " ⚡"
+
 		if text.length() > 35:
 			text = text.left(33) + "…"
 		var clabel = Label.new()
