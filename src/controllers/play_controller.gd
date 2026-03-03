@@ -54,7 +54,7 @@ func on_play_pressed() -> void:
 func _on_trans_in_finished_play_fx() -> void:
 	var seq = _current_playing_sequence
 	if seq and seq.fx.size() > 0:
-		_sequence_fx_player.fx_finished.connect(_on_fx_finished_start_play, CONNECT_ONE_SHOT)
+		_sequence_fx_player.fx_finished.connect(_on_play_fx_finished, CONNECT_ONE_SHOT)
 		_sequence_fx_player.play_fx_list(seq.fx, _visual_editor)
 	else:
 		_start_play_after_fx()
@@ -79,6 +79,7 @@ func _show_title_screen(seq) -> void:
 	_main._play_title_label.text = seq.title
 	_main._play_subtitle_label.text = seq.subtitle
 	_main._play_title_overlay.visible = true
+	_main._play_overlay.visible = false # Cacher le container de dialogue
 	if not _main._play_title_overlay.get_parent():
 		_visual_editor._overlay_container.add_child(_main._play_title_overlay)
 
@@ -86,12 +87,13 @@ func _show_title_screen(seq) -> void:
 func _hide_title_screen() -> void:
 	_is_showing_title = false
 	_main._play_title_overlay.visible = false
+	_main._play_overlay.visible = true # Réafficher le container de dialogue
 	if _main._play_title_overlay.get_parent():
 		_main._play_title_overlay.get_parent().remove_child(_main._play_title_overlay)
 	_start_sequence_actually()
 
 
-func _on_fx_finished_start_play() -> void:
+func _on_play_fx_finished() -> void:
 	_start_play_after_fx()
 
 
@@ -265,29 +267,10 @@ func on_story_play_sequence_requested(seq) -> void:
 	_sequence_fx_player.stop_fx()
 	
 	if seq.transition_in_type != "none":
-		_sequence_fx_player.fx_finished.connect(_on_story_trans_in_finished_play_fx, CONNECT_ONE_SHOT)
+		_sequence_fx_player.fx_finished.connect(_on_trans_in_finished_play_fx, CONNECT_ONE_SHOT)
 		_sequence_fx_player.play_transition(seq.transition_in_type, seq.transition_in_duration, true, _visual_editor)
 	else:
-		_on_story_trans_in_finished_play_fx()
-
-
-func _on_story_trans_in_finished_play_fx() -> void:
-	var seq = _current_playing_sequence
-	if seq and seq.fx.size() > 0:
-		_sequence_fx_player.fx_finished.connect(_on_story_fx_finished_start_play, CONNECT_ONE_SHOT)
-		_sequence_fx_player.play_fx_list(seq.fx, _visual_editor)
-	else:
-		_start_story_sequence_play()
-
-
-func _start_story_sequence_play() -> void:
-	_sequence_editor_ctrl.start_play()
-	if not _sequence_editor_ctrl.is_playing():
-		_story_play_ctrl.on_sequence_finished()
-
-
-func _on_story_fx_finished_start_play() -> void:
-	_start_story_sequence_play()
+		_on_trans_in_finished_play_fx()
 
 
 func on_story_play_choice_requested(choices: Array) -> void:

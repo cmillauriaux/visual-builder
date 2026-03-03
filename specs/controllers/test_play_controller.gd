@@ -94,3 +94,58 @@ func test_sequence_fx_player_exists() -> void:
 
 func test_fx_panel_exists() -> void:
 	assert_not_null(_main._fx_panel, "fx_panel should exist")
+
+
+func test_story_play_sequence_with_title_no_dialogues_shows_title_screen() -> void:
+	var seq = SequenceScript.new()
+	seq.title = "Test Title"
+	seq.subtitle = "Test Subtitle"
+	# No dialogues
+	
+	# Setup story/chapter/scene to avoid errors during navigation in PlayController
+	var story = load("res://src/models/story.gd").new()
+	story.title = "Test Story"
+	var chapter = load("res://src/models/chapter.gd").new()
+	var scene = load("res://src/models/scene_data.gd").new()
+	_main._editor_main._story = story
+	_main._editor_main._current_chapter = chapter
+	_main._editor_main._current_scene = scene
+	
+	_main._play_ctrl._is_story_play_mode = true
+	_main._play_ctrl.on_story_play_sequence_requested(seq)
+	
+	assert_true(_main._play_ctrl._is_showing_title, "Title screen should be showing")
+	assert_eq(_main._play_title_label.text, "Test Title")
+	assert_eq(_main._play_subtitle_label.text, "Test Subtitle")
+	assert_true(_main._play_title_overlay.visible)
+	assert_false(_main._play_overlay.visible, "Dialogue overlay should be hidden during title screen")
+	
+	# Hide title screen
+	_main._play_ctrl._hide_title_screen()
+	assert_false(_main._play_ctrl._is_showing_title, "Title screen should be hidden")
+	assert_true(_main._play_overlay.visible, "Dialogue overlay should be shown after title screen")
+
+
+func test_story_play_sequence_no_title_no_dialogues_skips_immediately() -> void:
+	var seq = SequenceScript.new()
+	# No title, no dialogues
+	
+	var story = load("res://src/models/story.gd").new()
+	story.title = "Test Story"
+	var chapter = load("res://src/models/chapter.gd").new()
+	var scene = load("res://src/models/scene_data.gd").new()
+	_main._editor_main._story = story
+	_main._editor_main._current_chapter = chapter
+	_main._editor_main._current_scene = scene
+	
+	watch_signals(_main._story_play_ctrl)
+	_main._play_ctrl._is_story_play_mode = true
+	
+	# Simulate StoryPlayController state
+	_main._story_play_ctrl._current_sequence = seq
+	_main._story_play_ctrl._state = 1 # State.PLAYING_SEQUENCE
+	
+	_main._play_ctrl.on_story_play_sequence_requested(seq)
+	
+	assert_false(_main._play_ctrl._is_showing_title, "Title screen should not be showing")
+	assert_signal_emitted(_main._story_play_ctrl, "play_finished")
