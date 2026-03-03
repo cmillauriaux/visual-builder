@@ -17,6 +17,12 @@ var dialogues: Array = []  # Array[Dialogue]
 var ending = null  # Ending
 var fx: Array = []  # Array[SequenceFx]
 
+# Transitions
+var transition_in_type: String = "none" # "none", "fade", "pixelate"
+var transition_in_duration: float = 0.5
+var transition_out_type: String = "none" # "none", "fade", "pixelate"
+var transition_out_duration: float = 0.5
+
 func _init():
 	uuid = _generate_uuid()
 
@@ -61,6 +67,10 @@ func to_dict() -> Dictionary:
 		"foregrounds": fg_arr,
 		"dialogues": dlg_arr,
 		"fx": fx_arr,
+		"transition_in_type": transition_in_type,
+		"transition_in_duration": transition_in_duration,
+		"transition_out_type": transition_out_type,
+		"transition_out_duration": transition_out_duration,
 	}
 
 	if ending:
@@ -77,6 +87,12 @@ static func from_dict(d: Dictionary):
 	if d.has("position"):
 		seq.position = Vector2(d["position"]["x"], d["position"]["y"])
 	seq.background = d.get("background", "")
+
+	# Transitions
+	seq.transition_in_type = d.get("transition_in_type", "none")
+	seq.transition_in_duration = d.get("transition_in_duration", 0.5)
+	seq.transition_out_type = d.get("transition_out_type", "none")
+	seq.transition_out_duration = d.get("transition_out_duration", 0.5)
 
 	if d.has("foregrounds"):
 		for fg_dict in d["foregrounds"]:

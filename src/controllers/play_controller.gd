@@ -15,6 +15,7 @@ var _visual_editor: Control
 var _previous_play_foregrounds: Array = []
 var _is_story_play_mode: bool = false
 var _story_play_return_level: String = ""
+var _current_playing_sequence = null
 
 
 func setup(main: Control) -> void:
@@ -37,6 +38,20 @@ func on_play_pressed() -> void:
 	EventBus.play_started.emit("sequence")
 	
 	var seq = _sequence_editor_ctrl.get_sequence()
+	_current_playing_sequence = seq
+	
+	# Nettoyer les transitions précédentes (ex: reste de pixelisation ou fondu)
+	_sequence_fx_player.stop_fx()
+	
+	if seq and seq.transition_in_type != "none":
+		_sequence_fx_player.fx_finished.connect(_on_trans_in_finished_play_fx, CONNECT_ONE_SHOT)
+		_sequence_fx_player.play_transition(seq.transition_in_type, seq.transition_in_duration, true, _visual_editor)
+	else:
+		_on_trans_in_finished_play_fx()
+
+
+func _on_trans_in_finished_play_fx() -> void:
+	var seq = _current_playing_sequence
 	if seq and seq.fx.size() > 0:
 		_sequence_fx_player.fx_finished.connect(_on_fx_finished_start_play, CONNECT_ONE_SHOT)
 		_sequence_fx_player.play_fx_list(seq.fx, _visual_editor)
@@ -47,7 +62,7 @@ func on_play_pressed() -> void:
 func _start_play_after_fx() -> void:
 	_sequence_editor_ctrl.start_play()
 	if not _sequence_editor_ctrl.is_playing():
-		EventBus.play_stopped.emit()
+		_handle_play_stopped()
 
 
 func _on_fx_finished_start_play() -> void:
@@ -63,6 +78,19 @@ func on_stop_pressed() -> void:
 
 
 func on_play_stopped() -> void:
+	_handle_play_stopped()
+
+
+func _handle_play_stopped() -> void:
+	var seq = _current_playing_sequence
+	if seq and seq.transition_out_type != "none":
+		_sequence_fx_player.fx_finished.connect(_on_trans_out_finished, CONNECT_ONE_SHOT)
+		_sequence_fx_player.play_transition(seq.transition_out_type, seq.transition_out_duration, false, _visual_editor)
+	else:
+		_on_trans_out_finished()
+
+
+func _on_trans_out_finished() -> void:
 	if _is_story_play_mode:
 		_story_play_ctrl.on_sequence_finished()
 		return
@@ -200,8 +228,21 @@ func on_story_play_sequence_requested(seq) -> void:
 	
 	_main.update_editor_mode()
 	_previous_play_foregrounds = []
+	_current_playing_sequence = seq
 	
-	if seq.fx.size() > 0:
+	# Nettoyer les transitions précédentes (ex: reste de pixelisation ou fondu)
+	_sequence_fx_player.stop_fx()
+	
+	if seq.transition_in_type != "none":
+		_sequence_fx_player.fx_finished.connect(_on_story_trans_in_finished_play_fx, CONNECT_ONE_SHOT)
+		_sequence_fx_player.play_transition(seq.transition_in_type, seq.transition_in_duration, true, _visual_editor)
+	else:
+		_on_story_trans_in_finished_play_fx()
+
+
+func _on_story_trans_in_finished_play_fx() -> void:
+	var seq = _current_playing_sequence
+	if seq and seq.fx.size() > 0:
 		_sequence_fx_player.fx_finished.connect(_on_story_fx_finished_start_play, CONNECT_ONE_SHOT)
 		_sequence_fx_player.play_fx_list(seq.fx, _visual_editor)
 	else:

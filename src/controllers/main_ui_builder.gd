@@ -272,11 +272,86 @@ static func _build_sequence_editor(main: Control) -> void:
 	main._fx_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	main._tab_container.add_child(main._fx_panel)
 
+	# Tab 4: Transitions (Séquence)
+	main._sequence_transition_panel = VBoxContainer.new()
+	main._sequence_transition_panel.name = "Transitions"
+	main._tab_container.add_child(main._sequence_transition_panel)
+	_build_sequence_transition_tab(main)
+
 	# Legacy dialogue editor (kept for API compat)
 	main._dialogue_editor = Control.new()
 	main._dialogue_editor.set_script(DialogueEditorScript)
 	main._dialogue_editor.visible = false
 	main.add_child(main._dialogue_editor)
+
+
+static func _build_sequence_transition_tab(main: Control) -> void:
+	var container = main._sequence_transition_panel
+	container.add_theme_constant_override("separation", 10)
+
+	var in_title = Label.new()
+	in_title.text = "Transition d'entrée"
+	in_title.add_theme_font_size_override("font_size", 16)
+	container.add_child(in_title)
+
+	var in_type_hbox = HBoxContainer.new()
+	container.add_child(in_type_hbox)
+	var in_type_label = Label.new()
+	in_type_label.text = "Type :"
+	in_type_label.custom_minimum_size = Vector2(80, 0)
+	in_type_hbox.add_child(in_type_label)
+	main._seq_trans_in_type = OptionButton.new()
+	main._seq_trans_in_type.add_item("Aucune", 0)
+	main._seq_trans_in_type.add_item("Fondu", 1)
+	main._seq_trans_in_type.add_item("Pixellisation", 2)
+	in_type_hbox.add_child(main._seq_trans_in_type)
+
+	var in_dur_hbox = HBoxContainer.new()
+	container.add_child(in_dur_hbox)
+	var in_dur_label = Label.new()
+	in_dur_label.text = "Durée :"
+	in_dur_label.custom_minimum_size = Vector2(80, 0)
+	in_dur_hbox.add_child(in_dur_label)
+	main._seq_trans_in_dur = SpinBox.new()
+	main._seq_trans_in_dur.min_value = 0.1
+	main._seq_trans_in_dur.max_value = 5.0
+	main._seq_trans_in_dur.step = 0.1
+	main._seq_trans_in_dur.value = 0.5
+	main._seq_trans_in_dur.suffix = "s"
+	in_dur_hbox.add_child(main._seq_trans_in_dur)
+
+	container.add_child(HSeparator.new())
+
+	var out_title = Label.new()
+	out_title.text = "Transition de sortie"
+	out_title.add_theme_font_size_override("font_size", 16)
+	container.add_child(out_title)
+
+	var out_type_hbox = HBoxContainer.new()
+	container.add_child(out_type_hbox)
+	var out_type_label = Label.new()
+	out_type_label.text = "Type :"
+	out_type_label.custom_minimum_size = Vector2(80, 0)
+	out_type_hbox.add_child(out_type_label)
+	main._seq_trans_out_type = OptionButton.new()
+	main._seq_trans_out_type.add_item("Aucune", 0)
+	main._seq_trans_out_type.add_item("Fondu", 1)
+	main._seq_trans_out_type.add_item("Pixellisation", 2)
+	out_type_hbox.add_child(main._seq_trans_out_type)
+
+	var out_dur_hbox = HBoxContainer.new()
+	container.add_child(out_dur_hbox)
+	var out_dur_label = Label.new()
+	out_dur_label.text = "Durée :"
+	out_dur_label.custom_minimum_size = Vector2(80, 0)
+	out_dur_hbox.add_child(out_dur_label)
+	main._seq_trans_out_dur = SpinBox.new()
+	main._seq_trans_out_dur.min_value = 0.1
+	main._seq_trans_out_dur.max_value = 5.0
+	main._seq_trans_out_dur.step = 0.1
+	main._seq_trans_out_dur.value = 0.5
+	main._seq_trans_out_dur.suffix = "s"
+	out_dur_hbox.add_child(main._seq_trans_out_dur)
 
 
 static func _build_condition_editor(main: Control) -> void:

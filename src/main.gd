@@ -107,6 +107,12 @@ var _sequence_fx_player: Node
 # FX Panel
 var _fx_panel: VBoxContainer
 
+# Sequence Transitions UI
+var _sequence_transition_panel: VBoxContainer
+var _seq_trans_in_type: OptionButton
+var _seq_trans_in_dur: SpinBox
+var _seq_trans_out_type: OptionButton
+var _seq_trans_out_dur: SpinBox
 
 func _ready() -> void:
 	_editor_main = Control.new()
@@ -238,6 +244,12 @@ func _connect_signals() -> void:
 	_visual_editor.foreground_deselected.connect(_on_foreground_deselected)
 	_fx_panel.fx_changed.connect(_on_fx_changed)
 
+	# Sequence Transitions
+	_seq_trans_in_type.item_selected.connect(_on_sequence_transition_changed)
+	_seq_trans_in_dur.value_changed.connect(_on_sequence_transition_changed)
+	_seq_trans_out_type.item_selected.connect(_on_sequence_transition_changed)
+	_seq_trans_out_dur.value_changed.connect(_on_sequence_transition_changed)
+
 
 # --- Public API / Helpers used by controllers ---
 
@@ -298,6 +310,27 @@ func _on_fx_changed() -> void:
 	pass
 
 
+func _on_sequence_transition_changed(_value = null) -> void:
+	var seq = _sequence_editor_ctrl.get_sequence()
+	if seq == null: return
+	
+	var in_types = ["none", "fade", "pixelate"]
+	var in_idx = _seq_trans_in_type.selected
+	if in_idx >= 0 and in_idx < in_types.size():
+		seq.transition_in_type = in_types[in_idx]
+	
+	seq.transition_in_duration = _seq_trans_in_dur.value
+	
+	var out_types = ["none", "fade", "pixelate"]
+	var out_idx = _seq_trans_out_type.selected
+	if out_idx >= 0 and out_idx < out_types.size():
+		seq.transition_out_type = out_types[out_idx]
+		
+	seq.transition_out_duration = _seq_trans_out_dur.value
+	
+	EventBus.story_modified.emit()
+
+
 # --- View management ---
 
 func load_sequence_editors(seq) -> void:
@@ -306,6 +339,18 @@ func load_sequence_editors(seq) -> void:
 	_nav_ctrl.notify_targets_changed()
 	_ending_editor.load_sequence(seq)
 	_fx_panel.load_sequence(seq)
+	
+	# Load transitions
+	var in_types = ["none", "fade", "pixelate"]
+	var in_idx = in_types.find(seq.transition_in_type)
+	_seq_trans_in_type.selected = in_idx if in_idx >= 0 else 0
+	_seq_trans_in_dur.value = seq.transition_in_duration
+	
+	var out_types = ["none", "fade", "pixelate"]
+	var out_idx = out_types.find(seq.transition_out_type)
+	_seq_trans_out_type.selected = out_idx if out_idx >= 0 else 0
+	_seq_trans_out_dur.value = seq.transition_out_duration
+
 	_sequence_editor_ctrl.load_sequence(seq)
 	_update_ending_tab_indicator()
 	_rebuild_dialogue_list()

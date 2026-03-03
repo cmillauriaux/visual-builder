@@ -56,14 +56,15 @@ func test_tab_container_exists():
 	assert_not_null(_main._tab_container, "TabContainer should exist")
 	assert_true(_main._tab_container is TabContainer, "Should be a TabContainer")
 
-func test_tab_container_has_4_tabs():
-	assert_eq(_main._tab_container.get_tab_count(), 4, "Should have 4 tabs")
+func test_tab_container_has_5_tabs():
+	assert_eq(_main._tab_container.get_tab_count(), 5, "Should have 5 tabs")
 
 func test_tab_names():
 	assert_eq(_main._tab_container.get_tab_title(0), "Dialogues")
 	assert_eq(_main._tab_container.get_tab_title(1), "Terminaison")
 	assert_eq(_main._tab_container.get_tab_title(2), "Musique")
 	assert_eq(_main._tab_container.get_tab_title(3), "FX")
+	assert_eq(_main._tab_container.get_tab_title(4), "Transitions")
 
 # --- Contenu de l'onglet Dialogues ---
 

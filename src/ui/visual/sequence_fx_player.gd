@@ -10,6 +10,22 @@ var _fx_nodes: Array = []
 var _target: Control = null
 var _original_position: Vector2 = Vector2.ZERO
 
+const PIXELATE_SHADER = """
+shader_type canvas_item;
+uniform sampler2D screen_texture : hint_screen_texture, filter_linear_mipmap;
+uniform float amount : hint_range(0.0, 512.0) = 0.0;
+
+void fragment() {
+    if (amount > 0.0) {
+        vec2 size = vec2(textureSize(screen_texture, 0));
+        float pixel_size = amount;
+        vec2 uv = floor(SCREEN_UV * size / pixel_size) * pixel_size / size;
+        COLOR = texture(screen_texture, uv);
+    } else {
+        COLOR = texture(screen_texture, SCREEN_UV);
+    }
+}
+"""
 
 func play_fx_list(fx_list: Array, target: Control) -> void:
 	stop_fx()
@@ -19,6 +35,120 @@ func play_fx_list(fx_list: Array, target: Control) -> void:
 	_target = target
 	_playing = true
 	_play_next(fx_list.duplicate(), target)
+
+
+func play_transition(type: String, duration: float, is_in: bool, target: Control) -> void:
+	stop_fx()
+	if type == "none" or duration <= 0:
+		fx_finished.emit()
+		return
+	
+	_target = target
+	_playing = true
+	
+	match type:
+		"fade":
+			if is_in:
+				_play_fade_in_transition(duration, target)
+			else:
+				_play_fade_out_transition(duration, target)
+		"pixelate":
+			if is_in:
+				_play_pixelate_in_transition(duration, target)
+			else:
+				_play_pixelate_out_transition(duration, target)
+		_:
+			_playing = false
+			fx_finished.emit()
+
+
+func _play_fade_in_transition(duration: float, target: Control) -> void:
+	var overlay = ColorRect.new()
+	overlay.name = "TransFadeInOverlay"
+	overlay.color = Color(0, 0, 0, 1)
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	target.add_child(overlay)
+	_fx_nodes.append(overlay)
+
+	_current_tween = create_tween()
+	_current_tween.tween_property(overlay, "color:a", 0.0, duration)
+	_current_tween.finished.connect(func():
+		if is_instance_valid(overlay):
+			_fx_nodes.erase(overlay)
+			overlay.queue_free()
+		_playing = false
+		fx_finished.emit()
+	)
+
+
+func _play_fade_out_transition(duration: float, target: Control) -> void:
+	var overlay = ColorRect.new()
+	overlay.name = "TransFadeOutOverlay"
+	overlay.color = Color(0, 0, 0, 0)
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	target.add_child(overlay)
+	_fx_nodes.append(overlay)
+
+	_current_tween = create_tween()
+	_current_tween.tween_property(overlay, "color:a", 1.0, duration)
+	_current_tween.finished.connect(func():
+		# Note: we don't queue_free the overlay yet because it should stay black until next sequence
+		_playing = false
+		fx_finished.emit()
+	)
+
+
+func _play_pixelate_in_transition(duration: float, target: Control) -> void:
+	var overlay = ColorRect.new()
+	overlay.name = "TransPixelateInOverlay"
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	target.add_child(overlay)
+	_fx_nodes.append(overlay)
+
+	var mat = ShaderMaterial.new()
+	var shader = Shader.new()
+	shader.code = PIXELATE_SHADER
+	mat.shader = shader
+	overlay.material = mat
+	
+	mat.set_shader_parameter("amount", 128.0)
+
+	_current_tween = create_tween()
+	_current_tween.tween_method(func(v): mat.set_shader_parameter("amount", v), 128.0, 0.0, duration)
+	_current_tween.finished.connect(func():
+		if is_instance_valid(overlay):
+			_fx_nodes.erase(overlay)
+			overlay.queue_free()
+		_playing = false
+		fx_finished.emit()
+	)
+
+
+func _play_pixelate_out_transition(duration: float, target: Control) -> void:
+	var overlay = ColorRect.new()
+	overlay.name = "TransPixelateOutOverlay"
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	target.add_child(overlay)
+	_fx_nodes.append(overlay)
+
+	var mat = ShaderMaterial.new()
+	var shader = Shader.new()
+	shader.code = PIXELATE_SHADER
+	mat.shader = shader
+	overlay.material = mat
+	
+	mat.set_shader_parameter("amount", 0.0)
+
+	_current_tween = create_tween()
+	_current_tween.tween_method(func(v): mat.set_shader_parameter("amount", v), 0.0, 128.0, duration)
+	_current_tween.finished.connect(func():
+		_playing = false
+		fx_finished.emit()
+	)
 
 
 func stop_fx() -> void:

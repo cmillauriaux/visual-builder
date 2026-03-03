@@ -21,6 +21,7 @@ var _menu_button: Button
 var _previous_play_foregrounds: Array = []
 var _user_stopped: bool = false
 var _i18n: Dictionary = {}
+var _current_playing_sequence = null
 
 signal play_finished_show_menu()
 
@@ -80,7 +81,21 @@ func on_sequence_play_requested(seq) -> void:
 	_sequence_editor_ctrl.load_sequence(seq)
 	_visual_editor.load_sequence(seq)
 	_previous_play_foregrounds = []
-	if seq.fx.size() > 0:
+	_current_playing_sequence = seq
+	
+	# Nettoyer les transitions précédentes (ex: reste de pixelisation ou fondu)
+	_sequence_fx_player.stop_fx()
+	
+	if seq.transition_in_type != "none":
+		_sequence_fx_player.fx_finished.connect(_on_trans_in_finished_play_fx, CONNECT_ONE_SHOT)
+		_sequence_fx_player.play_transition(seq.transition_in_type, seq.transition_in_duration, true, _visual_editor)
+	else:
+		_on_trans_in_finished_play_fx()
+
+
+func _on_trans_in_finished_play_fx() -> void:
+	var seq = _current_playing_sequence
+	if seq and seq.fx.size() > 0:
 		_sequence_fx_player.fx_finished.connect(_on_fx_finished_start_sequence, CONNECT_ONE_SHOT)
 		_sequence_fx_player.play_fx_list(seq.fx, _visual_editor)
 	else:
@@ -94,7 +109,7 @@ func _start_sequence_play() -> void:
 		_visual_editor._overlay_container.add_child(_play_overlay)
 		_typewriter_timer.start()
 	else:
-		_story_play_ctrl.on_sequence_finished()
+		_handle_play_stopped()
 
 
 func _on_fx_finished_start_sequence() -> void:
@@ -211,10 +226,24 @@ func on_play_dialogue_changed(index: int) -> void:
 
 
 func on_play_stopped() -> void:
+	_handle_play_stopped()
+
+
+func _handle_play_stopped() -> void:
 	_play_overlay.visible = false
 	_typewriter_timer.stop()
 	if _play_overlay.get_parent():
 		_play_overlay.get_parent().remove_child(_play_overlay)
+	
+	var seq = _current_playing_sequence
+	if seq and seq.transition_out_type != "none" and not _user_stopped:
+		_sequence_fx_player.fx_finished.connect(_on_trans_out_finished, CONNECT_ONE_SHOT)
+		_sequence_fx_player.play_transition(seq.transition_out_type, seq.transition_out_duration, false, _visual_editor)
+	else:
+		_on_trans_out_finished()
+
+
+func _on_trans_out_finished() -> void:
 	if not _user_stopped:
 		_story_play_ctrl.on_sequence_finished()
 
