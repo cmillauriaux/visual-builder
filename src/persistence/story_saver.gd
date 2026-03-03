@@ -18,7 +18,10 @@ static func save_story(story, base_path: String, lang: String = "fr") -> void:
 	DirAccess.make_dir_recursive_absolute(base_path + "/assets/foregrounds")
 	DirAccess.make_dir_recursive_absolute(base_path + "/chapters")
 
-	# Copier les assets et réécrire les chemins
+	# S'assurer que le loader utilise ce chemin pour les chargements ultérieurs
+	TextureLoader.base_dir = base_path
+
+	# Copier les assets et réécrire les chemins en relatif
 	_relocate_assets(story, base_path)
 
 	# Écrire story.yaml
@@ -53,6 +56,9 @@ static func load_story(base_path: String, lang: String = "fr"):
 	var story_yaml_path = base_path + "/story.yaml"
 	if not FileAccess.file_exists(story_yaml_path):
 		return null
+
+	# Définir le répertoire de base pour le chargement des images relatives
+	TextureLoader.base_dir = base_path
 
 	# Lire story.yaml
 	var story_content = _read_file(story_yaml_path)
@@ -136,17 +142,39 @@ static func _relocate_assets(story, base_path: String) -> void:
 static func _relocate_image(image_path: String, base_path: String, subfolder: String) -> String:
 	if image_path == "":
 		return ""
-	var dest_dir = base_path + "/assets/" + subfolder
+	
 	var filename = image_path.get_file()
-	var expected = dest_dir + "/" + filename
-	# Already in the right place
-	if image_path == expected:
-		return image_path
-	# Source file must exist to copy
+	var dest_dir = base_path + "/assets/" + subfolder
+	var expected_abs = dest_dir + "/" + filename
+	var relative_path = "assets/" + subfolder + "/" + filename
+	
+	# Si c'est déjà le bon chemin relatif, on ne touche à rien
+	if image_path == relative_path:
+		return relative_path
+		
+	# Si c'est le chemin absolu correspondant au dossier de destination, on convertit en relatif
+	if image_path == expected_abs:
+		return relative_path
+
+	# Si le fichier source n'existe pas, on tente de résoudre via 'assets/' pour migration
 	if not FileAccess.file_exists(image_path):
-		return image_path
-	# Avoid overwriting if a file with the same name already exists
-	if FileAccess.file_exists(expected):
-		return expected
-	DirAccess.copy_absolute(image_path, expected)
-	return expected
+		var assets_pos = image_path.find("assets/")
+		if assets_pos != -1:
+			var sub_path = image_path.substr(assets_pos)
+			var migration_path = base_path.path_join(sub_path)
+			if FileAccess.file_exists(migration_path):
+				image_path = migration_path
+			else:
+				return image_path
+		else:
+			return image_path
+		
+	# Si après résolution du fallback, on est déjà au bon endroit, on ne copie rien
+	if image_path == expected_abs:
+		return relative_path
+
+	# Copier le fichier s'il n'existe pas encore à destination
+	if not FileAccess.file_exists(expected_abs):
+		DirAccess.copy_absolute(image_path, expected_abs)
+		
+	return relative_path

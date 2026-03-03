@@ -102,6 +102,7 @@ func _ready() -> void:
 
 
 func _load_story_and_show_menu(path: String) -> void:
+	TextureLoader.base_dir = path
 	var story = StorySaver.load_story(path)
 	if story == null:
 		_show_error("Impossible de charger l'histoire depuis : " + path)

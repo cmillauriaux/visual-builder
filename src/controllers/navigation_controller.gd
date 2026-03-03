@@ -387,6 +387,8 @@ func _on_load_dir_selected(path: String) -> void:
 
 
 func on_new_story_pressed() -> void:
+	TextureLoader.base_dir = ""
+	_last_save_path = ""
 	var story = StoryScript.new()
 	story.title = "Mon Histoire"
 	story.author = "Auteur"

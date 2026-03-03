@@ -228,7 +228,7 @@ func test_save_rewrites_background_path():
 	var story = _create_test_story()
 	story.chapters[0].scenes[0].sequences[0].background = src_path
 	StorySaver.save_story(story, _test_dir)
-	assert_eq(story.chapters[0].scenes[0].sequences[0].background, _test_dir + "/assets/backgrounds/bg.png")
+	assert_eq(story.chapters[0].scenes[0].sequences[0].background, "assets/backgrounds/bg.png")
 
 func test_save_copies_foreground_to_assets():
 	var src_dir = _test_dir + "/src"
@@ -248,7 +248,7 @@ func test_save_rewrites_foreground_path():
 	var story = _create_test_story()
 	story.chapters[0].scenes[0].sequences[0].foregrounds[0].image = src_path
 	StorySaver.save_story(story, _test_dir)
-	assert_eq(story.chapters[0].scenes[0].sequences[0].foregrounds[0].image, _test_dir + "/assets/foregrounds/hero.png")
+	assert_eq(story.chapters[0].scenes[0].sequences[0].foregrounds[0].image, "assets/foregrounds/hero.png")
 
 func test_save_copies_dialogue_foreground_to_assets():
 	var src_dir = _test_dir + "/src"
@@ -271,7 +271,7 @@ func test_save_copies_menu_background_to_assets():
 	story.menu_background = src_path
 	StorySaver.save_story(story, _test_dir)
 	assert_true(FileAccess.file_exists(_test_dir + "/assets/backgrounds/menu_bg.png"))
-	assert_eq(story.menu_background, _test_dir + "/assets/backgrounds/menu_bg.png")
+	assert_eq(story.menu_background, "assets/backgrounds/menu_bg.png")
 
 func test_save_does_not_copy_if_already_in_assets():
 	var story = _create_test_story()
@@ -280,7 +280,23 @@ func test_save_does_not_copy_if_already_in_assets():
 	_create_minimal_png(existing_path)
 	story.chapters[0].scenes[0].sequences[0].background = existing_path
 	StorySaver.save_story(story, _test_dir)
-	assert_eq(story.chapters[0].scenes[0].sequences[0].background, existing_path)
+	assert_eq(story.chapters[0].scenes[0].sequences[0].background, "assets/backgrounds/bg.png")
+
+func test_save_migration_fallback():
+	# Simuler un chemin absolu invalide mais contenant 'assets/'
+	var story = _create_test_story()
+	DirAccess.make_dir_recursive_absolute(_test_dir + "/assets/backgrounds")
+	var real_path = _test_dir + "/assets/backgrounds/bg.png"
+	_create_minimal_png(real_path)
+	
+	var invalid_abs_path = "/Users/other/Stories/MyStory/assets/backgrounds/bg.png"
+	story.chapters[0].scenes[0].sequences[0].background = invalid_abs_path
+	
+	# Sauvegarder dans _test_dir (qui contient déjà le fichier au bon endroit relatif)
+	StorySaver.save_story(story, _test_dir)
+	
+	# Doit avoir résolu via le fallback et retourné le chemin relatif
+	assert_eq(story.chapters[0].scenes[0].sequences[0].background, "assets/backgrounds/bg.png")
 
 func test_save_keeps_empty_paths_unchanged():
 	var story = _create_test_story()
