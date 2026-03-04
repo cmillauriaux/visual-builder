@@ -18,6 +18,9 @@ var _story_play_return_level: String = ""
 var _current_playing_sequence = null
 var _is_showing_title: bool = false
 
+# Plein écran
+var _fullscreen_layer: ColorRect = null
+
 
 func setup(main: Control) -> void:
 	_main = main
@@ -291,6 +294,34 @@ func _restore_after_story_play() -> void:
 	while _main._editor_main.get_current_level() != _story_play_return_level and _main._editor_main.get_current_level() != "none":
 		_main._editor_main.navigate_back()
 	_main.refresh_current_view()
+
+
+# --- Plein écran ---
+
+func _enter_play_fullscreen() -> void:
+	_fullscreen_layer = ColorRect.new()
+	_fullscreen_layer.color = Color(0, 0, 0, 1)
+	_fullscreen_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_main.get_viewport().add_child(_fullscreen_layer)
+
+	_main._visual_editor.reparent(_fullscreen_layer)
+
+	var stop_btn = Button.new()
+	stop_btn.name = "FullscreenStopButton"
+	stop_btn.text = "Stop"
+	stop_btn.visible = true
+	_fullscreen_layer.add_child(stop_btn)
+
+	_main._vbox.visible = false
+
+
+func _exit_play_fullscreen() -> void:
+	if _fullscreen_layer == null:
+		return
+	_main._visual_editor.reparent(_main._left_panel)
+	_main._vbox.visible = true
+	_fullscreen_layer.queue_free()
+	_fullscreen_layer = null
 
 
 # --- Typewriter & Input ---

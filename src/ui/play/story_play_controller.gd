@@ -84,6 +84,20 @@ func start_play_scene(story, chapter, scene) -> void:
 	_init_variables_from_story(story)
 	_start_scene_entry(scene)
 
+## Reprend une partie depuis une sauvegarde : restaure directement l'état sans passer
+## par l'entry point. Émet sequence_play_requested avec la séquence sauvegardée.
+func start_play_from_save(story, chapter, scene, sequence, variables: Dictionary) -> void:
+	if story == null or chapter == null or scene == null or sequence == null:
+		return
+	_story = story
+	_current_chapter = chapter
+	_current_scene = scene
+	_current_sequence = sequence
+	_variables = variables.duplicate()
+	_user_stopped = false
+	_state = State.PLAYING_SEQUENCE
+	sequence_play_requested.emit(sequence)
+
 ## Trouve l'entry point d'une scène (séquence ou condition) et démarre le play.
 func _start_scene_entry(scene) -> void:
 	var entry = _find_scene_entry(scene)

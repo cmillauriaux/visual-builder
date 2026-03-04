@@ -177,6 +177,14 @@ func start_play() -> void:
 	_start_typewriter()
 	play_dialogue_changed.emit(_play_index)
 
+func start_play_at(index: int) -> void:
+	if _sequence == null or _sequence.dialogues.is_empty():
+		return
+	_playing = true
+	_play_index = clampi(index, 0, _sequence.dialogues.size() - 1)
+	_start_typewriter()
+	play_dialogue_changed.emit(_play_index)
+
 func stop_play() -> void:
 	_playing = false
 	_play_index = -1

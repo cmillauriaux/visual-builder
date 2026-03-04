@@ -1,5 +1,6 @@
 extends GutTest
 
+const ConditionEditorScene = preload("res://src/ui/editors/condition_editor.tscn")
 const ConditionEditorScript = preload("res://src/ui/editors/condition_editor.gd")
 const ConditionScript = preload("res://src/models/condition.gd")
 
@@ -7,8 +8,7 @@ var _editor: VBoxContainer
 var _condition: Object
 
 func before_each():
-	_editor = VBoxContainer.new()
-	_editor.set_script(ConditionEditorScript)
+	_editor = ConditionEditorScene.instantiate()
 	add_child(_editor)
 	_condition = ConditionScript.new()
 	_condition.condition_name = "Test"

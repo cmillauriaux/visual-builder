@@ -23,6 +23,7 @@ var _user_stopped: bool = false
 var _i18n: Dictionary = {}
 var _current_playing_sequence = null
 var _is_showing_title: bool = false
+var _restore_dialogue_index: int = -1
 
 signal play_finished_show_menu()
 
@@ -49,6 +50,21 @@ func setup(game: Control) -> void:
 func start_story(story) -> void:
 	_menu_button.visible = true
 	_story_play_ctrl.start_play_story(story)
+
+
+## Reprend une partie depuis une sauvegarde.
+## Trouve chapter/scene/sequence par UUID et reprend au bon index de dialogue.
+func start_from_save(story, save_data: Dictionary) -> void:
+	stop_current()
+	_menu_button.visible = true
+	var chapter = story.find_chapter(save_data.get("chapter_uuid", ""))
+	var scene = chapter.find_scene(save_data.get("scene_uuid", "")) if chapter else null
+	var sequence = scene.find_sequence(save_data.get("sequence_uuid", "")) if scene else null
+	if chapter == null or scene == null or sequence == null:
+		return
+	_restore_dialogue_index = save_data.get("dialogue_index", 0)
+	var vars: Dictionary = save_data.get("variables", {})
+	_story_play_ctrl.start_play_from_save(story, chapter, scene, sequence, vars)
 
 
 func stop_and_restart(story) -> void:
@@ -112,7 +128,12 @@ func _start_sequence_play() -> void:
 
 
 func _start_sequence_actually() -> void:
-	_sequence_editor_ctrl.start_play()
+	if _restore_dialogue_index >= 0:
+		var idx := _restore_dialogue_index
+		_restore_dialogue_index = -1
+		_sequence_editor_ctrl.start_play_at(idx)
+	else:
+		_sequence_editor_ctrl.start_play()
 	if _sequence_editor_ctrl.is_playing():
 		_play_overlay.visible = true
 		_visual_editor._overlay_container.add_child(_play_overlay)
