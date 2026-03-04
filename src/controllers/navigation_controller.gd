@@ -424,7 +424,7 @@ func on_new_story_pressed() -> void:
 func on_variables_pressed() -> void:
 	if _main._editor_main._story == null:
 		return
-	_main._variable_panel.load_story(_main._editor_main._story)
+	_main._variable_panel.load_story(_main._editor_main._story, _main._get_story_base_path())
 	_main._variable_panel_popup.popup_centered()
 
 

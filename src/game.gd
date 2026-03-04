@@ -56,6 +56,10 @@ var _story_selector: PanelContainer
 var _story_selector_title: Label
 var _story_list: VBoxContainer
 
+# UI — Variables display
+var _variable_sidebar: VBoxContainer
+var _variable_details_overlay: CenterContainer
+
 # UI — Menu principal
 var _main_menu: Control
 
@@ -93,6 +97,11 @@ func _ready() -> void:
 	_sequence_editor_ctrl.play_dialogue_changed.connect(_play_ctrl.on_play_dialogue_changed)
 	_sequence_editor_ctrl.play_stopped.connect(_play_ctrl.on_play_stopped)
 	_play_ctrl.play_finished_show_menu.connect(_on_play_finished_return)
+
+	# Connecter les signaux d'affichage des variables
+	_story_play_ctrl.variables_display_changed.connect(_on_variables_display_changed)
+	_variable_sidebar.details_requested.connect(_on_variable_details_requested)
+	_variable_details_overlay.close_requested.connect(_on_variable_details_close)
 
 	# Connecter les signaux du menu principal
 	_main_menu.new_game_pressed.connect(_on_new_game)
@@ -388,3 +397,21 @@ func _show_info(msg: String) -> void:
 	dialog.process_mode = Node.PROCESS_MODE_ALWAYS
 	add_child(dialog)
 	dialog.popup_centered()
+
+
+# --- Variables display ---
+
+func _on_variables_display_changed(variables: Dictionary) -> void:
+	_variable_sidebar.update_display(variables, _current_story)
+	_variable_details_overlay.set_i18n(_i18n_dict)
+
+
+func _on_variable_details_requested() -> void:
+	var vars: Dictionary = {}
+	if _story_play_ctrl.get("_variables") != null:
+		vars = _story_play_ctrl._variables
+	_variable_details_overlay.show_details(_current_story, vars)
+
+
+func _on_variable_details_close() -> void:
+	_variable_details_overlay.hide_details()

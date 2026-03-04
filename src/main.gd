@@ -109,6 +109,10 @@ var _foreground_transition: Node
 var _story_play_ctrl: Node
 var _sequence_fx_player: Node
 
+# UI — Variables display (play)
+var _variable_sidebar: VBoxContainer
+var _variable_details_overlay: CenterContainer
+
 # FX Panel
 var _fx_panel: VBoxContainer
 
@@ -238,6 +242,9 @@ func _connect_signals() -> void:
 	_story_play_ctrl.sequence_play_requested.connect(_play_ctrl.on_story_play_sequence_requested)
 	_story_play_ctrl.choice_display_requested.connect(_play_ctrl.on_story_play_choice_requested)
 	_story_play_ctrl.play_finished.connect(_play_ctrl.on_story_play_finished)
+	_story_play_ctrl.variables_display_changed.connect(_on_variables_display_changed)
+	_variable_sidebar.details_requested.connect(_on_variable_details_requested)
+	_variable_details_overlay.close_requested.connect(_on_variable_details_close)
 	EventBus.editor_mode_changed.connect(_on_editor_mode_changed)
 	EventBus.play_started.connect(_on_play_started)
 	EventBus.play_stopped.connect(_on_play_stopped)
@@ -419,6 +426,13 @@ func _on_play_started(_mode: String) -> void:
 
 func _on_play_stopped() -> void:
 	_typewriter_timer.stop()
+	# Masquer et retirer la sidebar/overlay des variables
+	_variable_sidebar.visible = false
+	if _variable_sidebar.get_parent():
+		_variable_sidebar.get_parent().remove_child(_variable_sidebar)
+	_variable_details_overlay.hide_details()
+	if _variable_details_overlay.get_parent():
+		_variable_details_overlay.get_parent().remove_child(_variable_details_overlay)
 
 
 func _on_story_modified() -> void:
@@ -449,3 +463,31 @@ func _on_redo_pressed() -> void:
 
 func _refresh_undo_redo_buttons() -> void:
 	_ui_ctrl.refresh_undo_redo_buttons()
+
+
+# --- Variables display (play) ---
+
+func _on_variables_display_changed(variables: Dictionary) -> void:
+	var story = _editor_main._story if _editor_main else null
+	_variable_sidebar.update_display(variables, story)
+	# Ajouter la sidebar au visual editor overlay si pas déjà présente
+	if _variable_sidebar.visible and _variable_sidebar.get_parent() != _visual_editor._overlay_container:
+		if _variable_sidebar.get_parent():
+			_variable_sidebar.get_parent().remove_child(_variable_sidebar)
+		_visual_editor._overlay_container.add_child(_variable_sidebar)
+
+
+func _on_variable_details_requested() -> void:
+	var story = _editor_main._story if _editor_main else null
+	var vars: Dictionary = {}
+	if _story_play_ctrl.get("_variables") != null:
+		vars = _story_play_ctrl._variables
+	_variable_details_overlay.show_details(story, vars)
+	if not _variable_details_overlay.get_parent():
+		_visual_editor._overlay_container.add_child(_variable_details_overlay)
+
+
+func _on_variable_details_close() -> void:
+	_variable_details_overlay.hide_details()
+	if _variable_details_overlay.get_parent():
+		_variable_details_overlay.get_parent().remove_child(_variable_details_overlay)

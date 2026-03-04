@@ -49,6 +49,20 @@ func get_triggered_notifications(var_name: String) -> Array:
 	return result
 
 
+func get_main_display_variables() -> Array:
+	var result := []
+	for v in variables:
+		if v.show_on_main:
+			result.append(v)
+	return result
+
+func get_details_display_variables() -> Array:
+	var result := []
+	for v in variables:
+		if v.show_on_details:
+			result.append(v)
+	return result
+
 func get_variable_names() -> Array:
 	var names := []
 	for v in variables:

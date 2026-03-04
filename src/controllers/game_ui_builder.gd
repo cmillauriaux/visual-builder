@@ -11,6 +11,8 @@ const MainMenuScript = preload("res://src/ui/menu/main_menu.gd")
 const PauseMenuScript = preload("res://src/ui/menu/pause_menu.gd")
 const SaveLoadMenuScript = preload("res://src/ui/menu/save_load_menu.gd")
 const GameTheme = preload("res://src/ui/themes/game_theme.gd")
+const VariableSidebarScript = preload("res://src/ui/play/variable_sidebar.gd")
+const VariableDetailsOverlayScript = preload("res://src/ui/play/variable_details_overlay.gd")
 
 
 static func build(game: Control) -> void:
@@ -22,6 +24,7 @@ static func build(game: Control) -> void:
 	_build_main_menu(game)
 	_build_save_load_menu(game)
 	_build_pause_menu(game)
+	_build_variable_display(game)
 	_build_menu_button(game)
 
 
@@ -172,3 +175,22 @@ static func _build_save_load_menu(game: Control) -> void:
 	game._save_load_menu.set_script(SaveLoadMenuScript)
 	game._save_load_menu.build_ui()
 	game.add_child(game._save_load_menu)
+
+
+static func _build_variable_display(game: Control) -> void:
+	# Sidebar gauche (cercles + valeurs)
+	game._variable_sidebar = VBoxContainer.new()
+	game._variable_sidebar.set_script(VariableSidebarScript)
+	game._variable_sidebar.set_anchors_preset(Control.PRESET_CENTER_LEFT)
+	game._variable_sidebar.offset_left = 10
+	game._variable_sidebar.offset_right = 130
+	game._variable_sidebar.offset_top = -200
+	game._variable_sidebar.offset_bottom = 200
+	game._variable_sidebar.visible = false
+	game.add_child(game._variable_sidebar)
+
+	# Overlay de détails
+	game._variable_details_overlay = CenterContainer.new()
+	game._variable_details_overlay.set_script(VariableDetailsOverlayScript)
+	game._variable_details_overlay.build_ui()
+	game.add_child(game._variable_details_overlay)

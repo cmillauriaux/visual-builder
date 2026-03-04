@@ -412,3 +412,8 @@ func _cleanup_play() -> void:
 	if _play_overlay.get_parent():
 		_play_overlay.get_parent().remove_child(_play_overlay)
 	_previous_play_foregrounds = []
+	# Masquer l'affichage des variables
+	if _game._variable_sidebar:
+		_game._variable_sidebar.visible = false
+	if _game._variable_details_overlay:
+		_game._variable_details_overlay.hide_details()

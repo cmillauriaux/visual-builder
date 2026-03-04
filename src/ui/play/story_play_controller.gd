@@ -9,6 +9,7 @@ signal sequence_play_requested(sequence)
 signal choice_display_requested(choices)
 signal play_finished(reason: String)
 signal notification_triggered(message: String)
+signal variables_display_changed(variables: Dictionary)
 
 var _state: int = State.IDLE
 var _story = null
@@ -46,6 +47,7 @@ func start_play_story(story) -> void:
 	_user_stopped = false
 	_variables = {}
 	_init_variables_from_story(story)
+	variables_display_changed.emit(_variables)
 	var chapter = _find_entry(story.chapters, story.entry_point_uuid)
 	if chapter == null:
 		_finish("error")
@@ -66,6 +68,7 @@ func start_play_chapter(story, chapter) -> void:
 	_user_stopped = false
 	_variables = {}
 	_init_variables_from_story(story)
+	variables_display_changed.emit(_variables)
 	var scene = _find_entry(chapter.scenes, chapter.entry_point_uuid)
 	if scene == null:
 		_finish("error")
@@ -82,6 +85,7 @@ func start_play_scene(story, chapter, scene) -> void:
 	_user_stopped = false
 	_variables = {}
 	_init_variables_from_story(story)
+	variables_display_changed.emit(_variables)
 	_start_scene_entry(scene)
 
 ## Reprend une partie depuis une sauvegarde : restaure directement l'état sans passer
@@ -96,6 +100,7 @@ func start_play_from_save(story, chapter, scene, sequence, variables: Dictionary
 	_variables = variables.duplicate()
 	_user_stopped = false
 	_state = State.PLAYING_SEQUENCE
+	variables_display_changed.emit(_variables)
 	sequence_play_requested.emit(sequence)
 
 ## Trouve l'entry point d'une scène (séquence ou condition) et démarre le play.
@@ -299,6 +304,7 @@ func _apply_effects(effects: Array) -> void:
 	for effect in effects:
 		effect.apply(_variables)
 	_check_notifications(before)
+	variables_display_changed.emit(_variables)
 
 
 func _check_notifications(before: Dictionary) -> void:

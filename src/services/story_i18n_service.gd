@@ -46,6 +46,9 @@ const UI_STRINGS: Array[String] = [
 	"Volume effets",
 	"Langue",
 	"Appliquer",
+	# Affichage des variables
+	"Détails",
+	"Fermer",
 ]
 
 
@@ -70,6 +73,10 @@ static func extract_strings(story: RefCounted) -> Dictionary:
 	_add(strings, story.description)
 	_add(strings, story.menu_title)
 	_add(strings, story.menu_subtitle)
+
+	# Descriptions de variables
+	for var_def in story.variables:
+		_add(strings, var_def.description)
 
 	# Notifications
 	for notif in story.notifications:
@@ -141,6 +148,9 @@ static func apply_to_story(story: RefCounted, i18n_dict: Dictionary) -> void:
 	story.description = _tr(story.description, i18n_dict)
 	story.menu_title = _tr(story.menu_title, i18n_dict)
 	story.menu_subtitle = _tr(story.menu_subtitle, i18n_dict)
+
+	for var_def in story.variables:
+		var_def.description = _tr(var_def.description, i18n_dict)
 
 	for notif in story.notifications:
 		notif.message = _tr(notif.message, i18n_dict)

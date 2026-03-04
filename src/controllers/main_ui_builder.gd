@@ -20,6 +20,8 @@ const StoryPlayControllerScript = preload("res://src/ui/play/story_play_controll
 const ConditionEditorScene = preload("res://src/ui/editors/condition_editor.tscn")
 const VariablePanelScene = preload("res://src/ui/editors/variable_panel.tscn")
 const VerifierReportPanelScript = preload("res://src/ui/editors/verifier_report_panel.gd")
+const VariableSidebarScript = preload("res://src/ui/play/variable_sidebar.gd")
+const VariableDetailsOverlayScript = preload("res://src/ui/play/variable_details_overlay.gd")
 
 const MainTheme = preload("res://src/ui/themes/editor_main.tres")
 
@@ -33,6 +35,7 @@ static func build(main: Control) -> void:
 	_build_verifier_panel(main)
 	_build_welcome_screen(main)
 	_build_play_overlay(main)
+	_build_variable_display(main)
 	_build_helpers(main)
 
 
@@ -491,6 +494,18 @@ static func _build_play_overlay(main: Control) -> void:
 	main._play_subtitle_label.add_theme_font_size_override("font_size", 24)
 	main._play_subtitle_label.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8))
 	title_vbox.add_child(main._play_subtitle_label)
+
+
+static func _build_variable_display(main: Control) -> void:
+	# Sidebar gauche (cercles + valeurs) — ajoutée au visual editor overlay pendant le play
+	main._variable_sidebar = VBoxContainer.new()
+	main._variable_sidebar.set_script(VariableSidebarScript)
+	main._variable_sidebar.visible = false
+
+	# Overlay de détails
+	main._variable_details_overlay = CenterContainer.new()
+	main._variable_details_overlay.set_script(VariableDetailsOverlayScript)
+	main._variable_details_overlay.build_ui()
 
 
 static func _build_helpers(main: Control) -> void:

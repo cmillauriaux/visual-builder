@@ -125,6 +125,10 @@ static func _relocate_assets(story, base_path: String) -> void:
 	# Menu background
 	story.menu_background = _relocate_image(story.menu_background, base_path, "backgrounds")
 
+	# Images des variables
+	for var_def in story.variables:
+		var_def.image = _relocate_image(var_def.image, base_path, "foregrounds")
+
 	for chapter in story.chapters:
 		for scene in chapter.scenes:
 			for seq in scene.sequences:
