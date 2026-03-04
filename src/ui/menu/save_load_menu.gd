@@ -37,7 +37,7 @@ func build_ui() -> void:
 	add_child(center)
 
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(960, 0)
+	panel.custom_minimum_size = Vector2(960, 600) # Hauteur fixe pour forcer le scroll si besoin
 	center.add_child(panel)
 
 	var vbox := VBoxContainer.new()
@@ -61,12 +61,19 @@ func build_ui() -> void:
 	close_btn.pressed.connect(func(): close_pressed.emit())
 	header.add_child(close_btn)
 
+	# Zone de défilement pour la grille
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	vbox.add_child(scroll)
+
 	# Grille 3 colonnes
 	_grid = GridContainer.new()
 	_grid.columns = 3
+	_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_grid.add_theme_constant_override("h_separation", 16)
 	_grid.add_theme_constant_override("v_separation", 16)
-	vbox.add_child(_grid)
+	scroll.add_child(_grid)
 
 	# Overlay de confirmation (caché initialement)
 	_confirm_overlay = Control.new()

@@ -72,6 +72,12 @@ func test_grid_has_six_slots() -> void:
 	assert_eq(_menu._grid.get_child_count(), GameSaveManager.NUM_SLOTS)
 
 
+func test_grid_is_inside_scroll_container() -> void:
+	var scroll = _menu._grid.get_parent()
+	assert_true(scroll is ScrollContainer, "La grille doit être dans un ScrollContainer")
+	assert_eq(scroll.size_flags_vertical, Control.SIZE_EXPAND_FILL, "ScrollContainer doit s'étendre verticalement")
+
+
 func test_empty_slot_shows_empty_label() -> void:
 	_menu.show_as_load_mode()
 	var card = _menu._grid.get_child(0)
