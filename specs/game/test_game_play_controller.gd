@@ -95,7 +95,7 @@ func test_cleanup_play_hides_ui() -> void:
 
 func test_hide_choice_overlay() -> void:
 	var child = Label.new()
-	_game._choice_overlay.add_child(child)
+	_game._choice_panel.add_child(child)
 	_game._choice_overlay.visible = true
 	_game._play_ctrl._hide_choice_overlay()
 	assert_false(_game._choice_overlay.visible)

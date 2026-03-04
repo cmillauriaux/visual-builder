@@ -444,12 +444,15 @@ static func _build_play_overlay(main: Control) -> void:
 	main._typewriter_timer.wait_time = 0.03
 	main.add_child(main._typewriter_timer)
 
-	# Choice overlay (for story play choices)
-	main._choice_overlay = PanelContainer.new()
+	# Choice overlay (centré via CenterContainer)
+	main._choice_overlay = CenterContainer.new()
 	main._choice_overlay.visible = false
-	main._choice_overlay.set_anchors_preset(Control.PRESET_CENTER)
-	main._choice_overlay.custom_minimum_size = Vector2(400, 0)
+	main._choice_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
 	main._choice_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+
+	main._choice_panel = PanelContainer.new()
+	main._choice_panel.custom_minimum_size = Vector2(400, 0)
+	main._choice_overlay.add_child(main._choice_panel)
 
 	# Toast overlay (notifications)
 	main._toast_overlay = PanelContainer.new()

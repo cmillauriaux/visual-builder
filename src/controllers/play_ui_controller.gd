@@ -39,10 +39,10 @@ func _on_play_choice_requested(choices: Array) -> void:
 		var idx = i
 		btn.pressed.connect(func(): _on_play_choice_selected(idx))
 		container.add_child(btn)
-	_main._choice_overlay.add_child(container)
+	_main._choice_panel.add_child(container)
 	_main._choice_overlay.visible = true
 	if not _main._choice_overlay.get_parent():
-		_main._visual_editor._overlay_container.add_child(_main._choice_overlay)
+		_main.add_child(_main._choice_overlay)
 
 
 func _on_play_choice_selected(index: int) -> void:
@@ -68,7 +68,7 @@ func _on_play_finished(reason: String) -> void:
 
 func _hide_choice_overlay() -> void:
 	_main._choice_overlay.visible = false
-	for child in _main._choice_overlay.get_children():
+	for child in _main._choice_panel.get_children():
 		child.queue_free()
 	if _main._choice_overlay.get_parent():
 		_main._choice_overlay.get_parent().remove_child(_main._choice_overlay)

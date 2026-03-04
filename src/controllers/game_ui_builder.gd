@@ -17,12 +17,12 @@ static func build(game: Control) -> void:
 	game.theme = GameTheme.create_theme()
 	_build_visual_editor(game)
 	_build_play_overlay(game)
-	_build_menu_button(game)
-	_build_pause_menu(game)
 	_build_helpers(game)
 	_build_story_selector(game)
 	_build_main_menu(game)
 	_build_save_load_menu(game)
+	_build_pause_menu(game)
+	_build_menu_button(game)
 
 
 static func _build_visual_editor(game: Control) -> void:
@@ -58,12 +58,15 @@ static func _build_play_overlay(game: Control) -> void:
 	game._typewriter_timer.wait_time = 0.03
 	game.add_child(game._typewriter_timer)
 
-	# Choice overlay
-	game._choice_overlay = PanelContainer.new()
+	# Choice overlay (centré via CenterContainer)
+	game._choice_overlay = CenterContainer.new()
 	game._choice_overlay.visible = false
-	game._choice_overlay.set_anchors_preset(Control.PRESET_CENTER)
-	game._choice_overlay.custom_minimum_size = Vector2(400, 0)
+	game._choice_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	game._choice_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+
+	game._choice_panel = PanelContainer.new()
+	game._choice_panel.custom_minimum_size = Vector2(400, 0)
+	game._choice_overlay.add_child(game._choice_panel)
 
 	# --- Play Title Overlay ---
 	game._play_title_overlay = CenterContainer.new()

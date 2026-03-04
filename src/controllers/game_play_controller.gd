@@ -15,7 +15,8 @@ var _play_overlay: PanelContainer
 var _play_character_label: Label
 var _play_text_label: RichTextLabel
 var _typewriter_timer: Timer
-var _choice_overlay: PanelContainer
+var _choice_overlay: CenterContainer
+var _choice_panel: PanelContainer
 var _menu_button: Button
 
 var _previous_play_foregrounds: Array = []
@@ -44,6 +45,7 @@ func setup(game: Control) -> void:
 	_play_text_label = game._play_text_label
 	_typewriter_timer = game._typewriter_timer
 	_choice_overlay = game._choice_overlay
+	_choice_panel = game._choice_panel
 	_menu_button = game._menu_button
 
 
@@ -96,13 +98,16 @@ func stop_current() -> void:
 
 func on_sequence_play_requested(seq) -> void:
 	_sequence_editor_ctrl.load_sequence(seq)
-	_visual_editor.load_sequence(seq)
 	_previous_play_foregrounds = []
 	_current_playing_sequence = seq
-	
+
+	# Préparer les visuels d'ouverture : n'afficher que les foregrounds statiques
+	# du premier dialogue pour éviter un flash des foregrounds animés pendant la transition.
+	_prepare_opening_visuals()
+
 	# Nettoyer les transitions précédentes (ex: reste de pixelisation ou fondu)
 	_sequence_fx_player.stop_fx()
-	
+
 	if seq.transition_in_type != "none":
 		_sequence_fx_player.fx_finished.connect(_on_trans_in_finished_play_fx, CONNECT_ONE_SHOT)
 		_sequence_fx_player.play_transition(seq.transition_in_type, seq.transition_in_duration, true, _visual_editor)
@@ -178,10 +183,11 @@ func on_choice_display_requested(choices) -> void:
 		var idx = i
 		btn.pressed.connect(func(): _on_choice_selected(idx))
 		vbox.add_child(btn)
-	_choice_overlay.add_child(vbox)
+	_choice_panel.add_child(vbox)
 	_choice_overlay.visible = true
 	if not _choice_overlay.get_parent():
-		_visual_editor._overlay_container.add_child(_choice_overlay)
+		_game.add_child(_choice_overlay)
+		_game.move_child(_game._menu_button, -1)
 
 
 func on_play_finished(reason: String) -> void:
@@ -325,6 +331,21 @@ func _input(event: InputEvent) -> void:
 
 # --- Internal ---
 
+func _prepare_opening_visuals() -> void:
+	var seq = _sequence_editor_ctrl.get_sequence()
+	if seq == null or seq.dialogues.is_empty():
+		_visual_editor.load_sequence(seq)
+		return
+	var fgs = _sequence_editor_ctrl.get_effective_foregrounds(0)
+	var static_fgs: Array = []
+	for fg in fgs:
+		if fg.transition_type == "none":
+			static_fgs.append(fg)
+	seq.foregrounds = static_fgs
+	_visual_editor.load_sequence(seq)
+	_previous_play_foregrounds = static_fgs
+
+
 func _update_preview(index: int) -> void:
 	var fgs = _sequence_editor_ctrl.get_effective_foregrounds(index)
 	var seq = _sequence_editor_ctrl.get_sequence()
@@ -360,7 +381,7 @@ func _on_choice_selected(index: int) -> void:
 
 func _hide_choice_overlay() -> void:
 	_choice_overlay.visible = false
-	for child in _choice_overlay.get_children():
+	for child in _choice_panel.get_children():
 		child.queue_free()
 	if _choice_overlay.get_parent():
 		_choice_overlay.get_parent().remove_child(_choice_overlay)

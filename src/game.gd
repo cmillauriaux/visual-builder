@@ -35,7 +35,8 @@ var _play_overlay: PanelContainer
 var _play_character_label: Label
 var _play_text_label: RichTextLabel
 var _typewriter_timer: Timer
-var _choice_overlay: PanelContainer
+var _choice_overlay: CenterContainer
+var _choice_panel: PanelContainer
 var _play_title_overlay: CenterContainer
 var _play_title_label: Label
 var _play_subtitle_label: Label
