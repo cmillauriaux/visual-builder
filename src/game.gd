@@ -15,6 +15,7 @@ const StorySaver = preload("res://src/persistence/story_saver.gd")
 const GameSettings = preload("res://src/ui/menu/game_settings.gd")
 const StoryI18nService = preload("res://src/services/story_i18n_service.gd")
 const GameSaveManager = preload("res://src/persistence/game_save_manager.gd")
+const PlayFabAnalyticsServiceScript = preload("res://src/services/playfab_analytics_service.gd")
 
 ## Chemin vers la story à charger automatiquement.
 ## Si vide, affiche le sélecteur. Peut pointer vers res:// ou user://.
@@ -65,6 +66,9 @@ var _variable_details_overlay: CenterContainer
 # UI — Menu principal
 var _main_menu: Control
 
+# Analytics
+var _analytics: Node
+
 # State
 var _current_story = null
 var _current_story_path: String = ""
@@ -104,6 +108,19 @@ func _ready() -> void:
 	_story_play_ctrl.variables_display_changed.connect(_on_variables_display_changed)
 	_variable_sidebar.details_requested.connect(_on_variable_details_requested)
 	_variable_details_overlay.close_requested.connect(_on_variable_details_close)
+
+	# Analytics PlayFab
+	_analytics = Node.new()
+	_analytics.set_script(PlayFabAnalyticsServiceScript)
+	_analytics.name = "PlayFabAnalytics"
+	add_child(_analytics)
+
+	# Connecter les signaux analytics du story play controller
+	_story_play_ctrl.chapter_entered.connect(_on_analytics_chapter_entered)
+	_story_play_ctrl.scene_entered.connect(_on_analytics_scene_entered)
+	_story_play_ctrl.sequence_entered.connect(_on_analytics_sequence_entered)
+	_story_play_ctrl.choice_made.connect(_on_analytics_choice_made)
+	_story_play_ctrl.story_finished_with_reason.connect(_on_analytics_story_finished)
 
 	# Connecter les signaux du menu principal
 	_main_menu.new_game_pressed.connect(_on_new_game)
@@ -157,6 +174,7 @@ func _load_story_and_show_menu(path: String) -> void:
 	_current_story = story
 	_current_story_path = path
 	_reload_i18n()
+	_configure_analytics(story)
 	_show_main_menu(_current_story)
 
 
@@ -199,6 +217,10 @@ func _show_main_menu(story) -> void:
 
 func _on_new_game() -> void:
 	_main_menu.hide_menu()
+	_analytics.track_event("story_started", {
+		"story_title": _current_story.title,
+		"story_version": _current_story.version,
+	})
 	_play_ctrl.start_story(_current_story, _current_story_path)
 
 
@@ -209,6 +231,8 @@ func _on_load_game() -> void:
 
 
 func _on_quit() -> void:
+	_analytics.track_event("game_quit", {})
+	_analytics.flush()
 	get_tree().quit()
 
 
@@ -271,6 +295,13 @@ func _collect_game_state() -> Dictionary:
 func _on_save_slot(slot_index: int) -> void:
 	var state := _collect_game_state()
 	GameSaveManager.save_game(slot_index, state, _pending_screenshot)
+	_analytics.track_event("story_saved", {
+		"story_title": _current_story.title if _current_story else "",
+		"slot_index": slot_index,
+		"chapter": state.get("chapter_name", ""),
+		"scene": state.get("scene_name", ""),
+		"sequence": state.get("sequence_name", ""),
+	})
 	_save_load_menu.hide_menu()
 	get_tree().paused = false
 
@@ -293,6 +324,10 @@ func _on_load_slot(slot_index: int) -> void:
 		_current_story_path = target_path
 		_reload_i18n()
 	# Reprendre depuis la sauvegarde
+	_analytics.track_event("story_loaded", {
+		"story_title": _current_story.title if _current_story else "",
+		"slot_index": slot_index,
+	})
 	_play_ctrl.start_from_save(_current_story, save_data, _current_story_path)
 
 
@@ -315,10 +350,23 @@ func _on_save_load_close() -> void:
 func _on_pause_new_game() -> void:
 	_pause_menu.hide_menu()
 	get_tree().paused = false
+	_analytics.track_event("story_started", {
+		"story_title": _current_story.title if _current_story else "",
+		"story_version": _current_story.version if _current_story else "",
+	})
 	_play_ctrl.stop_and_restart(_current_story, _current_story_path)
 
 
 func _on_pause_quit() -> void:
+	var chapter = _story_play_ctrl.get_current_chapter()
+	var scene = _story_play_ctrl.get_current_scene()
+	var seq = _story_play_ctrl.get_current_sequence()
+	_analytics.track_event("game_quit", {
+		"chapter": chapter.chapter_name if chapter else "",
+		"scene": scene.scene_name if scene else "",
+		"sequence": seq.seq_name if seq else "",
+	})
+	_analytics.flush()
 	_pause_menu.hide_menu()
 	get_tree().paused = false
 	_play_ctrl.stop_current()
@@ -420,3 +468,45 @@ func _on_variable_details_requested() -> void:
 
 func _on_variable_details_close() -> void:
 	_variable_details_overlay.hide_details()
+
+
+# --- PlayFab Analytics ---
+
+func _configure_analytics(story) -> void:
+	_analytics.configure(story.playfab_title_id, story.playfab_enabled)
+	if _analytics.is_configured():
+		_analytics.login_anonymous()
+
+
+func _on_analytics_chapter_entered(chapter_name: String, chapter_uuid: String) -> void:
+	_analytics.track_event("chapter_entered", {
+		"chapter_name": chapter_name,
+		"chapter_uuid": chapter_uuid,
+	})
+
+
+func _on_analytics_scene_entered(scene_name: String, scene_uuid: String) -> void:
+	_analytics.track_event("scene_entered", {
+		"scene_name": scene_name,
+		"scene_uuid": scene_uuid,
+	})
+
+
+func _on_analytics_sequence_entered(sequence_name: String, sequence_uuid: String) -> void:
+	_analytics.track_event("sequence_entered", {
+		"sequence_name": sequence_name,
+		"sequence_uuid": sequence_uuid,
+	})
+
+
+func _on_analytics_choice_made(sequence_uuid: String, choice_index: int, choice_text: String) -> void:
+	_analytics.track_event("choice_made", {
+		"sequence_uuid": sequence_uuid,
+		"choice_index": choice_index,
+		"choice_text": choice_text,
+	})
+
+
+func _on_analytics_story_finished(reason: String) -> void:
+	_analytics.track_event("story_finished", {"reason": reason})
+	_analytics.flush()

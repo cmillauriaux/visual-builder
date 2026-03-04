@@ -2,7 +2,7 @@ extends ConfirmationDialog
 
 ## Dialogue de configuration du menu principal de la story.
 
-signal menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_background: String, menu_music: String)
+signal menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_background: String, menu_music: String, playfab_title_id: String, playfab_enabled: bool)
 
 const ImagePickerDialogScript = preload("res://src/ui/dialogs/image_picker_dialog.gd")
 const AudioPickerDialogScript = preload("res://src/ui/dialogs/audio_picker_dialog.gd")
@@ -15,6 +15,8 @@ var _clear_bg_button: Button
 var _bg_preview: TextureRect
 var _menu_music_label: Label
 var _clear_music_button: Button
+var _playfab_title_id_edit: LineEdit
+var _playfab_enabled_check: CheckButton
 var _story_base_path: String = ""
 var _current_menu_music: String = ""
 
@@ -105,6 +107,29 @@ func _init():
 
 	vbox.add_child(music_hbox)
 
+	var separator = HSeparator.new()
+	separator.name = "PlayFabSeparator"
+	vbox.add_child(separator)
+
+	var playfab_label = Label.new()
+	playfab_label.text = "PlayFab Analytics"
+	playfab_label.add_theme_font_size_override("font_size", 16)
+	vbox.add_child(playfab_label)
+
+	var pf_title_label = Label.new()
+	pf_title_label.text = "Title ID"
+	vbox.add_child(pf_title_label)
+
+	_playfab_title_id_edit = LineEdit.new()
+	_playfab_title_id_edit.name = "PlayFabTitleIdEdit"
+	_playfab_title_id_edit.placeholder_text = "Laisser vide pour désactiver"
+	vbox.add_child(_playfab_title_id_edit)
+
+	_playfab_enabled_check = CheckButton.new()
+	_playfab_enabled_check.name = "PlayFabEnabledCheck"
+	_playfab_enabled_check.text = "Activer le tracking PlayFab"
+	vbox.add_child(_playfab_enabled_check)
+
 	add_child(vbox)
 
 	confirmed.connect(_on_confirmed)
@@ -113,6 +138,8 @@ func setup(story, story_base_path: String = "") -> void:
 	_menu_title_edit.text = story.menu_title
 	_menu_subtitle_edit.text = story.menu_subtitle
 	_menu_bg_edit.text = story.menu_background
+	_playfab_title_id_edit.text = story.playfab_title_id if story.get("playfab_title_id") != null else ""
+	_playfab_enabled_check.button_pressed = story.playfab_enabled if story.get("playfab_enabled") != null else false
 	_story_base_path = story_base_path
 	_current_menu_music = story.menu_music if story.get("menu_music") != null else ""
 	_update_menu_music_label()
@@ -182,5 +209,11 @@ func _update_preview() -> void:
 	else:
 		_bg_preview.texture = null
 
+func get_playfab_title_id() -> String:
+	return _playfab_title_id_edit.text
+
+func get_playfab_enabled() -> bool:
+	return _playfab_enabled_check.button_pressed
+
 func _on_confirmed() -> void:
-	menu_config_confirmed.emit(_menu_title_edit.text, _menu_subtitle_edit.text, _menu_bg_edit.text, _current_menu_music)
+	menu_config_confirmed.emit(_menu_title_edit.text, _menu_subtitle_edit.text, _menu_bg_edit.text, _current_menu_music, _playfab_title_id_edit.text, _playfab_enabled_check.button_pressed)

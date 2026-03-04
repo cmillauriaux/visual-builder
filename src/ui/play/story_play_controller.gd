@@ -10,6 +10,11 @@ signal choice_display_requested(choices)
 signal play_finished(reason: String)
 signal notification_triggered(message: String)
 signal variables_display_changed(variables: Dictionary)
+signal chapter_entered(chapter_name: String, chapter_uuid: String)
+signal scene_entered(scene_name: String, scene_uuid: String)
+signal sequence_entered(sequence_name: String, sequence_uuid: String)
+signal choice_made(sequence_uuid: String, choice_index: int, choice_text: String)
+signal story_finished_with_reason(reason: String)
 
 var _state: int = State.IDLE
 var _story = null
@@ -53,6 +58,7 @@ func start_play_story(story) -> void:
 		_finish("error")
 		return
 	_current_chapter = chapter
+	chapter_entered.emit(chapter.chapter_name, chapter.uuid)
 	var scene = _find_entry(chapter.scenes, chapter.entry_point_uuid)
 	if scene == null:
 		_finish("error")
@@ -65,6 +71,7 @@ func start_play_chapter(story, chapter) -> void:
 		return
 	_story = story
 	_current_chapter = chapter
+	chapter_entered.emit(chapter.chapter_name, chapter.uuid)
 	_user_stopped = false
 	_variables = {}
 	_init_variables_from_story(story)
@@ -81,6 +88,7 @@ func start_play_scene(story, chapter, scene) -> void:
 		return
 	_story = story
 	_current_chapter = chapter
+	chapter_entered.emit(chapter.chapter_name, chapter.uuid)
 	_current_scene = scene
 	_user_stopped = false
 	_variables = {}
@@ -105,6 +113,7 @@ func start_play_from_save(story, chapter, scene, sequence, variables: Dictionary
 
 ## Trouve l'entry point d'une scène (séquence ou condition) et démarre le play.
 func _start_scene_entry(scene) -> void:
+	scene_entered.emit(scene.scene_name, scene.uuid)
 	var entry = _find_scene_entry(scene)
 	if entry == null:
 		_finish("error")
@@ -149,6 +158,7 @@ func _resolve_entry(entry) -> void:
 		# C'est une séquence
 		_current_sequence = entry
 		_state = State.PLAYING_SEQUENCE
+		sequence_entered.emit(entry.seq_name, entry.uuid)
 		sequence_play_requested.emit(entry)
 
 ## Évalue une condition et résout la conséquence.
@@ -201,6 +211,7 @@ func on_choice_selected(index: int) -> void:
 	if choice.consequence == null:
 		_finish("error")
 		return
+	choice_made.emit(seq.uuid, index, choice.text)
 	# Appliquer les effets du choix d'abord, puis ceux de la conséquence
 	_apply_effects(choice.effects)
 	_resolve_consequence(choice.consequence)
@@ -221,6 +232,7 @@ func _resolve_consequence(consequence) -> void:
 			if target:
 				_current_sequence = target
 				_state = State.PLAYING_SEQUENCE
+				sequence_entered.emit(target.seq_name, target.uuid)
 				sequence_play_requested.emit(target)
 				return
 			_finish("error")
@@ -244,6 +256,7 @@ func _resolve_consequence(consequence) -> void:
 				_finish("error")
 				return
 			_current_chapter = target_ch
+			chapter_entered.emit(target_ch.chapter_name, target_ch.uuid)
 			var scene = _find_entry(target_ch.scenes, target_ch.entry_point_uuid)
 			if scene == null:
 				_finish("error")
@@ -260,6 +273,8 @@ func _resolve_consequence(consequence) -> void:
 func _finish(reason: String) -> void:
 	_state = State.IDLE
 	_current_sequence = null
+	if reason == "game_over" or reason == "to_be_continued":
+		story_finished_with_reason.emit(reason)
 	play_finished.emit(reason)
 
 # --- Utilitaires ---
