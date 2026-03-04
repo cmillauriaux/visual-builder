@@ -2,7 +2,7 @@ extends ConfirmationDialog
 
 ## Dialogue de configuration du menu principal de la story.
 
-signal menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_background: String)
+signal menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_background: String, playfab_title_id: String, playfab_enabled: bool)
 
 const ImagePickerDialogScript = preload("res://src/ui/dialogs/image_picker_dialog.gd")
 
@@ -12,6 +12,8 @@ var _menu_bg_edit: LineEdit
 var _browse_button: Button
 var _clear_bg_button: Button
 var _bg_preview: TextureRect
+var _playfab_title_id_edit: LineEdit
+var _playfab_enabled_check: CheckButton
 var _story_base_path: String = ""
 
 func _init():
@@ -72,6 +74,29 @@ func _init():
 	_bg_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	vbox.add_child(_bg_preview)
 
+	var separator = HSeparator.new()
+	separator.name = "PlayFabSeparator"
+	vbox.add_child(separator)
+
+	var playfab_label = Label.new()
+	playfab_label.text = "PlayFab Analytics"
+	playfab_label.add_theme_font_size_override("font_size", 16)
+	vbox.add_child(playfab_label)
+
+	var pf_title_label = Label.new()
+	pf_title_label.text = "Title ID"
+	vbox.add_child(pf_title_label)
+
+	_playfab_title_id_edit = LineEdit.new()
+	_playfab_title_id_edit.name = "PlayFabTitleIdEdit"
+	_playfab_title_id_edit.placeholder_text = "Laisser vide pour désactiver"
+	vbox.add_child(_playfab_title_id_edit)
+
+	_playfab_enabled_check = CheckButton.new()
+	_playfab_enabled_check.name = "PlayFabEnabledCheck"
+	_playfab_enabled_check.text = "Activer le tracking PlayFab"
+	vbox.add_child(_playfab_enabled_check)
+
 	add_child(vbox)
 
 	confirmed.connect(_on_confirmed)
@@ -80,6 +105,8 @@ func setup(story, story_base_path: String = "") -> void:
 	_menu_title_edit.text = story.menu_title
 	_menu_subtitle_edit.text = story.menu_subtitle
 	_menu_bg_edit.text = story.menu_background
+	_playfab_title_id_edit.text = story.playfab_title_id
+	_playfab_enabled_check.button_pressed = story.playfab_enabled
 	_story_base_path = story_base_path
 	_update_preview()
 
@@ -118,5 +145,11 @@ func _update_preview() -> void:
 	else:
 		_bg_preview.texture = null
 
+func get_playfab_title_id() -> String:
+	return _playfab_title_id_edit.text
+
+func get_playfab_enabled() -> bool:
+	return _playfab_enabled_check.button_pressed
+
 func _on_confirmed() -> void:
-	menu_config_confirmed.emit(_menu_title_edit.text, _menu_subtitle_edit.text, _menu_bg_edit.text)
+	menu_config_confirmed.emit(_menu_title_edit.text, _menu_subtitle_edit.text, _menu_bg_edit.text, _playfab_title_id_edit.text, _playfab_enabled_check.button_pressed)
