@@ -40,13 +40,16 @@ func is_story_play_mode() -> bool:
 func on_play_pressed() -> void:
 	_previous_play_foregrounds = []
 	EventBus.play_started.emit("sequence")
-	
+
 	var seq = _sequence_editor_ctrl.get_sequence()
 	_current_playing_sequence = seq
-	
+
 	# Nettoyer les transitions précédentes (ex: reste de pixelisation ou fondu)
 	_sequence_fx_player.stop_fx()
-	
+
+	# Préparer l'affichage du premier dialogue avant l'animation d'ouverture
+	_prepare_opening_visuals()
+
 	if seq and seq.transition_in_type != "none":
 		_sequence_fx_player.fx_finished.connect(_on_trans_in_finished_play_fx, CONNECT_ONE_SHOT)
 		_sequence_fx_player.play_transition(seq.transition_in_type, seq.transition_in_duration, true, _visual_editor)
@@ -212,6 +215,22 @@ func _create_fade_out_clone(source: Control) -> TextureRect:
 	return clone
 
 
+func _prepare_opening_visuals() -> void:
+	# Pendant l'animation d'ouverture, afficher uniquement le background et
+	# les foregrounds du premier dialogue qui n'ont pas d'animation propre.
+	var seq = _sequence_editor_ctrl.get_sequence()
+	if seq == null or seq.dialogues.is_empty():
+		return
+	var fgs = _sequence_editor_ctrl.get_effective_foregrounds(0)
+	var static_fgs: Array = []
+	for fg in fgs:
+		if fg.transition_type == "none":
+			static_fgs.append(fg)
+	seq.foregrounds = static_fgs
+	_visual_editor.load_sequence(seq)
+	_previous_play_foregrounds = static_fgs
+
+
 # --- Story Play ---
 
 func on_top_play_pressed() -> void:
@@ -265,10 +284,13 @@ func on_story_play_sequence_requested(seq) -> void:
 	_main.update_editor_mode()
 	_previous_play_foregrounds = []
 	_current_playing_sequence = seq
-	
+
 	# Nettoyer les transitions précédentes (ex: reste de pixelisation ou fondu)
 	_sequence_fx_player.stop_fx()
-	
+
+	# Préparer l'affichage du premier dialogue avant l'animation d'ouverture
+	_prepare_opening_visuals()
+
 	if seq.transition_in_type != "none":
 		_sequence_fx_player.fx_finished.connect(_on_trans_in_finished_play_fx, CONNECT_ONE_SHOT)
 		_sequence_fx_player.play_transition(seq.transition_in_type, seq.transition_in_duration, true, _visual_editor)

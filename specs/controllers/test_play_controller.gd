@@ -149,3 +149,88 @@ func test_story_play_sequence_no_title_no_dialogues_skips_immediately() -> void:
 	
 	assert_false(_main._play_ctrl._is_showing_title, "Title screen should not be showing")
 	assert_signal_emitted(_main._story_play_ctrl, "play_finished")
+
+
+func _create_foreground(name: String, transition: String = "none"):
+	var ForegroundScript = load("res://src/models/foreground.gd")
+	var fg = ForegroundScript.new()
+	fg.fg_name = name
+	fg.transition_type = transition
+	return fg
+
+
+func test_prepare_opening_visuals_shows_first_dialogue_foregrounds() -> void:
+	var seq = SequenceScript.new()
+	var dlg0 = DialogueScript.new()
+	dlg0.character = "Alice"
+	dlg0.text = "Premier"
+	var fg0 = _create_foreground("fg_alice")
+	dlg0.foregrounds.append(fg0)
+	seq.dialogues.append(dlg0)
+
+	var dlg1 = DialogueScript.new()
+	dlg1.character = "Bob"
+	dlg1.text = "Dernier"
+	var fg1 = _create_foreground("fg_bob")
+	dlg1.foregrounds.append(fg1)
+	seq.dialogues.append(dlg1)
+
+	# Simuler que le dernier dialogue est affiché
+	seq.foregrounds = [fg1]
+	_main._sequence_editor_ctrl.load_sequence(seq)
+
+	_main._play_ctrl._prepare_opening_visuals()
+
+	# Doit afficher les foregrounds du premier dialogue (fg0), pas du dernier (fg1)
+	assert_eq(seq.foregrounds.size(), 1)
+	assert_eq(seq.foregrounds[0].fg_name, "fg_alice")
+
+
+func test_prepare_opening_visuals_filters_animated_foregrounds() -> void:
+	var seq = SequenceScript.new()
+	var dlg = DialogueScript.new()
+	dlg.character = "Alice"
+	dlg.text = "Test"
+	var fg_static = _create_foreground("fg_static", "none")
+	var fg_animated = _create_foreground("fg_animated", "fade")
+	dlg.foregrounds.append(fg_static)
+	dlg.foregrounds.append(fg_animated)
+	seq.dialogues.append(dlg)
+
+	_main._sequence_editor_ctrl.load_sequence(seq)
+
+	_main._play_ctrl._prepare_opening_visuals()
+
+	# Seul le foreground sans animation doit être affiché
+	assert_eq(seq.foregrounds.size(), 1)
+	assert_eq(seq.foregrounds[0].fg_name, "fg_static")
+
+
+func test_prepare_opening_visuals_sets_previous_play_foregrounds() -> void:
+	var seq = SequenceScript.new()
+	var dlg = DialogueScript.new()
+	dlg.character = "Alice"
+	dlg.text = "Test"
+	var fg = _create_foreground("fg_alice")
+	dlg.foregrounds.append(fg)
+	seq.dialogues.append(dlg)
+
+	_main._sequence_editor_ctrl.load_sequence(seq)
+
+	_main._play_ctrl._prepare_opening_visuals()
+
+	assert_eq(_main._play_ctrl._previous_play_foregrounds.size(), 1)
+	assert_eq(_main._play_ctrl._previous_play_foregrounds[0].fg_name, "fg_alice")
+
+
+func test_prepare_opening_visuals_no_dialogues_does_nothing() -> void:
+	var seq = SequenceScript.new()
+	var fg = _create_foreground("old_fg")
+	seq.foregrounds = [fg]
+	_main._sequence_editor_ctrl.load_sequence(seq)
+
+	_main._play_ctrl._prepare_opening_visuals()
+
+	# Foregrounds should remain unchanged since there are no dialogues
+	assert_eq(seq.foregrounds.size(), 1)
+	assert_eq(seq.foregrounds[0].fg_name, "old_fg")
