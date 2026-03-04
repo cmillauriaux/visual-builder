@@ -25,8 +25,9 @@ Another error")
 	f.close()
 	
 	var result = _service.extract_export_error(log_path)
-	assert_eq(result, "Missing template")
-	
+	# La fonction collecte toutes les lignes d'erreur après "due to configuration errors:"
+	assert_eq(result, "Missing template\nAnother error")
+
 	DirAccess.remove_absolute(log_path)
 
 func test_extract_export_error_from_godot_error():
