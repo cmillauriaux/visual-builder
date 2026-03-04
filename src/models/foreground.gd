@@ -13,7 +13,7 @@ var anchor_fg: Vector2 = Vector2(0.5, 1.0)
 var _transition_type: String = "none"
 var _transition_duration: float = 0.5
 
-const VALID_TRANSITION_TYPES = ["none", "fade", "crossfade"]
+const VALID_TRANSITION_TYPES = ["none", "fade"]
 
 var transition_type: String:
 	get:

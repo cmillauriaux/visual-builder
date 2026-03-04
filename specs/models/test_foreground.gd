@@ -126,7 +126,7 @@ func test_transition_type_default():
 
 func test_transition_type_valid_values():
 	var fg = Foreground.new()
-	for t in ["none", "fade", "crossfade"]:
+	for t in ["none", "fade"]:
 		fg.transition_type = t
 		assert_eq(fg.transition_type, t)
 
@@ -171,12 +171,27 @@ func test_from_dict_with_transition():
 	var d = {
 		"uuid": "fg-trans",
 		"name": "Test",
-		"transition_type": "crossfade",
+		"transition_type": "fade",
 		"transition_duration": 2.0
 	}
 	var fg = Foreground.from_dict(d)
-	assert_eq(fg.transition_type, "crossfade")
+	assert_eq(fg.transition_type, "fade")
 	assert_eq(fg.transition_duration, 2.0)
+
+func test_crossfade_falls_back_to_none():
+	var fg = Foreground.new()
+	fg.transition_type = "crossfade"
+	assert_eq(fg.transition_type, "none", "crossfade n'est plus valide, doit retomber sur none")
+
+func test_from_dict_crossfade_falls_back():
+	var d = {
+		"uuid": "fg-legacy",
+		"name": "Legacy",
+		"transition_type": "crossfade",
+		"transition_duration": 1.0
+	}
+	var fg = Foreground.from_dict(d)
+	assert_eq(fg.transition_type, "none", "crossfade dans les anciennes données doit retomber sur none")
 
 func test_from_dict_transition_defaults():
 	var d = {"uuid": "fg-003", "name": "NoTrans"}

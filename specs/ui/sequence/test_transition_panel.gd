@@ -34,9 +34,9 @@ func test_hide_panel():
 
 func test_displays_transition_type():
 	var fg = Foreground.new()
-	fg.transition_type = "crossfade"
+	fg.transition_type = "fade"
 	_panel.show_for_foreground(fg)
-	assert_eq(_panel.get_selected_type(), "crossfade")
+	assert_eq(_panel.get_selected_type(), "fade")
 
 func test_displays_transition_duration():
 	var fg = Foreground.new()
@@ -64,11 +64,12 @@ func test_change_duration_updates_foreground():
 	_panel.set_duration(1.5)
 	assert_almost_eq(fg.transition_duration, 1.5, 0.01)
 
-func test_change_type_to_crossfade():
+func test_crossfade_type_falls_back_to_none():
 	var fg = Foreground.new()
+	fg.transition_type = "crossfade"
 	_panel.show_for_foreground(fg)
-	_panel.set_type("crossfade")
-	assert_eq(fg.transition_type, "crossfade")
+	# crossfade n'est plus valide, retombe sur none (idx 0)
+	assert_eq(_panel.get_selected_type(), "none")
 
 func test_change_type_to_none():
 	var fg = Foreground.new()

@@ -73,7 +73,7 @@ Version simplifiée de `PlayController` sans :
 
 Conserve :
 - Gestion du typewriter
-- Transitions foregrounds (fade in/out, crossfade, clones)
+- Transitions foregrounds (fade in/out, clones)
 - Choix et sélection
 - Messages de fin
 
@@ -97,7 +97,7 @@ Pour exporter un jeu lié à une seule histoire :
 - [x] `game.tscn` est une scène indépendante qui se lance sans erreur
 - [x] Le jeu charge une story depuis `user://stories/`
 - [x] Les dialogues s'affichent avec le typewriter
-- [x] Les transitions de foregrounds fonctionnent (fade in/out, crossfade)
+- [x] Les transitions de foregrounds fonctionnent (fade in/out)
 - [x] Les choix s'affichent et sont fonctionnels
 - [x] Un message de fin s'affiche (game over, to be continued, etc.)
 - [x] Aucune référence aux fichiers éditeur (views, editors, navigation, main_ui_builder)

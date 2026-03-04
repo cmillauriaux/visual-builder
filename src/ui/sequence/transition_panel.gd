@@ -6,8 +6,8 @@ var _foreground = null
 var _type_option: OptionButton = null
 var _duration_spin: SpinBox = null
 
-const TYPE_OPTIONS = ["none", "fade", "crossfade"]
-const TYPE_LABELS = ["Aucune", "Fondu", "Crossfade"]
+const TYPE_OPTIONS = ["none", "fade"]
+const TYPE_LABELS = ["Aucune", "Fondu"]
 
 signal transition_changed()
 

@@ -374,7 +374,7 @@ foregrounds:
 | `scale` | non | `1.0` | Facteur d'échelle |
 | `anchor_bg` | non | `{x: 0.5, y: 0.5}` | Point d'ancrage sur le fond (0.0 à 1.0) |
 | `anchor_fg` | non | `{x: 0.5, y: 1.0}` | Point d'ancrage sur l'image (0.0 à 1.0) |
-| `transition_type` | non | `"none"` | Type de transition : `"none"`, `"fade"`, `"crossfade"` |
+| `transition_type` | non | `"none"` | Type de transition : `"none"`, `"fade"` |
 | `transition_duration` | non | `0.5` | Durée de la transition en secondes (0.1 à 5.0) |
 
 ### Positionnement avec les ancres
@@ -394,9 +394,8 @@ anchor_fg: { x: 0.5, y: 1.0 }   # Point d'ancrage du personnage : bas-centre (le
 
 | Type | Description |
 |------|-------------|
-| `"none"` | Apparition instantanée |
-| `"fade"` | Fondu en apparition/disparition |
-| `"crossfade"` | Fondu croisé entre l'ancien et le nouvel état |
+| `"none"` | Apparition instantanée, disparition en fondu |
+| `"fade"` | Fondu en apparition et disparition |
 
 ---
 

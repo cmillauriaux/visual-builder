@@ -15,7 +15,7 @@ Le modèle `Dialogue` est enrichi avec :
 ### Transition sur Foreground
 
 Le modèle `Foreground` est enrichi avec :
-- `transition_type: String` — type de transition : `"none"` (instantané), `"fade"` (fondu en opacité), `"crossfade"` (transition croisée). Valeur par défaut : `"none"`.
+- `transition_type: String` — type de transition : `"none"` (instantané), `"fade"` (fondu en opacité). Valeur par défaut : `"none"`.
 - `transition_duration: float` — durée de la transition en secondes (ex: 0.5). Valeur par défaut : `0.5`. Utilisé uniquement si `transition_type != "none"`.
 
 ### Héritage des foregrounds
@@ -56,7 +56,7 @@ Quand l'utilisateur modifie un foreground hérité sur un dialogue, **tous** les
 - **Déplacement** : cliquer-glisser un foreground pour le repositionner sur la preview.
 - **Redimensionnement** : poignées de redimensionnement sur le foreground sélectionné.
 - **Suppression** : sélectionner un foreground puis le supprimer (touche Suppr ou bouton).
-- **Propriétés de transition** : quand un foreground est sélectionné, un mini-panel affiche les options de transition (type : aucune/fondu/crossfade, durée en secondes).
+- **Propriétés de transition** : quand un foreground est sélectionné, un mini-panel affiche les options de transition (type : aucune/fondu, durée en secondes).
 
 ### Mode Play
 
@@ -79,7 +79,7 @@ Quand l'utilisateur modifie un foreground hérité sur un dialogue, **tous** les
 ### Modèle de données
 - [x] Le modèle `Dialogue` possède un champ `foregrounds: Array[Foreground]` et un `uuid: String`
 - [x] Le modèle `Foreground` possède les champs `transition_type: String` et `transition_duration: float`
-- [x] `transition_type` accepte les valeurs `"none"`, `"fade"`, `"crossfade"` (défaut : `"none"`)
+- [x] `transition_type` accepte les valeurs `"none"`, `"fade"` (défaut : `"none"`)
 - [x] `transition_duration` a une valeur par défaut de `0.5` et est clampée entre `0.1` et `5.0`
 - [x] La sérialisation/désérialisation YAML de `Dialogue` et `Foreground` inclut les nouveaux champs
 
@@ -117,7 +117,7 @@ Quand l'utilisateur modifie un foreground hérité sur un dialogue, **tous** les
 - [x] Le texte s'affiche avec un effet typewriter (lettre par lettre)
 - [x] Espace pendant l'animation : affiche tout le texte d'un coup
 - [x] Espace après affichage complet : passe au dialogue suivant
-- [x] Les transitions de foregrounds (fade/crossfade) sont jouées entre les dialogues
+- [x] Les transitions de foregrounds (fade) sont jouées entre les dialogues
 - [x] Après le dernier dialogue, espace arrête le mode Play et revient à l'édition
 - [x] Le bouton Stop quitte le mode Play à tout moment
 - [x] La liste des dialogues met en surbrillance le dialogue courant pendant le Play

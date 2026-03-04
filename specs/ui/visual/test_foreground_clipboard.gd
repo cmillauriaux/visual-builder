@@ -147,10 +147,10 @@ func test_paste_preserves_transition_type():
 	var source = _make_fg()
 	source.transition_type = "fade"
 	var target = _make_fg()
-	target.transition_type = "crossfade"
+	target.transition_type = "fade"
 	clipboard.copy_from(source)
 	clipboard.paste_to(target)
-	assert_eq(target.transition_type, "crossfade")
+	assert_eq(target.transition_type, "fade")
 
 func test_paste_preserves_transition_duration():
 	var source = _make_fg()

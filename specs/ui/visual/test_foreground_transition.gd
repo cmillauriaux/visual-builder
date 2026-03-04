@@ -27,7 +27,7 @@ func test_fade_in_new_foreground():
 	assert_eq(result[0]["action"], "fade_in")
 	assert_eq(result[0]["duration"], 1.0)
 
-func test_fade_out_removed_foreground():
+func test_fade_out_removed_foreground_with_fade():
 	var fg1 = _make_fg("a", "img.png", "fade", 0.8)
 	var result = _transition.compute_transitions([fg1], [])
 	assert_eq(result.size(), 1)
@@ -35,44 +35,52 @@ func test_fade_out_removed_foreground():
 	assert_eq(result[0]["action"], "fade_out")
 	assert_eq(result[0]["duration"], 0.8)
 
-func test_crossfade_replaced_foreground():
-	var fg_old = _make_fg("a", "old.png", "none", 0.5)
-	var fg_new = _make_fg("b", "new.png", "crossfade", 1.5)
-	var result = _transition.compute_transitions([fg_old], [fg_new])
-	# fg_old doit disparaître (fade_out), fg_new doit apparaître (fade_in)
-	assert_true(result.size() >= 1)
-	var has_fade_in = false
-	for r in result:
-		if r["uuid"] == "b" and r["action"] == "fade_in":
-			has_fade_in = true
-			assert_eq(r["duration"], 1.5)
-	assert_true(has_fade_in, "Le nouveau foreground doit avoir un fade_in")
-
-func test_crossfade_same_uuid_different_image():
-	# Même UUID, image différente, type crossfade → action crossfade avec old_image
-	var fg_old = _make_fg("a", "old.png", "crossfade", 1.0)
-	var fg_new = _make_fg("a", "new.png", "crossfade", 1.0)
-	var result = _transition.compute_transitions([fg_old], [fg_new])
+func test_fade_out_always_emitted_for_removed_fg_even_type_none():
+	# La disparition est TOUJOURS un fade out, quel que soit le transition_type
+	var fg1 = _make_fg("a", "img.png", "none", 0.5)
+	var result = _transition.compute_transitions([fg1], [])
 	assert_eq(result.size(), 1)
 	assert_eq(result[0]["uuid"], "a")
-	assert_eq(result[0]["action"], "crossfade")
-	assert_eq(result[0]["old_image"], "old.png")
-	assert_eq(result[0]["duration"], 1.0)
+	assert_eq(result[0]["action"], "fade_out")
+	assert_eq(result[0]["duration"], 0.5)
 
-func test_fade_same_uuid_different_image():
-	# Même UUID, image différente, type fade → action fade_in (pas crossfade)
+func test_replace_fade_same_uuid_different_image():
+	# Même UUID, image différente, type fade → replace_fade (nouveau par-dessus)
 	var fg_old = _make_fg("a", "old.png", "fade", 0.8)
 	var fg_new = _make_fg("a", "new.png", "fade", 0.8)
 	var result = _transition.compute_transitions([fg_old], [fg_new])
 	assert_eq(result.size(), 1)
 	assert_eq(result[0]["uuid"], "a")
-	assert_eq(result[0]["action"], "fade_in")
+	assert_eq(result[0]["action"], "replace_fade")
 	assert_eq(result[0]["duration"], 0.8)
+
+func test_replace_instant_same_uuid_different_image_type_none():
+	# Même UUID, image différente, type none → replace_instant (ancien par-dessus)
+	var fg_old = _make_fg("a", "old.png", "none", 0.5)
+	var fg_new = _make_fg("a", "new.png", "none", 0.5)
+	var result = _transition.compute_transitions([fg_old], [fg_new])
+	assert_eq(result.size(), 1)
+	assert_eq(result[0]["uuid"], "a")
+	assert_eq(result[0]["action"], "replace_instant")
+	assert_eq(result[0]["duration"], 0.5)
+
+func test_replace_instant_uses_old_fg_duration():
+	var fg_old = _make_fg("a", "old.png", "none", 1.5)
+	var fg_new = _make_fg("a", "new.png", "none", 0.3)
+	var result = _transition.compute_transitions([fg_old], [fg_new])
+	assert_eq(result.size(), 1)
+	assert_eq(result[0]["duration"], 1.5, "replace_instant utilise la durée de l'ancien fg")
 
 func test_no_transition_if_type_none():
 	var fg_new = _make_fg("a", "img.png", "none", 0.5)
 	var result = _transition.compute_transitions([], [fg_new])
-	assert_eq(result.size(), 0, "transition_type=none → pas de transition animée")
+	assert_eq(result.size(), 0, "transition_type=none → pas de transition animée à l'apparition")
+
+func test_no_transition_for_same_image():
+	# Même UUID, même image → pas de transition
+	var fg = _make_fg("a", "same.png", "fade", 0.5)
+	var result = _transition.compute_transitions([fg], [fg])
+	assert_eq(result.size(), 0)
 
 func test_transition_with_changed_image():
 	# Même UUID mais image différente → transition
@@ -88,6 +96,40 @@ func test_multiple_foregrounds_mixed():
 	# Seul le nouveau doit avoir une transition
 	assert_eq(result.size(), 1)
 	assert_eq(result[0]["uuid"], "new")
+
+func test_multiple_mixed_with_removal():
+	# Un qui reste, un supprimé (type none), un nouveau (type fade)
+	var fg_stay = _make_fg("stay", "stay.png", "none", 0.5)
+	var fg_removed = _make_fg("removed", "old.png", "none", 0.5)
+	var fg_new = _make_fg("new", "new.png", "fade", 0.5)
+	var result = _transition.compute_transitions(
+		[fg_stay, fg_removed],
+		[fg_stay, fg_new]
+	)
+	# removed → fade_out (toujours), new → fade_in
+	assert_eq(result.size(), 2)
+	var actions = {}
+	for r in result:
+		actions[r["uuid"]] = r["action"]
+	assert_eq(actions["removed"], "fade_out")
+	assert_eq(actions["new"], "fade_in")
+
+func test_replaced_fg_different_uuids():
+	# Ancien et nouveau avec des UUIDs différents → fade_out + fade_in
+	var fg_old = _make_fg("a", "old.png", "none", 0.5)
+	var fg_new = _make_fg("b", "new.png", "fade", 1.5)
+	var result = _transition.compute_transitions([fg_old], [fg_new])
+	assert_true(result.size() >= 1)
+	var has_fade_out = false
+	var has_fade_in = false
+	for r in result:
+		if r["uuid"] == "a" and r["action"] == "fade_out":
+			has_fade_out = true
+		if r["uuid"] == "b" and r["action"] == "fade_in":
+			has_fade_in = true
+			assert_eq(r["duration"], 1.5)
+	assert_true(has_fade_out, "L'ancien foreground doit avoir un fade_out")
+	assert_true(has_fade_in, "Le nouveau foreground doit avoir un fade_in")
 
 # --- Application de transition sur un Control ---
 
@@ -105,33 +147,6 @@ func test_apply_fade_out():
 	target.modulate.a = 1.0
 	_transition.apply_instant_fade_out(target)
 	assert_eq(target.modulate.a, 0.0)
-
-func test_crossfade_tween_clone_above_target():
-	# Le clone de l'ancienne image doit être placé AU-DESSUS du target
-	# et fade out pendant que la nouvelle image est visible en dessous
-	var container = Control.new()
-	add_child_autofree(container)
-
-	var target = TextureRect.new()
-	container.add_child(target)
-
-	var tween = _transition.apply_tween_crossfade(target, "", 1.0)
-	assert_not_null(tween, "Le tween doit être créé")
-
-	# Le clone doit être un enfant du container
-	assert_eq(container.get_child_count(), 2, "Le container doit avoir 2 enfants (target + clone)")
-
-	var clone = container.get_child(1)
-	assert_eq(clone.name, "CrossfadeClone", "Le clone doit être au-dessus du target")
-	assert_eq(target.get_index(), 0, "Le target doit être en dessous du clone")
-
-	# Le clone commence opaque (il va fade out)
-	assert_eq(clone.modulate.a, 1.0, "Le clone commence opaque")
-	# Le target est opaque (visible sous le clone qui fade out)
-	assert_eq(target.modulate.a, 1.0, "Le target est opaque")
-
-	tween.kill()
-	clone.queue_free()
 
 # --- Helper ---
 

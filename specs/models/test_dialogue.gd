@@ -125,7 +125,7 @@ func test_from_dict_with_uuid_and_foregrounds():
 				"scale": 1.0,
 				"anchor_bg": {"x": 0.5, "y": 0.5},
 				"anchor_fg": {"x": 0.5, "y": 0.5},
-				"transition_type": "crossfade",
+				"transition_type": "fade",
 				"transition_duration": 2.0
 			}
 		]
@@ -135,7 +135,7 @@ func test_from_dict_with_uuid_and_foregrounds():
 	assert_eq(d.character, "Narrateur")
 	assert_eq(d.foregrounds.size(), 1)
 	assert_eq(d.foregrounds[0].uuid, "fg-200")
-	assert_eq(d.foregrounds[0].transition_type, "crossfade")
+	assert_eq(d.foregrounds[0].transition_type, "fade")
 
 func test_from_dict_backwards_compatible():
 	# Ancien format sans uuid ni foregrounds

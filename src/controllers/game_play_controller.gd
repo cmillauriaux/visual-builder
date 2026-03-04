@@ -227,55 +227,68 @@ func on_play_dialogue_changed(index: int) -> void:
 	var transitions = _foreground_transition.compute_transitions(_previous_play_foregrounds, new_fgs)
 	_previous_play_foregrounds = new_fgs
 
-	var has_fade_out := false
-	var has_fade_in := false
-	var fade_in_duration := 0.5
+	# Phase 1 : Cloner les anciens nœuds AVANT la mise à jour visuelle
+	var clones: Array = []
 	for t in transitions:
-		if t["action"] == "fade_out":
-			has_fade_out = true
-		if t["action"] == "fade_in" or t["action"] == "crossfade":
-			has_fade_in = true
-			fade_in_duration = maxf(fade_in_duration, t["duration"])
-	var is_replacement := has_fade_out and has_fade_in
-
-	# Clone old nodes for fade_out before visual update
-	var fade_out_clones: Array = []
-	for t in transitions:
-		if t["action"] == "fade_out":
+		var action = t["action"]
+		if action in ["fade_out", "replace_fade", "replace_instant"]:
 			var old_node = _visual_editor.get_foreground_node(t["uuid"])
 			if old_node and is_instance_valid(old_node):
 				var clone = _create_fade_out_clone(old_node)
 				if clone:
-					fade_out_clones.append(clone)
+					clones.append({
+						"clone": clone,
+						"action": action,
+						"duration": t["duration"],
+						"uuid": t["uuid"]
+					})
 
-	# Update visuals
+	# Phase 2 : Mettre à jour les visuels
 	_update_preview(index)
 
-	# Move clones above new nodes
-	for clone in fade_out_clones:
-		var p = clone.get_parent()
-		if p:
-			p.move_child(clone, p.get_child_count() - 1)
+	# Phase 3 : Positionner les clones et appliquer les transitions
+	for entry in clones:
+		var clone = entry["clone"]
+		var action = entry["action"]
+		var duration = entry["duration"]
+		var uuid = entry["uuid"]
+		var target = _visual_editor.get_foreground_node(uuid)
 
-	# Apply transitions
+		if action == "fade_out":
+			if clone.get_parent():
+				clone.get_parent().move_child(clone, clone.get_parent().get_child_count() - 1)
+			_foreground_transition.apply_tween_fade_out(clone, duration, true)
+
+		elif action == "replace_fade":
+			if target and is_instance_valid(target):
+				var parent = clone.get_parent()
+				if parent:
+					parent.move_child(clone, target.get_index())
+				var tween = _foreground_transition.apply_tween_fade_in(target, duration)
+				if tween:
+					_visual_editor._transitioning_uuids.append(uuid)
+					tween.finished.connect(func(): _visual_editor._transitioning_uuids.erase(uuid))
+			_foreground_transition.apply_tween_fade_out(clone, duration, true)
+
+		elif action == "replace_instant":
+			if target and is_instance_valid(target):
+				target.modulate.a = 1.0
+				var parent = clone.get_parent()
+				if parent:
+					parent.move_child(clone, parent.get_child_count() - 1)
+			_foreground_transition.apply_tween_fade_out(clone, duration, true)
+
+	# Phase 4 : fade_in pur (nouveau FG sans prédécesseur)
 	for t in transitions:
-		if t["action"] == "fade_in" or t["action"] == "crossfade":
+		if t["action"] == "fade_in":
 			var target = _visual_editor.get_foreground_node(t["uuid"])
 			if target == null:
 				continue
-			if is_replacement:
-				target.modulate.a = 1.0
-			else:
-				var tween = _foreground_transition.apply_tween_fade_in(target, t["duration"])
-				if tween:
-					var uuid = t["uuid"]
-					_visual_editor._transitioning_uuids.append(uuid)
-					tween.finished.connect(func(): _visual_editor._transitioning_uuids.erase(uuid))
-
-	# Apply fade_out on clones
-	var fo_duration = fade_in_duration if is_replacement else 0.5
-	for clone in fade_out_clones:
-		_foreground_transition.apply_tween_fade_out(clone, fo_duration, true)
+			var tween = _foreground_transition.apply_tween_fade_in(target, t["duration"])
+			if tween:
+				var uuid = t["uuid"]
+				_visual_editor._transitioning_uuids.append(uuid)
+				tween.finished.connect(func(): _visual_editor._transitioning_uuids.erase(uuid))
 
 
 func on_play_stopped() -> void:

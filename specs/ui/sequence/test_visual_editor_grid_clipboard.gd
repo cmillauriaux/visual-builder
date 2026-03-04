@@ -204,7 +204,7 @@ func test_paste_preserves_unrelated_props():
 	source.transition_type = "fade"
 	target.z_order = 5
 	target.opacity = 0.8
-	target.transition_type = "crossfade"
+	target.transition_type = "fade"
 	var target_uuid = target.uuid
 	var target_image = target.image
 	var target_name = target.fg_name
@@ -215,7 +215,7 @@ func test_paste_preserves_unrelated_props():
 	assert_eq(target.fg_name, target_name)
 	assert_eq(target.z_order, 5)
 	assert_almost_eq(target.opacity, 0.8, 0.001)
-	assert_eq(target.transition_type, "crossfade")
+	assert_eq(target.transition_type, "fade")
 
 func test_clipboard_accessible():
 	assert_not_null(_editor._fg_clipboard)
