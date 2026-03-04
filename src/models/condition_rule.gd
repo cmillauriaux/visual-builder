@@ -55,11 +55,23 @@ func to_dict() -> Dictionary:
 		"consequence": consequence.to_dict() if consequence else {},
 	}
 
+static func _normalize_operator(op: String) -> String:
+	var ALIASES := {
+		"equals": "equal",
+		"not_equals": "not_equal",
+		"gt": "greater_than",
+		"gte": "greater_than_equal",
+		"lt": "less_than",
+		"lte": "less_than_equal",
+	}
+	var lower = op.strip_edges().to_lower()
+	return ALIASES.get(lower, lower)
+
 static func from_dict(d: Dictionary):
 	var script = load("res://src/models/condition_rule.gd")
 	var rule = script.new()
 	rule.variable = d.get("variable", "")
-	rule.operator = d.get("operator", "")
+	rule.operator = _normalize_operator(d.get("operator", ""))
 	rule.value = d.get("value", "")
 	if d.has("consequence") and not d["consequence"].is_empty():
 		rule.consequence = ConsequenceScript.from_dict(d["consequence"])

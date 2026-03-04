@@ -147,6 +147,25 @@ func test_from_dict_empty() -> void:
 	assert_eq(rule.value, "")
 
 
+func test_from_dict_normalizes_equals_to_equal() -> void:
+	var d = {"variable": "x", "operator": "equals", "value": "a", "consequence": {}}
+	var rule = ConditionRuleScript.from_dict(d)
+	assert_eq(rule.operator, "equal", "'equals' should be normalized to 'equal'")
+	assert_true(rule.evaluate({"x": "a"}))
+
+
+func test_from_dict_normalizes_not_equals() -> void:
+	var d = {"variable": "x", "operator": "not_equals", "value": "a", "consequence": {}}
+	var rule = ConditionRuleScript.from_dict(d)
+	assert_eq(rule.operator, "not_equal", "'not_equals' should be normalized to 'not_equal'")
+
+
+func test_from_dict_normalizes_with_whitespace() -> void:
+	var d = {"variable": "x", "operator": "  Equal  ", "value": "a", "consequence": {}}
+	var rule = ConditionRuleScript.from_dict(d)
+	assert_eq(rule.operator, "equal", "operator should be stripped and lowercased")
+
+
 func test_roundtrip() -> void:
 	var original = _make_rule("score", "greater_than_equal", "50")
 	original.consequence = ConsequenceScript.new()
