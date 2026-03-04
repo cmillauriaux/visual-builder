@@ -193,13 +193,13 @@ func test_add_dialogue_still_works():
 	_navigate_to_sequence()
 	var seq = _main._sequence_editor_ctrl.get_sequence()
 	var initial_count = seq.dialogues.size()
-	_main._on_add_dialogue_pressed()
+	_main._seq_ui_ctrl.on_add_dialogue_pressed()
 	assert_eq(seq.dialogues.size(), initial_count + 1)
 
 func test_dialogue_list_rebuilt_after_add():
 	_navigate_to_sequence()
 	var initial_items = _main._dialogue_list_container.get_item_count()
-	_main._on_add_dialogue_pressed()
+	_main._seq_ui_ctrl.on_add_dialogue_pressed()
 	assert_eq(_main._dialogue_list_container.get_item_count(), initial_items + 1)
 
 func test_ending_editor_still_loads():
