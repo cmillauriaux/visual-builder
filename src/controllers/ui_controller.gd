@@ -116,11 +116,17 @@ func enter_fullscreen() -> void:
 	_previous_fullscreen_layer.color = Color(0, 0, 0, 1)
 	_previous_fullscreen_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_main.add_child(_previous_fullscreen_layer)
-	
+
 	_main._left_panel.remove_child(_main._visual_editor)
 	_previous_fullscreen_layer.add_child(_main._visual_editor)
 	_main._visual_editor.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	
+
+	# Ajouter le play overlay au conteneur de superposition du visual editor
+	if _main._play_overlay.get_parent():
+		_main._play_overlay.get_parent().remove_child(_main._play_overlay)
+	_main._visual_editor._overlay_container.add_child(_main._play_overlay)
+	_main._play_overlay.visible = true
+
 	var fs_stop = Button.new()
 	fs_stop.text = "■ Stop"
 	fs_stop.pressed.connect(_main._play_ctrl.on_stop_pressed)
@@ -133,6 +139,11 @@ func enter_fullscreen() -> void:
 func exit_fullscreen() -> void:
 	if not _previous_fullscreen_layer:
 		return
+	# Retirer le play overlay du visual editor
+	_main._play_overlay.visible = false
+	if _main._play_overlay.get_parent():
+		_main._play_overlay.get_parent().remove_child(_main._play_overlay)
+
 	_previous_fullscreen_layer.remove_child(_main._visual_editor)
 	_main._left_panel.add_child(_main._visual_editor)
 	_main._left_panel.move_child(_main._visual_editor, 0)

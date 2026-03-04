@@ -179,3 +179,27 @@ func test_fullscreen_layer_is_black():
 	assert_true(main_ctrl._play_ctrl._fullscreen_layer is ColorRect, "Fullscreen layer should be a ColorRect")
 	assert_eq(main_ctrl._play_ctrl._fullscreen_layer.color, Color(0, 0, 0, 1), "Fullscreen layer should be black")
 	main_ctrl._play_ctrl._exit_play_fullscreen()
+
+# --- UI Controller fullscreen tests (play overlay) ---
+
+func test_ui_ctrl_enter_fullscreen_adds_play_overlay():
+	var main_ctrl = Control.new()
+	main_ctrl.set_script(MainScript)
+	add_child_autofree(main_ctrl)
+	await get_tree().process_frame
+	assert_false(main_ctrl._play_overlay.visible, "Play overlay should be hidden initially")
+	main_ctrl._ui_ctrl.enter_fullscreen()
+	assert_eq(main_ctrl._play_overlay.get_parent(), main_ctrl._visual_editor._overlay_container, "Play overlay should be in overlay container")
+	assert_true(main_ctrl._play_overlay.visible, "Play overlay should be visible in fullscreen")
+	main_ctrl._ui_ctrl.exit_fullscreen()
+
+func test_ui_ctrl_exit_fullscreen_removes_play_overlay():
+	var main_ctrl = Control.new()
+	main_ctrl.set_script(MainScript)
+	add_child_autofree(main_ctrl)
+	await get_tree().process_frame
+	main_ctrl._ui_ctrl.enter_fullscreen()
+	assert_true(main_ctrl._play_overlay.visible)
+	main_ctrl._ui_ctrl.exit_fullscreen()
+	assert_false(main_ctrl._play_overlay.visible, "Play overlay should be hidden after exit")
+	assert_null(main_ctrl._play_overlay.get_parent(), "Play overlay should be removed from tree")
