@@ -10,9 +10,11 @@ const SequenceEditorScript = preload("res://src/ui/sequence/sequence_editor.gd")
 const MainMenuScript = preload("res://src/ui/menu/main_menu.gd")
 const PauseMenuScript = preload("res://src/ui/menu/pause_menu.gd")
 const SaveLoadMenuScript = preload("res://src/ui/menu/save_load_menu.gd")
+const GameTheme = preload("res://src/ui/themes/game_theme.gd")
 
 
 static func build(game: Control) -> void:
+	game.theme = GameTheme.create_theme()
 	_build_visual_editor(game)
 	_build_play_overlay(game)
 	_build_menu_button(game)
@@ -42,6 +44,7 @@ static func _build_play_overlay(game: Control) -> void:
 
 	game._play_character_label = Label.new()
 	game._play_character_label.add_theme_font_size_override("font_size", 20)
+	game._play_character_label.add_theme_color_override("font_color", Color("#5C3A1E"))
 	play_vbox.add_child(game._play_character_label)
 
 	game._play_text_label = RichTextLabel.new()
@@ -74,8 +77,9 @@ static func _build_play_overlay(game: Control) -> void:
 	game._play_title_label = Label.new()
 	game._play_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	game._play_title_label.add_theme_font_size_override("font_size", 48)
+	game._play_title_label.add_theme_color_override("font_color", Color.WHITE)
 	title_vbox.add_child(game._play_title_label)
-	
+
 	game._play_subtitle_label = Label.new()
 	game._play_subtitle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	game._play_subtitle_label.add_theme_font_size_override("font_size", 24)
@@ -122,10 +126,14 @@ static func _build_helpers(game: Control) -> void:
 
 
 static func _build_story_selector(game: Control) -> void:
+	var center = CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	game.add_child(center)
+
 	game._story_selector = PanelContainer.new()
 	game._story_selector.name = "StorySelector"
-	game._story_selector.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	game._story_selector.custom_minimum_size = Vector2(500, 400)
+	center.add_child(game._story_selector)
 
 	var vbox = VBoxContainer.new()
 	game._story_selector.add_child(vbox)
@@ -146,8 +154,6 @@ static func _build_story_selector(game: Control) -> void:
 	game._story_list = VBoxContainer.new()
 	game._story_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(game._story_list)
-
-	game.add_child(game._story_selector)
 
 
 static func _build_main_menu(game: Control) -> void:

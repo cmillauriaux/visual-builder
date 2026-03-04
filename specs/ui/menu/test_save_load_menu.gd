@@ -154,12 +154,12 @@ func test_delete_slot_pressed_signal_emitted() -> void:
 func test_close_pressed_signal_emitted() -> void:
 	_menu.show_as_load_mode()
 	watch_signals(_menu)
-	# Le bouton fermer (×) est dans l'en-tête
-	var close_btn := _find_child_by_name(_menu, "×")
+	# Le bouton fermer (✕) est dans l'en-tête
+	var close_btn := _find_child_by_name(_menu, "✕")
 	if close_btn == null:
-		# Trouver par parcours : premier Button avec text "×"
-		close_btn = _find_button_with_text(_menu, "×")
-	assert_not_null(close_btn, "bouton × doit exister")
+		# Trouver par parcours : premier Button avec text "✕"
+		close_btn = _find_button_with_text(_menu, "✕")
+	assert_not_null(close_btn, "bouton ✕ doit exister")
 	close_btn.pressed.emit()
 	assert_signal_emitted(_menu, "close_pressed")
 

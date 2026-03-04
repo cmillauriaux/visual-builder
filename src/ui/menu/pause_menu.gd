@@ -3,6 +3,7 @@ extends Control
 ## Menu pause in-game : overlay avec options reprendre, sauvegarder, charger, nouvelle partie, quitter.
 
 const StoryI18nService = preload("res://src/services/story_i18n_service.gd")
+const GameTheme = preload("res://src/ui/themes/game_theme.gd")
 
 signal resume_pressed
 signal save_pressed
@@ -76,6 +77,7 @@ func build_ui() -> void:
 
 	_quit_button = _create_menu_button("Quitter")
 	_quit_button.pressed.connect(func(): quit_pressed.emit())
+	GameTheme.apply_danger_style(_quit_button)
 	vbox.add_child(_quit_button)
 
 

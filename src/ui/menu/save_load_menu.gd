@@ -5,6 +5,7 @@ extends Control
 ## Mode "load" : boutons Charger et Supprimer par slot.
 
 const GameSaveManager = preload("res://src/persistence/game_save_manager.gd")
+const GameTheme = preload("res://src/ui/themes/game_theme.gd")
 
 signal save_slot_pressed(index: int)
 signal load_slot_pressed(index: int)
@@ -55,10 +56,11 @@ func build_ui() -> void:
 	header.add_child(_title_label)
 
 	var close_btn := Button.new()
-	close_btn.text = "×"
+	close_btn.text = "✕"
 	close_btn.custom_minimum_size = Vector2(50, 50)
 	close_btn.add_theme_font_size_override("font_size", 24)
 	close_btn.pressed.connect(func(): close_pressed.emit())
+	GameTheme.apply_close_style(close_btn)
 	header.add_child(close_btn)
 
 	# Zone de défilement pour la grille
@@ -129,6 +131,7 @@ func _build_slot_card(entry: Dictionary) -> Control:
 	var card := PanelContainer.new()
 	card.custom_minimum_size = Vector2(290, 0)
 	card.name = "Slot_%d" % idx
+	GameTheme.apply_dark_panel_style(card)
 
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 6)
@@ -157,20 +160,21 @@ func _build_slot_card(entry: Dictionary) -> Control:
 		var chap_label := Label.new()
 		chap_label.text = data.get("chapter_name", "")
 		chap_label.add_theme_font_size_override("font_size", 13)
+		chap_label.add_theme_color_override("font_color", Color("#E8D5B5"))
 		chap_label.name = "ChapterLabel"
 		info_vbox.add_child(chap_label)
 
 		var scene_label := Label.new()
 		scene_label.text = data.get("scene_name", "")
 		scene_label.add_theme_font_size_override("font_size", 12)
-		scene_label.modulate = Color(0.8, 0.8, 0.8)
+		scene_label.add_theme_color_override("font_color", Color("#C4A882"))
 		scene_label.name = "SceneLabel"
 		info_vbox.add_child(scene_label)
 
 		var date_label := Label.new()
 		date_label.text = data.get("timestamp", "")
 		date_label.add_theme_font_size_override("font_size", 11)
-		date_label.modulate = Color(0.65, 0.65, 0.65)
+		date_label.add_theme_color_override("font_color", Color("#A08060"))
 		date_label.name = "DateLabel"
 		info_vbox.add_child(date_label)
 
@@ -198,6 +202,7 @@ func _build_slot_card(entry: Dictionary) -> Control:
 		del_btn.name = "DeleteButton"
 		del_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		del_btn.pressed.connect(func(): _on_delete_slot(idx))
+		GameTheme.apply_danger_style(del_btn)
 		btn_row.add_child(del_btn)
 	else:
 		# Slot vide
@@ -206,6 +211,7 @@ func _build_slot_card(entry: Dictionary) -> Control:
 		empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		empty_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		empty_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		empty_label.add_theme_color_override("font_color", Color("#C4A882"))
 		empty_label.name = "EmptyLabel"
 		vbox.add_child(empty_label)
 

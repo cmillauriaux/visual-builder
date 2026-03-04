@@ -101,3 +101,10 @@ func test_no_editor_components() -> void:
 	# Vérifier qu'aucun composant éditeur n'est présent
 	for child in _game.get_children():
 		assert_false(child is GraphEdit, "should not contain any GraphEdit (editor views)")
+
+
+func test_game_has_kenney_theme() -> void:
+	assert_not_null(_game.theme, "Game should have a theme applied")
+	var panel_style = _game.theme.get_stylebox("panel", "PanelContainer")
+	assert_not_null(panel_style, "Theme should have PanelContainer panel style")
+	assert_true(panel_style is StyleBoxTexture, "Panel style should be StyleBoxTexture")

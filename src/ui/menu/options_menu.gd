@@ -4,6 +4,7 @@ extends PanelContainer
 
 const GameSettings = preload("res://src/ui/menu/game_settings.gd")
 const StoryI18nService = preload("res://src/services/story_i18n_service.gd")
+const GameTheme = preload("res://src/ui/themes/game_theme.gd")
 
 signal closed
 signal applied
@@ -31,7 +32,6 @@ var _ui_label_pairs: Array = []
 
 func build_ui() -> void:
 	visible = false
-	set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	custom_minimum_size = Vector2(600, 500)
 
 	var root_vbox = VBoxContainer.new()
@@ -51,6 +51,7 @@ func build_ui() -> void:
 	_close_button = Button.new()
 	_close_button.text = "✕"
 	_close_button.pressed.connect(_on_close)
+	GameTheme.apply_close_style(_close_button)
 	title_bar.add_child(_close_button)
 
 	root_vbox.add_child(HSeparator.new())
@@ -164,6 +165,7 @@ func _add_section_label(parent: Control, text: String) -> Label:
 	var label = Label.new()
 	label.text = text
 	label.add_theme_font_size_override("font_size", 18)
+	label.add_theme_color_override("font_color", GameTheme.COLOR_TEXT_SECONDARY)
 	parent.add_child(label)
 	_ui_label_pairs.append([label, text])
 	return label
