@@ -116,6 +116,9 @@ var _variable_details_overlay: CenterContainer
 # FX Panel
 var _fx_panel: VBoxContainer
 
+# Audio Panel (Musique + FX audio)
+var _audio_panel: VBoxContainer
+
 # Sequence Transitions UI
 var _sequence_transition_panel: VBoxContainer
 var _seq_title_edit: LineEdit
@@ -257,6 +260,7 @@ func _connect_signals() -> void:
 	_visual_editor.foreground_selected.connect(_on_foreground_selected)
 	_visual_editor.foreground_deselected.connect(_on_foreground_deselected)
 	_fx_panel.fx_changed.connect(_on_fx_changed)
+	_audio_panel.audio_changed.connect(_on_audio_changed)
 
 	# Sequence Transitions
 	_seq_title_edit.text_changed.connect(_on_sequence_transition_changed)
@@ -324,7 +328,11 @@ func _on_foreground_deselected() -> void:
 
 
 func _on_fx_changed() -> void:
-	pass
+	EventBus.story_modified.emit()
+
+
+func _on_audio_changed() -> void:
+	EventBus.story_modified.emit()
 
 
 func _on_sequence_transition_changed(_value = null) -> void:
@@ -361,7 +369,9 @@ func load_sequence_editors(seq) -> void:
 	_nav_ctrl.notify_targets_changed()
 	_ending_editor.load_sequence(seq)
 	_fx_panel.load_sequence(seq)
-	
+	_audio_panel.load_sequence(seq)
+	_audio_panel.setup_story_path(_get_story_base_path(), self)
+
 	# Load params
 	_seq_title_edit.text = seq.title
 	_seq_subtitle_edit.text = seq.subtitle

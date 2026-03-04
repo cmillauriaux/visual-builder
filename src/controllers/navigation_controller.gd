@@ -441,10 +441,11 @@ func on_menu_config_requested() -> void:
 	_menu_config_dialog.popup_centered()
 
 
-func _on_menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_background: String) -> void:
+func _on_menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_background: String, menu_music: String = "") -> void:
 	_main._editor_main._story.menu_title = menu_title
 	_main._editor_main._story.menu_subtitle = menu_subtitle
 	_main._editor_main._story.menu_background = menu_background
+	_main._editor_main._story.menu_music = menu_music
 
 
 func on_variables_changed() -> void:

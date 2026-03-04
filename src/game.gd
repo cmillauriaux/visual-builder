@@ -26,6 +26,7 @@ var _sequence_editor_ctrl: Control
 var _story_play_ctrl: Node
 var _foreground_transition: Node
 var _sequence_fx_player: Node
+var _music_player: Node
 
 # UI — Visual
 var _visual_editor: Control
@@ -192,11 +193,13 @@ func _show_main_menu(story) -> void:
 	_menu_button.visible = false
 	_main_menu.setup(story, _current_story_path)
 	_main_menu.show_menu()
+	if _music_player and story.get("menu_music") != null and story.menu_music != "":
+		_music_player.play_menu_music(story.menu_music)
 
 
 func _on_new_game() -> void:
 	_main_menu.hide_menu()
-	_play_ctrl.start_story(_current_story)
+	_play_ctrl.start_story(_current_story, _current_story_path)
 
 
 func _on_load_game() -> void:
@@ -290,7 +293,7 @@ func _on_load_slot(slot_index: int) -> void:
 		_current_story_path = target_path
 		_reload_i18n()
 	# Reprendre depuis la sauvegarde
-	_play_ctrl.start_from_save(_current_story, save_data)
+	_play_ctrl.start_from_save(_current_story, save_data, _current_story_path)
 
 
 func _on_delete_slot(slot_index: int) -> void:
@@ -312,7 +315,7 @@ func _on_save_load_close() -> void:
 func _on_pause_new_game() -> void:
 	_pause_menu.hide_menu()
 	get_tree().paused = false
-	_play_ctrl.stop_and_restart(_current_story)
+	_play_ctrl.stop_and_restart(_current_story, _current_story_path)
 
 
 func _on_pause_quit() -> void:

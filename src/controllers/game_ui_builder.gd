@@ -13,6 +13,7 @@ const SaveLoadMenuScript = preload("res://src/ui/menu/save_load_menu.gd")
 const GameTheme = preload("res://src/ui/themes/game_theme.gd")
 const VariableSidebarScript = preload("res://src/ui/play/variable_sidebar.gd")
 const VariableDetailsOverlayScript = preload("res://src/ui/play/variable_details_overlay.gd")
+const MusicPlayerScript = preload("res://src/services/music_player.gd")
 
 
 static func build(game: Control) -> void:
@@ -26,6 +27,7 @@ static func build(game: Control) -> void:
 	_build_pause_menu(game)
 	_build_variable_display(game)
 	_build_menu_button(game)
+	_build_music_player(game)
 
 
 static func _build_visual_editor(game: Control) -> void:
@@ -175,6 +177,12 @@ static func _build_save_load_menu(game: Control) -> void:
 	game._save_load_menu.set_script(SaveLoadMenuScript)
 	game._save_load_menu.build_ui()
 	game.add_child(game._save_load_menu)
+
+
+static func _build_music_player(game: Control) -> void:
+	game._music_player = Node.new()
+	game._music_player.set_script(MusicPlayerScript)
+	game.add_child(game._music_player)
 
 
 static func _build_variable_display(game: Control) -> void:

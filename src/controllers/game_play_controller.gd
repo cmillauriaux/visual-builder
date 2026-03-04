@@ -25,6 +25,8 @@ var _i18n: Dictionary = {}
 var _current_playing_sequence = null
 var _is_showing_title: bool = false
 var _restore_dialogue_index: int = -1
+var _story_base_path: String = ""
+var _music_player: Node = null
 
 signal play_finished_show_menu()
 
@@ -47,17 +49,25 @@ func setup(game: Control) -> void:
 	_choice_overlay = game._choice_overlay
 	_choice_panel = game._choice_panel
 	_menu_button = game._menu_button
+	if game.get("_music_player") != null:
+		_music_player = game._music_player
 
 
-func start_story(story) -> void:
+func start_story(story, base_path: String = "") -> void:
+	_story_base_path = base_path
+	if _music_player:
+		_music_player.stop_music()
 	_menu_button.visible = true
 	_story_play_ctrl.start_play_story(story)
 
 
 ## Reprend une partie depuis une sauvegarde.
 ## Trouve chapter/scene/sequence par UUID et reprend au bon index de dialogue.
-func start_from_save(story, save_data: Dictionary) -> void:
+func start_from_save(story, save_data: Dictionary, base_path: String = "") -> void:
 	stop_current()
+	_story_base_path = base_path
+	if _music_player:
+		_music_player.stop_music()
 	_menu_button.visible = true
 	var chapter = story.find_chapter(save_data.get("chapter_uuid", ""))
 	var scene = chapter.find_scene(save_data.get("scene_uuid", "")) if chapter else null
@@ -69,7 +79,7 @@ func start_from_save(story, save_data: Dictionary) -> void:
 	_story_play_ctrl.start_play_from_save(story, chapter, scene, sequence, vars)
 
 
-func stop_and_restart(story) -> void:
+func stop_and_restart(story, base_path: String = "") -> void:
 	_user_stopped = true
 	_sequence_fx_player.stop_fx()
 	if _sequence_editor_ctrl.is_playing():
@@ -79,7 +89,7 @@ func stop_and_restart(story) -> void:
 	_hide_choice_overlay()
 	_cleanup_play()
 	_user_stopped = false
-	start_story(story)
+	start_story(story, base_path)
 
 
 func stop_current() -> void:
@@ -121,7 +131,17 @@ func _on_trans_in_finished_play_fx() -> void:
 		_sequence_fx_player.fx_finished.connect(_on_fx_finished_start_sequence, CONNECT_ONE_SHOT)
 		_sequence_fx_player.play_fx_list(seq.fx, _visual_editor)
 	else:
+		_apply_sequence_audio()
 		_start_sequence_play()
+
+
+func _apply_sequence_audio() -> void:
+	if _music_player == null:
+		return
+	var seq = _current_playing_sequence
+	if seq == null:
+		return
+	_music_player.apply_sequence(seq, _story_base_path)
 
 
 func _start_sequence_play() -> void:
@@ -165,6 +185,7 @@ func _hide_title_screen() -> void:
 
 
 func _on_fx_finished_start_sequence() -> void:
+	_apply_sequence_audio()
 	_start_sequence_play()
 
 

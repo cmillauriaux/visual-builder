@@ -19,6 +19,11 @@ var dialogues: Array = []  # Array[Dialogue]
 var ending = null  # Ending
 var fx: Array = []  # Array[SequenceFx]
 
+# Audio
+var music: String = ""
+var audio_fx: String = ""
+var stop_music: bool = false
+
 # Transitions
 var transition_in_type: String = "none" # "none", "fade", "pixelate"
 var transition_in_duration: float = 0.5
@@ -71,6 +76,9 @@ func to_dict() -> Dictionary:
 		"foregrounds": fg_arr,
 		"dialogues": dlg_arr,
 		"fx": fx_arr,
+		"music": music,
+		"audio_fx": audio_fx,
+		"stop_music": stop_music,
 		"transition_in_type": transition_in_type,
 		"transition_in_duration": transition_in_duration,
 		"transition_out_type": transition_out_type,
@@ -111,6 +119,10 @@ static func from_dict(d: Dictionary):
 	if d.has("fx"):
 		for fx_dict in d["fx"]:
 			seq.fx.append(SequenceFxScript.from_dict(fx_dict))
+
+	seq.music = d.get("music", "")
+	seq.audio_fx = d.get("audio_fx", "")
+	seq.stop_music = d.get("stop_music", false)
 
 	if d.has("ending"):
 		seq.ending = EndingScript.from_dict(d["ending"])
