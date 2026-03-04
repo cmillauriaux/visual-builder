@@ -84,6 +84,7 @@ static func extract_strings(story: RefCounted) -> Dictionary:
 			_add(strings, scene.subtitle)
 			for seq in scene.sequences:
 				_add(strings, seq.seq_name)
+				_add(strings, seq.title)
 				_add(strings, seq.subtitle)
 				for dlg in seq.dialogues:
 					_add(strings, dlg.character)
@@ -91,6 +92,11 @@ static func extract_strings(story: RefCounted) -> Dictionary:
 				if seq.ending and seq.ending.type == "choices":
 					for choice in seq.ending.choices:
 						_add(strings, choice.text)
+			
+			if scene.get("conditions") != null:
+				for cond in scene.conditions:
+					_add(strings, cond.condition_name)
+					_add(strings, cond.subtitle)
 
 	return strings
 
@@ -147,6 +153,7 @@ static func apply_to_story(story: RefCounted, i18n_dict: Dictionary) -> void:
 			scene.subtitle = _tr(scene.subtitle, i18n_dict)
 			for seq in scene.sequences:
 				seq.seq_name = _tr(seq.seq_name, i18n_dict)
+				seq.title = _tr(seq.title, i18n_dict)
 				seq.subtitle = _tr(seq.subtitle, i18n_dict)
 				for dlg in seq.dialogues:
 					dlg.character = _tr(dlg.character, i18n_dict)
@@ -154,6 +161,11 @@ static func apply_to_story(story: RefCounted, i18n_dict: Dictionary) -> void:
 				if seq.ending and seq.ending.type == "choices":
 					for choice in seq.ending.choices:
 						choice.text = _tr(choice.text, i18n_dict)
+			
+			if scene.get("conditions") != null:
+				for cond in scene.conditions:
+					cond.condition_name = _tr(cond.condition_name, i18n_dict)
+					cond.subtitle = _tr(cond.subtitle, i18n_dict)
 
 
 ## Charge la configuration des langues depuis i18n/languages.yaml.

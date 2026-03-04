@@ -109,17 +109,18 @@ func test_rewrite_already_res_path():
 	assert_eq(loaded.chapters[0].scenes[0].sequences[0].background, "res://story/assets/backgrounds/already.png")
 
 
-# --- Tests que menu_background n'est pas touché ---
+# --- Tests de réécriture du background du menu ---
 
-func test_rewrite_preserves_menu_background():
-	var story = _create_story_with_background("user://stories/test/assets/backgrounds/bg.png")
-	story.menu_background = "backgrounds/menu_bg.png"
+func test_rewrite_menu_background_user_path():
+	var story = _create_story_with_background("")
+	story.menu_background = "user://stories/test/assets/backgrounds/menu_bg.png"
 	StorySaver.save_story(story, _test_dir)
 
-	StoryPathRewriter.rewrite_story_paths(_test_dir, "res://story")
+	var result = StoryPathRewriter.rewrite_story_paths(_test_dir, "res://story")
 
+	assert_true(result)
 	var loaded = StorySaver.load_story(_test_dir)
-	assert_eq(loaded.menu_background, "backgrounds/menu_bg.png")
+	assert_eq(loaded.menu_background, "res://story/assets/backgrounds/menu_bg.png")
 
 
 # --- Test roundtrip complet ---

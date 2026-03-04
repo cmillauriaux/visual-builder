@@ -145,12 +145,19 @@ func _load_story_and_show_menu(path: String) -> void:
 	_current_story = story
 	_current_story_path = path
 	_reload_i18n()
-	_show_main_menu(story)
+	_show_main_menu(_current_story)
 
 
 func _reload_i18n() -> void:
 	if _current_story_path != "":
+		# Recharger la story depuis le YAML pour avoir les textes originaux (clés i18n)
+		# et éviter l'écrasement destructif lors des changements de langue successifs.
+		_current_story = StorySaver.load_story(_current_story_path)
 		_i18n_dict = StoryI18nService.load_i18n(_current_story_path, _settings.language)
+		
+		# Appliquer les traductions si ce n'est pas la langue par défaut (fr)
+		if _settings.language != "fr" and not _i18n_dict.is_empty():
+			StoryI18nService.apply_to_story(_current_story, _i18n_dict)
 	else:
 		_i18n_dict = {}
 	_apply_ui_lang()

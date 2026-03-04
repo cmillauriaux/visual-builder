@@ -11,6 +11,9 @@ static func rewrite_story_paths(story_folder: String, new_base: String) -> bool:
 	if story == null:
 		return false
 
+	# Réécrire le background du menu
+	story.menu_background = _rewrite_path(story.menu_background, new_base, "backgrounds")
+
 	for chapter in story.chapters:
 		for scene in chapter.scenes:
 			for sequence in scene.sequences:

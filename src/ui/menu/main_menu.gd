@@ -26,6 +26,11 @@ var _options_menu: PanelContainer
 # Settings partagés
 var _settings: RefCounted
 
+# Contexte actuel pour la traduction dynamique
+var _current_story = null
+var _current_base_path: String = ""
+var _last_i18n_dict: Dictionary = {}
+
 
 func build_ui() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -98,14 +103,29 @@ func build_ui() -> void:
 
 
 func setup(story, base_path: String) -> void:
-	_title_label.text = story.menu_title if story.menu_title != "" else story.title
-	_subtitle_label.text = story.menu_subtitle
+	_current_story = story
+	_current_base_path = base_path
+	_update_display()
 
-	if story.menu_background != "":
-		var full_path = base_path + "/assets/" + story.menu_background
+
+func _update_display() -> void:
+	if _current_story == null:
+		return
+		
+	var title_to_use = _current_story.menu_title if _current_story.menu_title != "" else _current_story.title
+	_title_label.text = StoryI18nService.get_ui_string(title_to_use, _last_i18n_dict)
+	_subtitle_label.text = StoryI18nService.get_ui_string(_current_story.menu_subtitle, _last_i18n_dict)
+
+	if _current_story.menu_background != "":
+		# On utilise path_join pour éviter de doubler "assets/"
+		# story.menu_background est déjà "assets/backgrounds/image.png"
+		var full_path = _current_base_path.path_join(_current_story.menu_background)
 		var tex = TextureLoader.load_texture(full_path)
 		if tex:
 			_background.texture = tex
+		else:
+			# Fallback si le chemin relatif ne marche pas (ex: export PCK interne)
+			_background.texture = TextureLoader.load_texture(_current_story.menu_background)
 	else:
 		_background.texture = null
 
@@ -129,11 +149,13 @@ func _on_options_pressed() -> void:
 
 
 func apply_ui_translations(i18n_dict: Dictionary) -> void:
+	_last_i18n_dict = i18n_dict
 	_new_game_button.text = StoryI18nService.get_ui_string("Nouvelle partie", i18n_dict)
 	_load_game_button.text = StoryI18nService.get_ui_string("Charger partie", i18n_dict)
 	_options_button.text = StoryI18nService.get_ui_string("Options", i18n_dict)
 	_quit_button.text = StoryI18nService.get_ui_string("Quitter", i18n_dict)
 	_options_menu.apply_ui_translations(i18n_dict)
+	_update_display()
 
 
 func _create_menu_button(text: String) -> Button:
