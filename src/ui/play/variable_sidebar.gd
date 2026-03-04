@@ -43,6 +43,7 @@ func _add_variable_item(var_def, value: String) -> void:
 	# Cercle avec image
 	var circle = PanelContainer.new()
 	circle.custom_minimum_size = Vector2(96, 96)
+	circle.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	var circle_style = StyleBoxFlat.new()
 	circle_style.bg_color = Color(0.3, 0.25, 0.15, 0.8)
 	circle_style.set_corner_radius_all(48)

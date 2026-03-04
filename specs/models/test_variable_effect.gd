@@ -76,13 +76,13 @@ func test_apply_increment():
 	var vars = {"score": "10"}
 	var e = _make_effect("score", "increment", "5")
 	e.apply(vars)
-	assert_eq(vars["score"], "15.0")
+	assert_eq(vars["score"], "15")
 
 func test_apply_increment_nonexistent_variable():
 	var vars = {}
 	var e = _make_effect("score", "increment", "7")
 	e.apply(vars)
-	assert_eq(vars["score"], "7.0")
+	assert_eq(vars["score"], "7")
 
 func test_apply_increment_non_numeric_value_ignored():
 	var vars = {"score": "abc"}
@@ -100,7 +100,13 @@ func test_apply_increment_float():
 	var vars = {"score": "1.5"}
 	var e = _make_effect("score", "increment", "2.5")
 	e.apply(vars)
-	assert_eq(vars["score"], "4.0")
+	assert_eq(vars["score"], "4")
+
+func test_apply_increment_float_keeps_decimals():
+	var vars = {"score": "1.5"}
+	var e = _make_effect("score", "increment", "2.3")
+	e.apply(vars)
+	assert_eq(vars["score"], "3.8")
 
 # --- apply() : decrement ---
 
@@ -108,13 +114,13 @@ func test_apply_decrement():
 	var vars = {"score": "20"}
 	var e = _make_effect("score", "decrement", "3")
 	e.apply(vars)
-	assert_eq(vars["score"], "17.0")
+	assert_eq(vars["score"], "17")
 
 func test_apply_decrement_nonexistent_variable():
 	var vars = {}
 	var e = _make_effect("score", "decrement", "5")
 	e.apply(vars)
-	assert_eq(vars["score"], "-5.0")
+	assert_eq(vars["score"], "-5")
 
 func test_apply_decrement_non_numeric_ignored():
 	var vars = {"score": "abc"}

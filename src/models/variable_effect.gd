@@ -16,15 +16,20 @@ func apply(variables: Dictionary) -> void:
 			if not current_str.is_valid_float() or not value.is_valid_float():
 				return
 			var result = float(current_str) + float(value)
-			variables[variable] = str(result)
+			variables[variable] = _format_number(result)
 		"decrement":
 			var current_str = str(variables.get(variable, "0"))
 			if not current_str.is_valid_float() or not value.is_valid_float():
 				return
 			var result = float(current_str) - float(value)
-			variables[variable] = str(result)
+			variables[variable] = _format_number(result)
 		"delete":
 			variables.erase(variable)
+
+static func _format_number(result: float) -> String:
+	if result == floorf(result):
+		return str(int(result))
+	return str(result)
 
 func to_dict() -> Dictionary:
 	var d := {

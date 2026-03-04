@@ -58,6 +58,7 @@ var _story_list: VBoxContainer
 
 # UI — Variables display
 var _variable_sidebar: VBoxContainer
+var _variable_sidebar_scroll: ScrollContainer
 var _variable_details_overlay: CenterContainer
 
 # UI — Menu principal
@@ -403,6 +404,7 @@ func _show_info(msg: String) -> void:
 
 func _on_variables_display_changed(variables: Dictionary) -> void:
 	_variable_sidebar.update_display(variables, _current_story)
+	_variable_sidebar_scroll.visible = _variable_sidebar.visible
 	_variable_details_overlay.set_i18n(_i18n_dict)
 
 

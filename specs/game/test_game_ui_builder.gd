@@ -103,6 +103,14 @@ func test_no_editor_components() -> void:
 		assert_false(child is GraphEdit, "should not contain any GraphEdit (editor views)")
 
 
+func test_builds_variable_sidebar_in_scroll() -> void:
+	assert_not_null(_game._variable_sidebar_scroll, "scroll container should be created")
+	assert_true(_game._variable_sidebar_scroll is ScrollContainer)
+	assert_false(_game._variable_sidebar_scroll.visible, "scroll should start hidden")
+	assert_eq(_game._variable_sidebar.get_parent(), _game._variable_sidebar_scroll,
+		"sidebar should be child of scroll container")
+
+
 func test_game_has_kenney_theme() -> void:
 	assert_not_null(_game.theme, "Game should have a theme applied")
 	var panel_style = _game.theme.get_stylebox("panel", "PanelContainer")

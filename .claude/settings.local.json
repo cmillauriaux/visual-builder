@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(xargs basename -a)"
+      "Bash(xargs basename -a)",
+      "Bash(xargs grep -l \"variables_display_changed\")",
+      "Bash(xargs grep -l \"format.*variable\\\\|variable.*format\")",
+      "Bash(echo $GODOT_PATH)",
+      "Bash(timeout 120 \"/c/Program Files/Godot/Godot_v4.4.1-stable_win64_console.exe\" --headless --path . -s addons/gut/gut_cmdln.gd)",
+      "Bash(timeout 120 \"/c/Program Files/Godot/Godot_v4.4.1-stable_win64_console.exe\" --headless --path . -s addons/gut/gut_cmdln.gd -gtest=res://specs/ui/play/test_variable_sidebar.gd)"
     ]
   }
 }

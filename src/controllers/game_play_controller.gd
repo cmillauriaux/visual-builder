@@ -415,5 +415,7 @@ func _cleanup_play() -> void:
 	# Masquer l'affichage des variables
 	if _game._variable_sidebar:
 		_game._variable_sidebar.visible = false
+	if _game._variable_sidebar_scroll:
+		_game._variable_sidebar_scroll.visible = false
 	if _game._variable_details_overlay:
 		_game._variable_details_overlay.hide_details()

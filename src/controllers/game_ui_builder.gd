@@ -178,16 +178,24 @@ static func _build_save_load_menu(game: Control) -> void:
 
 
 static func _build_variable_display(game: Control) -> void:
-	# Sidebar gauche (cercles + valeurs)
+	# ScrollContainer sur le bord gauche (toute la hauteur avec marges)
+	game._variable_sidebar_scroll = ScrollContainer.new()
+	game._variable_sidebar_scroll.set_anchors_preset(Control.PRESET_LEFT_WIDE)
+	game._variable_sidebar_scroll.offset_left = 10
+	game._variable_sidebar_scroll.offset_right = 130
+	game._variable_sidebar_scroll.offset_top = 50
+	game._variable_sidebar_scroll.offset_bottom = -160
+	game._variable_sidebar_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+	game._variable_sidebar_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+	game._variable_sidebar_scroll.visible = false
+	game.add_child(game._variable_sidebar_scroll)
+
+	# Sidebar gauche (cercles + valeurs) dans le scroll
 	game._variable_sidebar = VBoxContainer.new()
 	game._variable_sidebar.set_script(VariableSidebarScript)
-	game._variable_sidebar.set_anchors_preset(Control.PRESET_CENTER_LEFT)
-	game._variable_sidebar.offset_left = 10
-	game._variable_sidebar.offset_right = 130
-	game._variable_sidebar.offset_top = -200
-	game._variable_sidebar.offset_bottom = 200
-	game._variable_sidebar.visible = false
-	game.add_child(game._variable_sidebar)
+	game._variable_sidebar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	game._variable_sidebar.alignment = BoxContainer.ALIGNMENT_CENTER
+	game._variable_sidebar_scroll.add_child(game._variable_sidebar)
 
 	# Overlay de détails
 	game._variable_details_overlay = CenterContainer.new()

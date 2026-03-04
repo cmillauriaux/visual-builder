@@ -105,7 +105,7 @@ func test_choice_applies_choice_effects_then_consequence_effects():
 	_controller.on_choice_selected(0)
 
 	assert_eq(_controller.get_variable("choice_made"), "go")
-	assert_eq(_controller.get_variable("transitions"), "1.0")
+	assert_eq(_controller.get_variable("transitions"), "1")
 
 func test_choice_effects_applied_before_consequence_effects():
 	var story = _make_story_with_variables({"counter": "0"})
@@ -142,7 +142,7 @@ func test_choice_effects_applied_before_consequence_effects():
 	_controller.on_sequence_finished()
 	_controller.on_choice_selected(0)
 
-	assert_eq(_controller.get_variable("counter"), "15.0", "Choice effects avant consequence effects")
+	assert_eq(_controller.get_variable("counter"), "15", "Choice effects avant consequence effects")
 
 # --- Effets avec conditions ---
 
