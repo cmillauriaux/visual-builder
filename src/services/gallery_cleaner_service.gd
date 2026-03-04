@@ -27,14 +27,25 @@ static func collect_used_images(story) -> Array:
 
 
 static func find_unused_images(story_base_path: String, used_images: Array) -> Dictionary:
+	var normalized := normalize_paths(used_images, story_base_path)
 	var result := {"backgrounds": [], "foregrounds": []}
 
 	var bg_dir = story_base_path + "/assets/backgrounds"
 	var fg_dir = story_base_path + "/assets/foregrounds"
 
-	result["backgrounds"] = _find_unused_in_dir(bg_dir, used_images)
-	result["foregrounds"] = _find_unused_in_dir(fg_dir, used_images)
+	result["backgrounds"] = _find_unused_in_dir(bg_dir, normalized)
+	result["foregrounds"] = _find_unused_in_dir(fg_dir, normalized)
 
+	return result
+
+
+static func normalize_paths(paths: Array, base_path: String) -> Array:
+	var result := []
+	for p in paths:
+		if p.is_absolute_path() or p.begins_with("res://") or p.begins_with("user://"):
+			result.append(p)
+		else:
+			result.append(base_path + "/" + p)
 	return result
 
 

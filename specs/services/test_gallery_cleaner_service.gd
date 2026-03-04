@@ -282,3 +282,39 @@ func test_delete_files_skips_nonexistent():
 	var count = GalleryCleanerService.delete_files([path1, "user://no_such_file.png"])
 	assert_eq(count, 1)
 	assert_false(FileAccess.file_exists(path1))
+
+
+# --- normalize_paths ---
+
+func test_normalize_paths_keeps_absolute():
+	var paths = ["/absolute/path/img.png", "user://some/img.png", "res://img.png"]
+	var result = GalleryCleanerService.normalize_paths(paths, "/base")
+	assert_eq(result[0], "/absolute/path/img.png")
+	assert_eq(result[1], "user://some/img.png")
+	assert_eq(result[2], "res://img.png")
+
+
+func test_normalize_paths_resolves_relative():
+	var paths = ["assets/backgrounds/forest.png", "assets/foregrounds/hero.png"]
+	var result = GalleryCleanerService.normalize_paths(paths, "/base/story")
+	assert_eq(result[0], "/base/story/assets/backgrounds/forest.png")
+	assert_eq(result[1], "/base/story/assets/foregrounds/hero.png")
+
+
+func test_find_unused_with_relative_used_paths():
+	_create_test_image(_test_dir + "/assets/backgrounds/used.png")
+	_create_test_image(_test_dir + "/assets/backgrounds/unused.png")
+	# Simulate post-save relative paths
+	var used = ["assets/backgrounds/used.png"]
+	var unused = GalleryCleanerService.find_unused_images(_test_dir, used)
+	assert_eq(unused["backgrounds"].size(), 1)
+	assert_has(unused["backgrounds"], _test_dir + "/assets/backgrounds/unused.png")
+
+
+func test_find_unused_with_relative_paths_all_used():
+	_create_test_image(_test_dir + "/assets/backgrounds/bg1.png")
+	_create_test_image(_test_dir + "/assets/foregrounds/fg1.png")
+	var used = ["assets/backgrounds/bg1.png", "assets/foregrounds/fg1.png"]
+	var unused = GalleryCleanerService.find_unused_images(_test_dir, used)
+	assert_eq(unused["backgrounds"].size(), 0)
+	assert_eq(unused["foregrounds"].size(), 0)

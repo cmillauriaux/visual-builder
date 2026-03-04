@@ -166,6 +166,16 @@ func test_used_image_has_full_opacity():
 	assert_eq(item.modulate.a, 1.0)
 
 
+func test_used_image_with_relative_path_has_full_opacity():
+	_create_test_image(_test_dir + "/assets/backgrounds/bg_rel.png")
+	var story = StoryScript.new()
+	story.title = "Test"
+	story.menu_background = "assets/backgrounds/bg_rel.png"
+	_dialog.setup(story, _test_dir)
+	var item = _dialog._bg_grid.get_child(0)
+	assert_eq(item.modulate.a, 1.0)
+
+
 # --- Clean button ---
 
 func test_clean_button_exists():
@@ -339,6 +349,40 @@ func test_rename_dialog_has_correct_title():
 			break
 	assert_not_null(rename_dlg)
 	assert_eq(rename_dlg.title, "Renommer l'image")
+
+
+# --- Normalize button ---
+
+func test_normalize_button_exists():
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	assert_not_null(_dialog._normalize_button)
+	assert_eq(_dialog._normalize_button.text, "Normaliser les images")
+
+
+func test_normalize_button_disabled_when_less_than_2_images():
+	_create_test_image(_test_dir + "/assets/backgrounds/img.png")
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	assert_true(_dialog._normalize_button.disabled)
+
+
+func test_normalize_button_enabled_when_2_or_more_images():
+	_create_test_image(_test_dir + "/assets/backgrounds/bg1.png")
+	_create_test_image(_test_dir + "/assets/backgrounds/bg2.png")
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	assert_false(_dialog._normalize_button.disabled)
+
+
+func test_normalize_button_disabled_when_gallery_empty():
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	assert_true(_dialog._normalize_button.disabled)
 
 
 func test_rename_dialog_line_edit_prefilled_without_extension():

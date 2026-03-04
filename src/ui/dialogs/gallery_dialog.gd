@@ -9,6 +9,7 @@ const ImagePreviewPopup = preload("res://src/ui/shared/image_preview_popup.gd")
 const ImageCategoryService = preload("res://src/services/image_category_service.gd")
 const CategoryManagerDialogScript = preload("res://src/ui/dialogs/category_manager_dialog.gd")
 const ImageRenameService = preload("res://src/services/image_rename_service.gd")
+const ImageNormalizerDialogScript = preload("res://src/ui/dialogs/image_normalizer_dialog.gd")
 
 signal image_renamed(old_path: String, new_path: String)
 
@@ -25,6 +26,7 @@ var _fg_section_label: Label
 var _fg_grid: GridContainer
 var _fg_empty_label: Label
 var _clean_button: Button
+var _normalize_button: Button
 var _close_button: Button
 var _image_preview: Control
 var _category_filter_container: HBoxContainer
@@ -43,7 +45,8 @@ func setup(story, story_base_path: String) -> void:
 	_story = story
 	_story_base_path = story_base_path
 	title = "Galerie — " + story.title
-	_used_images = GalleryCleanerService.collect_used_images(story)
+	var raw_used = GalleryCleanerService.collect_used_images(story)
+	_used_images = GalleryCleanerService.normalize_paths(raw_used, story_base_path)
 	_category_service = ImageCategoryService.new()
 	if story_base_path != "":
 		_category_service.load_from(story_base_path)
@@ -133,6 +136,12 @@ func _build_ui() -> void:
 	_clean_button.disabled = true
 	_clean_button.pressed.connect(_on_clean_pressed)
 	hbox.add_child(_clean_button)
+
+	_normalize_button = Button.new()
+	_normalize_button.text = "Normaliser les images"
+	_normalize_button.disabled = true
+	_normalize_button.pressed.connect(_on_normalize_pressed)
+	hbox.add_child(_normalize_button)
 
 	var spacer = Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -237,6 +246,8 @@ func _list_images(dir_path: String) -> Array:
 func _update_clean_button_state() -> void:
 	var has_any = _bg_grid.get_child_count() > 0 or _fg_grid.get_child_count() > 0
 	_clean_button.disabled = not has_any
+	var total_images = _bg_grid.get_child_count() + _fg_grid.get_child_count()
+	_normalize_button.disabled = total_images < 2
 
 
 func _on_clean_pressed() -> void:
@@ -259,7 +270,8 @@ func _on_clean_pressed() -> void:
 	confirm.dialog_text = "%d fichier(s) — %s" % [all_unused.size(), size_text]
 	confirm.confirmed.connect(func():
 		GalleryCleanerService.delete_files(all_unused)
-		_used_images = GalleryCleanerService.collect_used_images(_story)
+		var raw = GalleryCleanerService.collect_used_images(_story)
+		_used_images = GalleryCleanerService.normalize_paths(raw, _story_base_path)
 		_refresh()
 	)
 	add_child(confirm)
@@ -430,6 +442,17 @@ func _open_category_manager() -> void:
 		_refresh()
 	)
 	manager.popup_centered()
+
+
+func _on_normalize_pressed() -> void:
+	var normalizer = Window.new()
+	normalizer.set_script(ImageNormalizerDialogScript)
+	add_child(normalizer)
+	normalizer.setup(_story_base_path)
+	normalizer.normalization_applied.connect(func():
+		_refresh()
+	)
+	normalizer.popup_centered()
 
 
 func _on_close() -> void:
