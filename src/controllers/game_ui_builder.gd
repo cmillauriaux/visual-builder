@@ -9,6 +9,7 @@ const StoryPlayControllerScript = preload("res://src/ui/play/story_play_controll
 const SequenceEditorScript = preload("res://src/ui/sequence/sequence_editor.gd")
 const MainMenuScript = preload("res://src/ui/menu/main_menu.gd")
 const PauseMenuScript = preload("res://src/ui/menu/pause_menu.gd")
+const SaveLoadMenuScript = preload("res://src/ui/menu/save_load_menu.gd")
 
 
 static func build(game: Control) -> void:
@@ -19,6 +20,7 @@ static func build(game: Control) -> void:
 	_build_helpers(game)
 	_build_story_selector(game)
 	_build_main_menu(game)
+	_build_save_load_menu(game)
 
 
 static func _build_visual_editor(game: Control) -> void:
@@ -154,3 +156,10 @@ static func _build_main_menu(game: Control) -> void:
 	game._main_menu.build_ui()
 	game._main_menu.visible = false
 	game.add_child(game._main_menu)
+
+
+static func _build_save_load_menu(game: Control) -> void:
+	game._save_load_menu = Control.new()
+	game._save_load_menu.set_script(SaveLoadMenuScript)
+	game._save_load_menu.build_ui()
+	game.add_child(game._save_load_menu)

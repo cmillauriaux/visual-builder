@@ -645,3 +645,54 @@ func test_redirect_scene_then_sequence():
 
 	_ctrl.on_sequence_finished()
 	assert_eq(_ctrl.get_current_sequence(), seq2b)
+
+# === start_play_from_save ===
+
+func test_start_play_from_save_sets_state_playing():
+	var story = _make_story()
+	var ch = _make_chapter("Ch1")
+	var sc = _make_scene("Sc1")
+	var seq = _make_sequence("Seq1")
+	_ctrl.start_play_from_save(story, ch, sc, seq, {})
+	assert_eq(_ctrl.get_state(), StoryPlayController.State.PLAYING_SEQUENCE)
+
+func test_start_play_from_save_emits_sequence_play_requested():
+	var story = _make_story()
+	var ch = _make_chapter("Ch1")
+	var sc = _make_scene("Sc1")
+	var seq = _make_sequence("Seq1")
+	watch_signals(_ctrl)
+	_ctrl.start_play_from_save(story, ch, sc, seq, {})
+	assert_signal_emitted(_ctrl, "sequence_play_requested")
+
+func test_start_play_from_save_sets_correct_sequence():
+	var story = _make_story()
+	var ch = _make_chapter("Ch1")
+	var sc = _make_scene("Sc1")
+	var seq = _make_sequence("SeqTarget")
+	_ctrl.start_play_from_save(story, ch, sc, seq, {})
+	assert_eq(_ctrl.get_current_sequence(), seq)
+
+func test_start_play_from_save_restores_variables():
+	var story = _make_story()
+	var ch = _make_chapter("Ch1")
+	var sc = _make_scene("Sc1")
+	var seq = _make_sequence("Seq1")
+	var vars := {"hero_trust": 7, "choice": "war"}
+	_ctrl.start_play_from_save(story, ch, sc, seq, vars)
+	assert_eq(_ctrl.get_variable("hero_trust"), 7)
+	assert_eq(_ctrl.get_variable("choice"), "war")
+
+func test_start_play_from_save_does_nothing_with_null_sequence():
+	var story = _make_story()
+	var ch = _make_chapter("Ch1")
+	var sc = _make_scene("Sc1")
+	_ctrl.start_play_from_save(story, ch, sc, null, {})
+	assert_eq(_ctrl.get_state(), StoryPlayController.State.IDLE)
+
+func test_start_play_from_save_does_nothing_with_null_story():
+	var ch = _make_chapter("Ch1")
+	var sc = _make_scene("Sc1")
+	var seq = _make_sequence("Seq1")
+	_ctrl.start_play_from_save(null, ch, sc, seq, {})
+	assert_eq(_ctrl.get_state(), StoryPlayController.State.IDLE)

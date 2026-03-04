@@ -14,6 +14,7 @@ const GamePlayControllerScript = preload("res://src/controllers/game_play_contro
 const StorySaver = preload("res://src/persistence/story_saver.gd")
 const GameSettings = preload("res://src/ui/menu/game_settings.gd")
 const StoryI18nService = preload("res://src/services/story_i18n_service.gd")
+const GameSaveManager = preload("res://src/persistence/game_save_manager.gd")
 
 ## Chemin vers la story à charger automatiquement.
 ## Si vide, affiche le sélecteur. Peut pointer vers res:// ou user://.
@@ -42,6 +43,12 @@ var _play_subtitle_label: Label
 # UI — Menu button & Pause menu
 var _menu_button: Button
 var _pause_menu: Control
+
+# UI — Save/Load menu
+var _save_load_menu: Control
+var _pending_screenshot: Image = null
+# Contexte d'ouverture de la grille : "pause" ou "main"
+var _save_load_context: String = "pause"
 
 # UI — Story selector
 var _story_selector: PanelContainer
@@ -99,6 +106,12 @@ func _ready() -> void:
 	_pause_menu.load_pressed.connect(_on_pause_load)
 	_pause_menu.new_game_pressed.connect(_on_pause_new_game)
 	_pause_menu.quit_pressed.connect(_on_pause_quit)
+
+	# Connecter les signaux du menu save/load
+	_save_load_menu.save_slot_pressed.connect(_on_save_slot)
+	_save_load_menu.load_slot_pressed.connect(_on_load_slot)
+	_save_load_menu.delete_slot_pressed.connect(_on_delete_slot)
+	_save_load_menu.close_pressed.connect(_on_save_load_close)
 
 	# Chercher si un chemin est forcé via override.cfg/settings
 	var override_path = ProjectSettings.get_setting("application/config/story_path", "")
@@ -169,7 +182,9 @@ func _on_new_game() -> void:
 
 
 func _on_load_game() -> void:
-	_show_info(StoryI18nService.get_ui_string("Fonctionnalité à venir", _i18n_dict))
+	_main_menu.hide_menu()
+	_save_load_context = "main"
+	_save_load_menu.show_as_load_mode()
 
 
 func _on_quit() -> void:
@@ -186,6 +201,8 @@ func _on_play_finished_return() -> void:
 # --- Menu pause ---
 
 func _on_menu_button_pressed() -> void:
+	# Capturer le screenshot avant d'afficher le menu (sans overlay)
+	_pending_screenshot = get_viewport().get_texture().get_image()
 	get_tree().paused = true
 	_pause_menu.show_menu()
 
@@ -196,11 +213,82 @@ func _on_pause_resume() -> void:
 
 
 func _on_pause_save() -> void:
-	_show_info(StoryI18nService.get_ui_string("Fonctionnalité à venir", _i18n_dict))
+	_pause_menu.hide_menu()
+	_save_load_context = "pause"
+	_save_load_menu.show_as_save_mode()
 
 
 func _on_pause_load() -> void:
-	_show_info(StoryI18nService.get_ui_string("Fonctionnalité à venir", _i18n_dict))
+	_pause_menu.hide_menu()
+	_save_load_context = "pause"
+	_save_load_menu.show_as_load_mode()
+
+
+## Collecte l'état courant du jeu pour une sauvegarde.
+func _collect_game_state() -> Dictionary:
+	var chapter = _story_play_ctrl.get_current_chapter()
+	var scene = _story_play_ctrl.get_current_scene()
+	var seq = _story_play_ctrl.get_current_sequence()
+	var vars: Dictionary = {}
+	if _story_play_ctrl.get("_variables") != null:
+		vars = _story_play_ctrl._variables.duplicate()
+	var timestamp := Time.get_datetime_string_from_system(false, true).replace("T", " ")
+	return {
+		"timestamp": timestamp,
+		"story_path": _current_story_path,
+		"chapter_uuid": chapter.uuid if chapter else "",
+		"chapter_name": chapter.chapter_name if chapter else "",
+		"scene_uuid": scene.uuid if scene else "",
+		"scene_name": scene.scene_name if scene else "",
+		"sequence_uuid": seq.uuid if seq else "",
+		"sequence_name": seq.seq_name if seq else "",
+		"dialogue_index": _sequence_editor_ctrl.get_play_dialogue_index(),
+		"variables": vars,
+	}
+
+
+func _on_save_slot(slot_index: int) -> void:
+	var state := _collect_game_state()
+	GameSaveManager.save_game(slot_index, state, _pending_screenshot)
+	_save_load_menu.hide_menu()
+	get_tree().paused = false
+
+
+func _on_load_slot(slot_index: int) -> void:
+	var save_data := GameSaveManager.load_game(slot_index)
+	if save_data.is_empty():
+		return
+	_save_load_menu.hide_menu()
+	get_tree().paused = false
+	# Charger la story si nécessaire
+	var target_path: String = save_data.get("story_path", "")
+	if target_path != _current_story_path and target_path != "":
+		TextureLoader.base_dir = target_path
+		var story = StorySaver.load_story(target_path)
+		if story == null:
+			_show_error(StoryI18nService.get_ui_string("Impossible de charger la story sauvegardée.", _i18n_dict))
+			return
+		_current_story = story
+		_current_story_path = target_path
+		_reload_i18n()
+	# Reprendre depuis la sauvegarde
+	_play_ctrl.start_from_save(_current_story, save_data)
+
+
+func _on_delete_slot(slot_index: int) -> void:
+	GameSaveManager.delete_save(slot_index)
+	_save_load_menu.refresh()
+
+
+func _on_save_load_close() -> void:
+	_save_load_menu.hide_menu()
+	if _save_load_context == "pause":
+		_pause_menu.show_menu()
+	else:
+		if _current_story:
+			_show_main_menu(_current_story)
+		else:
+			_show_story_selector()
 
 
 func _on_pause_new_game() -> void:

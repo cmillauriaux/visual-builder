@@ -333,6 +333,50 @@ func test_remove_foreground_from_dialogue():
 	_editor.remove_foreground_from_current(fg.uuid)
 	assert_eq(_sequence.dialogues[0].foregrounds.size(), 0)
 
+# --- start_play_at ---
+
+func test_start_play_at_sets_correct_index():
+	_add_dialogue("A", "Premier")
+	_add_dialogue("B", "Deuxième")
+	_add_dialogue("C", "Troisième")
+	_editor.load_sequence(_sequence)
+	_editor.start_play_at(2)
+	assert_true(_editor.is_playing())
+	assert_eq(_editor.get_play_dialogue_index(), 2)
+
+func test_start_play_at_emits_play_dialogue_changed():
+	_add_dialogue("A", "Premier")
+	_add_dialogue("B", "Deuxième")
+	_editor.load_sequence(_sequence)
+	watch_signals(_editor)
+	_editor.start_play_at(1)
+	assert_signal_emitted(_editor, "play_dialogue_changed")
+
+func test_start_play_at_clamps_index_when_out_of_bounds():
+	_add_dialogue("A", "Premier")
+	_add_dialogue("B", "Deuxième")
+	_editor.load_sequence(_sequence)
+	_editor.start_play_at(99)
+	assert_eq(_editor.get_play_dialogue_index(), 1)
+
+func test_start_play_at_clamps_negative_index_to_zero():
+	_add_dialogue("A", "Premier")
+	_editor.load_sequence(_sequence)
+	_editor.start_play_at(-5)
+	assert_eq(_editor.get_play_dialogue_index(), 0)
+
+func test_start_play_at_does_nothing_without_sequence():
+	_editor.start_play_at(0)
+	assert_false(_editor.is_playing())
+
+func test_start_play_at_zero_behaves_like_start_play():
+	_add_dialogue("A", "Premier")
+	_add_dialogue("B", "Deuxième")
+	_editor.load_sequence(_sequence)
+	_editor.start_play_at(0)
+	assert_true(_editor.is_playing())
+	assert_eq(_editor.get_play_dialogue_index(), 0)
+
 # --- Helper ---
 
 func _add_dialogue(character: String, text: String):
