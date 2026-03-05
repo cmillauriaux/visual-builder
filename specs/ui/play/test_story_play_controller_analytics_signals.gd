@@ -184,3 +184,30 @@ func test_story_finished_with_reason_not_emitted_for_error():
 	watch_signals(_ctrl)
 	_ctrl.on_sequence_finished()
 	assert_signal_not_emitted(_ctrl, "story_finished_with_reason")
+
+
+# === start_play_from_save analytics signals ===
+
+func test_start_play_from_save_emits_chapter_entered():
+	var data = _build_simple_story()
+	watch_signals(_ctrl)
+	_ctrl.start_play_from_save(data["story"], data["chapter"], data["scene"], data["sequence"], {})
+	assert_signal_emitted(_ctrl, "chapter_entered")
+	var params = get_signal_parameters(_ctrl, "chapter_entered")
+	assert_eq(params[0], "Chapitre 1")
+
+func test_start_play_from_save_emits_scene_entered():
+	var data = _build_simple_story()
+	watch_signals(_ctrl)
+	_ctrl.start_play_from_save(data["story"], data["chapter"], data["scene"], data["sequence"], {})
+	assert_signal_emitted(_ctrl, "scene_entered")
+	var params = get_signal_parameters(_ctrl, "scene_entered")
+	assert_eq(params[0], "Scène 1")
+
+func test_start_play_from_save_emits_sequence_entered():
+	var data = _build_simple_story()
+	watch_signals(_ctrl)
+	_ctrl.start_play_from_save(data["story"], data["chapter"], data["scene"], data["sequence"], {})
+	assert_signal_emitted(_ctrl, "sequence_entered")
+	var params = get_signal_parameters(_ctrl, "sequence_entered")
+	assert_eq(params[0], "Séquence 1")
