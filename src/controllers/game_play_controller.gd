@@ -4,6 +4,7 @@ extends Node
 ## Version simplifiée de PlayController adaptée au contexte game-only.
 
 const StoryI18nService = preload("res://src/services/story_i18n_service.gd")
+const AutoPlayManagerScript = preload("res://src/services/auto_play_manager.gd")
 
 var _game: Control
 var _sequence_editor_ctrl: Control
@@ -27,12 +28,28 @@ var _is_showing_title: bool = false
 var _restore_dialogue_index: int = -1
 var _story_base_path: String = ""
 var _music_player: Node = null
+var _auto_play: RefCounted = null
+var _auto_play_button: Button = null
 
 signal play_finished_show_menu()
 
 
 func set_i18n(dict: Dictionary) -> void:
 	_i18n = dict
+
+
+func set_auto_play_delay(delay: float) -> void:
+	if _auto_play:
+		_auto_play.delay = delay
+
+
+func set_auto_play_enabled(enabled: bool) -> void:
+	if _auto_play and enabled != _auto_play.enabled:
+		_auto_play.toggle()
+
+
+func get_auto_play_manager() -> RefCounted:
+	return _auto_play
 
 
 func setup(game: Control) -> void:
@@ -51,6 +68,12 @@ func setup(game: Control) -> void:
 	_menu_button = game._menu_button
 	if game.get("_music_player") != null:
 		_music_player = game._music_player
+	if game.get("_auto_play_button") != null:
+		_auto_play_button = game._auto_play_button
+	_auto_play = AutoPlayManagerScript.new()
+	_auto_play.setup(game.get_tree())
+	_auto_play.auto_advance_requested.connect(_on_auto_advance)
+	_auto_play.auto_play_toggled.connect(_on_auto_play_toggled)
 
 
 func start_story(story, base_path: String = "") -> void:
@@ -58,6 +81,8 @@ func start_story(story, base_path: String = "") -> void:
 	if _music_player:
 		_music_player.stop_music()
 	_menu_button.visible = true
+	if _auto_play_button:
+		_auto_play_button.visible = true
 	_story_play_ctrl.start_play_story(story)
 
 
@@ -69,6 +94,8 @@ func start_from_save(story, save_data: Dictionary, base_path: String = "") -> vo
 	if _music_player:
 		_music_player.stop_music()
 	_menu_button.visible = true
+	if _auto_play_button:
+		_auto_play_button.visible = true
 	var chapter = story.find_chapter(save_data.get("chapter_uuid", ""))
 	var scene = chapter.find_scene(save_data.get("scene_uuid", "")) if chapter else null
 	var sequence = scene.find_sequence(save_data.get("sequence_uuid", "")) if scene else null
@@ -190,6 +217,8 @@ func _on_fx_finished_start_sequence() -> void:
 
 
 func on_choice_display_requested(choices) -> void:
+	if _auto_play:
+		_auto_play.stop_timer()
 	_hide_choice_overlay()
 	var vbox = VBoxContainer.new()
 	vbox.name = "ChoiceVBox"
@@ -341,6 +370,9 @@ func on_typewriter_tick() -> void:
 		return
 	_sequence_editor_ctrl.advance_typewriter()
 	_play_text_label.visible_characters = _sequence_editor_ctrl.get_visible_characters()
+	if _sequence_editor_ctrl.is_text_fully_displayed() and _auto_play and _auto_play.enabled:
+		_typewriter_timer.stop()
+		_auto_play.start_timer()
 
 
 # --- Input ---
@@ -355,12 +387,40 @@ func _input(event: InputEvent) -> void:
 	if not _sequence_editor_ctrl.is_playing():
 		return
 	if event is InputEventKey and event.pressed and event.keycode == KEY_SPACE:
+		if _auto_play:
+			_auto_play.reset()
 		if not _sequence_editor_ctrl.is_text_fully_displayed():
 			_sequence_editor_ctrl.skip_typewriter()
 			_play_text_label.visible_characters = _sequence_editor_ctrl.get_visible_characters()
 		else:
 			_sequence_editor_ctrl.advance_play()
 		get_viewport().set_input_as_handled()
+
+
+# --- Auto-play ---
+
+func _on_auto_advance() -> void:
+	if not _sequence_editor_ctrl.is_playing():
+		return
+	if _sequence_editor_ctrl.is_text_fully_displayed():
+		_sequence_editor_ctrl.advance_play()
+
+
+func _on_auto_play_toggled(active: bool) -> void:
+	if _auto_play_button:
+		_auto_play_button.text = "Auto [ON]" if active else "Auto"
+		if active:
+			_auto_play_button.add_theme_color_override("font_color", Color(0.2, 0.8, 0.2))
+		else:
+			_auto_play_button.remove_theme_color_override("font_color")
+	# If toggled on while text is already fully displayed, start timer immediately
+	if active and _sequence_editor_ctrl.is_playing() and _sequence_editor_ctrl.is_text_fully_displayed():
+		_auto_play.start_timer()
+
+
+func toggle_auto_play() -> void:
+	if _auto_play:
+		_auto_play.toggle()
 
 
 # --- Internal ---
@@ -428,7 +488,11 @@ func _cleanup_play() -> void:
 		_game._play_title_overlay.get_parent().remove_child(_game._play_title_overlay)
 	if _music_player:
 		_music_player.stop_music()
+	if _auto_play:
+		_auto_play.reset()
 	_menu_button.visible = false
+	if _auto_play_button:
+		_auto_play_button.visible = false
 	_play_overlay.visible = false
 	_typewriter_timer.stop()
 	if _play_overlay.get_parent():

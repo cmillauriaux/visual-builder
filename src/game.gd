@@ -43,8 +43,9 @@ var _play_title_overlay: CenterContainer
 var _play_title_label: Label
 var _play_subtitle_label: Label
 
-# UI — Menu button & Pause menu
+# UI — Menu button, Auto-play button & Pause menu
 var _menu_button: Button
+var _auto_play_button: Button
 var _pause_menu: Control
 
 # UI — Save/Load menu
@@ -96,6 +97,9 @@ func _ready() -> void:
 
 	# Connecter les signaux du play
 	_menu_button.pressed.connect(_on_menu_button_pressed)
+	_auto_play_button.pressed.connect(_play_ctrl.toggle_auto_play)
+	_play_ctrl.set_auto_play_delay(_settings.auto_play_delay)
+	_play_ctrl.set_auto_play_enabled(_settings.auto_play_enabled)
 	_typewriter_timer.timeout.connect(_play_ctrl.on_typewriter_tick)
 	_story_play_ctrl.sequence_play_requested.connect(_play_ctrl.on_sequence_play_requested)
 	_story_play_ctrl.choice_display_requested.connect(_play_ctrl.on_choice_display_requested)
@@ -135,6 +139,7 @@ func _ready() -> void:
 	_pause_menu.load_pressed.connect(_on_pause_load)
 	_pause_menu.new_game_pressed.connect(_on_pause_new_game)
 	_pause_menu.quit_pressed.connect(_on_pause_quit)
+	_pause_menu.auto_play_toggled.connect(_on_pause_auto_play_toggled)
 
 	# Connecter les signaux du menu save/load
 	_save_load_menu.save_slot_pressed.connect(_on_save_slot)
@@ -204,6 +209,8 @@ func _apply_ui_lang() -> void:
 
 func _on_options_applied() -> void:
 	_reload_i18n()
+	_play_ctrl.set_auto_play_delay(_settings.auto_play_delay)
+	_play_ctrl.set_auto_play_enabled(_settings.auto_play_enabled)
 
 
 func _show_main_menu(story) -> void:
@@ -249,7 +256,17 @@ func _on_menu_button_pressed() -> void:
 	# Capturer le screenshot avant d'afficher le menu (sans overlay)
 	_pending_screenshot = get_viewport().get_texture().get_image()
 	get_tree().paused = true
+	var auto_play_mgr = _play_ctrl.get_auto_play_manager()
+	if auto_play_mgr:
+		_pause_menu.set_auto_play_state(auto_play_mgr.enabled)
 	_pause_menu.show_menu()
+
+
+func _on_pause_auto_play_toggled(enabled: bool) -> void:
+	var auto_play_mgr = _play_ctrl.get_auto_play_manager()
+	if auto_play_mgr:
+		if enabled != auto_play_mgr.enabled:
+			auto_play_mgr.toggle()
 
 
 func _on_pause_resume() -> void:

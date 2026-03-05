@@ -41,6 +41,12 @@ func test_default_fx_volume():
 func test_default_language():
 	assert_eq(_settings.language, "fr")
 
+func test_default_auto_play_enabled():
+	assert_eq(_settings.auto_play_enabled, false)
+
+func test_default_auto_play_delay():
+	assert_eq(_settings.auto_play_delay, 2.0)
+
 
 # --- Sauvegarde et chargement ---
 
@@ -96,6 +102,20 @@ func test_save_and_load_language():
 	var loaded = GameSettings.new()
 	loaded.load_settings(_test_cfg_path)
 	assert_eq(loaded.language, "en")
+
+func test_save_and_load_auto_play_enabled():
+	_settings.auto_play_enabled = true
+	_settings.save_settings(_test_cfg_path)
+	var loaded = GameSettings.new()
+	loaded.load_settings(_test_cfg_path)
+	assert_eq(loaded.auto_play_enabled, true)
+
+func test_save_and_load_auto_play_delay():
+	_settings.auto_play_delay = 3.0
+	_settings.save_settings(_test_cfg_path)
+	var loaded = GameSettings.new()
+	loaded.load_settings(_test_cfg_path)
+	assert_eq(loaded.auto_play_delay, 3.0)
 
 func test_load_nonexistent_file_uses_defaults():
 	_settings.load_settings("user://nonexistent_test_settings.cfg")

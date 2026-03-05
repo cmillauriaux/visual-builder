@@ -63,6 +63,14 @@ func test_has_language_option():
 	assert_not_null(_menu._language_option)
 	assert_is(_menu._language_option, OptionButton)
 
+func test_has_auto_play_enabled_check():
+	assert_not_null(_menu._auto_play_enabled_check)
+	assert_is(_menu._auto_play_enabled_check, CheckButton)
+
+func test_has_auto_play_delay_option():
+	assert_not_null(_menu._auto_play_delay_option)
+	assert_is(_menu._auto_play_delay_option, OptionButton)
+
 
 # --- Résolutions ---
 
@@ -82,6 +90,18 @@ func test_language_option_has_2_items():
 func test_language_option_labels():
 	assert_eq(_menu._language_option.get_item_text(0), "Français")
 	assert_eq(_menu._language_option.get_item_text(1), "English")
+
+
+# --- Auto-play delay ---
+
+func test_auto_play_delay_option_has_4_items():
+	assert_eq(_menu._auto_play_delay_option.item_count, 4)
+
+func test_auto_play_delay_option_labels():
+	assert_eq(_menu._auto_play_delay_option.get_item_text(0), "1s")
+	assert_eq(_menu._auto_play_delay_option.get_item_text(1), "2s")
+	assert_eq(_menu._auto_play_delay_option.get_item_text(2), "3s")
+	assert_eq(_menu._auto_play_delay_option.get_item_text(3), "5s")
 
 
 # --- Chargement des valeurs ---
@@ -121,6 +141,35 @@ func test_load_values_language():
 	_menu.load_from_settings(_settings)
 	assert_eq(_menu._language_option.selected, 1)  # Index de English
 
+func test_load_values_auto_play_enabled():
+	_settings.auto_play_enabled = true
+	_menu.load_from_settings(_settings)
+	assert_true(_menu._auto_play_enabled_check.button_pressed)
+
+func test_load_values_auto_play_disabled():
+	_settings.auto_play_enabled = false
+	_menu.load_from_settings(_settings)
+	assert_false(_menu._auto_play_enabled_check.button_pressed)
+
+func test_load_values_auto_play_delay():
+	_settings.auto_play_delay = 3.0
+	_menu.load_from_settings(_settings)
+	assert_eq(_menu._auto_play_delay_option.selected, 2)  # Index de 3s
+
+func test_load_values_auto_play_delay_default():
+	_menu.load_from_settings(_settings)
+	assert_eq(_menu._auto_play_delay_option.selected, 1)  # Index de 2s (defaut)
+
+func test_auto_play_delay_disabled_when_auto_play_off():
+	_settings.auto_play_enabled = false
+	_menu.load_from_settings(_settings)
+	assert_true(_menu._auto_play_delay_option.disabled)
+
+func test_auto_play_delay_enabled_when_auto_play_on():
+	_settings.auto_play_enabled = true
+	_menu.load_from_settings(_settings)
+	assert_false(_menu._auto_play_delay_option.disabled)
+
 
 # --- Volume grisé quand audio désactivé ---
 
@@ -158,6 +207,9 @@ func test_apply_writes_to_settings():
 	_menu._fx_volume_slider.value = 20
 	_menu._language_option.selected = 1  # en
 
+	_menu._auto_play_enabled_check.button_pressed = true
+	_menu._auto_play_delay_option.selected = 3  # 5s
+
 	_menu.apply_to_settings(_settings, _test_cfg_path)
 	assert_eq(_settings.resolution, Vector2i(1280, 720))
 	assert_eq(_settings.fullscreen, true)
@@ -166,6 +218,8 @@ func test_apply_writes_to_settings():
 	assert_eq(_settings.fx_enabled, false)
 	assert_eq(_settings.fx_volume, 20)
 	assert_eq(_settings.language, "en")
+	assert_eq(_settings.auto_play_enabled, true)
+	assert_eq(_settings.auto_play_delay, 5.0)
 
 func test_apply_saves_to_file():
 	_menu.load_from_settings(_settings)

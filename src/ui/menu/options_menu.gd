@@ -21,6 +21,11 @@ var _music_volume_slider: HSlider
 var _fx_enabled_check: CheckButton
 var _fx_volume_slider: HSlider
 var _language_option: OptionButton
+var _auto_play_enabled_check: CheckButton
+var _auto_play_delay_option: OptionButton
+
+const AUTO_PLAY_DELAYS := [1.0, 2.0, 3.0, 5.0]
+const AUTO_PLAY_DELAY_LABELS := ["1s", "2s", "3s", "5s"]
 
 # Référence aux settings pour apply
 var _current_settings: RefCounted
@@ -87,6 +92,14 @@ func build_ui() -> void:
 	_add_section_label(content, "Langue")
 	_language_option = _add_option_row(content, "Langue", ["Français", "English"])
 
+	content.add_child(HSeparator.new())
+
+	# Section Gameplay
+	_add_section_label(content, "Gameplay")
+	_auto_play_enabled_check = _add_check_row(content, "Auto-play")
+	_auto_play_delay_option = _add_option_row(content, "Delai auto-play", AUTO_PLAY_DELAY_LABELS)
+	_auto_play_enabled_check.toggled.connect(_on_auto_play_toggled)
+
 	# Bouton Appliquer
 	_apply_button = Button.new()
 	_apply_button.text = "Appliquer"
@@ -117,6 +130,12 @@ func load_from_settings(settings: RefCounted) -> void:
 	var lang_idx = LANGUAGE_CODES.find(settings.language)
 	_language_option.selected = max(lang_idx, 0)
 
+	# Auto-play
+	_auto_play_enabled_check.button_pressed = settings.auto_play_enabled
+	var delay_idx = AUTO_PLAY_DELAYS.find(settings.auto_play_delay)
+	_auto_play_delay_option.selected = max(delay_idx, 0)
+	_auto_play_delay_option.disabled = not settings.auto_play_enabled
+
 
 func apply_to_settings(settings: RefCounted, path: String = GameSettings.SETTINGS_PATH) -> void:
 	var res_idx = _resolution_option.selected
@@ -130,6 +149,10 @@ func apply_to_settings(settings: RefCounted, path: String = GameSettings.SETTING
 	var lang_idx = _language_option.selected
 	if lang_idx >= 0 and lang_idx < LANGUAGE_CODES.size():
 		settings.language = LANGUAGE_CODES[lang_idx]
+	settings.auto_play_enabled = _auto_play_enabled_check.button_pressed
+	var delay_idx = _auto_play_delay_option.selected
+	if delay_idx >= 0 and delay_idx < AUTO_PLAY_DELAYS.size():
+		settings.auto_play_delay = AUTO_PLAY_DELAYS[delay_idx]
 	settings.save_settings(path)
 	settings.apply_settings()
 
@@ -152,6 +175,10 @@ func _on_music_toggled(enabled: bool) -> void:
 
 func _on_fx_toggled(enabled: bool) -> void:
 	_fx_volume_slider.editable = enabled
+
+
+func _on_auto_play_toggled(enabled: bool) -> void:
+	_auto_play_delay_option.disabled = not enabled
 
 
 # --- Helpers UI ---

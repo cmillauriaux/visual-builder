@@ -96,6 +96,16 @@ static func _build_play_overlay(game: Control) -> void:
 
 
 static func _build_menu_button(game: Control) -> void:
+	game._auto_play_button = Button.new()
+	game._auto_play_button.text = "Auto"
+	game._auto_play_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	game._auto_play_button.offset_left = -180
+	game._auto_play_button.offset_right = -110
+	game._auto_play_button.offset_top = 10
+	game._auto_play_button.offset_bottom = 40
+	game._auto_play_button.visible = false
+	game.add_child(game._auto_play_button)
+
 	game._menu_button = Button.new()
 	game._menu_button.text = "☰ Menu"
 	game._menu_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)

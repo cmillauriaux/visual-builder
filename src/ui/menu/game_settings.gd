@@ -25,6 +25,8 @@ var music_volume: int = 80
 var fx_enabled: bool = true
 var fx_volume: int = 80
 var language: String = "fr"
+var auto_play_enabled: bool = false
+var auto_play_delay: float = 2.0
 
 
 func load_settings(path: String = SETTINGS_PATH) -> void:
@@ -39,6 +41,8 @@ func load_settings(path: String = SETTINGS_PATH) -> void:
 	fx_enabled = cfg.get_value("audio", "fx_enabled", true)
 	fx_volume = cfg.get_value("audio", "fx_volume", 80)
 	language = cfg.get_value("general", "language", "fr")
+	auto_play_enabled = cfg.get_value("gameplay", "auto_play_enabled", false)
+	auto_play_delay = cfg.get_value("gameplay", "auto_play_delay", 2.0)
 
 
 func save_settings(path: String = SETTINGS_PATH) -> void:
@@ -51,6 +55,8 @@ func save_settings(path: String = SETTINGS_PATH) -> void:
 	cfg.set_value("audio", "fx_enabled", fx_enabled)
 	cfg.set_value("audio", "fx_volume", fx_volume)
 	cfg.set_value("general", "language", language)
+	cfg.set_value("gameplay", "auto_play_enabled", auto_play_enabled)
+	cfg.set_value("gameplay", "auto_play_delay", auto_play_delay)
 	cfg.save(path)
 
 
