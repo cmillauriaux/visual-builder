@@ -81,9 +81,6 @@ func start_story(story, base_path: String = "") -> void:
 	if _music_player:
 		_music_player.stop_music()
 	_menu_button.visible = true
-	if _auto_play_button:
-		_auto_play_button.visible = true
-		_game.move_child(_auto_play_button, -1)
 	_story_play_ctrl.start_play_story(story)
 
 
@@ -95,9 +92,6 @@ func start_from_save(story, save_data: Dictionary, base_path: String = "") -> vo
 	if _music_player:
 		_music_player.stop_music()
 	_menu_button.visible = true
-	if _auto_play_button:
-		_auto_play_button.visible = true
-		_game.move_child(_auto_play_button, -1)
 	var chapter = story.find_chapter(save_data.get("chapter_uuid", ""))
 	var scene = chapter.find_scene(save_data.get("scene_uuid", "")) if chapter else null
 	var sequence = scene.find_sequence(save_data.get("sequence_uuid", "")) if scene else null
@@ -190,6 +184,9 @@ func _start_sequence_actually() -> void:
 		_sequence_editor_ctrl.start_play()
 	if _sequence_editor_ctrl.is_playing():
 		_play_overlay.visible = true
+		if _auto_play_button:
+			_auto_play_button.visible = true
+			_game.move_child(_auto_play_button, -1)
 		_visual_editor._overlay_container.add_child(_play_overlay)
 		_typewriter_timer.start()
 	else:
@@ -354,6 +351,8 @@ func on_play_stopped() -> void:
 
 func _handle_play_stopped() -> void:
 	_play_overlay.visible = false
+	if _auto_play_button:
+		_auto_play_button.visible = false
 	_typewriter_timer.stop()
 	if _auto_play:
 		_auto_play.stop_timer()

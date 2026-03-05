@@ -65,7 +65,8 @@ static func _build_play_overlay(game: Control) -> void:
 	game._auto_play_button = Button.new()
 	game._auto_play_button.text = "Auto"
 	game._auto_play_button.visible = false
-	game._auto_play_button.custom_minimum_size = Vector2(100, 30)
+	game._auto_play_button.custom_minimum_size = Vector2(120, 30)
+	game._auto_play_button.clip_text = true
 
 	# Typewriter timer
 	game._typewriter_timer = Timer.new()
@@ -108,10 +109,10 @@ static func _build_auto_play_button(game: Control) -> void:
 	# Align right edge with the visible brown border of the play overlay
 	# panel_brown.png has ~3px transparent rounded corners on edges
 	game._auto_play_button.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
-	game._auto_play_button.offset_left = -103
+	game._auto_play_button.offset_left = -123
 	game._auto_play_button.offset_right = -3
-	game._auto_play_button.offset_top = -185
-	game._auto_play_button.offset_bottom = -155
+	game._auto_play_button.offset_top = -188
+	game._auto_play_button.offset_bottom = -150
 	game.add_child(game._auto_play_button)
 
 
