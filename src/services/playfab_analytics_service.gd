@@ -1,25 +1,21 @@
 extends Node
 
 ## Service d'analytics PlayFab léger.
-## Gère le login anonyme et l'envoi d'événements de télémétrie via l'API REST PlayFab.
+## Gère le login anonyme et l'envoi d'événements via Client/WritePlayerEvent.
 ## Ne fait rien si title_id est vide ou si enabled est false.
 
 const DEVICE_ID_PATH = "user://playfab_device_id.txt"
-const BATCH_SIZE_THRESHOLD = 10
 const FLUSH_INTERVAL_SEC = 10.0
-const MAX_BATCH_SIZE = 200
 
 var _title_id: String = ""
 var _enabled: bool = false
-var _entity_token: String = ""
-var _entity_id: String = ""
-var _entity_type: String = ""
+var _session_ticket: String = ""
 var _device_id: String = ""
 var _logged_in: bool = false
 var _event_queue: Array = []
 var _flush_timer: float = 0.0
 var _http_login: HTTPRequest
-var _http_events: HTTPRequest
+var _http_pool: Array[HTTPRequest] = []
 var _pending_login: bool = false
 
 
@@ -58,38 +54,47 @@ func login_anonymous() -> void:
 
 
 func track_event(event_name: String, body: Dictionary = {}) -> void:
-	if not is_active():
+	if not is_configured():
 		return
 	_event_queue.append({
-		"EventNamespace": "custom.visualbuilder",
-		"Name": event_name,
-		"Payload": body,
-		"Entity": {
-			"Id": _entity_id,
-			"Type": _entity_type,
-		},
+		"EventName": event_name,
+		"Body": body,
 	})
-	if _event_queue.size() >= BATCH_SIZE_THRESHOLD:
+	if is_active() and _event_queue.size() >= 10:
 		flush()
 
 
 func flush() -> void:
 	if _event_queue.is_empty() or not is_active():
 		return
-	var events_to_send = _event_queue.slice(0, MAX_BATCH_SIZE)
-	_event_queue = _event_queue.slice(MAX_BATCH_SIZE)
+	var events_to_send = _event_queue.duplicate()
+	_event_queue.clear()
 	_flush_timer = 0.0
-	var url = "https://%s.playfabapi.com/Event/WriteTelemetryEvents" % _title_id
-	var body = JSON.stringify({"Events": events_to_send})
-	if _http_events == null:
-		_http_events = HTTPRequest.new()
-		_http_events.name = "HttpEvents"
-		add_child(_http_events)
-	_http_events.request_completed.connect(_on_events_completed, CONNECT_ONE_SHOT)
-	_http_events.request(url, [
+	for event in events_to_send:
+		_send_single_event(event)
+
+
+func _send_single_event(event: Dictionary) -> void:
+	var url = "https://%s.playfabapi.com/Client/WritePlayerEvent" % _title_id
+	var body = JSON.stringify(event)
+	var http = _get_http_node()
+	http.request_completed.connect(_on_event_completed.bind(http), CONNECT_ONE_SHOT)
+	http.request(url, [
 		"Content-Type: application/json",
-		"X-EntityToken: " + _entity_token,
+		"X-Authorization: " + _session_ticket,
 	], HTTPClient.METHOD_POST, body)
+
+
+func _get_http_node() -> HTTPRequest:
+	# Réutiliser un HTTPRequest libre ou en créer un nouveau
+	for h in _http_pool:
+		if is_instance_valid(h) and h.get_http_client_status() == HTTPClient.STATUS_DISCONNECTED:
+			return h
+	var h = HTTPRequest.new()
+	h.name = "HttpEvent_%d" % _http_pool.size()
+	add_child(h)
+	_http_pool.append(h)
+	return h
 
 
 func _process(delta: float) -> void:
@@ -104,8 +109,8 @@ func get_event_queue() -> Array:
 	return _event_queue
 
 
-func get_entity_token() -> String:
-	return _entity_token
+func get_session_ticket() -> String:
+	return _session_ticket
 
 
 # --- Callbacks ---
@@ -125,24 +130,24 @@ func _on_login_completed(result: int, response_code: int, _headers: PackedString
 		push_warning("PlayFab login: invalid response")
 		return
 	var data = json["data"]
-	if data.has("EntityToken") and data["EntityToken"].has("EntityToken"):
-		_entity_token = data["EntityToken"]["EntityToken"]
-		if data["EntityToken"].has("Entity"):
-			_entity_id = data["EntityToken"]["Entity"].get("Id", "")
-			_entity_type = data["EntityToken"]["Entity"].get("Type", "")
+	if data.has("SessionTicket"):
+		_session_ticket = data["SessionTicket"]
 		_logged_in = true
-		print("PlayFab: logged in (entity: %s)" % _entity_id)
+		print("PlayFab: logged in (PlayFabId: %s)" % data.get("PlayFabId", ""))
+		# Flusher les événements mis en file avant la fin du login
+		if not _event_queue.is_empty():
+			flush()
 	else:
-		push_warning("PlayFab login: no entity token in response")
+		push_warning("PlayFab login: no SessionTicket in response")
 
 
-func _on_events_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+func _on_event_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, _http: HTTPRequest) -> void:
 	if result != HTTPRequest.RESULT_SUCCESS or response_code != 200:
 		var error_detail = ""
 		var err_json = JSON.parse_string(body.get_string_from_utf8())
 		if err_json is Dictionary:
 			error_detail = " — %s: %s" % [err_json.get("error", ""), err_json.get("errorMessage", "")]
-		push_warning("PlayFab events flush failed: HTTP %d%s" % [response_code, error_detail])
+		push_warning("PlayFab event send failed: HTTP %d%s" % [response_code, error_detail])
 
 
 # --- Device ID ---

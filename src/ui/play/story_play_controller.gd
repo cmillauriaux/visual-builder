@@ -108,6 +108,9 @@ func start_play_from_save(story, chapter, scene, sequence, variables: Dictionary
 	_variables = variables.duplicate()
 	_user_stopped = false
 	_state = State.PLAYING_SEQUENCE
+	chapter_entered.emit(chapter.chapter_name, chapter.uuid)
+	scene_entered.emit(scene.scene_name, scene.uuid)
+	sequence_entered.emit(sequence.seq_name, sequence.uuid)
 	variables_display_changed.emit(_variables)
 	sequence_play_requested.emit(sequence)
 
