@@ -103,39 +103,19 @@ func test_button_minimum_size() -> void:
 	assert_eq(_menu._resume_button.custom_minimum_size, Vector2(300, 50))
 	assert_eq(_menu._save_button.custom_minimum_size, Vector2(300, 50))
 	assert_eq(_menu._load_button.custom_minimum_size, Vector2(300, 50))
+	assert_eq(_menu._options_button.custom_minimum_size, Vector2(300, 50))
 	assert_eq(_menu._new_game_button.custom_minimum_size, Vector2(300, 50))
 	assert_eq(_menu._quit_button.custom_minimum_size, Vector2(300, 50))
 
 
-# --- Auto-play ---
+# --- Options ---
 
-func test_has_auto_play_check() -> void:
-	assert_not_null(_menu._auto_play_check, "should have auto-play check button")
-	assert_is(_menu._auto_play_check, CheckButton)
-
-
-func test_auto_play_default_off() -> void:
-	assert_false(_menu._auto_play_check.button_pressed)
+func test_has_options_button() -> void:
+	assert_not_null(_menu._options_button, "should have options button")
+	assert_eq(_menu._options_button.text, "Options")
 
 
-func test_auto_play_toggle_signal() -> void:
+func test_options_signal() -> void:
 	watch_signals(_menu)
-	_menu._auto_play_check.button_pressed = true
-	assert_signal_emitted_with_parameters(_menu, "auto_play_toggled", [true])
-
-
-func test_set_auto_play_state() -> void:
-	_menu.set_auto_play_state(true)
-	assert_true(_menu._auto_play_check.button_pressed)
-
-
-func test_set_auto_play_state_false() -> void:
-	_menu.set_auto_play_state(true)
-	_menu.set_auto_play_state(false)
-	assert_false(_menu._auto_play_check.button_pressed)
-
-
-func test_set_auto_play_state_no_signal() -> void:
-	watch_signals(_menu)
-	_menu.set_auto_play_state(true)
-	assert_signal_not_emitted(_menu, "auto_play_toggled")
+	_menu._options_button.pressed.emit()
+	assert_signal_emitted(_menu, "options_pressed")

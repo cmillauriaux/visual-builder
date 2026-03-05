@@ -137,6 +137,38 @@ func test_sequence_fx_player_exists() -> void:
 	assert_not_null(_game._sequence_fx_player, "sequence_fx_player should exist")
 
 
+# --- Auto-play ---
+
+func test_auto_play_button_exists() -> void:
+	assert_not_null(_game._auto_play_button, "auto play button should exist")
+	assert_eq(_game._auto_play_button.text, "Auto")
+
+
+func test_auto_play_button_hidden_by_default() -> void:
+	assert_false(_game._auto_play_button.visible)
+
+
+func test_auto_play_button_pressed_toggles_on() -> void:
+	_game._auto_play_button.pressed.emit()
+	var mgr = _game._play_ctrl.get_auto_play_manager()
+	assert_true(mgr.enabled, "auto-play should be enabled after press")
+	assert_eq(_game._auto_play_button.text, "Auto [ON]")
+
+
+func test_auto_play_button_pressed_toggles_off() -> void:
+	_game._auto_play_button.pressed.emit()
+	_game._auto_play_button.pressed.emit()
+	var mgr = _game._play_ctrl.get_auto_play_manager()
+	assert_false(mgr.enabled, "auto-play should be disabled after second press")
+	assert_eq(_game._auto_play_button.text, "Auto")
+
+
+func test_auto_play_button_visible_during_play() -> void:
+	var story = _create_minimal_story()
+	_game._play_ctrl.start_story(story)
+	assert_true(_game._auto_play_button.visible, "auto play button should be visible during play")
+
+
 func _create_minimal_story():
 	var story = StoryScript.new()
 	story.title = "Test Story"

@@ -15,6 +15,7 @@ const StorySaver = preload("res://src/persistence/story_saver.gd")
 const GameSettings = preload("res://src/ui/menu/game_settings.gd")
 const StoryI18nService = preload("res://src/services/story_i18n_service.gd")
 const GameSaveManager = preload("res://src/persistence/game_save_manager.gd")
+const OptionsMenuScript = preload("res://src/ui/menu/options_menu.gd")
 const PlayFabAnalyticsServiceScript = preload("res://src/services/playfab_analytics_service.gd")
 
 ## Chemin vers la story à charger automatiquement.
@@ -66,6 +67,10 @@ var _variable_details_overlay: CenterContainer
 
 # UI — Menu principal
 var _main_menu: Control
+
+# UI — Options menu (pause context)
+var _pause_options_center: CenterContainer
+var _pause_options_menu: PanelContainer
 
 # Analytics
 var _analytics: Node
@@ -139,7 +144,21 @@ func _ready() -> void:
 	_pause_menu.load_pressed.connect(_on_pause_load)
 	_pause_menu.new_game_pressed.connect(_on_pause_new_game)
 	_pause_menu.quit_pressed.connect(_on_pause_quit)
-	_pause_menu.auto_play_toggled.connect(_on_pause_auto_play_toggled)
+	_pause_menu.options_pressed.connect(_on_pause_options)
+
+	# Options menu (pause context)
+	_pause_options_center = CenterContainer.new()
+	_pause_options_center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_pause_options_center.visible = false
+	_pause_options_center.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(_pause_options_center)
+
+	_pause_options_menu = PanelContainer.new()
+	_pause_options_menu.set_script(OptionsMenuScript)
+	_pause_options_menu.build_ui()
+	_pause_options_menu.applied.connect(_on_pause_options_applied)
+	_pause_options_menu.closed.connect(_on_pause_options_closed)
+	_pause_options_center.add_child(_pause_options_menu)
 
 	# Connecter les signaux du menu save/load
 	_save_load_menu.save_slot_pressed.connect(_on_save_slot)
@@ -204,6 +223,7 @@ func _apply_ui_lang() -> void:
 		_story_selector_title.text = StoryI18nService.get_ui_string("Sélectionnez une histoire", _i18n_dict)
 	_main_menu.apply_ui_translations(_i18n_dict)
 	_pause_menu.apply_ui_translations(_i18n_dict)
+	_pause_options_menu.apply_ui_translations(_i18n_dict)
 	_play_ctrl.set_i18n(_i18n_dict)
 
 
@@ -256,17 +276,26 @@ func _on_menu_button_pressed() -> void:
 	# Capturer le screenshot avant d'afficher le menu (sans overlay)
 	_pending_screenshot = get_viewport().get_texture().get_image()
 	get_tree().paused = true
-	var auto_play_mgr = _play_ctrl.get_auto_play_manager()
-	if auto_play_mgr:
-		_pause_menu.set_auto_play_state(auto_play_mgr.enabled)
 	_pause_menu.show_menu()
 
 
-func _on_pause_auto_play_toggled(enabled: bool) -> void:
-	var auto_play_mgr = _play_ctrl.get_auto_play_manager()
-	if auto_play_mgr:
-		if enabled != auto_play_mgr.enabled:
-			auto_play_mgr.toggle()
+func _on_pause_options() -> void:
+	_pause_menu.hide_menu()
+	if _settings:
+		_pause_options_menu.load_from_settings(_settings)
+	_pause_options_menu.visible = true
+	_pause_options_center.visible = true
+
+
+func _on_pause_options_applied() -> void:
+	_pause_options_center.visible = false
+	_on_options_applied()
+	_pause_menu.show_menu()
+
+
+func _on_pause_options_closed() -> void:
+	_pause_options_center.visible = false
+	_pause_menu.show_menu()
 
 
 func _on_pause_resume() -> void:

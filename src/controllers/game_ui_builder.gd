@@ -28,6 +28,8 @@ static func build(game: Control) -> void:
 	_build_variable_display(game)
 	_build_menu_button(game)
 	_build_music_player(game)
+	# Auto-play button — added last so it renders on top of everything
+	_build_auto_play_button(game)
 
 
 static func _build_visual_editor(game: Control) -> void:
@@ -56,7 +58,14 @@ static func _build_play_overlay(game: Control) -> void:
 	game._play_text_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	game._play_text_label.bbcode_enabled = false
 	game._play_text_label.fit_content = true
+	game._play_text_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	play_vbox.add_child(game._play_text_label)
+
+	# Auto-play button — created here, added to game at the end of build() to stay on top
+	game._auto_play_button = Button.new()
+	game._auto_play_button.text = "Auto"
+	game._auto_play_button.visible = false
+	game._auto_play_button.custom_minimum_size = Vector2(100, 30)
 
 	# Typewriter timer
 	game._typewriter_timer = Timer.new()
@@ -95,17 +104,18 @@ static func _build_play_overlay(game: Control) -> void:
 	title_vbox.add_child(game._play_subtitle_label)
 
 
-static func _build_menu_button(game: Control) -> void:
-	game._auto_play_button = Button.new()
-	game._auto_play_button.text = "Auto"
-	game._auto_play_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-	game._auto_play_button.offset_left = -180
-	game._auto_play_button.offset_right = -110
-	game._auto_play_button.offset_top = 10
-	game._auto_play_button.offset_bottom = 40
-	game._auto_play_button.visible = false
+static func _build_auto_play_button(game: Control) -> void:
+	# Align right edge with the visible brown border of the play overlay
+	# panel_brown.png has ~3px transparent rounded corners on edges
+	game._auto_play_button.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	game._auto_play_button.offset_left = -103
+	game._auto_play_button.offset_right = -3
+	game._auto_play_button.offset_top = -185
+	game._auto_play_button.offset_bottom = -155
 	game.add_child(game._auto_play_button)
 
+
+static func _build_menu_button(game: Control) -> void:
 	game._menu_button = Button.new()
 	game._menu_button.text = "☰ Menu"
 	game._menu_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)

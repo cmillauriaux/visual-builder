@@ -83,6 +83,7 @@ func start_story(story, base_path: String = "") -> void:
 	_menu_button.visible = true
 	if _auto_play_button:
 		_auto_play_button.visible = true
+		_game.move_child(_auto_play_button, -1)
 	_story_play_ctrl.start_play_story(story)
 
 
@@ -96,6 +97,7 @@ func start_from_save(story, save_data: Dictionary, base_path: String = "") -> vo
 	_menu_button.visible = true
 	if _auto_play_button:
 		_auto_play_button.visible = true
+		_game.move_child(_auto_play_button, -1)
 	var chapter = story.find_chapter(save_data.get("chapter_uuid", ""))
 	var scene = chapter.find_scene(save_data.get("scene_uuid", "")) if chapter else null
 	var sequence = scene.find_sequence(save_data.get("sequence_uuid", "")) if scene else null
@@ -267,10 +269,15 @@ func on_play_dialogue_changed(index: int) -> void:
 	var seq = _sequence_editor_ctrl.get_sequence()
 	if seq == null or index < 0 or index >= seq.dialogues.size():
 		return
+	# Stop any pending auto-play timer from the previous dialogue
+	if _auto_play:
+		_auto_play.stop_timer()
 	var dlg = seq.dialogues[index]
 	_play_character_label.text = dlg.character
 	_play_text_label.text = dlg.text
 	_play_text_label.visible_characters = 0
+	# Restart typewriter for the new dialogue
+	_typewriter_timer.start()
 
 	# Compute foreground transitions
 	var new_fgs = _sequence_editor_ctrl.get_effective_foregrounds(index)
@@ -348,6 +355,8 @@ func on_play_stopped() -> void:
 func _handle_play_stopped() -> void:
 	_play_overlay.visible = false
 	_typewriter_timer.stop()
+	if _auto_play:
+		_auto_play.stop_timer()
 	if _play_overlay.get_parent():
 		_play_overlay.get_parent().remove_child(_play_overlay)
 	
@@ -388,7 +397,7 @@ func _input(event: InputEvent) -> void:
 		return
 	if event is InputEventKey and event.pressed and event.keycode == KEY_SPACE:
 		if _auto_play:
-			_auto_play.reset()
+			_auto_play.stop_timer()
 		if not _sequence_editor_ctrl.is_text_fully_displayed():
 			_sequence_editor_ctrl.skip_typewriter()
 			_play_text_label.visible_characters = _sequence_editor_ctrl.get_visible_characters()
