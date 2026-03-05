@@ -84,6 +84,8 @@ func build_ui() -> void:
 	_quit_button = _create_menu_button("Quitter")
 	_quit_button.pressed.connect(func(): quit_pressed.emit())
 	GameTheme.apply_danger_style(_quit_button)
+	if OS.has_feature("web"):
+		_quit_button.visible = false
 	vbox.add_child(_quit_button)
 
 
