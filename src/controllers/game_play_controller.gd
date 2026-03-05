@@ -426,7 +426,8 @@ func _cleanup_play() -> void:
 	_game._play_title_overlay.visible = false
 	if _game._play_title_overlay.get_parent():
 		_game._play_title_overlay.get_parent().remove_child(_game._play_title_overlay)
-	
+	if _music_player:
+		_music_player.stop_music()
 	_menu_button.visible = false
 	_play_overlay.visible = false
 	_typewriter_timer.stop()

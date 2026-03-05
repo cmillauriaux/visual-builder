@@ -133,6 +133,8 @@ func _on_trans_out_finished() -> void:
 	if _is_story_play_mode:
 		_story_play_ctrl.on_sequence_finished()
 		return
+	if _music_player:
+		_music_player.stop_music()
 	EventBus.play_stopped.emit()
 
 
@@ -344,6 +346,8 @@ func on_choice_selected(index: int) -> void:
 
 
 func on_story_play_finished(reason: String) -> void:
+	if _music_player:
+		_music_player.stop_music()
 	EventBus.play_finished.emit(reason)
 	_restore_after_story_play()
 
