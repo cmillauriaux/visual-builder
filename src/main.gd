@@ -158,6 +158,10 @@ func _setup_controllers() -> void:
 	_play_ctrl.setup(self)
 	add_child(_play_ctrl)
 
+	var music_player = MusicPlayer.new()
+	add_child(music_player)
+	_play_ctrl._music_player = music_player
+
 	_nav_ctrl = Node.new()
 	_nav_ctrl.set_script(NavigationControllerScript)
 	_nav_ctrl.setup(self)
