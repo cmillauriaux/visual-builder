@@ -47,6 +47,9 @@ func test_default_auto_play_enabled():
 func test_default_auto_play_delay():
 	assert_eq(_settings.auto_play_delay, 2.0)
 
+func test_default_typewriter_speed():
+	assert_eq(_settings.typewriter_speed, 0.03)
+
 
 # --- Sauvegarde et chargement ---
 
@@ -117,6 +120,27 @@ func test_save_and_load_auto_play_delay():
 	loaded.load_settings(_test_cfg_path)
 	assert_eq(loaded.auto_play_delay, 3.0)
 
+func test_save_and_load_typewriter_speed_slow():
+	_settings.typewriter_speed = 0.06
+	_settings.save_settings(_test_cfg_path)
+	var loaded = GameSettings.new()
+	loaded.load_settings(_test_cfg_path)
+	assert_eq(loaded.typewriter_speed, 0.06)
+
+func test_save_and_load_typewriter_speed_fast():
+	_settings.typewriter_speed = 0.015
+	_settings.save_settings(_test_cfg_path)
+	var loaded = GameSettings.new()
+	loaded.load_settings(_test_cfg_path)
+	assert_eq(loaded.typewriter_speed, 0.015)
+
+func test_save_and_load_typewriter_speed_instant():
+	_settings.typewriter_speed = 0.0
+	_settings.save_settings(_test_cfg_path)
+	var loaded = GameSettings.new()
+	loaded.load_settings(_test_cfg_path)
+	assert_eq(loaded.typewriter_speed, 0.0)
+
 func test_load_nonexistent_file_uses_defaults():
 	_settings.load_settings("user://nonexistent_test_settings.cfg")
 	assert_eq(_settings.resolution, Vector2i(1920, 1080))
@@ -163,3 +187,16 @@ func test_resolution_labels():
 	assert_eq(labels.size(), 4)
 	assert_true(labels[0].find("1920") >= 0)
 	assert_true(labels[2].find("1280") >= 0)
+
+
+# --- Vitesse typewriter ---
+
+func test_typewriter_speeds_count():
+	assert_eq(GameSettings.TYPEWRITER_SPEEDS.size(), 4)
+	assert_eq(GameSettings.TYPEWRITER_SPEED_LABELS.size(), 4)
+
+func test_typewriter_speed_values():
+	assert_eq(GameSettings.TYPEWRITER_SPEEDS[0], 0.06)
+	assert_eq(GameSettings.TYPEWRITER_SPEEDS[1], 0.03)
+	assert_eq(GameSettings.TYPEWRITER_SPEEDS[2], 0.015)
+	assert_eq(GameSettings.TYPEWRITER_SPEEDS[3], 0.0)

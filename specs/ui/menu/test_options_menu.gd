@@ -71,6 +71,10 @@ func test_has_auto_play_delay_option():
 	assert_not_null(_menu._auto_play_delay_option)
 	assert_is(_menu._auto_play_delay_option, OptionButton)
 
+func test_has_typewriter_speed_option():
+	assert_not_null(_menu._typewriter_speed_option)
+	assert_is(_menu._typewriter_speed_option, OptionButton)
+
 
 # --- Résolutions ---
 
@@ -102,6 +106,18 @@ func test_auto_play_delay_option_labels():
 	assert_eq(_menu._auto_play_delay_option.get_item_text(1), "2s")
 	assert_eq(_menu._auto_play_delay_option.get_item_text(2), "3s")
 	assert_eq(_menu._auto_play_delay_option.get_item_text(3), "5s")
+
+
+# --- Vitesse texte ---
+
+func test_typewriter_speed_option_has_4_items():
+	assert_eq(_menu._typewriter_speed_option.item_count, 4)
+
+func test_typewriter_speed_option_labels():
+	assert_eq(_menu._typewriter_speed_option.get_item_text(0), "Lent")
+	assert_eq(_menu._typewriter_speed_option.get_item_text(1), "Normal")
+	assert_eq(_menu._typewriter_speed_option.get_item_text(2), "Rapide")
+	assert_eq(_menu._typewriter_speed_option.get_item_text(3), "Instantané")
 
 
 # --- Chargement des valeurs ---
@@ -159,6 +175,20 @@ func test_load_values_auto_play_delay():
 func test_load_values_auto_play_delay_default():
 	_menu.load_from_settings(_settings)
 	assert_eq(_menu._auto_play_delay_option.selected, 1)  # Index de 2s (defaut)
+
+func test_load_values_typewriter_speed_default():
+	_menu.load_from_settings(_settings)
+	assert_eq(_menu._typewriter_speed_option.selected, 1)  # Normal (0.03)
+
+func test_load_values_typewriter_speed_slow():
+	_settings.typewriter_speed = 0.06
+	_menu.load_from_settings(_settings)
+	assert_eq(_menu._typewriter_speed_option.selected, 0)  # Lent
+
+func test_load_values_typewriter_speed_instant():
+	_settings.typewriter_speed = 0.0
+	_menu.load_from_settings(_settings)
+	assert_eq(_menu._typewriter_speed_option.selected, 3)  # Instantané
 
 func test_auto_play_delay_disabled_when_auto_play_off():
 	_settings.auto_play_enabled = false
@@ -242,6 +272,19 @@ func test_close_hides_menu():
 
 
 # --- Signal applied ---
+
+func test_apply_typewriter_speed_slow():
+	_menu.load_from_settings(_settings)
+	_menu._typewriter_speed_option.selected = 0  # Lent
+	_menu.apply_to_settings(_settings, _test_cfg_path)
+	assert_eq(_settings.typewriter_speed, 0.06)
+
+func test_apply_typewriter_speed_instant():
+	_menu.load_from_settings(_settings)
+	_menu._typewriter_speed_option.selected = 3  # Instantané
+	_menu.apply_to_settings(_settings, _test_cfg_path)
+	assert_eq(_settings.typewriter_speed, 0.0)
+
 
 func test_apply_emits_applied_signal():
 	watch_signals(_menu)

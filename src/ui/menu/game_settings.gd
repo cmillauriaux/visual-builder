@@ -27,6 +27,10 @@ var fx_volume: int = 80
 var language: String = "fr"
 var auto_play_enabled: bool = false
 var auto_play_delay: float = 2.0
+var typewriter_speed: float = 0.03
+
+const TYPEWRITER_SPEEDS: Array[float] = [0.06, 0.03, 0.015, 0.0]
+const TYPEWRITER_SPEED_LABELS: Array[String] = ["Lent", "Normal", "Rapide", "Instantané"]
 
 
 func load_settings(path: String = SETTINGS_PATH) -> void:
@@ -43,6 +47,7 @@ func load_settings(path: String = SETTINGS_PATH) -> void:
 	language = cfg.get_value("general", "language", "fr")
 	auto_play_enabled = cfg.get_value("gameplay", "auto_play_enabled", false)
 	auto_play_delay = cfg.get_value("gameplay", "auto_play_delay", 2.0)
+	typewriter_speed = cfg.get_value("gameplay", "typewriter_speed", 0.03)
 
 
 func save_settings(path: String = SETTINGS_PATH) -> void:
@@ -57,6 +62,7 @@ func save_settings(path: String = SETTINGS_PATH) -> void:
 	cfg.set_value("general", "language", language)
 	cfg.set_value("gameplay", "auto_play_enabled", auto_play_enabled)
 	cfg.set_value("gameplay", "auto_play_delay", auto_play_delay)
+	cfg.set_value("gameplay", "typewriter_speed", typewriter_speed)
 	cfg.save(path)
 
 

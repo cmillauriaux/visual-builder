@@ -30,6 +30,7 @@ var _story_base_path: String = ""
 var _music_player: Node = null
 var _auto_play: RefCounted = null
 var _auto_play_button: Button = null
+var _typewriter_speed: float = 0.03
 
 signal play_finished_show_menu()
 
@@ -41,6 +42,12 @@ func set_i18n(dict: Dictionary) -> void:
 func set_auto_play_delay(delay: float) -> void:
 	if _auto_play:
 		_auto_play.delay = delay
+
+
+func set_typewriter_speed(speed: float) -> void:
+	_typewriter_speed = speed
+	if speed > 0.0:
+		_typewriter_timer.wait_time = speed
 
 
 func set_auto_play_enabled(enabled: bool) -> void:
@@ -188,7 +195,13 @@ func _start_sequence_actually() -> void:
 			_auto_play_button.visible = true
 			_game.move_child(_auto_play_button, -1)
 		_visual_editor._overlay_container.add_child(_play_overlay)
-		_typewriter_timer.start()
+		if _typewriter_speed == 0.0:
+			_sequence_editor_ctrl.skip_typewriter()
+			_play_text_label.visible_characters = _sequence_editor_ctrl.get_visible_characters()
+			if _auto_play and _auto_play.enabled:
+				_auto_play.start_timer()
+		else:
+			_typewriter_timer.start()
 	else:
 		_handle_play_stopped()
 
@@ -274,7 +287,13 @@ func on_play_dialogue_changed(index: int) -> void:
 	_play_text_label.text = dlg.text
 	_play_text_label.visible_characters = 0
 	# Restart typewriter for the new dialogue
-	_typewriter_timer.start()
+	if _typewriter_speed == 0.0:
+		_sequence_editor_ctrl.skip_typewriter()
+		_play_text_label.visible_characters = _sequence_editor_ctrl.get_visible_characters()
+		if _auto_play and _auto_play.enabled:
+			_auto_play.start_timer()
+	else:
+		_typewriter_timer.start()
 
 	# Compute foreground transitions
 	var new_fgs = _sequence_editor_ctrl.get_effective_foregrounds(index)
