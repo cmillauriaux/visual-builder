@@ -2,9 +2,10 @@ extends ConfirmationDialog
 
 ## Dialogue de configuration du menu principal de la story.
 
-signal menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_background: String, playfab_title_id: String, playfab_enabled: bool)
+signal menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_background: String, menu_music: String, playfab_title_id: String, playfab_enabled: bool)
 
 const ImagePickerDialogScript = preload("res://src/ui/dialogs/image_picker_dialog.gd")
+const AudioPickerDialogScript = preload("res://src/ui/dialogs/audio_picker_dialog.gd")
 
 var _menu_title_edit: LineEdit
 var _menu_subtitle_edit: LineEdit
@@ -12,9 +13,12 @@ var _menu_bg_edit: LineEdit
 var _browse_button: Button
 var _clear_bg_button: Button
 var _bg_preview: TextureRect
+var _menu_music_label: Label
+var _clear_music_button: Button
 var _playfab_title_id_edit: LineEdit
 var _playfab_enabled_check: CheckButton
 var _story_base_path: String = ""
+var _current_menu_music: String = ""
 
 func _init():
 	title = "Configurer le menu"
@@ -74,6 +78,35 @@ func _init():
 	_bg_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	vbox.add_child(_bg_preview)
 
+	var music_label = Label.new()
+	music_label.text = "Musique du menu"
+	vbox.add_child(music_label)
+
+	var music_hbox = HBoxContainer.new()
+	music_hbox.name = "MusicHBox"
+
+	_menu_music_label = Label.new()
+	_menu_music_label.name = "MenuMusicLabel"
+	_menu_music_label.text = "Aucune musique"
+	_menu_music_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_menu_music_label.clip_text = true
+	_menu_music_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
+	music_hbox.add_child(_menu_music_label)
+
+	var browse_music_btn = Button.new()
+	browse_music_btn.name = "BrowseMusicButton"
+	browse_music_btn.text = "Choisir..."
+	browse_music_btn.pressed.connect(_on_browse_music_pressed)
+	music_hbox.add_child(browse_music_btn)
+
+	_clear_music_button = Button.new()
+	_clear_music_button.name = "ClearMusicButton"
+	_clear_music_button.text = "✕"
+	_clear_music_button.pressed.connect(_on_clear_music_pressed)
+	music_hbox.add_child(_clear_music_button)
+
+	vbox.add_child(music_hbox)
+
 	var separator = HSeparator.new()
 	separator.name = "PlayFabSeparator"
 	vbox.add_child(separator)
@@ -108,6 +141,8 @@ func setup(story, story_base_path: String = "") -> void:
 	_playfab_title_id_edit.text = story.playfab_title_id
 	_playfab_enabled_check.button_pressed = story.playfab_enabled
 	_story_base_path = story_base_path
+	_current_menu_music = story.menu_music if story.get("menu_music") != null else ""
+	_update_menu_music_label()
 	_update_preview()
 
 func get_menu_title() -> String:
@@ -118,6 +153,9 @@ func get_menu_subtitle() -> String:
 
 func get_menu_background() -> String:
 	return _menu_bg_edit.text
+
+func get_menu_music() -> String:
+	return _current_menu_music
 
 func _on_browse_pressed() -> void:
 	var picker = Window.new()
@@ -134,6 +172,32 @@ func _on_bg_image_selected(path: String) -> void:
 func _on_clear_bg_pressed() -> void:
 	_menu_bg_edit.text = ""
 	_bg_preview.texture = null
+
+func _on_browse_music_pressed() -> void:
+	var picker = Window.new()
+	picker.set_script(AudioPickerDialogScript)
+	add_child(picker)
+	picker.setup(AudioPickerDialogScript.Mode.MUSIC, _story_base_path)
+	picker.audio_selected.connect(_on_menu_music_selected)
+	picker.popup_centered()
+
+func _on_menu_music_selected(path: String) -> void:
+	_current_menu_music = path
+	_update_menu_music_label()
+
+func _on_clear_music_pressed() -> void:
+	_current_menu_music = ""
+	_update_menu_music_label()
+
+func _update_menu_music_label() -> void:
+	if _menu_music_label == null:
+		return
+	if _current_menu_music != "":
+		_menu_music_label.text = _current_menu_music.get_file()
+		_menu_music_label.add_theme_color_override("font_color", Color.WHITE)
+	else:
+		_menu_music_label.text = "Aucune musique"
+		_menu_music_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
 
 func _update_preview() -> void:
 	if _menu_bg_edit.text == "":
@@ -152,4 +216,4 @@ func get_playfab_enabled() -> bool:
 	return _playfab_enabled_check.button_pressed
 
 func _on_confirmed() -> void:
-	menu_config_confirmed.emit(_menu_title_edit.text, _menu_subtitle_edit.text, _menu_bg_edit.text, _playfab_title_id_edit.text, _playfab_enabled_check.button_pressed)
+	menu_config_confirmed.emit(_menu_title_edit.text, _menu_subtitle_edit.text, _menu_bg_edit.text, _current_menu_music, _playfab_title_id_edit.text, _playfab_enabled_check.button_pressed)

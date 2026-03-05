@@ -20,6 +20,7 @@ var entry_point_uuid: String = ""
 var menu_title: String = ""
 var menu_subtitle: String = ""
 var menu_background: String = ""
+var menu_music: String = ""
 var playfab_title_id: String = ""
 var playfab_enabled: bool = false
 
@@ -103,6 +104,7 @@ func to_dict() -> Dictionary:
 		"menu_title": menu_title,
 		"menu_subtitle": menu_subtitle,
 		"menu_background": menu_background,
+		"menu_music": menu_music,
 		"playfab": {
 			"title_id": playfab_title_id,
 			"enabled": playfab_enabled,
@@ -139,6 +141,7 @@ static func from_dict(d: Dictionary):
 	story.menu_title = d.get("menu_title", "")
 	story.menu_subtitle = d.get("menu_subtitle", "")
 	story.menu_background = d.get("menu_background", "")
+	story.menu_music = d.get("menu_music", "")
 
 	if d.has("playfab"):
 		var pf = d["playfab"]

@@ -10,6 +10,7 @@ var _story_play_ctrl: Node
 var _foreground_transition: Node
 var _sequence_fx_player: Node
 var _visual_editor: Control
+var _music_player: Node = null
 
 # État du play
 var _previous_play_foregrounds: Array = []
@@ -63,6 +64,7 @@ func _on_trans_in_finished_play_fx() -> void:
 		_sequence_fx_player.fx_finished.connect(_on_play_fx_finished, CONNECT_ONE_SHOT)
 		_sequence_fx_player.play_fx_list(seq.fx, _visual_editor)
 	else:
+		_apply_sequence_audio()
 		_start_play_after_fx()
 
 
@@ -100,11 +102,14 @@ func _hide_title_screen() -> void:
 
 
 func _on_play_fx_finished() -> void:
+	_apply_sequence_audio()
 	_start_play_after_fx()
 
 
 func on_stop_pressed() -> void:
 	_sequence_fx_player.stop_fx()
+	if _music_player:
+		_music_player.stop_music()
 	if _is_story_play_mode:
 		_stop_story_play()
 		return
@@ -255,6 +260,12 @@ func _prepare_opening_visuals() -> void:
 	_previous_play_foregrounds = static_fgs
 
 
+func _apply_sequence_audio() -> void:
+	if _music_player == null or _current_playing_sequence == null:
+		return
+	_music_player.apply_sequence(_current_playing_sequence, _main._get_story_base_path())
+
+
 # --- Story Play ---
 
 func on_top_play_pressed() -> void:
@@ -276,6 +287,8 @@ func on_top_stop_pressed() -> void:
 
 
 func _stop_story_play() -> void:
+	if _music_player:
+		_music_player.stop_music()
 	_is_showing_title = false
 	_main._play_title_overlay.visible = false
 	if _main._play_title_overlay.get_parent():

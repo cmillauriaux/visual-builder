@@ -15,6 +15,7 @@ const TransitionPanelScript = preload("res://src/ui/sequence/transition_panel.gd
 const ForegroundTransitionScript = preload("res://src/ui/visual/foreground_transition.gd")
 const SequenceFxPlayerScript = preload("res://src/ui/visual/sequence_fx_player.gd")
 const FxPanelScript = preload("res://src/ui/sequence/fx_panel.gd")
+const AudioPanelScript = preload("res://src/ui/sequence/audio_panel.gd")
 const DialogueEditorScript = preload("res://src/ui/editors/dialogue_editor.gd")
 const StoryPlayControllerScript = preload("res://src/ui/play/story_play_controller.gd")
 const ConditionEditorScene = preload("res://src/ui/editors/condition_editor.tscn")
@@ -265,16 +266,16 @@ static func _build_sequence_editor(main: Control) -> void:
 	main._ending_editor = EndingEditorScene.instantiate()
 	terminaison_tab.add_child(main._ending_editor)
 
-	# Tab 2: Musique (placeholder)
-	var musique_tab = VBoxContainer.new()
-	musique_tab.name = "Musique"
-	main._tab_container.add_child(musique_tab)
-	var musique_label = Label.new()
-	musique_label.text = "À venir"
-	musique_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	musique_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	musique_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	musique_tab.add_child(musique_label)
+	# Tab 2: Musique
+	var musique_scroll = ScrollContainer.new()
+	musique_scroll.name = "Musique"
+	musique_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	main._tab_container.add_child(musique_scroll)
+
+	main._audio_panel = VBoxContainer.new()
+	main._audio_panel.set_script(AudioPanelScript)
+	main._audio_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	musique_scroll.add_child(main._audio_panel)
 
 	# Tab 3: FX
 	main._fx_panel = VBoxContainer.new()

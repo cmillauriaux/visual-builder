@@ -70,33 +70,39 @@ func test_is_active_true_when_logged_in_and_configured():
 
 func test_track_event_queues_event():
 	_service.configure("ABCDEF", true)
+	_service._logged_in = true
+	_service._entity_id = "player123"
+	_service._entity_type = "title_player_account"
 	_service.track_event("test_event", {"key": "value"})
 	var queue = _service.get_event_queue()
 	assert_eq(queue.size(), 1)
-	assert_eq(queue[0]["EventName"], "test_event")
-	assert_eq(queue[0]["Body"]["key"], "value")
+	assert_eq(queue[0]["Name"], "test_event")
+	assert_eq(queue[0]["Payload"]["key"], "value")
+	assert_eq(queue[0]["EventNamespace"], "custom.visualbuilder")
 
 
-func test_track_event_ignored_when_not_configured():
+func test_track_event_ignored_when_inactive():
 	_service.configure("", false)
 	_service.track_event("test_event", {"key": "value"})
 	assert_eq(_service.get_event_queue().size(), 0)
 
 
-func test_track_event_queued_before_login():
+func test_track_event_ignored_when_not_logged_in():
 	_service.configure("ABCDEF", true)
-	# Pas encore loggé, mais configuré → l'event doit être mis en file
 	_service.track_event("test_event", {})
-	assert_eq(_service.get_event_queue().size(), 1, "event doit être en file même sans login")
+	assert_eq(_service.get_event_queue().size(), 0)
 
 
 func test_track_event_multiple():
 	_service.configure("ABCDEF", true)
+	_service._logged_in = true
+	_service._entity_id = "player123"
+	_service._entity_type = "title_player_account"
 	_service.track_event("event_1", {})
 	_service.track_event("event_2", {"data": 42})
 	assert_eq(_service.get_event_queue().size(), 2)
-	assert_eq(_service.get_event_queue()[0]["EventName"], "event_1")
-	assert_eq(_service.get_event_queue()[1]["EventName"], "event_2")
+	assert_eq(_service.get_event_queue()[0]["Name"], "event_1")
+	assert_eq(_service.get_event_queue()[1]["Name"], "event_2")
 
 
 # --- generate_uuid ---
