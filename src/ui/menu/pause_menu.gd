@@ -5,6 +5,9 @@ extends Control
 const StoryI18nService = preload("res://src/services/story_i18n_service.gd")
 const GameTheme = preload("res://src/ui/themes/game_theme.gd")
 
+var _patreon_url: String = ""
+var _itchio_url: String = ""
+
 signal resume_pressed
 signal save_pressed
 signal load_pressed
@@ -20,6 +23,8 @@ var _save_button: Button
 var _load_button: Button
 var _options_button: Button
 var _new_game_button: Button
+var _patreon_button: Button
+var _itchio_button: Button
 var _quit_button: Button
 
 
@@ -81,6 +86,18 @@ func build_ui() -> void:
 	_new_game_button.pressed.connect(func(): new_game_pressed.emit())
 	vbox.add_child(_new_game_button)
 
+	_patreon_button = _create_menu_button("Patreon")
+	_patreon_button.pressed.connect(_on_patreon_pressed)
+	GameTheme.apply_link_style(_patreon_button, Color("#FF424D"))
+	_patreon_button.visible = false
+	vbox.add_child(_patreon_button)
+
+	_itchio_button = _create_menu_button("itch.io")
+	_itchio_button.pressed.connect(_on_itchio_pressed)
+	GameTheme.apply_link_style(_itchio_button, Color("#FA5C5C"))
+	_itchio_button.visible = false
+	vbox.add_child(_itchio_button)
+
 	_quit_button = _create_menu_button("Quitter")
 	_quit_button.pressed.connect(func(): quit_pressed.emit())
 	GameTheme.apply_danger_style(_quit_button)
@@ -96,6 +113,8 @@ func apply_ui_translations(i18n_dict: Dictionary) -> void:
 	_load_button.text = StoryI18nService.get_ui_string("Charger", i18n_dict)
 	_options_button.text = StoryI18nService.get_ui_string("Options", i18n_dict)
 	_new_game_button.text = StoryI18nService.get_ui_string("Nouvelle partie", i18n_dict)
+	_patreon_button.text = StoryI18nService.get_ui_string("Patreon", i18n_dict)
+	_itchio_button.text = StoryI18nService.get_ui_string("itch.io", i18n_dict)
 	_quit_button.text = StoryI18nService.get_ui_string("Quitter", i18n_dict)
 
 
@@ -105,6 +124,23 @@ func show_menu() -> void:
 
 func hide_menu() -> void:
 	visible = false
+
+
+func set_external_links(patreon_url: String, itchio_url: String) -> void:
+	_patreon_url = patreon_url
+	_itchio_url = itchio_url
+	_patreon_button.visible = patreon_url != ""
+	_itchio_button.visible = itchio_url != ""
+
+
+func _on_patreon_pressed() -> void:
+	if _patreon_url != "":
+		OS.shell_open(_patreon_url)
+
+
+func _on_itchio_pressed() -> void:
+	if _itchio_url != "":
+		OS.shell_open(_itchio_url)
 
 
 func _create_menu_button(text: String) -> Button:

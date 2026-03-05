@@ -114,3 +114,68 @@ func test_get_menu_subtitle():
 func test_get_menu_background():
 	_dialog._menu_bg_edit.text = "test.png"
 	assert_eq(_dialog.get_menu_background(), "test.png")
+
+
+# --- Liens externes ---
+
+func test_has_patreon_url_edit():
+	assert_true(_dialog.has_node("ContentVBox/PatreonUrlEdit"), "Le champ URL Patreon doit exister")
+
+func test_has_itchio_url_edit():
+	assert_true(_dialog.has_node("ContentVBox/ItchioUrlEdit"), "Le champ URL itch.io doit exister")
+
+func test_get_patreon_url():
+	_dialog._patreon_url_edit.text = "https://www.patreon.com/test"
+	assert_eq(_dialog.get_patreon_url(), "https://www.patreon.com/test")
+
+func test_get_itchio_url():
+	_dialog._itchio_url_edit.text = "https://mygame.itch.io/game"
+	assert_eq(_dialog.get_itchio_url(), "https://mygame.itch.io/game")
+
+func test_setup_fills_link_fields():
+	var story = _make_story()
+	story.patreon_url = "https://www.patreon.com/test"
+	story.itchio_url = "https://mygame.itch.io/game"
+	_dialog.setup(story, "/tmp/test_story")
+	assert_eq(_dialog.get_patreon_url(), "https://www.patreon.com/test")
+	assert_eq(_dialog.get_itchio_url(), "https://mygame.itch.io/game")
+
+func test_confirmed_signal_includes_links():
+	var story = _make_story("T", "S", "B")
+	story.patreon_url = "https://www.patreon.com/test"
+	story.itchio_url = "https://test.itch.io/game"
+	_dialog.setup(story, "/tmp/test_story")
+	watch_signals(_dialog)
+	_dialog._on_confirmed()
+	var params = get_signal_parameters(_dialog, "menu_config_confirmed")
+	assert_eq(params[6], "https://www.patreon.com/test")
+	assert_eq(params[7], "https://test.itch.io/game")
+
+func test_validate_url_rejects_invalid():
+	var story = _make_story()
+	_dialog.setup(story, "/tmp/test_story")
+	_dialog._patreon_url_edit.text = "not-a-url"
+	_dialog._itchio_url_edit.text = "ftp://invalid.com"
+	watch_signals(_dialog)
+	_dialog._on_confirmed()
+	var params = get_signal_parameters(_dialog, "menu_config_confirmed")
+	assert_eq(params[6], "", "URL invalide doit être traitée comme vide")
+	assert_eq(params[7], "", "URL invalide doit être traitée comme vide")
+
+func test_validate_url_accepts_https():
+	var story = _make_story()
+	_dialog.setup(story, "/tmp/test_story")
+	_dialog._patreon_url_edit.text = "https://www.patreon.com/test"
+	watch_signals(_dialog)
+	_dialog._on_confirmed()
+	var params = get_signal_parameters(_dialog, "menu_config_confirmed")
+	assert_eq(params[6], "https://www.patreon.com/test")
+
+func test_validate_url_accepts_http():
+	var story = _make_story()
+	_dialog.setup(story, "/tmp/test_story")
+	_dialog._patreon_url_edit.text = "http://www.patreon.com/test"
+	watch_signals(_dialog)
+	_dialog._on_confirmed()
+	var params = get_signal_parameters(_dialog, "menu_config_confirmed")
+	assert_eq(params[6], "http://www.patreon.com/test")

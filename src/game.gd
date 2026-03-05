@@ -260,6 +260,9 @@ func _show_main_menu(story) -> void:
 	_menu_button.visible = false
 	_main_menu.setup(story, _current_story_path)
 	_main_menu.show_menu()
+	var patreon_url = story.patreon_url if story.get("patreon_url") != null else ""
+	var itchio_url = story.itchio_url if story.get("itchio_url") != null else ""
+	_pause_menu.set_external_links(patreon_url, itchio_url)
 	if _music_player and story.get("menu_music") != null and story.menu_music != "":
 		_music_player.play_menu_music(story.menu_music)
 

@@ -23,6 +23,8 @@ var menu_background: String = ""
 var menu_music: String = ""
 var playfab_title_id: String = ""
 var playfab_enabled: bool = false
+var patreon_url: String = ""
+var itchio_url: String = ""
 
 func _init():
 	var now = _iso_now()
@@ -109,6 +111,10 @@ func to_dict() -> Dictionary:
 			"title_id": playfab_title_id,
 			"enabled": playfab_enabled,
 		},
+		"links": {
+			"patreon": patreon_url,
+			"itchio": itchio_url,
+		},
 	}
 
 static func from_dict(d: Dictionary):
@@ -147,6 +153,11 @@ static func from_dict(d: Dictionary):
 		var pf = d["playfab"]
 		story.playfab_title_id = pf.get("title_id", "")
 		story.playfab_enabled = pf.get("enabled", false)
+
+	if d.has("links"):
+		var links = d["links"]
+		story.patreon_url = links.get("patreon", "")
+		story.itchio_url = links.get("itchio", "")
 
 	return story
 

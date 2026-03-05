@@ -46,6 +46,20 @@ func test_has_options_button():
 	assert_not_null(_menu._options_button)
 	assert_eq(_menu._options_button.text, "Options")
 
+func test_has_patreon_button():
+	assert_not_null(_menu._patreon_button)
+	assert_eq(_menu._patreon_button.text, "Patreon")
+
+func test_has_itchio_button():
+	assert_not_null(_menu._itchio_button)
+	assert_eq(_menu._itchio_button.text, "itch.io")
+
+func test_patreon_button_hidden_by_default():
+	assert_false(_menu._patreon_button.visible)
+
+func test_itchio_button_hidden_by_default():
+	assert_false(_menu._itchio_button.visible)
+
 func test_has_quit_button():
 	assert_not_null(_menu._quit_button)
 	assert_eq(_menu._quit_button.text, "Quitter")
@@ -122,3 +136,30 @@ func test_hide_menu():
 	_menu.visible = true
 	_menu.hide_menu()
 	assert_false(_menu.visible)
+
+
+# --- Liens externes ---
+
+func test_patreon_visible_when_url_set():
+	var story = Story.new()
+	story.patreon_url = "https://www.patreon.com/test"
+	_menu.setup(story, "res://")
+	assert_true(_menu._patreon_button.visible)
+
+func test_patreon_hidden_when_url_empty():
+	var story = Story.new()
+	story.patreon_url = ""
+	_menu.setup(story, "res://")
+	assert_false(_menu._patreon_button.visible)
+
+func test_itchio_visible_when_url_set():
+	var story = Story.new()
+	story.itchio_url = "https://mygame.itch.io/game"
+	_menu.setup(story, "res://")
+	assert_true(_menu._itchio_button.visible)
+
+func test_itchio_hidden_when_url_empty():
+	var story = Story.new()
+	story.itchio_url = ""
+	_menu.setup(story, "res://")
+	assert_false(_menu._itchio_button.visible)

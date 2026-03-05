@@ -441,13 +441,15 @@ func on_menu_config_requested() -> void:
 	_menu_config_dialog.popup_centered()
 
 
-func _on_menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_background: String, menu_music: String = "", playfab_title_id: String = "", playfab_enabled: bool = false) -> void:
+func _on_menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_background: String, menu_music: String = "", playfab_title_id: String = "", playfab_enabled: bool = false, patreon_url: String = "", itchio_url: String = "") -> void:
 	_main._editor_main._story.menu_title = menu_title
 	_main._editor_main._story.menu_subtitle = menu_subtitle
 	_main._editor_main._story.menu_background = menu_background
 	_main._editor_main._story.menu_music = menu_music
 	_main._editor_main._story.playfab_title_id = playfab_title_id
 	_main._editor_main._story.playfab_enabled = playfab_enabled
+	_main._editor_main._story.patreon_url = patreon_url
+	_main._editor_main._story.itchio_url = itchio_url
 
 
 func on_variables_changed() -> void:

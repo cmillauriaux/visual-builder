@@ -64,6 +64,20 @@ func test_has_new_game_button() -> void:
 	assert_eq(_menu._new_game_button.text, "Nouvelle partie")
 
 
+func test_has_patreon_button() -> void:
+	assert_not_null(_menu._patreon_button, "should have patreon button")
+	assert_eq(_menu._patreon_button.text, "Patreon")
+
+func test_has_itchio_button() -> void:
+	assert_not_null(_menu._itchio_button, "should have itchio button")
+	assert_eq(_menu._itchio_button.text, "itch.io")
+
+func test_patreon_button_hidden_by_default() -> void:
+	assert_false(_menu._patreon_button.visible)
+
+func test_itchio_button_hidden_by_default() -> void:
+	assert_false(_menu._itchio_button.visible)
+
 func test_has_quit_button() -> void:
 	assert_not_null(_menu._quit_button, "should have quit button")
 	assert_eq(_menu._quit_button.text, "Quitter")
@@ -105,6 +119,8 @@ func test_button_minimum_size() -> void:
 	assert_eq(_menu._load_button.custom_minimum_size, Vector2(300, 50))
 	assert_eq(_menu._options_button.custom_minimum_size, Vector2(300, 50))
 	assert_eq(_menu._new_game_button.custom_minimum_size, Vector2(300, 50))
+	assert_eq(_menu._patreon_button.custom_minimum_size, Vector2(300, 50))
+	assert_eq(_menu._itchio_button.custom_minimum_size, Vector2(300, 50))
 	assert_eq(_menu._quit_button.custom_minimum_size, Vector2(300, 50))
 
 
@@ -119,3 +135,27 @@ func test_options_signal() -> void:
 	watch_signals(_menu)
 	_menu._options_button.pressed.emit()
 	assert_signal_emitted(_menu, "options_pressed")
+
+
+# --- Liens externes ---
+
+func test_set_external_links_shows_patreon() -> void:
+	_menu.set_external_links("https://www.patreon.com/test", "")
+	assert_true(_menu._patreon_button.visible)
+	assert_false(_menu._itchio_button.visible)
+
+func test_set_external_links_shows_itchio() -> void:
+	_menu.set_external_links("", "https://mygame.itch.io/game")
+	assert_false(_menu._patreon_button.visible)
+	assert_true(_menu._itchio_button.visible)
+
+func test_set_external_links_shows_both() -> void:
+	_menu.set_external_links("https://www.patreon.com/test", "https://mygame.itch.io/game")
+	assert_true(_menu._patreon_button.visible)
+	assert_true(_menu._itchio_button.visible)
+
+func test_set_external_links_hides_both_when_empty() -> void:
+	_menu.set_external_links("https://www.patreon.com/test", "https://mygame.itch.io/game")
+	_menu.set_external_links("", "")
+	assert_false(_menu._patreon_button.visible)
+	assert_false(_menu._itchio_button.visible)

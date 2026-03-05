@@ -2,7 +2,7 @@ extends ConfirmationDialog
 
 ## Dialogue de configuration du menu principal de la story.
 
-signal menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_background: String, menu_music: String, playfab_title_id: String, playfab_enabled: bool)
+signal menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_background: String, menu_music: String, playfab_title_id: String, playfab_enabled: bool, patreon_url: String, itchio_url: String)
 
 const ImagePickerDialogScript = preload("res://src/ui/dialogs/image_picker_dialog.gd")
 const AudioPickerDialogScript = preload("res://src/ui/dialogs/audio_picker_dialog.gd")
@@ -17,6 +17,8 @@ var _menu_music_label: Label
 var _clear_music_button: Button
 var _playfab_title_id_edit: LineEdit
 var _playfab_enabled_check: CheckButton
+var _patreon_url_edit: LineEdit
+var _itchio_url_edit: LineEdit
 var _story_base_path: String = ""
 var _current_menu_music: String = ""
 
@@ -130,6 +132,33 @@ func _init():
 	_playfab_enabled_check.text = "Activer le tracking PlayFab"
 	vbox.add_child(_playfab_enabled_check)
 
+	var links_separator = HSeparator.new()
+	links_separator.name = "LinksSeparator"
+	vbox.add_child(links_separator)
+
+	var links_label = Label.new()
+	links_label.text = "Liens externes"
+	links_label.add_theme_font_size_override("font_size", 16)
+	vbox.add_child(links_label)
+
+	var patreon_label = Label.new()
+	patreon_label.text = "URL Patreon"
+	vbox.add_child(patreon_label)
+
+	_patreon_url_edit = LineEdit.new()
+	_patreon_url_edit.name = "PatreonUrlEdit"
+	_patreon_url_edit.placeholder_text = "https://www.patreon.com/..."
+	vbox.add_child(_patreon_url_edit)
+
+	var itchio_label = Label.new()
+	itchio_label.text = "URL itch.io"
+	vbox.add_child(itchio_label)
+
+	_itchio_url_edit = LineEdit.new()
+	_itchio_url_edit.name = "ItchioUrlEdit"
+	_itchio_url_edit.placeholder_text = "https://votrejeu.itch.io/..."
+	vbox.add_child(_itchio_url_edit)
+
 	add_child(vbox)
 
 	confirmed.connect(_on_confirmed)
@@ -140,6 +169,8 @@ func setup(story, story_base_path: String = "") -> void:
 	_menu_bg_edit.text = story.menu_background
 	_playfab_title_id_edit.text = story.playfab_title_id
 	_playfab_enabled_check.button_pressed = story.playfab_enabled
+	_patreon_url_edit.text = story.patreon_url if story.get("patreon_url") != null else ""
+	_itchio_url_edit.text = story.itchio_url if story.get("itchio_url") != null else ""
 	_story_base_path = story_base_path
 	_current_menu_music = story.menu_music if story.get("menu_music") != null else ""
 	_update_menu_music_label()
@@ -215,5 +246,19 @@ func get_playfab_title_id() -> String:
 func get_playfab_enabled() -> bool:
 	return _playfab_enabled_check.button_pressed
 
+func get_patreon_url() -> String:
+	return _patreon_url_edit.text
+
+func get_itchio_url() -> String:
+	return _itchio_url_edit.text
+
+static func _validate_url(url: String) -> String:
+	var trimmed = url.strip_edges()
+	if trimmed == "":
+		return ""
+	if trimmed.begins_with("http://") or trimmed.begins_with("https://"):
+		return trimmed
+	return ""
+
 func _on_confirmed() -> void:
-	menu_config_confirmed.emit(_menu_title_edit.text, _menu_subtitle_edit.text, _menu_bg_edit.text, _current_menu_music, _playfab_title_id_edit.text, _playfab_enabled_check.button_pressed)
+	menu_config_confirmed.emit(_menu_title_edit.text, _menu_subtitle_edit.text, _menu_bg_edit.text, _current_menu_music, _playfab_title_id_edit.text, _playfab_enabled_check.button_pressed, _validate_url(_patreon_url_edit.text), _validate_url(_itchio_url_edit.text))

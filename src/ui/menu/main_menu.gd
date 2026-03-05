@@ -21,6 +21,8 @@ var _subtitle_label: Label
 var _new_game_button: Button
 var _load_game_button: Button
 var _options_button: Button
+var _patreon_button: Button
+var _itchio_button: Button
 var _quit_button: Button
 var _options_menu: PanelContainer
 var _options_center: CenterContainer
@@ -117,6 +119,18 @@ func build_ui() -> void:
 	_options_button.pressed.connect(_on_options_pressed)
 	vbox.add_child(_options_button)
 
+	_patreon_button = _create_menu_button("Patreon")
+	_patreon_button.pressed.connect(_on_patreon_pressed)
+	GameTheme.apply_link_style(_patreon_button, Color("#FF424D"))
+	_patreon_button.visible = false
+	vbox.add_child(_patreon_button)
+
+	_itchio_button = _create_menu_button("itch.io")
+	_itchio_button.pressed.connect(_on_itchio_pressed)
+	GameTheme.apply_link_style(_itchio_button, Color("#FA5C5C"))
+	_itchio_button.visible = false
+	vbox.add_child(_itchio_button)
+
 	_quit_button = _create_menu_button("Quitter")
 	_quit_button.pressed.connect(func(): quit_pressed.emit())
 	GameTheme.apply_danger_style(_quit_button)
@@ -151,23 +165,25 @@ func setup(story, base_path: String) -> void:
 func _update_display() -> void:
 	if _current_story == null:
 		return
-		
+
 	var title_to_use = _current_story.menu_title if _current_story.menu_title != "" else _current_story.title
 	_title_label.text = StoryI18nService.get_ui_string(title_to_use, _last_i18n_dict)
 	_subtitle_label.text = StoryI18nService.get_ui_string(_current_story.menu_subtitle, _last_i18n_dict)
 
 	if _current_story.menu_background != "":
-		# On utilise path_join pour éviter de doubler "assets/"
-		# story.menu_background est déjà "assets/backgrounds/image.png"
 		var full_path = _current_base_path.path_join(_current_story.menu_background)
 		var tex = TextureLoader.load_texture(full_path)
 		if tex:
 			_background.texture = tex
 		else:
-			# Fallback si le chemin relatif ne marche pas (ex: export PCK interne)
 			_background.texture = TextureLoader.load_texture(_current_story.menu_background)
 	else:
 		_background.texture = null
+
+	var patreon_url = _current_story.patreon_url if _current_story.get("patreon_url") != null else ""
+	var itchio_url = _current_story.itchio_url if _current_story.get("itchio_url") != null else ""
+	_patreon_button.visible = patreon_url != ""
+	_itchio_button.visible = itchio_url != ""
 
 
 func set_settings(settings: RefCounted) -> void:
@@ -194,9 +210,21 @@ func apply_ui_translations(i18n_dict: Dictionary) -> void:
 	_new_game_button.text = StoryI18nService.get_ui_string("Nouvelle partie", i18n_dict)
 	_load_game_button.text = StoryI18nService.get_ui_string("Charger partie", i18n_dict)
 	_options_button.text = StoryI18nService.get_ui_string("Options", i18n_dict)
+	_patreon_button.text = StoryI18nService.get_ui_string("Patreon", i18n_dict)
+	_itchio_button.text = StoryI18nService.get_ui_string("itch.io", i18n_dict)
 	_quit_button.text = StoryI18nService.get_ui_string("Quitter", i18n_dict)
 	_options_menu.apply_ui_translations(i18n_dict)
 	_update_display()
+
+
+func _on_patreon_pressed() -> void:
+	if _current_story and _current_story.patreon_url != "":
+		OS.shell_open(_current_story.patreon_url)
+
+
+func _on_itchio_pressed() -> void:
+	if _current_story and _current_story.itchio_url != "":
+		OS.shell_open(_current_story.itchio_url)
 
 
 func _create_menu_button(text: String) -> Button:
