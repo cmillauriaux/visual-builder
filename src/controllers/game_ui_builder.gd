@@ -28,8 +28,10 @@ static func build(game: Control) -> void:
 	_build_variable_display(game)
 	_build_menu_button(game)
 	_build_music_player(game)
-	# Auto-play button — added last so it renders on top of everything
-	_build_auto_play_button(game)
+	# Play buttons bar (Save, Load, Auto) — added last so it renders on top of everything
+	_build_play_buttons_bar(game)
+	_build_toast_overlay(game)
+	_build_quickload_confirm(game)
 
 
 static func _build_visual_editor(game: Control) -> void:
@@ -61,10 +63,19 @@ static func _build_play_overlay(game: Control) -> void:
 	game._play_text_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	play_vbox.add_child(game._play_text_label)
 
-	# Auto-play button — created here, added to game at the end of build() to stay on top
+	# Boutons de jeu — créés ici, ajoutés dans _build_play_buttons_bar() à la fin
+	game._quicksave_button = Button.new()
+	game._quicksave_button.text = "Save (F5)"
+	game._quicksave_button.custom_minimum_size = Vector2(120, 30)
+	game._quicksave_button.clip_text = true
+
+	game._quickload_button = Button.new()
+	game._quickload_button.text = "Load (F9)"
+	game._quickload_button.custom_minimum_size = Vector2(120, 30)
+	game._quickload_button.clip_text = true
+
 	game._auto_play_button = Button.new()
 	game._auto_play_button.text = "Auto"
-	game._auto_play_button.visible = false
 	game._auto_play_button.custom_minimum_size = Vector2(120, 30)
 	game._auto_play_button.clip_text = true
 
@@ -105,15 +116,85 @@ static func _build_play_overlay(game: Control) -> void:
 	title_vbox.add_child(game._play_subtitle_label)
 
 
-static func _build_auto_play_button(game: Control) -> void:
-	# Align right edge with the visible brown border of the play overlay
-	# panel_brown.png has ~3px transparent rounded corners on edges
-	game._auto_play_button.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
-	game._auto_play_button.offset_left = -123
-	game._auto_play_button.offset_right = -3
-	game._auto_play_button.offset_top = -188
-	game._auto_play_button.offset_bottom = -150
-	game.add_child(game._auto_play_button)
+static func _build_play_buttons_bar(game: Control) -> void:
+	game._play_buttons_bar = HBoxContainer.new()
+	game._play_buttons_bar.visible = false
+	game._play_buttons_bar.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	game._play_buttons_bar.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	game._play_buttons_bar.offset_right = -3
+	game._play_buttons_bar.offset_top = -188
+	game._play_buttons_bar.offset_bottom = -150
+	game._play_buttons_bar.add_theme_constant_override("separation", 4)
+	game._play_buttons_bar.add_child(game._quicksave_button)
+	game._play_buttons_bar.add_child(game._quickload_button)
+	game._play_buttons_bar.add_child(game._auto_play_button)
+	game.add_child(game._play_buttons_bar)
+
+
+static func _build_toast_overlay(game: Control) -> void:
+	game._toast_overlay = PanelContainer.new()
+	game._toast_overlay.visible = false
+	game._toast_overlay.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	game._toast_overlay.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	game._toast_overlay.grow_vertical = Control.GROW_DIRECTION_END
+	game._toast_overlay.offset_top = 8
+	game._toast_overlay.offset_right = -8
+	game._toast_overlay.custom_minimum_size = Vector2(300, 0)
+	game._toast_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	game._toast_overlay.z_index = 100
+	game.add_child(game._toast_overlay)
+
+	game._toast_label = Label.new()
+	game._toast_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	game._toast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	game._toast_overlay.add_child(game._toast_label)
+
+
+static func _build_quickload_confirm(game: Control) -> void:
+	game._quickload_confirm_overlay = Control.new()
+	game._quickload_confirm_overlay.visible = false
+	game._quickload_confirm_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	game._quickload_confirm_overlay.process_mode = Node.PROCESS_MODE_ALWAYS
+	game.add_child(game._quickload_confirm_overlay)
+
+	var bg := ColorRect.new()
+	bg.color = Color(0, 0, 0, 0.6)
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	bg.mouse_filter = Control.MOUSE_FILTER_STOP
+	game._quickload_confirm_overlay.add_child(bg)
+
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	game._quickload_confirm_overlay.add_child(center)
+
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(400, 0)
+	center.add_child(panel)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 16)
+	panel.add_child(vbox)
+
+	game._quickload_confirm_label = Label.new()
+	game._quickload_confirm_label.text = "Charger la sauvegarde rapide ?"
+	game._quickload_confirm_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	game._quickload_confirm_label.add_theme_font_size_override("font_size", 20)
+	vbox.add_child(game._quickload_confirm_label)
+
+	var hbox := HBoxContainer.new()
+	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	hbox.add_theme_constant_override("separation", 16)
+	vbox.add_child(hbox)
+
+	game._quickload_yes_btn = Button.new()
+	game._quickload_yes_btn.text = "Oui"
+	game._quickload_yes_btn.custom_minimum_size = Vector2(120, 40)
+	hbox.add_child(game._quickload_yes_btn)
+
+	game._quickload_no_btn = Button.new()
+	game._quickload_no_btn.text = "Non"
+	game._quickload_no_btn.custom_minimum_size = Vector2(120, 40)
+	hbox.add_child(game._quickload_no_btn)
 
 
 static func _build_menu_button(game: Control) -> void:

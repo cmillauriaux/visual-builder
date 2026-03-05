@@ -7,14 +7,14 @@ const GameSaveManager = preload("res://src/persistence/game_save_manager.gd")
 var _original_save_dir: String = ""
 
 func before_each():
-	# Réinitialiser les slots de test en nettoyant user://saves/slot_0 à slot_5
 	for i in range(GameSaveManager.NUM_SLOTS):
 		GameSaveManager.delete_save(i)
+	GameSaveManager.delete_quicksave()
 
 func after_each():
-	# Nettoyage après chaque test
 	for i in range(GameSaveManager.NUM_SLOTS):
 		GameSaveManager.delete_save(i)
+	GameSaveManager.delete_quicksave()
 
 
 func _make_state(story_path: String = "user://stories/test") -> Dictionary:
@@ -185,3 +185,90 @@ func test_list_saves_valid_story_path_kept():
 	var saves := GameSaveManager.list_saves()
 	# story_path vide = pas de vérification, la save est conservée
 	assert_true(saves[0].get("has_data", false))
+
+
+# --- quicksave_exists ---
+
+func test_quicksave_exists_false_initially():
+	assert_false(GameSaveManager.quicksave_exists())
+
+
+func test_quicksave_exists_true_after_save():
+	GameSaveManager.quicksave(_make_state(""), null)
+	assert_true(GameSaveManager.quicksave_exists())
+
+
+# --- quicksave ---
+
+func test_quicksave_creates_json_file():
+	GameSaveManager.quicksave(_make_state(""), null)
+	assert_true(FileAccess.file_exists("%s/save.json" % GameSaveManager.QUICKSAVE_DIR))
+
+
+func test_quicksave_creates_screenshot_file():
+	GameSaveManager.quicksave(_make_state(""), _make_dummy_image())
+	assert_true(FileAccess.file_exists("%s/screenshot.png" % GameSaveManager.QUICKSAVE_DIR))
+
+
+func test_quicksave_returns_true_on_success():
+	var ok := GameSaveManager.quicksave(_make_state(""), null)
+	assert_true(ok)
+
+
+func test_quicksave_injects_version():
+	GameSaveManager.quicksave(_make_state(""), null)
+	var data := GameSaveManager.quickload()
+	assert_eq(data.get("version"), GameSaveManager.SAVE_VERSION)
+
+
+func test_quicksave_preserves_all_state_fields():
+	GameSaveManager.quicksave(_make_state(""), null)
+	var loaded := GameSaveManager.quickload()
+	assert_eq(loaded.get("chapter_uuid"), "chap-001")
+	assert_eq(loaded.get("scene_uuid"), "scene-001")
+	assert_eq(loaded.get("dialogue_index"), 2)
+
+
+func test_quicksave_overwrites_previous():
+	GameSaveManager.quicksave(_make_state(""), null)
+	var state2 := _make_state("")
+	state2["dialogue_index"] = 42
+	GameSaveManager.quicksave(state2, null)
+	var loaded := GameSaveManager.quickload()
+	assert_eq(loaded.get("dialogue_index"), 42)
+
+
+# --- quickload ---
+
+func test_quickload_returns_empty_dict_when_no_quicksave():
+	var data := GameSaveManager.quickload()
+	assert_eq(data, {})
+
+
+func test_quickload_returns_saved_data():
+	GameSaveManager.quicksave(_make_state(""), null)
+	var data := GameSaveManager.quickload()
+	assert_eq(data.get("chapter_name"), "Chapitre 1")
+
+
+# --- delete_quicksave ---
+
+func test_delete_quicksave_removes_files():
+	GameSaveManager.quicksave(_make_state(""), _make_dummy_image())
+	GameSaveManager.delete_quicksave()
+	assert_false(GameSaveManager.quicksave_exists())
+	assert_false(FileAccess.file_exists("%s/screenshot.png" % GameSaveManager.QUICKSAVE_DIR))
+
+
+func test_delete_quicksave_on_empty_does_not_crash():
+	GameSaveManager.delete_quicksave()
+	assert_false(GameSaveManager.quicksave_exists())
+
+
+# --- quicksave isolation ---
+
+func test_quicksave_does_not_affect_regular_slots():
+	GameSaveManager.quicksave(_make_state(""), null)
+	var saves := GameSaveManager.list_saves()
+	for entry in saves:
+		assert_false(entry.get("has_data", false))

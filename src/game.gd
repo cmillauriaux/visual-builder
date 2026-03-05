@@ -44,9 +44,12 @@ var _play_title_overlay: CenterContainer
 var _play_title_label: Label
 var _play_subtitle_label: Label
 
-# UI — Menu button, Auto-play button & Pause menu
+# UI — Menu button, Play buttons bar & Pause menu
 var _menu_button: Button
 var _auto_play_button: Button
+var _quicksave_button: Button
+var _quickload_button: Button
+var _play_buttons_bar: HBoxContainer
 var _pause_menu: Control
 
 # UI — Save/Load menu
@@ -71,6 +74,17 @@ var _main_menu: Control
 # UI — Options menu (pause context)
 var _pause_options_center: CenterContainer
 var _pause_options_menu: PanelContainer
+
+# UI — Toast
+var _toast_overlay: PanelContainer
+var _toast_label: Label
+var _toast_generation: int = 0
+
+# UI — Quickload confirmation
+var _quickload_confirm_overlay: Control
+var _quickload_confirm_label: Label
+var _quickload_yes_btn: Button
+var _quickload_no_btn: Button
 
 # Analytics
 var _analytics: Node
@@ -166,6 +180,12 @@ func _ready() -> void:
 	_save_load_menu.load_slot_pressed.connect(_on_load_slot)
 	_save_load_menu.delete_slot_pressed.connect(_on_delete_slot)
 	_save_load_menu.close_pressed.connect(_on_save_load_close)
+
+	# Connecter les signaux quicksave/quickload
+	_quicksave_button.pressed.connect(_on_quicksave)
+	_quickload_button.pressed.connect(_on_quickload)
+	_quickload_yes_btn.pressed.connect(_do_quickload)
+	_quickload_no_btn.pressed.connect(_cancel_quickload)
 
 	# Chercher si un chemin est forcé via override.cfg/settings
 	var override_path = ProjectSettings.get_setting("application/config/story_path", "")
@@ -558,3 +578,88 @@ func _on_analytics_choice_made(sequence_uuid: String, choice_index: int, choice_
 func _on_analytics_story_finished(reason: String) -> void:
 	_analytics.track_event("story_finished", {"reason": reason})
 	_analytics.flush()
+
+
+# --- Quicksave / Quickload ---
+
+func _input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_F5:
+			_on_quicksave()
+			get_viewport().set_input_as_handled()
+		elif event.keycode == KEY_F9:
+			_on_quickload()
+			get_viewport().set_input_as_handled()
+
+
+func _can_quicksave() -> bool:
+	return _sequence_editor_ctrl.is_playing() and not get_tree().paused
+
+
+func _on_quicksave() -> void:
+	if not _can_quicksave():
+		return
+	var screenshot := get_viewport().get_texture().get_image()
+	var state := _collect_game_state()
+	var ok := GameSaveManager.quicksave(state, screenshot)
+	if ok:
+		_show_toast(StoryI18nService.get_ui_string("Sauvegarde rapide effectuée", _i18n_dict))
+		_analytics.track_event("quicksave", {
+			"story_title": _current_story.title if _current_story else "",
+			"chapter": state.get("chapter_name", ""),
+		})
+
+
+func _on_quickload() -> void:
+	if not _can_quicksave():
+		return
+	if not GameSaveManager.quicksave_exists():
+		_show_toast(StoryI18nService.get_ui_string("Aucune sauvegarde rapide", _i18n_dict))
+		return
+	_show_quickload_confirm()
+
+
+func _show_quickload_confirm() -> void:
+	get_tree().paused = true
+	_quickload_confirm_overlay.visible = true
+
+
+func _do_quickload() -> void:
+	_quickload_confirm_overlay.visible = false
+	var save_data := GameSaveManager.quickload()
+	if save_data.is_empty():
+		get_tree().paused = false
+		return
+	get_tree().paused = false
+	var target_path: String = save_data.get("story_path", "")
+	if target_path != _current_story_path and target_path != "":
+		TextureLoader.base_dir = target_path
+		var story = StorySaver.load_story(target_path)
+		if story == null:
+			_show_error(StoryI18nService.get_ui_string("Impossible de charger la story sauvegardée.", _i18n_dict))
+			return
+		_current_story = story
+		_current_story_path = target_path
+		_reload_i18n()
+	_analytics.track_event("quickload", {
+		"story_title": _current_story.title if _current_story else "",
+	})
+	_play_ctrl.start_from_save(_current_story, save_data, _current_story_path)
+
+
+func _cancel_quickload() -> void:
+	_quickload_confirm_overlay.visible = false
+	get_tree().paused = false
+
+
+# --- Toast ---
+
+func _show_toast(message: String) -> void:
+	_toast_label.text = message
+	_toast_overlay.visible = true
+	_toast_generation += 1
+	var gen := _toast_generation
+	get_tree().create_timer(3.0).timeout.connect(func():
+		if _toast_generation == gen:
+			_toast_overlay.visible = false
+	)

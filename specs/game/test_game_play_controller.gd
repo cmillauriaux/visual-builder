@@ -144,8 +144,8 @@ func test_auto_play_button_exists() -> void:
 	assert_eq(_game._auto_play_button.text, "Auto")
 
 
-func test_auto_play_button_hidden_by_default() -> void:
-	assert_false(_game._auto_play_button.visible)
+func test_play_buttons_bar_hidden_by_default() -> void:
+	assert_false(_game._play_buttons_bar.visible)
 
 
 func test_auto_play_button_pressed_toggles_on() -> void:

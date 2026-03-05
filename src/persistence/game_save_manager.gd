@@ -7,6 +7,7 @@ extends RefCounted
 const SAVE_VERSION: int = 1
 const NUM_SLOTS: int = 6
 const SAVE_DIR: String = "user://saves"
+const QUICKSAVE_DIR: String = "user://saves/quicksave"
 
 
 static func get_slot_dir(slot_index: int) -> String:
@@ -98,6 +99,53 @@ static func list_saves() -> Array:
 					entry["has_screenshot"] = FileAccess.file_exists(get_screenshot_path(i))
 		result.append(entry)
 	return result
+
+
+## Vérifie si une sauvegarde rapide existe.
+static func quicksave_exists() -> bool:
+	return FileAccess.file_exists("%s/save.json" % QUICKSAVE_DIR)
+
+
+## Sauvegarde rapide dans le slot dédié. Écrase silencieusement la précédente.
+static func quicksave(state: Dictionary, screenshot: Image) -> bool:
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(QUICKSAVE_DIR))
+	var save_path := "%s/save.json" % QUICKSAVE_DIR
+	var file := FileAccess.open(save_path, FileAccess.WRITE)
+	if file == null:
+		return false
+	var data := state.duplicate()
+	data["version"] = SAVE_VERSION
+	file.store_string(JSON.stringify(data, "\t"))
+	file.close()
+	if screenshot != null:
+		screenshot.save_png("%s/screenshot.png" % QUICKSAVE_DIR)
+	return true
+
+
+## Charge la sauvegarde rapide. Retourne {} si aucune sauvegarde.
+static func quickload() -> Dictionary:
+	var save_path := "%s/save.json" % QUICKSAVE_DIR
+	if not FileAccess.file_exists(save_path):
+		return {}
+	var file := FileAccess.open(save_path, FileAccess.READ)
+	if file == null:
+		return {}
+	var content := file.get_as_text()
+	file.close()
+	var parsed = JSON.parse_string(content)
+	if parsed == null or not parsed is Dictionary:
+		return {}
+	return parsed
+
+
+## Supprime la sauvegarde rapide.
+static func delete_quicksave() -> void:
+	var save_path := "%s/save.json" % QUICKSAVE_DIR
+	var png_path := "%s/screenshot.png" % QUICKSAVE_DIR
+	if FileAccess.file_exists(save_path):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(save_path))
+	if FileAccess.file_exists(png_path):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(png_path))
 
 
 ## Vérifie si la story_path pointe vers un fichier de story existant.

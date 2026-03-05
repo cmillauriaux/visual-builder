@@ -30,6 +30,7 @@ var _story_base_path: String = ""
 var _music_player: Node = null
 var _auto_play: RefCounted = null
 var _auto_play_button: Button = null
+var _play_buttons_bar: HBoxContainer = null
 var _typewriter_speed: float = 0.03
 
 signal play_finished_show_menu()
@@ -77,6 +78,8 @@ func setup(game: Control) -> void:
 		_music_player = game._music_player
 	if game.get("_auto_play_button") != null:
 		_auto_play_button = game._auto_play_button
+	if game.get("_play_buttons_bar") != null:
+		_play_buttons_bar = game._play_buttons_bar
 	_auto_play = AutoPlayManagerScript.new()
 	_auto_play.setup(game.get_tree())
 	_auto_play.auto_advance_requested.connect(_on_auto_advance)
@@ -191,9 +194,9 @@ func _start_sequence_actually() -> void:
 		_sequence_editor_ctrl.start_play()
 	if _sequence_editor_ctrl.is_playing():
 		_play_overlay.visible = true
-		if _auto_play_button:
-			_auto_play_button.visible = true
-			_game.move_child(_auto_play_button, -1)
+		if _play_buttons_bar:
+			_play_buttons_bar.visible = true
+			_game.move_child(_play_buttons_bar, -1)
 		_visual_editor._overlay_container.add_child(_play_overlay)
 		if _typewriter_speed == 0.0:
 			_sequence_editor_ctrl.skip_typewriter()
@@ -370,8 +373,8 @@ func on_play_stopped() -> void:
 
 func _handle_play_stopped() -> void:
 	_play_overlay.visible = false
-	if _auto_play_button:
-		_auto_play_button.visible = false
+	if _play_buttons_bar:
+		_play_buttons_bar.visible = false
 	_typewriter_timer.stop()
 	if _auto_play:
 		_auto_play.stop_timer()
@@ -518,8 +521,8 @@ func _cleanup_play() -> void:
 	if _auto_play:
 		_auto_play.reset()
 	_menu_button.visible = false
-	if _auto_play_button:
-		_auto_play_button.visible = false
+	if _play_buttons_bar:
+		_play_buttons_bar.visible = false
 	_play_overlay.visible = false
 	_typewriter_timer.stop()
 	if _play_overlay.get_parent():
