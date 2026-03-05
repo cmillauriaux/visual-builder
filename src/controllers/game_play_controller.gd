@@ -32,6 +32,7 @@ var _auto_play: RefCounted = null
 var _auto_play_button: Button = null
 var _play_buttons_bar: HBoxContainer = null
 var _typewriter_speed: float = 0.03
+var _dialogue_opacity: float = 0.8
 
 signal play_finished_show_menu()
 
@@ -49,6 +50,12 @@ func set_typewriter_speed(speed: float) -> void:
 	_typewriter_speed = speed
 	if speed > 0.0:
 		_typewriter_timer.wait_time = speed
+
+
+func set_dialogue_opacity(value: float) -> void:
+	_dialogue_opacity = value
+	if _play_overlay:
+		_play_overlay.self_modulate.a = value
 
 
 func set_auto_play_enabled(enabled: bool) -> void:

@@ -75,6 +75,10 @@ func test_has_typewriter_speed_option():
 	assert_not_null(_menu._typewriter_speed_option)
 	assert_is(_menu._typewriter_speed_option, OptionButton)
 
+func test_has_dialogue_opacity_slider():
+	assert_not_null(_menu._dialogue_opacity_slider)
+	assert_is(_menu._dialogue_opacity_slider, HSlider)
+
 
 # --- Résolutions ---
 
@@ -190,6 +194,15 @@ func test_load_values_typewriter_speed_instant():
 	_menu.load_from_settings(_settings)
 	assert_eq(_menu._typewriter_speed_option.selected, 3)  # Instantané
 
+func test_load_values_dialogue_opacity():
+	_settings.dialogue_opacity = 50
+	_menu.load_from_settings(_settings)
+	assert_eq(int(_menu._dialogue_opacity_slider.value), 50)
+
+func test_load_values_dialogue_opacity_default():
+	_menu.load_from_settings(_settings)
+	assert_eq(int(_menu._dialogue_opacity_slider.value), 80)
+
 func test_auto_play_delay_disabled_when_auto_play_off():
 	_settings.auto_play_enabled = false
 	_menu.load_from_settings(_settings)
@@ -285,6 +298,12 @@ func test_apply_typewriter_speed_instant():
 	_menu.apply_to_settings(_settings, _test_cfg_path)
 	assert_eq(_settings.typewriter_speed, 0.0)
 
+
+func test_apply_dialogue_opacity():
+	_menu.load_from_settings(_settings)
+	_menu._dialogue_opacity_slider.value = 40
+	_menu.apply_to_settings(_settings, _test_cfg_path)
+	assert_eq(_settings.dialogue_opacity, 40)
 
 func test_apply_emits_applied_signal():
 	watch_signals(_menu)

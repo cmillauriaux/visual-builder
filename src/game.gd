@@ -120,6 +120,7 @@ func _ready() -> void:
 	_play_ctrl.set_auto_play_delay(_settings.auto_play_delay)
 	_play_ctrl.set_auto_play_enabled(_settings.auto_play_enabled)
 	_play_ctrl.set_typewriter_speed(_settings.typewriter_speed)
+	_play_ctrl.set_dialogue_opacity(_settings.dialogue_opacity / 100.0)
 	_typewriter_timer.timeout.connect(_play_ctrl.on_typewriter_tick)
 	_story_play_ctrl.sequence_play_requested.connect(_play_ctrl.on_sequence_play_requested)
 	_story_play_ctrl.choice_display_requested.connect(_play_ctrl.on_choice_display_requested)
@@ -253,6 +254,7 @@ func _on_options_applied() -> void:
 	_play_ctrl.set_auto_play_delay(_settings.auto_play_delay)
 	_play_ctrl.set_auto_play_enabled(_settings.auto_play_enabled)
 	_play_ctrl.set_typewriter_speed(_settings.typewriter_speed)
+	_play_ctrl.set_dialogue_opacity(_settings.dialogue_opacity / 100.0)
 
 
 func _show_main_menu(story) -> void:

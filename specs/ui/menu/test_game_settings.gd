@@ -50,6 +50,9 @@ func test_default_auto_play_delay():
 func test_default_typewriter_speed():
 	assert_eq(_settings.typewriter_speed, 0.03)
 
+func test_default_dialogue_opacity():
+	assert_eq(_settings.dialogue_opacity, 80)
+
 
 # --- Sauvegarde et chargement ---
 
@@ -140,6 +143,27 @@ func test_save_and_load_typewriter_speed_instant():
 	var loaded = GameSettings.new()
 	loaded.load_settings(_test_cfg_path)
 	assert_eq(loaded.typewriter_speed, 0.0)
+
+func test_save_and_load_dialogue_opacity():
+	_settings.dialogue_opacity = 50
+	_settings.save_settings(_test_cfg_path)
+	var loaded = GameSettings.new()
+	loaded.load_settings(_test_cfg_path)
+	assert_eq(loaded.dialogue_opacity, 50)
+
+func test_save_and_load_dialogue_opacity_zero():
+	_settings.dialogue_opacity = 0
+	_settings.save_settings(_test_cfg_path)
+	var loaded = GameSettings.new()
+	loaded.load_settings(_test_cfg_path)
+	assert_eq(loaded.dialogue_opacity, 0)
+
+func test_save_and_load_dialogue_opacity_full():
+	_settings.dialogue_opacity = 100
+	_settings.save_settings(_test_cfg_path)
+	var loaded = GameSettings.new()
+	loaded.load_settings(_test_cfg_path)
+	assert_eq(loaded.dialogue_opacity, 100)
 
 func test_load_nonexistent_file_uses_defaults():
 	_settings.load_settings("user://nonexistent_test_settings.cfg")

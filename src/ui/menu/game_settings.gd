@@ -28,6 +28,7 @@ var language: String = "fr"
 var auto_play_enabled: bool = false
 var auto_play_delay: float = 2.0
 var typewriter_speed: float = 0.03
+var dialogue_opacity: int = 80
 
 const TYPEWRITER_SPEEDS: Array[float] = [0.06, 0.03, 0.015, 0.0]
 const TYPEWRITER_SPEED_LABELS: Array[String] = ["Lent", "Normal", "Rapide", "Instantané"]
@@ -40,6 +41,7 @@ func load_settings(path: String = SETTINGS_PATH) -> void:
 	resolution.x = cfg.get_value("display", "resolution_x", 1920)
 	resolution.y = cfg.get_value("display", "resolution_y", 1080)
 	fullscreen = cfg.get_value("display", "fullscreen", false)
+	dialogue_opacity = cfg.get_value("display", "dialogue_opacity", 80)
 	music_enabled = cfg.get_value("audio", "music_enabled", true)
 	music_volume = cfg.get_value("audio", "music_volume", 80)
 	fx_enabled = cfg.get_value("audio", "fx_enabled", true)
@@ -55,6 +57,7 @@ func save_settings(path: String = SETTINGS_PATH) -> void:
 	cfg.set_value("display", "resolution_x", resolution.x)
 	cfg.set_value("display", "resolution_y", resolution.y)
 	cfg.set_value("display", "fullscreen", fullscreen)
+	cfg.set_value("display", "dialogue_opacity", dialogue_opacity)
 	cfg.set_value("audio", "music_enabled", music_enabled)
 	cfg.set_value("audio", "music_volume", music_volume)
 	cfg.set_value("audio", "fx_enabled", fx_enabled)

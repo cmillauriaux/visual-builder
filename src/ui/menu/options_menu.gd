@@ -24,6 +24,7 @@ var _language_option: OptionButton
 var _auto_play_enabled_check: CheckButton
 var _auto_play_delay_option: OptionButton
 var _typewriter_speed_option: OptionButton
+var _dialogue_opacity_slider: HSlider
 
 const AUTO_PLAY_DELAYS := [1.0, 2.0, 3.0, 5.0]
 const AUTO_PLAY_DELAY_LABELS := ["1s", "2s", "3s", "5s"]
@@ -77,6 +78,7 @@ func build_ui() -> void:
 	_add_section_label(content, "Affichage")
 	_resolution_option = _add_option_row(content, "Résolution", GameSettings.RESOLUTION_LABELS)
 	_fullscreen_check = _add_check_row(content, "Plein écran")
+	_dialogue_opacity_slider = _add_slider_row(content, "Opacité dialogue")
 
 	content.add_child(HSeparator.new())
 
@@ -122,6 +124,9 @@ func load_from_settings(settings: RefCounted) -> void:
 	# Plein écran
 	_fullscreen_check.button_pressed = settings.fullscreen
 
+	# Opacité dialogue
+	_dialogue_opacity_slider.value = settings.dialogue_opacity
+
 	# Audio
 	_music_enabled_check.button_pressed = settings.music_enabled
 	_music_volume_slider.value = settings.music_volume
@@ -150,6 +155,7 @@ func apply_to_settings(settings: RefCounted, path: String = GameSettings.SETTING
 	if res_idx >= 0 and res_idx < GameSettings.AVAILABLE_RESOLUTIONS.size():
 		settings.resolution = GameSettings.AVAILABLE_RESOLUTIONS[res_idx]
 	settings.fullscreen = _fullscreen_check.button_pressed
+	settings.dialogue_opacity = int(_dialogue_opacity_slider.value)
 	settings.music_enabled = _music_enabled_check.button_pressed
 	settings.music_volume = int(_music_volume_slider.value)
 	settings.fx_enabled = _fx_enabled_check.button_pressed
