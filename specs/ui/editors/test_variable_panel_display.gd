@@ -1,6 +1,6 @@
 extends GutTest
 
-const VariablePanelScript = preload("res://src/ui/editors/variable_panel.gd")
+const VariablePanelScene = preload("res://src/ui/editors/variable_panel.tscn")
 const StoryScript = preload("res://src/models/story.gd")
 const VariableDefinitionScript = preload("res://src/models/variable_definition.gd")
 
@@ -8,13 +8,8 @@ var _panel: VBoxContainer
 
 
 func before_each():
-	_panel = VBoxContainer.new()
-	_panel.set_script(VariablePanelScript)
-	add_child(_panel)
-
-
-func after_each():
-	_panel.queue_free()
+	_panel = VariablePanelScene.instantiate()
+	add_child_autofree(_panel)
 
 
 func _make_story_with_var(vname: String = "score", val: String = "0"):

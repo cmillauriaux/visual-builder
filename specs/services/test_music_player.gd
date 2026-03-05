@@ -62,6 +62,7 @@ func test_play_music_empty_path() -> void:
 func test_play_fx_empty_path() -> void:
 	# play_fx("") ne doit pas provoquer d'erreur
 	_player.play_fx("")
+	assert_eq(_player._current_music_path, "", "Le chemin musique ne doit pas changer")
 
 
 func test_play_menu_music_empty_path() -> void:
