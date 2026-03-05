@@ -9,6 +9,16 @@ var _panel: VBoxContainer
 
 func before_each():
 	_panel = VBoxContainer.new()
+	# Créer la structure de nœuds attendue par @onready
+	var scroll = ScrollContainer.new()
+	scroll.name = "Scroll"
+	_panel.add_child(scroll)
+	var vars_list = VBoxContainer.new()
+	vars_list.name = "VarsList"
+	scroll.add_child(vars_list)
+	var add_btn = Button.new()
+	add_btn.name = "AddBtn"
+	_panel.add_child(add_btn)
 	_panel.set_script(VariablePanelScript)
 	add_child(_panel)
 

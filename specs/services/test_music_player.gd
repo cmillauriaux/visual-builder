@@ -62,6 +62,7 @@ func test_play_music_empty_path() -> void:
 func test_play_fx_empty_path() -> void:
 	# play_fx("") ne doit pas provoquer d'erreur
 	_player.play_fx("")
+	assert_true(true, "play_fx with empty path should not crash")
 
 
 func test_play_menu_music_empty_path() -> void:

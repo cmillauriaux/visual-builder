@@ -103,22 +103,21 @@ func test_ending_editor_in_terminaison_tab():
 
 # --- Placeholders Musique et FX ---
 
-func test_musique_tab_placeholder():
+func test_musique_tab_has_audio_panel():
 	var musique_tab = _main._tab_container.get_child(2)
-	var label = _find_label_in(musique_tab, "À venir")
-	assert_not_null(label, "Musique tab should have 'À venir' label")
+	assert_not_null(musique_tab, "Musique tab should exist")
+	assert_true(musique_tab.is_ancestor_of(_main._audio_panel) or musique_tab == _main._audio_panel.get_parent(),
+		"Musique tab should contain the audio panel")
 
 func test_fx_tab_has_fx_panel():
 	var fx_tab = _main._tab_container.get_child(3)
 	assert_not_null(fx_tab, "FX tab should exist")
 	assert_eq(fx_tab, _main._fx_panel, "FX tab should be the FxPanel")
 
-func test_musique_placeholder_centered():
-	var musique_tab = _main._tab_container.get_child(2)
-	var label = _find_label_in(musique_tab, "À venir")
-	assert_not_null(label)
-	if label:
-		assert_eq(label.horizontal_alignment, HORIZONTAL_ALIGNMENT_CENTER)
+func test_musique_tab_audio_panel_expands():
+	assert_not_null(_main._audio_panel, "Audio panel should exist")
+	assert_eq(_main._audio_panel.size_flags_horizontal, Control.SIZE_EXPAND_FILL,
+		"Audio panel should expand horizontally")
 
 func test_fx_panel_has_add_button():
 	assert_not_null(_main._fx_panel._add_button, "FX panel should have an add button")
