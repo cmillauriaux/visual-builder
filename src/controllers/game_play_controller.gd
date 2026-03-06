@@ -30,9 +30,12 @@ var _story_base_path: String = ""
 var _music_player: Node = null
 var _auto_play: RefCounted = null
 var _auto_play_button: Button = null
+var _skip_button: Button = null
 var _play_buttons_bar: HBoxContainer = null
 var _typewriter_speed: float = 0.03
 var _dialogue_opacity: float = 0.8
+var _skip_max_chapter_index: int = -1
+var _skip_max_scene_index: int = -1
 
 signal play_finished_show_menu()
 
@@ -85,6 +88,8 @@ func setup(game: Control) -> void:
 		_music_player = game._music_player
 	if game.get("_auto_play_button") != null:
 		_auto_play_button = game._auto_play_button
+	if game.get("_skip_button") != null:
+		_skip_button = game._skip_button
 	if game.get("_play_buttons_bar") != null:
 		_play_buttons_bar = game._play_buttons_bar
 	_auto_play = AutoPlayManagerScript.new()
@@ -438,6 +443,9 @@ func _input(event: InputEvent) -> void:
 		else:
 			_sequence_editor_ctrl.advance_play()
 		get_viewport().set_input_as_handled()
+	elif event is InputEventKey and event.pressed and event.keycode == KEY_S:
+		execute_skip()
+		get_viewport().set_input_as_handled()
 
 
 # --- Auto-play ---
@@ -464,6 +472,42 @@ func _on_auto_play_toggled(active: bool) -> void:
 func toggle_auto_play() -> void:
 	if _auto_play:
 		_auto_play.toggle()
+
+
+# --- Skip ---
+
+## Définit la progression maximale calculée depuis les sauvegardes.
+func set_skip_progression(max_ch_idx: int, max_sc_idx: int) -> void:
+	_skip_max_chapter_index = max_ch_idx
+	_skip_max_scene_index = max_sc_idx
+
+
+## Met à jour l'état disabled du bouton Skip selon la scène courante.
+func update_skip_availability(chapter_index: int, scene_index: int) -> void:
+	if _skip_button == null:
+		return
+	_skip_button.disabled = not is_scene_available(chapter_index, scene_index, _skip_max_chapter_index, _skip_max_scene_index)
+
+
+## Calcule si une scène est disponible pour le skip (logique pure, testable).
+static func is_scene_available(ch_idx: int, sc_idx: int, max_ch_idx: int, max_sc_idx: int) -> bool:
+	if max_ch_idx < 0:
+		return false
+	return ch_idx < max_ch_idx or (ch_idx == max_ch_idx and sc_idx <= max_sc_idx)
+
+
+## Saute instantanément à la fin de la séquence courante.
+## Un appui = un saut (action ponctuelle, pas un mode persistant).
+func execute_skip() -> void:
+	if _skip_button == null or _skip_button.disabled:
+		return
+	if not _sequence_editor_ctrl.is_playing():
+		return
+	_typewriter_timer.stop()
+	if _auto_play:
+		_auto_play.stop_timer()
+	_sequence_editor_ctrl.skip_to_end()
+	_handle_play_stopped()
 
 
 # --- Internal ---
@@ -533,6 +577,8 @@ func _cleanup_play() -> void:
 		_music_player.stop_music()
 	if _auto_play:
 		_auto_play.reset()
+	if _skip_button:
+		_skip_button.disabled = true
 	_menu_button.visible = false
 	if _play_buttons_bar:
 		_play_buttons_bar.visible = false

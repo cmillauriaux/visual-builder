@@ -227,3 +227,12 @@ func advance_typewriter() -> void:
 	if _visible_characters >= dlg.text.length():
 		_visible_characters = dlg.text.length()
 		_text_fully_displayed = true
+
+func skip_to_end() -> void:
+	## Stoppe la lecture instantanément sans émettre play_stopped.
+	## Utilisé par le Skip pour déclencher directement la fin de séquence.
+	if not _playing:
+		return
+	_playing = false
+	_play_index = -1
+	_text_fully_displayed = true

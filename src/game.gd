@@ -47,6 +47,7 @@ var _play_subtitle_label: Label
 # UI — Menu button, Play buttons bar & Pause menu
 var _menu_button: Button
 var _auto_play_button: Button
+var _skip_button: Button
 var _quicksave_button: Button
 var _quickload_button: Button
 var _play_buttons_bar: HBoxContainer
@@ -129,6 +130,7 @@ func _ready() -> void:
 	# Connecter les signaux du play
 	_menu_button.pressed.connect(_on_menu_button_pressed)
 	_auto_play_button.pressed.connect(_play_ctrl.toggle_auto_play)
+	_skip_button.pressed.connect(_play_ctrl.execute_skip)
 	_play_ctrl.set_auto_play_delay(_settings.auto_play_delay)
 	_play_ctrl.set_auto_play_enabled(_settings.auto_play_enabled)
 	_play_ctrl.set_typewriter_speed(_settings.typewriter_speed)
@@ -140,6 +142,9 @@ func _ready() -> void:
 	_sequence_editor_ctrl.play_dialogue_changed.connect(_play_ctrl.on_play_dialogue_changed)
 	_sequence_editor_ctrl.play_stopped.connect(_play_ctrl.on_play_stopped)
 	_play_ctrl.play_finished_show_menu.connect(_on_play_finished_return)
+
+	# Connecter le signal scene_entered pour mettre à jour la disponibilité du Skip
+	_story_play_ctrl.scene_entered.connect(_on_scene_entered_update_skip)
 
 	# Connecter les signaux d'affichage des variables
 	_story_play_ctrl.variables_display_changed.connect(_on_variables_display_changed)
@@ -457,6 +462,47 @@ func _on_chapter_scene_close() -> void:
 		_show_main_menu(_current_story)
 	else:
 		_pause_menu.show_menu()
+
+
+## Appelé à chaque entrée dans une nouvelle scène pour réévaluer le Skip.
+func _on_scene_entered_update_skip(_scene_name: String, _scene_uuid: String) -> void:
+	_update_skip_availability()
+
+
+## Met à jour la progression max et l'état du bouton Skip selon la scène courante.
+func _update_skip_availability() -> void:
+	if _current_story == null:
+		return
+	var prog := _compute_max_progression()
+	_play_ctrl.set_skip_progression(prog["chapter"], prog["scene"])
+	var chapter = _story_play_ctrl.get_current_chapter()
+	var scene = _story_play_ctrl.get_current_scene()
+	var ch_idx := _find_chapter_index(_current_story, chapter.uuid if chapter else "")
+	var sc_idx := _find_scene_index(_current_story, ch_idx, scene.uuid if scene else "")
+	_play_ctrl.update_skip_availability(ch_idx, sc_idx)
+
+
+## Analyse toutes les sauvegardes et retourne la progression maximale atteinte.
+func _compute_max_progression() -> Dictionary:
+	var max_ch := -1
+	var max_sc := -1
+	var all_saves: Array = []
+	for entry in GameSaveManager.list_saves():
+		if entry.get("has_data", false):
+			all_saves.append(entry.get("data", {}))
+	for entry in GameSaveManager.list_autosaves():
+		all_saves.append(entry.get("data", {}))
+	if GameSaveManager.quicksave_exists():
+		all_saves.append(GameSaveManager.quickload())
+	for save_data in all_saves:
+		var ch_uuid: String = save_data.get("chapter_uuid", "")
+		var sc_uuid: String = save_data.get("scene_uuid", "")
+		var ch_idx := _find_chapter_index(_current_story, ch_uuid)
+		var sc_idx := _find_scene_index(_current_story, ch_idx, sc_uuid)
+		if ch_idx > max_ch or (ch_idx == max_ch and sc_idx > max_sc):
+			max_ch = ch_idx
+			max_sc = sc_idx
+	return {"chapter": max_ch, "scene": max_sc}
 
 
 ## Retourne l'index de chapitre par UUID, ou 0 si non trouvé.

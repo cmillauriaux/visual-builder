@@ -83,6 +83,12 @@ static func _build_play_overlay(game: Control) -> void:
 	game._auto_play_button.custom_minimum_size = Vector2(120, 30)
 	game._auto_play_button.clip_text = true
 
+	game._skip_button = Button.new()
+	game._skip_button.text = "Skip (S)"
+	game._skip_button.custom_minimum_size = Vector2(120, 30)
+	game._skip_button.clip_text = true
+	game._skip_button.disabled = true
+
 	# Typewriter timer
 	game._typewriter_timer = Timer.new()
 	game._typewriter_timer.wait_time = 0.03
@@ -132,6 +138,7 @@ static func _build_play_buttons_bar(game: Control) -> void:
 	game._play_buttons_bar.add_child(game._quicksave_button)
 	game._play_buttons_bar.add_child(game._quickload_button)
 	game._play_buttons_bar.add_child(game._auto_play_button)
+	game._play_buttons_bar.add_child(game._skip_button)
 	game.add_child(game._play_buttons_bar)
 
 
