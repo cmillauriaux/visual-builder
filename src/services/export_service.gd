@@ -66,6 +66,20 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 	DirAccess.make_dir_recursive_absolute(abs_temp_story)
 	_copy_dir_recursive(abs_story_dir, abs_temp_story)
 	
+	# 3b. Copier le menu_background comme boot splash si défini
+	var boot_splash_res_path := ""
+	if story.menu_background != "":
+		var bg_abs_src = abs_story_dir + "/" + story.menu_background
+		if FileAccess.file_exists(bg_abs_src):
+			var bg_ext = story.menu_background.get_extension().to_lower()
+			if bg_ext != "png":
+				_remove_dir_recursive(abs_temp_base)
+				return ExportResult.new(false, abs_output_path, log_path,
+					"Le boot splash nécessite une image PNG.\nL'image de fond du menu (%s) est au format .%s.\nConvertissez-la en PNG avant d'exporter." % [story.menu_background, bg_ext])
+			var bg_abs_dst = abs_temp_project + "/boot_splash.png"
+			DirAccess.copy_absolute(bg_abs_src, bg_abs_dst)
+			boot_splash_res_path = "res://boot_splash.png"
+
 	# 4. Réécrire les chemins images (via le script existant, mais appelé localement si possible)
 	# Comme on est dans Godot, on peut utiliser StoryPathRewriter directement
 	# mais il faut le faire sur les fichiers copiés dans le dossier temporaire.
@@ -84,6 +98,10 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 	if project_content.find("[application]") == -1:
 		project_content += "\n[application]\n"
 	project_content = project_content.replace("[application]", "[application]\nconfig/story_path=\"res://story\"")
+
+	# Boot splash : utiliser le menu_background de la story
+	if boot_splash_res_path != "":
+		project_content = project_content.replace("[application]", "[application]\nboot_splash/image=\"" + boot_splash_res_path + "\"\nboot_splash/bg_color=Color(0, 0, 0, 1)\nboot_splash/fullsize=true\nboot_splash/show_image=true")
 
 	# Désactiver les plugins
 	if project_content.find("[editor_plugins]") != -1:
