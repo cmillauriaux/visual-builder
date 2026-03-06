@@ -37,6 +37,11 @@ var _dialogue_opacity: float = 0.8
 var _skip_max_chapter_index: int = -1
 var _skip_max_scene_index: int = -1
 
+var _dialogue_history: Array[Dictionary] = []
+var _history_button: Button = null
+var _history_panel: Control = null
+var _history_open: bool = false
+
 signal play_finished_show_menu()
 
 
@@ -92,6 +97,8 @@ func setup(game: Control) -> void:
 		_skip_button = game._skip_button
 	if game.get("_play_buttons_bar") != null:
 		_play_buttons_bar = game._play_buttons_bar
+	if game.get("_history_button") != null:
+		_history_button = game._history_button
 	_auto_play = AutoPlayManagerScript.new()
 	_auto_play.setup(game.get_tree())
 	_auto_play.auto_advance_requested.connect(_on_auto_advance)
@@ -198,6 +205,7 @@ func _start_sequence_play() -> void:
 
 
 func _start_sequence_actually() -> void:
+	_enable_history_button(true)
 	if _restore_dialogue_index >= 0:
 		var idx := _restore_dialogue_index
 		_restore_dialogue_index = -1
@@ -209,7 +217,8 @@ func _start_sequence_actually() -> void:
 		if _play_buttons_bar:
 			_play_buttons_bar.visible = true
 			_game.move_child(_play_buttons_bar, -1)
-		_visual_editor._overlay_container.add_child(_play_overlay)
+		_game.add_child(_play_overlay)
+		_game.move_child(_play_overlay, _game.get_child_count() - 1)
 		if _typewriter_speed == 0.0:
 			_sequence_editor_ctrl.skip_typewriter()
 			_play_text_label.visible_characters = _sequence_editor_ctrl.get_visible_characters()
@@ -258,7 +267,8 @@ func on_choice_display_requested(choices) -> void:
 		var btn = Button.new()
 		btn.text = choices[i].text
 		var idx = i
-		btn.pressed.connect(func(): _on_choice_selected(idx))
+		var choice_text = choices[i].text
+		btn.pressed.connect(func(): _on_choice_selected(idx, choice_text))
 		vbox.add_child(btn)
 	_choice_panel.add_child(vbox)
 	_choice_overlay.visible = true
@@ -306,6 +316,7 @@ func on_play_dialogue_changed(index: int) -> void:
 	var dlg = seq.dialogues[index]
 	_play_character_label.text = dlg.character
 	_play_text_label.text = dlg.text
+	add_history_entry(dlg.character, dlg.text)
 	_play_text_label.visible_characters = 0
 	# Restart typewriter for the new dialogue
 	if _typewriter_speed == 0.0:
@@ -446,6 +457,10 @@ func _input(event: InputEvent) -> void:
 	elif event is InputEventKey and event.pressed and event.keycode == KEY_S:
 		execute_skip()
 		get_viewport().set_input_as_handled()
+	elif event is InputEventKey and event.pressed and event.keycode == KEY_H:
+		if not _choice_overlay.visible:
+			open_history()
+			get_viewport().set_input_as_handled()
 
 
 # --- Auto-play ---
@@ -510,6 +525,139 @@ func execute_skip() -> void:
 	_handle_play_stopped()
 
 
+# --- History ---
+
+## Formate une entrée d'historique (logique pure).
+static func format_history_entry(character: String, text: String) -> String:
+	if character == "" and text == "":
+		return ""
+	if character == "":
+		return text
+	return character + " : " + text
+
+
+## Ajoute un dialogue à l'historique.
+func add_history_entry(character: String, text: String) -> void:
+	_dialogue_history.append({"character": character, "text": text})
+
+
+## Réinitialise l'historique.
+func reset_history() -> void:
+	_dialogue_history = []
+
+
+## Ouvre ou ferme le panneau d'historique (toggle).
+func open_history() -> void:
+	if _history_open:
+		close_history()
+		return
+	_history_open = true
+	_update_history_button_text()
+	_show_history_panel()
+
+
+## Ferme le panneau d'historique.
+func close_history() -> void:
+	_history_open = false
+	_update_history_button_text()
+	_hide_history_panel()
+
+
+## Met à jour le texte du bouton selon l'état du panneau.
+func _update_history_button_text() -> void:
+	if _history_button == null:
+		return
+	if _history_open:
+		_history_button.text = "Histo [ON]"
+		_history_button.add_theme_color_override("font_color", Color(0.2, 0.8, 0.8))
+	else:
+		_history_button.text = "Histo (H)"
+		_history_button.remove_theme_color_override("font_color")
+
+
+## Active ou désactive le bouton historique.
+func _enable_history_button(enabled: bool) -> void:
+	if _history_button == null:
+		return
+	_history_button.disabled = not enabled
+
+
+## Construit et affiche le panneau d'historique.
+func _show_history_panel() -> void:
+	if _history_panel != null and is_instance_valid(_history_panel):
+		_history_panel.queue_free()
+		_history_panel = null
+
+	# Fond cliquable pour fermer
+	var overlay = Control.new()
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	overlay.z_index = 90
+	overlay.gui_input.connect(func(ev):
+		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+			close_history()
+	)
+	_history_panel = overlay
+
+	# Panneau centré
+	var center = CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_PASS
+	overlay.add_child(center)
+
+	var panel = PanelContainer.new()
+	panel.custom_minimum_size = Vector2(600, 400)
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	center.add_child(panel)
+
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 8)
+	panel.add_child(vbox)
+
+	var title = Label.new()
+	title.text = "Historique"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 18)
+	vbox.add_child(title)
+
+	var sep = HSeparator.new()
+	vbox.add_child(sep)
+
+	var scroll = ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.custom_minimum_size = Vector2(0, 300)
+	vbox.add_child(scroll)
+
+	var entries_vbox = VBoxContainer.new()
+	entries_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	entries_vbox.add_theme_constant_override("separation", 4)
+	scroll.add_child(entries_vbox)
+
+	for entry in _dialogue_history:
+		var lbl = Label.new()
+		lbl.text = format_history_entry(entry["character"], entry["text"])
+		lbl.autowrap_mode = TextServer.AUTOWRAP_WORD
+		lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		entries_vbox.add_child(lbl)
+
+	# Scroll vers le bas après un frame
+	scroll.call_deferred("set_v_scroll", 999999)
+
+	var close_btn = Button.new()
+	close_btn.text = "Fermer"
+	close_btn.pressed.connect(close_history)
+	vbox.add_child(close_btn)
+
+	_game.add_child(overlay)
+
+
+## Supprime le panneau d'historique.
+func _hide_history_panel() -> void:
+	if _history_panel != null and is_instance_valid(_history_panel):
+		_history_panel.queue_free()
+	_history_panel = null
+
+
 # --- Internal ---
 
 func _prepare_opening_visuals() -> void:
@@ -555,7 +703,9 @@ func _create_fade_out_clone(source: Control) -> TextureRect:
 	return clone
 
 
-func _on_choice_selected(index: int) -> void:
+func _on_choice_selected(index: int, choice_text: String = "") -> void:
+	if choice_text != "":
+		add_history_entry("→", choice_text)
 	_hide_choice_overlay()
 	_story_play_ctrl.on_choice_selected(index)
 
@@ -569,6 +719,9 @@ func _hide_choice_overlay() -> void:
 
 
 func _cleanup_play() -> void:
+	reset_history()
+	close_history()
+	_enable_history_button(false)
 	_is_showing_title = false
 	_game._play_title_overlay.visible = false
 	if _game._play_title_overlay.get_parent():

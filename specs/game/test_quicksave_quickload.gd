@@ -42,12 +42,12 @@ func test_play_buttons_bar_hidden_by_default() -> void:
 	assert_false(_game._play_buttons_bar.visible, "play buttons bar should start hidden")
 
 
-func test_play_buttons_bar_contains_four_buttons() -> void:
+func test_play_buttons_bar_contains_five_buttons() -> void:
 	var buttons := []
 	for child in _game._play_buttons_bar.get_children():
 		if child is Button:
 			buttons.append(child)
-	assert_eq(buttons.size(), 4, "bar should contain Save, Load, Auto, Skip buttons")
+	assert_eq(buttons.size(), 5, "bar should contain Save, Load, Auto, Skip, History buttons")
 
 
 func test_play_buttons_bar_order() -> void:

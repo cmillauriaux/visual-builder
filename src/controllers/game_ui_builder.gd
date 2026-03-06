@@ -89,6 +89,12 @@ static func _build_play_overlay(game: Control) -> void:
 	game._skip_button.clip_text = true
 	game._skip_button.disabled = true
 
+	game._history_button = Button.new()
+	game._history_button.text = "Histo (H)"
+	game._history_button.custom_minimum_size = Vector2(120, 30)
+	game._history_button.clip_text = true
+	game._history_button.disabled = true
+
 	# Typewriter timer
 	game._typewriter_timer = Timer.new()
 	game._typewriter_timer.wait_time = 0.03
@@ -129,16 +135,18 @@ static func _build_play_overlay(game: Control) -> void:
 static func _build_play_buttons_bar(game: Control) -> void:
 	game._play_buttons_bar = HBoxContainer.new()
 	game._play_buttons_bar.visible = false
-	game._play_buttons_bar.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
-	game._play_buttons_bar.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	game._play_buttons_bar.offset_right = -3
+	game._play_buttons_bar.alignment = BoxContainer.ALIGNMENT_END
+	game._play_buttons_bar.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	game._play_buttons_bar.offset_top = -188
 	game._play_buttons_bar.offset_bottom = -150
+	game._play_buttons_bar.offset_right = -3
+	game._play_buttons_bar.mouse_filter = Control.MOUSE_FILTER_PASS
 	game._play_buttons_bar.add_theme_constant_override("separation", 4)
 	game._play_buttons_bar.add_child(game._quicksave_button)
 	game._play_buttons_bar.add_child(game._quickload_button)
 	game._play_buttons_bar.add_child(game._auto_play_button)
 	game._play_buttons_bar.add_child(game._skip_button)
+	game._play_buttons_bar.add_child(game._history_button)
 	game.add_child(game._play_buttons_bar)
 
 

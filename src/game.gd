@@ -48,6 +48,7 @@ var _play_subtitle_label: Label
 var _menu_button: Button
 var _auto_play_button: Button
 var _skip_button: Button
+var _history_button: Button
 var _quicksave_button: Button
 var _quickload_button: Button
 var _play_buttons_bar: HBoxContainer
@@ -131,6 +132,7 @@ func _ready() -> void:
 	_menu_button.pressed.connect(_on_menu_button_pressed)
 	_auto_play_button.pressed.connect(_play_ctrl.toggle_auto_play)
 	_skip_button.pressed.connect(_play_ctrl.execute_skip)
+	_history_button.pressed.connect(_play_ctrl.open_history)
 	_play_ctrl.set_auto_play_delay(_settings.auto_play_delay)
 	_play_ctrl.set_auto_play_enabled(_settings.auto_play_enabled)
 	_play_ctrl.set_typewriter_speed(_settings.typewriter_speed)
