@@ -193,6 +193,60 @@ static func _setup_scrollbar(theme: Theme) -> void:
 	theme.set_stylebox("grabber_pressed", "VScrollBar", grabber_hover)
 
 
+## Applique un style thématique (brun aventure) à un TabContainer.
+static func apply_tab_container_style(tab: TabContainer) -> void:
+	# --- Fond de la zone de contenu ---
+	var panel_style := StyleBoxFlat.new()
+	panel_style.bg_color = Color("#2A1D14")
+	panel_style.set_corner_radius_all(0)
+	panel_style.content_margin_left = 12
+	panel_style.content_margin_right = 12
+	panel_style.content_margin_top = 12
+	panel_style.content_margin_bottom = 12
+	tab.add_theme_stylebox_override("panel", panel_style)
+
+	# --- Onglet sélectionné ---
+	var selected := StyleBoxFlat.new()
+	selected.bg_color = Color("#C4A882")
+	selected.corner_radius_top_left = 5
+	selected.corner_radius_top_right = 5
+	selected.content_margin_left = 16
+	selected.content_margin_right = 16
+	selected.content_margin_top = 8
+	selected.content_margin_bottom = 8
+	tab.add_theme_stylebox_override("tab_selected", selected)
+
+	# --- Onglet non sélectionné ---
+	var unselected := StyleBoxFlat.new()
+	unselected.bg_color = Color("#5C3A1E")
+	unselected.corner_radius_top_left = 5
+	unselected.corner_radius_top_right = 5
+	unselected.content_margin_left = 16
+	unselected.content_margin_right = 16
+	unselected.content_margin_top = 8
+	unselected.content_margin_bottom = 8
+	tab.add_theme_stylebox_override("tab_unselected", unselected)
+
+	# --- Onglet survolé ---
+	var hovered := StyleBoxFlat.new()
+	hovered.bg_color = Color("#7A4E2A")
+	hovered.corner_radius_top_left = 5
+	hovered.corner_radius_top_right = 5
+	hovered.content_margin_left = 16
+	hovered.content_margin_right = 16
+	hovered.content_margin_top = 8
+	hovered.content_margin_bottom = 8
+	tab.add_theme_stylebox_override("tab_hovered", hovered)
+
+	# --- Couleurs du texte des onglets ---
+	tab.add_theme_color_override("font_selected_color", COLOR_TEXT_DARK)
+	tab.add_theme_color_override("font_unselected_color", Color("#E8D5B5"))
+	tab.add_theme_color_override("font_hovered_color", Color("#F0E4CC"))
+
+	# --- Taille de police ---
+	tab.add_theme_font_size_override("font_size", 16)
+
+
 ## Applique un style coloré personnalisé à un bouton de lien externe.
 static func apply_link_style(button: Button, color: Color) -> void:
 	var normal = StyleBoxFlat.new()

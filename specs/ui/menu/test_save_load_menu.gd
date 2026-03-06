@@ -21,6 +21,7 @@ func before_each() -> void:
 func after_each() -> void:
 	for i in range(GameSaveManager.NUM_SLOTS):
 		GameSaveManager.delete_save(i)
+	GameSaveManager.delete_quicksave()
 
 
 # --- État initial ---
@@ -212,7 +213,118 @@ func test_refresh_updates_grid() -> void:
 	assert_eq(chap_label.text, "Après refresh")
 
 
+# --- TabContainer (spec 053) ---
+
+func test_tab_container_exists() -> void:
+	_menu.show_as_load_mode()
+	assert_not_null(_menu._tab_container, "un TabContainer doit exister")
+	assert_true(_menu._tab_container is TabContainer)
+
+
+func test_tab_container_has_three_tabs() -> void:
+	_menu.show_as_load_mode()
+	assert_eq(_menu._tab_container.get_tab_count(), 3)
+
+
+func test_tab_titles() -> void:
+	_menu.show_as_load_mode()
+	assert_eq(_menu._tab_container.get_tab_title(0), "Sauvegardes")
+	assert_eq(_menu._tab_container.get_tab_title(1), "Automatiques")
+	assert_eq(_menu._tab_container.get_tab_title(2), "Rapides")
+
+
+func test_grid_is_in_tab_zero() -> void:
+	_menu.show_as_load_mode()
+	var tab0: Node = _menu._tab_container.get_child(0)
+	var found: Node = _find_child_by_name(tab0, _menu._grid.name)
+	assert_not_null(found, "_grid doit être dans le premier onglet")
+
+
+func test_auto_tab_has_coming_soon_label() -> void:
+	_menu.show_as_load_mode()
+	var tab1: Node = _menu._tab_container.get_child(1)
+	var lbl: Label = _find_label_with_text(tab1, "À venir")
+	assert_not_null(lbl, "L'onglet Automatiques doit afficher 'À venir'")
+
+
+func test_quick_tab_no_save_shows_placeholder() -> void:
+	GameSaveManager.delete_quicksave()
+	_menu.show_as_load_mode()
+	var tab2: Node = _menu._tab_container.get_child(2)
+	var lbl: Label = _find_label_with_text(tab2, "Aucune sauvegarde rapide")
+	assert_not_null(lbl, "Onglet Rapides sans quicksave doit afficher 'Aucune sauvegarde rapide'")
+
+
+func test_quick_tab_with_save_shows_load_button() -> void:
+	_make_quicksave()
+	_menu.show_as_load_mode()
+	var tab2: Node = _menu._tab_container.get_child(2)
+	var load_btn: Node = _find_child_by_name(tab2, "QuickLoadButton")
+	assert_not_null(load_btn, "Onglet Rapides avec quicksave doit afficher QuickLoadButton")
+
+
+func test_quick_tab_load_button_emits_signal_with_minus_one() -> void:
+	_make_quicksave()
+	_menu.show_as_load_mode()
+	watch_signals(_menu)
+	var tab2: Node = _menu._tab_container.get_child(2)
+	var load_btn: Node = _find_child_by_name(tab2, "QuickLoadButton")
+	assert_not_null(load_btn)
+	(load_btn as Button).pressed.emit()
+	assert_signal_emitted_with_parameters(_menu, "load_slot_pressed", [-1])
+
+
+func test_quick_tab_with_save_shows_chapter_label() -> void:
+	_make_quicksave("Chapitre Rapide", "Scène Rapide")
+	_menu.show_as_load_mode()
+	var tab2: Node = _menu._tab_container.get_child(2)
+	var lbl: Node = _find_child_by_name(tab2, "QuickChapterLabel")
+	assert_not_null(lbl)
+	assert_eq((lbl as Label).text, "Chapitre Rapide")
+
+
+func test_save_mode_tab_bar_hidden() -> void:
+	_menu.show_as_save_mode()
+	assert_false(_menu._tab_container.tabs_visible, "La barre d'onglets doit être masquée en mode save")
+
+
+func test_save_mode_active_tab_is_zero() -> void:
+	_menu.show_as_save_mode()
+	assert_eq(_menu._tab_container.current_tab, 0)
+
+
+func test_load_mode_tab_bar_visible() -> void:
+	_menu.show_as_load_mode()
+	assert_true(_menu._tab_container.tabs_visible, "La barre d'onglets doit être visible en mode load")
+
+
 # --- Helpers ---
+
+func _make_quicksave(chapter_name: String = "Chapitre Rapide", scene_name: String = "Scène Rapide") -> void:
+	var state := {
+		"timestamp": "2026-03-06 10:00:00",
+		"story_path": "",
+		"chapter_uuid": "chap-qs",
+		"chapter_name": chapter_name,
+		"scene_uuid": "scene-qs",
+		"scene_name": scene_name,
+		"sequence_uuid": "seq-qs",
+		"sequence_name": "Intro",
+		"dialogue_index": 0,
+		"variables": {},
+	}
+	GameSaveManager.quicksave(state, null)
+
+
+func _find_label_with_text(node: Node, text: String) -> Label:
+	for child in node.get_children():
+		if child is Label and child.text == text:
+			return child
+		var found := _find_label_with_text(child, text)
+		if found:
+			return found
+	return null
+
 
 func _make_save(slot: int, chapter_name: String = "Chapitre 1", scene_name: String = "Scène 1") -> void:
 	var state := {

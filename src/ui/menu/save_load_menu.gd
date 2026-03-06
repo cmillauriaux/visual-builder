@@ -2,7 +2,7 @@ extends Control
 
 ## Grille de sauvegarde/chargement.
 ## Mode "save" : cliquer un slot sauvegarde la partie (confirmation si slot occupé).
-## Mode "load" : boutons Charger et Supprimer par slot.
+## Mode "load" : trois onglets (manuelles, automatiques, rapides) avec boutons Charger et Supprimer.
 
 const GameSaveManager = preload("res://src/persistence/game_save_manager.gd")
 const GameTheme = preload("res://src/ui/themes/game_theme.gd")
@@ -16,7 +16,9 @@ enum Mode { SAVE, LOAD }
 
 var _mode: int = Mode.LOAD
 var _title_label: Label
+var _tab_container: TabContainer
 var _grid: GridContainer
+var _quick_content: VBoxContainer
 var _overlay: ColorRect
 var _confirm_overlay: Control
 
@@ -38,7 +40,7 @@ func build_ui() -> void:
 	add_child(center)
 
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(960, 600) # Hauteur fixe pour forcer le scroll si besoin
+	panel.custom_minimum_size = Vector2(960, 600)
 	center.add_child(panel)
 
 	var vbox := VBoxContainer.new()
@@ -63,19 +65,49 @@ func build_ui() -> void:
 	GameTheme.apply_close_style(close_btn)
 	header.add_child(close_btn)
 
-	# Zone de défilement pour la grille
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	vbox.add_child(scroll)
+	# TabContainer pour les trois onglets
+	_tab_container = TabContainer.new()
+	_tab_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	GameTheme.apply_tab_container_style(_tab_container)
+	vbox.add_child(_tab_container)
 
-	# Grille 3 colonnes
+	# --- Onglet 0 : Sauvegardes manuelles ---
+	var manual_scroll := ScrollContainer.new()
+	manual_scroll.name = "Sauvegardes"
+	manual_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	manual_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_tab_container.add_child(manual_scroll)
+
 	_grid = GridContainer.new()
 	_grid.columns = 3
 	_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_grid.add_theme_constant_override("h_separation", 16)
 	_grid.add_theme_constant_override("v_separation", 16)
-	scroll.add_child(_grid)
+	manual_scroll.add_child(_grid)
+
+	# --- Onglet 1 : Sauvegardes automatiques (placeholder) ---
+	var auto_container := CenterContainer.new()
+	auto_container.name = "Automatiques"
+	auto_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_tab_container.add_child(auto_container)
+
+	var auto_label := Label.new()
+	auto_label.text = "À venir"
+	auto_label.add_theme_font_size_override("font_size", 22)
+	auto_label.add_theme_color_override("font_color", Color("#C4A882"))
+	auto_container.add_child(auto_label)
+
+	# --- Onglet 2 : Sauvegarde rapide ---
+	var quick_scroll := ScrollContainer.new()
+	quick_scroll.name = "Rapides"
+	quick_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	quick_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_tab_container.add_child(quick_scroll)
+
+	_quick_content = VBoxContainer.new()
+	_quick_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_quick_content.add_theme_constant_override("separation", 16)
+	quick_scroll.add_child(_quick_content)
 
 	# Overlay de confirmation (caché initialement)
 	_confirm_overlay = Control.new()
@@ -87,6 +119,8 @@ func build_ui() -> void:
 func show_as_save_mode() -> void:
 	_mode = Mode.SAVE
 	_title_label.text = "Sauvegarder"
+	_tab_container.tabs_visible = false
+	_tab_container.current_tab = 0
 	refresh()
 	visible = true
 
@@ -94,6 +128,7 @@ func show_as_save_mode() -> void:
 func show_as_load_mode() -> void:
 	_mode = Mode.LOAD
 	_title_label.text = "Charger"
+	_tab_container.tabs_visible = true
 	refresh()
 	visible = true
 
@@ -105,6 +140,15 @@ func hide_menu() -> void:
 
 ## Recharge la liste des sauvegardes depuis le disque.
 func refresh() -> void:
+	_refresh_manual_saves()
+	_refresh_quick_saves()
+
+
+func get_title_text() -> String:
+	return _title_label.text if _title_label else ""
+
+
+func _refresh_manual_saves() -> void:
 	while _grid.get_child_count() > 0:
 		var child := _grid.get_child(0)
 		_grid.remove_child(child)
@@ -116,8 +160,84 @@ func refresh() -> void:
 		_grid.add_child(card)
 
 
-func get_title_text() -> String:
-	return _title_label.text if _title_label else ""
+func _refresh_quick_saves() -> void:
+	while _quick_content.get_child_count() > 0:
+		var child := _quick_content.get_child(0)
+		_quick_content.remove_child(child)
+		child.queue_free()
+
+	if GameSaveManager.quicksave_exists():
+		var data := GameSaveManager.quickload()
+		var card := _build_quicksave_card(data)
+		_quick_content.add_child(card)
+	else:
+		var empty_lbl := Label.new()
+		empty_lbl.text = "Aucune sauvegarde rapide"
+		empty_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		empty_lbl.add_theme_color_override("font_color", Color("#C4A882"))
+		empty_lbl.add_theme_font_size_override("font_size", 18)
+		_quick_content.add_child(empty_lbl)
+
+
+func _build_quicksave_card(data: Dictionary) -> Control:
+	var card := PanelContainer.new()
+	card.custom_minimum_size = Vector2(290, 0)
+	card.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	card.name = "QuicksaveCard"
+	GameTheme.apply_dark_panel_style(card)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 6)
+	card.add_child(vbox)
+
+	# Thumbnail screenshot
+	var thumb := TextureRect.new()
+	thumb.custom_minimum_size = Vector2(290, 163)
+	thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	thumb.name = "QuickThumbnail"
+	var png_path := GameSaveManager.QUICKSAVE_DIR + "/screenshot.png"
+	if FileAccess.file_exists(png_path):
+		var img := Image.load_from_file(ProjectSettings.globalize_path(png_path))
+		if img:
+			thumb.texture = ImageTexture.create_from_image(img)
+	vbox.add_child(thumb)
+
+	# Infos textuelles
+	var info_vbox := VBoxContainer.new()
+	info_vbox.add_theme_constant_override("separation", 2)
+	vbox.add_child(info_vbox)
+
+	var chap_label := Label.new()
+	chap_label.text = data.get("chapter_name", "")
+	chap_label.add_theme_font_size_override("font_size", 13)
+	chap_label.add_theme_color_override("font_color", Color("#E8D5B5"))
+	chap_label.name = "QuickChapterLabel"
+	info_vbox.add_child(chap_label)
+
+	var scene_label := Label.new()
+	scene_label.text = data.get("scene_name", "")
+	scene_label.add_theme_font_size_override("font_size", 12)
+	scene_label.add_theme_color_override("font_color", Color("#C4A882"))
+	scene_label.name = "QuickSceneLabel"
+	info_vbox.add_child(scene_label)
+
+	var date_label := Label.new()
+	date_label.text = data.get("timestamp", "")
+	date_label.add_theme_font_size_override("font_size", 11)
+	date_label.add_theme_color_override("font_color", Color("#A08060"))
+	date_label.name = "QuickDateLabel"
+	info_vbox.add_child(date_label)
+
+	# Bouton Charger
+	var load_btn := Button.new()
+	load_btn.text = "Charger"
+	load_btn.name = "QuickLoadButton"
+	load_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	load_btn.pressed.connect(func(): load_slot_pressed.emit(-1))
+	vbox.add_child(load_btn)
+
+	return card
 
 
 # --- Construction des cartes ---
