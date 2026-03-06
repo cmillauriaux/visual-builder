@@ -1,6 +1,6 @@
 extends GutTest
 
-# Tests pour le dialogue de configuration du menu
+# Tests pour le dialogue de configuration du jeu
 
 const MenuConfigDialogScript = preload("res://src/ui/dialogs/menu_config_dialog.gd")
 const StoryScript = preload("res://src/models/story.gd")
@@ -22,26 +22,29 @@ func _make_story(menu_title := "", menu_subtitle := "", menu_background := ""):
 
 # --- Structure UI ---
 
-func test_title_is_configurer_le_menu():
-	assert_eq(_dialog.title, "Configurer le menu")
+func test_title_is_configurer_le_jeu():
+	assert_eq(_dialog.title, "Configurer le jeu")
+
+func test_has_tab_container():
+	assert_true(_dialog.has_node("TabContainer"), "Le TabContainer doit exister")
 
 func test_has_menu_title_edit():
-	assert_true(_dialog.has_node("ContentVBox/MenuTitleEdit"), "Le champ titre du menu doit exister")
+	assert_true(_dialog.has_node("TabContainer/Menu/MenuTitleEdit"), "Le champ titre du menu doit exister")
 
 func test_has_menu_subtitle_edit():
-	assert_true(_dialog.has_node("ContentVBox/MenuSubtitleEdit"), "Le champ sous-titre doit exister")
+	assert_true(_dialog.has_node("TabContainer/Menu/MenuSubtitleEdit"), "Le champ sous-titre doit exister")
 
 func test_has_menu_bg_edit():
-	assert_true(_dialog.has_node("ContentVBox/BgHBox/MenuBgEdit"), "Le champ image de fond doit exister")
+	assert_true(_dialog.has_node("TabContainer/Menu/BgHBox/MenuBgEdit"), "Le champ image de fond doit exister")
 
 func test_has_browse_button():
-	assert_true(_dialog.has_node("ContentVBox/BgHBox/BrowseButton"), "Le bouton Parcourir doit exister")
+	assert_true(_dialog.has_node("TabContainer/Menu/BgHBox/BrowseButton"), "Le bouton Parcourir doit exister")
 
 func test_has_clear_bg_button():
-	assert_true(_dialog.has_node("ContentVBox/BgHBox/ClearBgButton"), "Le bouton de suppression doit exister")
+	assert_true(_dialog.has_node("TabContainer/Menu/BgHBox/ClearBgButton"), "Le bouton de suppression doit exister")
 
 func test_has_bg_preview():
-	assert_true(_dialog.has_node("ContentVBox/BgPreview"), "L'aperçu doit exister")
+	assert_true(_dialog.has_node("TabContainer/Menu/BgPreview"), "L'aperçu doit exister")
 
 func test_bg_edit_is_readonly():
 	assert_false(_dialog._menu_bg_edit.editable, "Le champ background doit être en lecture seule")
@@ -66,6 +69,8 @@ func test_setup_with_empty_fields():
 	assert_eq(_dialog.get_menu_background(), "")
 
 # --- Signal ---
+# Note : le signal a 14 paramètres, ce qui dépasse la limite de GUT watch_signals (9 max).
+# On utilise une connexion directe avec lambda pour capturer les paramètres.
 
 func test_menu_config_confirmed_signal_exists():
 	assert_has_signal(_dialog, "menu_config_confirmed")
@@ -73,19 +78,20 @@ func test_menu_config_confirmed_signal_exists():
 func test_confirmed_emits_signal():
 	var story = _make_story("Mon Titre", "Mon Sous-titre", "bg.png")
 	_dialog.setup(story, "/tmp/test_story")
-	watch_signals(_dialog)
+	var emitted := [false]
+	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n): emitted[0] = true)
 	_dialog._on_confirmed()
-	assert_signal_emitted(_dialog, "menu_config_confirmed")
+	assert_true(emitted[0], "Le signal menu_config_confirmed doit être émis")
 
 func test_confirmed_signal_params():
 	var story = _make_story("T", "S", "B")
 	_dialog.setup(story, "/tmp/test_story")
-	watch_signals(_dialog)
+	var captured := []
+	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n]))
 	_dialog._on_confirmed()
-	var params = get_signal_parameters(_dialog, "menu_config_confirmed")
-	assert_eq(params[0], "T")
-	assert_eq(params[1], "S")
-	assert_eq(params[2], "B")
+	assert_eq(captured[0], "T")
+	assert_eq(captured[1], "S")
+	assert_eq(captured[2], "B")
 
 # --- Clear background ---
 
@@ -119,10 +125,10 @@ func test_get_menu_background():
 # --- Liens externes ---
 
 func test_has_patreon_url_edit():
-	assert_true(_dialog.has_node("ContentVBox/PatreonUrlEdit"), "Le champ URL Patreon doit exister")
+	assert_true(_dialog.has_node("TabContainer/Liens/PatreonUrlEdit"), "Le champ URL Patreon doit exister")
 
 func test_has_itchio_url_edit():
-	assert_true(_dialog.has_node("ContentVBox/ItchioUrlEdit"), "Le champ URL itch.io doit exister")
+	assert_true(_dialog.has_node("TabContainer/Liens/ItchioUrlEdit"), "Le champ URL itch.io doit exister")
 
 func test_get_patreon_url():
 	_dialog._patreon_url_edit.text = "https://www.patreon.com/test"
@@ -145,37 +151,137 @@ func test_confirmed_signal_includes_links():
 	story.patreon_url = "https://www.patreon.com/test"
 	story.itchio_url = "https://test.itch.io/game"
 	_dialog.setup(story, "/tmp/test_story")
-	watch_signals(_dialog)
+	var captured := []
+	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n]))
 	_dialog._on_confirmed()
-	var params = get_signal_parameters(_dialog, "menu_config_confirmed")
-	assert_eq(params[6], "https://www.patreon.com/test")
-	assert_eq(params[7], "https://test.itch.io/game")
+	assert_eq(captured[6], "https://www.patreon.com/test")
+	assert_eq(captured[7], "https://test.itch.io/game")
 
 func test_validate_url_rejects_invalid():
 	var story = _make_story()
 	_dialog.setup(story, "/tmp/test_story")
 	_dialog._patreon_url_edit.text = "not-a-url"
 	_dialog._itchio_url_edit.text = "ftp://invalid.com"
-	watch_signals(_dialog)
+	var captured := []
+	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n]))
 	_dialog._on_confirmed()
-	var params = get_signal_parameters(_dialog, "menu_config_confirmed")
-	assert_eq(params[6], "", "URL invalide doit être traitée comme vide")
-	assert_eq(params[7], "", "URL invalide doit être traitée comme vide")
+	assert_eq(captured[6], "", "URL invalide doit être traitée comme vide")
+	assert_eq(captured[7], "", "URL invalide doit être traitée comme vide")
 
 func test_validate_url_accepts_https():
 	var story = _make_story()
 	_dialog.setup(story, "/tmp/test_story")
 	_dialog._patreon_url_edit.text = "https://www.patreon.com/test"
-	watch_signals(_dialog)
+	var captured := []
+	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n]))
 	_dialog._on_confirmed()
-	var params = get_signal_parameters(_dialog, "menu_config_confirmed")
-	assert_eq(params[6], "https://www.patreon.com/test")
+	assert_eq(captured[6], "https://www.patreon.com/test")
 
 func test_validate_url_accepts_http():
 	var story = _make_story()
 	_dialog.setup(story, "/tmp/test_story")
 	_dialog._patreon_url_edit.text = "http://www.patreon.com/test"
-	watch_signals(_dialog)
+	var captured := []
+	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n]))
 	_dialog._on_confirmed()
-	var params = get_signal_parameters(_dialog, "menu_config_confirmed")
-	assert_eq(params[6], "http://www.patreon.com/test")
+	assert_eq(captured[6], "http://www.patreon.com/test")
+
+
+# --- Écran Game Over ---
+
+func test_has_game_over_bg_edit():
+	assert_true(_dialog.has_node("TabContainer/GameOver/GameOverBgHBox/GameOverBgEdit"))
+
+func test_has_game_over_browse_button():
+	assert_true(_dialog.has_node("TabContainer/GameOver/GameOverBgHBox/GameOverBrowseButton"))
+
+func test_has_game_over_clear_button():
+	assert_true(_dialog.has_node("TabContainer/GameOver/GameOverBgHBox/GameOverClearBgButton"))
+
+func test_has_game_over_bg_preview():
+	assert_true(_dialog.has_node("TabContainer/GameOver/GameOverBgPreview"))
+
+func test_has_game_over_title_edit():
+	assert_true(_dialog.has_node("TabContainer/GameOver/GameOverTitleEdit"))
+
+func test_has_game_over_subtitle_edit():
+	assert_true(_dialog.has_node("TabContainer/GameOver/GameOverSubtitleEdit"))
+
+func test_game_over_bg_edit_readonly():
+	assert_false(_dialog._game_over_bg_edit.editable)
+
+func test_setup_fills_game_over_fields():
+	var story = _make_story()
+	story.game_over_title = "Game Over!"
+	story.game_over_subtitle = "Tu as perdu"
+	story.game_over_background = "bg.png"
+	_dialog.setup(story, "/tmp")
+	assert_eq(_dialog.get_game_over_title(), "Game Over!")
+	assert_eq(_dialog.get_game_over_subtitle(), "Tu as perdu")
+	assert_eq(_dialog.get_game_over_background(), "bg.png")
+
+func test_clear_game_over_bg():
+	var story = _make_story()
+	story.game_over_background = "bg.png"
+	_dialog.setup(story, "/tmp")
+	_dialog._on_game_over_clear_bg_pressed()
+	assert_eq(_dialog.get_game_over_background(), "")
+	assert_null(_dialog._game_over_bg_preview.texture)
+
+
+# --- Écran To Be Continued ---
+
+func test_has_to_be_continued_bg_edit():
+	assert_true(_dialog.has_node("TabContainer/ASuivre/ToBeContinuedBgHBox/ToBeContinuedBgEdit"))
+
+func test_has_to_be_continued_browse_button():
+	assert_true(_dialog.has_node("TabContainer/ASuivre/ToBeContinuedBgHBox/ToBeContinuedBrowseButton"))
+
+func test_has_to_be_continued_clear_button():
+	assert_true(_dialog.has_node("TabContainer/ASuivre/ToBeContinuedBgHBox/ToBeContinuedClearBgButton"))
+
+func test_has_to_be_continued_bg_preview():
+	assert_true(_dialog.has_node("TabContainer/ASuivre/ToBeContinuedBgPreview"))
+
+func test_has_to_be_continued_title_edit():
+	assert_true(_dialog.has_node("TabContainer/ASuivre/ToBeContinuedTitleEdit"))
+
+func test_has_to_be_continued_subtitle_edit():
+	assert_true(_dialog.has_node("TabContainer/ASuivre/ToBeContinuedSubtitleEdit"))
+
+func test_setup_fills_to_be_continued_fields():
+	var story = _make_story()
+	story.to_be_continued_title = "À suivre..."
+	story.to_be_continued_subtitle = "Episode 2"
+	story.to_be_continued_background = "tbc.png"
+	_dialog.setup(story, "/tmp")
+	assert_eq(_dialog.get_to_be_continued_title(), "À suivre...")
+	assert_eq(_dialog.get_to_be_continued_subtitle(), "Episode 2")
+	assert_eq(_dialog.get_to_be_continued_background(), "tbc.png")
+
+func test_clear_to_be_continued_bg():
+	var story = _make_story()
+	story.to_be_continued_background = "tbc.png"
+	_dialog.setup(story, "/tmp")
+	_dialog._on_tbc_clear_bg_pressed()
+	assert_eq(_dialog.get_to_be_continued_background(), "")
+	assert_null(_dialog._to_be_continued_bg_preview.texture)
+
+func test_confirmed_signal_includes_ending_screen_params():
+	var story = _make_story("T", "S", "B")
+	story.game_over_title = "GO"
+	story.game_over_subtitle = "GOS"
+	story.game_over_background = "gobg.png"
+	story.to_be_continued_title = "TBC"
+	story.to_be_continued_subtitle = "TBCS"
+	story.to_be_continued_background = "tbcbg.png"
+	_dialog.setup(story, "/tmp")
+	var captured := []
+	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n]))
+	_dialog._on_confirmed()
+	assert_eq(captured[8], "GO")
+	assert_eq(captured[9], "GOS")
+	assert_eq(captured[10], "gobg.png")
+	assert_eq(captured[11], "TBC")
+	assert_eq(captured[12], "TBCS")
+	assert_eq(captured[13], "tbcbg.png")

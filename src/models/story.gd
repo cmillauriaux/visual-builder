@@ -25,6 +25,12 @@ var playfab_title_id: String = ""
 var playfab_enabled: bool = false
 var patreon_url: String = ""
 var itchio_url: String = ""
+var game_over_title: String = ""
+var game_over_subtitle: String = ""
+var game_over_background: String = ""
+var to_be_continued_title: String = ""
+var to_be_continued_subtitle: String = ""
+var to_be_continued_background: String = ""
 
 func _init():
 	var now = _iso_now()
@@ -115,6 +121,18 @@ func to_dict() -> Dictionary:
 			"patreon": patreon_url,
 			"itchio": itchio_url,
 		},
+		"screens": {
+			"game_over": {
+				"title": game_over_title,
+				"subtitle": game_over_subtitle,
+				"background": game_over_background,
+			},
+			"to_be_continued": {
+				"title": to_be_continued_title,
+				"subtitle": to_be_continued_subtitle,
+				"background": to_be_continued_background,
+			},
+		},
 	}
 
 static func from_dict(d: Dictionary):
@@ -158,6 +176,19 @@ static func from_dict(d: Dictionary):
 		var links = d["links"]
 		story.patreon_url = links.get("patreon", "")
 		story.itchio_url = links.get("itchio", "")
+
+	if d.has("screens"):
+		var screens = d["screens"]
+		if screens.has("game_over"):
+			var go = screens["game_over"]
+			story.game_over_title = go.get("title", "")
+			story.game_over_subtitle = go.get("subtitle", "")
+			story.game_over_background = go.get("background", "")
+		if screens.has("to_be_continued"):
+			var tbc = screens["to_be_continued"]
+			story.to_be_continued_title = tbc.get("title", "")
+			story.to_be_continued_subtitle = tbc.get("subtitle", "")
+			story.to_be_continued_background = tbc.get("background", "")
 
 	return story
 

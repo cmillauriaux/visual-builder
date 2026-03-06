@@ -8,6 +8,7 @@ const SequenceFxPlayerScript = preload("res://src/ui/visual/sequence_fx_player.g
 const StoryPlayControllerScript = preload("res://src/ui/play/story_play_controller.gd")
 const SequenceEditorScript = preload("res://src/ui/sequence/sequence_editor.gd")
 const MainMenuScript = preload("res://src/ui/menu/main_menu.gd")
+const EndingScreenScript = preload("res://src/ui/menu/ending_screen.gd")
 const PauseMenuScript = preload("res://src/ui/menu/pause_menu.gd")
 const SaveLoadMenuScript = preload("res://src/ui/menu/save_load_menu.gd")
 const GameTheme = preload("res://src/ui/themes/game_theme.gd")
@@ -23,6 +24,7 @@ static func build(game: Control) -> void:
 	_build_helpers(game)
 	_build_story_selector(game)
 	_build_main_menu(game)
+	_build_ending_screens(game)
 	_build_save_load_menu(game)
 	_build_pause_menu(game)
 	_build_variable_display(game)
@@ -272,6 +274,18 @@ static func _build_main_menu(game: Control) -> void:
 	game._main_menu.build_ui()
 	game._main_menu.visible = false
 	game.add_child(game._main_menu)
+
+
+static func _build_ending_screens(game: Control) -> void:
+	game._game_over_screen = Control.new()
+	game._game_over_screen.set_script(EndingScreenScript)
+	game._game_over_screen.build_ui("Game Over")
+	game.add_child(game._game_over_screen)
+
+	game._to_be_continued_screen = Control.new()
+	game._to_be_continued_screen.set_script(EndingScreenScript)
+	game._to_be_continued_screen.build_ui("À suivre...")
+	game.add_child(game._to_be_continued_screen)
 
 
 static func _build_save_load_menu(game: Control) -> void:

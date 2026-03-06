@@ -267,9 +267,15 @@ func on_play_finished(reason: String) -> void:
 		return
 	_hide_choice_overlay()
 	_cleanup_play()
+	if reason == "game_over":
+		if _game.get("_game_over_screen") != null:
+			_game._game_over_screen.show_screen()
+			return
+	elif reason == "to_be_continued":
+		if _game.get("_to_be_continued_screen") != null:
+			_game._to_be_continued_screen.show_screen()
+			return
 	var messages = {
-		"game_over": StoryI18nService.get_ui_string("Fin — Game Over", _i18n),
-		"to_be_continued": StoryI18nService.get_ui_string("Fin — À suivre...", _i18n),
 		"no_ending": StoryI18nService.get_ui_string("Fin (aucune terminaison configurée)", _i18n),
 		"error": StoryI18nService.get_ui_string("Erreur (cible introuvable ou contenu vide)", _i18n),
 		"stopped": StoryI18nService.get_ui_string("Lecture arrêtée", _i18n),

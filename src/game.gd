@@ -71,6 +71,10 @@ var _variable_details_overlay: CenterContainer
 # UI — Menu principal
 var _main_menu: Control
 
+# UI — Écrans de fin
+var _game_over_screen: Control
+var _to_be_continued_screen: Control
+
 # UI — Options menu (pause context)
 var _pause_options_center: CenterContainer
 var _pause_options_menu: PanelContainer
@@ -159,6 +163,11 @@ func _ready() -> void:
 	_main_menu.quit_pressed.connect(_on_quit)
 	_main_menu.options_applied.connect(_on_options_applied)
 	_main_menu.set_settings(_settings)
+
+	# Connecter les signaux des écrans de fin
+	_game_over_screen.back_to_menu_pressed.connect(_on_play_finished_return)
+	_to_be_continued_screen.back_to_menu_pressed.connect(_on_play_finished_return)
+	_game_over_screen.load_last_autosave_pressed.connect(_on_game_over_load_autosave)
 
 	# Connecter les signaux du menu pause
 	_pause_menu.resume_pressed.connect(_on_pause_resume)
@@ -267,11 +276,30 @@ func _on_options_applied() -> void:
 func _show_main_menu(story) -> void:
 	_story_selector.visible = false
 	_menu_button.visible = false
+	_game_over_screen.hide_screen()
+	_to_be_continued_screen.hide_screen()
 	_main_menu.setup(story, _current_story_path)
 	_main_menu.show_menu()
 	var patreon_url = story.patreon_url if story.get("patreon_url") != null else ""
 	var itchio_url = story.itchio_url if story.get("itchio_url") != null else ""
 	_pause_menu.set_external_links(patreon_url, itchio_url)
+	_game_over_screen.setup(
+		story.game_over_title if story.get("game_over_title") != null else "",
+		story.game_over_subtitle if story.get("game_over_subtitle") != null else "",
+		story.game_over_background if story.get("game_over_background") != null else "",
+		_current_story_path,
+		patreon_url,
+		itchio_url
+	)
+	_game_over_screen.set_load_autosave_visible(not GameSaveManager.list_autosaves().is_empty())
+	_to_be_continued_screen.setup(
+		story.to_be_continued_title if story.get("to_be_continued_title") != null else "",
+		story.to_be_continued_subtitle if story.get("to_be_continued_subtitle") != null else "",
+		story.to_be_continued_background if story.get("to_be_continued_background") != null else "",
+		_current_story_path,
+		patreon_url,
+		itchio_url
+	)
 	if _music_player and story.get("menu_music") != null and story.menu_music != "":
 		_music_player.play_menu_music(story.menu_music)
 
@@ -298,10 +326,21 @@ func _on_quit() -> void:
 
 
 func _on_play_finished_return() -> void:
+	_game_over_screen.hide_screen()
+	_to_be_continued_screen.hide_screen()
 	if _current_story:
 		_show_main_menu(_current_story)
 	else:
 		_show_story_selector()
+
+
+func _on_game_over_load_autosave() -> void:
+	_game_over_screen.hide_screen()
+	var autosaves := GameSaveManager.list_autosaves()
+	if autosaves.is_empty():
+		return
+	var latest_slot: int = autosaves[0]["slot_index"]
+	_on_load_slot(-(latest_slot + 2))
 
 
 # --- Menu pause ---

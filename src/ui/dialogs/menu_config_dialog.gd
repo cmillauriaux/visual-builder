@@ -1,8 +1,8 @@
 extends ConfirmationDialog
 
-## Dialogue de configuration du menu principal de la story.
+## Dialogue de configuration du jeu (menu, analytics, liens, écrans de fin).
 
-signal menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_background: String, menu_music: String, playfab_title_id: String, playfab_enabled: bool, patreon_url: String, itchio_url: String)
+signal menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_background: String, menu_music: String, playfab_title_id: String, playfab_enabled: bool, patreon_url: String, itchio_url: String, game_over_title: String, game_over_subtitle: String, game_over_background: String, to_be_continued_title: String, to_be_continued_subtitle: String, to_be_continued_background: String)
 
 const ImagePickerDialogScript = preload("res://src/ui/dialogs/image_picker_dialog.gd")
 const AudioPickerDialogScript = preload("res://src/ui/dialogs/audio_picker_dialog.gd")
@@ -19,70 +19,85 @@ var _playfab_title_id_edit: LineEdit
 var _playfab_enabled_check: CheckButton
 var _patreon_url_edit: LineEdit
 var _itchio_url_edit: LineEdit
+var _game_over_bg_edit: LineEdit
+var _game_over_bg_preview: TextureRect
+var _game_over_title_edit: LineEdit
+var _game_over_subtitle_edit: LineEdit
+var _to_be_continued_bg_edit: LineEdit
+var _to_be_continued_bg_preview: TextureRect
+var _to_be_continued_title_edit: LineEdit
+var _to_be_continued_subtitle_edit: LineEdit
 var _story_base_path: String = ""
 var _current_menu_music: String = ""
 
+
 func _init():
-	title = "Configurer le menu"
-	min_size = Vector2i(400, 0)
+	title = "Configurer le jeu"
+	min_size = Vector2i(450, 450)
 
-	var vbox = VBoxContainer.new()
-	vbox.name = "ContentVBox"
+	var tabs = TabContainer.new()
+	tabs.name = "TabContainer"
+	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 
-	var title_label = Label.new()
-	title_label.text = "Titre du menu"
-	vbox.add_child(title_label)
+	# ── Onglet Menu ──────────────────────────────────────────────────────────
+	var menu_vbox = VBoxContainer.new()
+	menu_vbox.name = "Menu"
+	menu_vbox.add_theme_constant_override("separation", 4)
+
+	var title_lbl = Label.new()
+	title_lbl.text = "Titre du menu"
+	menu_vbox.add_child(title_lbl)
 
 	_menu_title_edit = LineEdit.new()
 	_menu_title_edit.name = "MenuTitleEdit"
 	_menu_title_edit.placeholder_text = "Laissez vide pour utiliser le titre de l'histoire"
-	vbox.add_child(_menu_title_edit)
+	menu_vbox.add_child(_menu_title_edit)
 
-	var subtitle_label = Label.new()
-	subtitle_label.text = "Sous-titre"
-	vbox.add_child(subtitle_label)
+	var subtitle_lbl = Label.new()
+	subtitle_lbl.text = "Sous-titre"
+	menu_vbox.add_child(subtitle_lbl)
 
 	_menu_subtitle_edit = LineEdit.new()
 	_menu_subtitle_edit.name = "MenuSubtitleEdit"
-	vbox.add_child(_menu_subtitle_edit)
+	menu_vbox.add_child(_menu_subtitle_edit)
 
-	var bg_label = Label.new()
-	bg_label.text = "Image de fond"
-	vbox.add_child(bg_label)
+	var bg_lbl = Label.new()
+	bg_lbl.text = "Image de fond"
+	menu_vbox.add_child(bg_lbl)
 
-	var hbox = HBoxContainer.new()
-	hbox.name = "BgHBox"
+	var bg_hbox = HBoxContainer.new()
+	bg_hbox.name = "BgHBox"
 
 	_menu_bg_edit = LineEdit.new()
 	_menu_bg_edit.name = "MenuBgEdit"
 	_menu_bg_edit.editable = false
 	_menu_bg_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	hbox.add_child(_menu_bg_edit)
+	bg_hbox.add_child(_menu_bg_edit)
 
 	_browse_button = Button.new()
 	_browse_button.name = "BrowseButton"
 	_browse_button.text = "Parcourir..."
 	_browse_button.pressed.connect(_on_browse_pressed)
-	hbox.add_child(_browse_button)
+	bg_hbox.add_child(_browse_button)
 
 	_clear_bg_button = Button.new()
 	_clear_bg_button.name = "ClearBgButton"
 	_clear_bg_button.text = "✕"
 	_clear_bg_button.pressed.connect(_on_clear_bg_pressed)
-	hbox.add_child(_clear_bg_button)
+	bg_hbox.add_child(_clear_bg_button)
 
-	vbox.add_child(hbox)
+	menu_vbox.add_child(bg_hbox)
 
 	_bg_preview = TextureRect.new()
 	_bg_preview.name = "BgPreview"
 	_bg_preview.custom_minimum_size = Vector2(200, 112)
 	_bg_preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_bg_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	vbox.add_child(_bg_preview)
+	menu_vbox.add_child(_bg_preview)
 
-	var music_label = Label.new()
-	music_label.text = "Musique du menu"
-	vbox.add_child(music_label)
+	var music_lbl = Label.new()
+	music_lbl.text = "Musique du menu"
+	menu_vbox.add_child(music_lbl)
 
 	var music_hbox = HBoxContainer.new()
 	music_hbox.name = "MusicHBox"
@@ -107,61 +122,186 @@ func _init():
 	_clear_music_button.pressed.connect(_on_clear_music_pressed)
 	music_hbox.add_child(_clear_music_button)
 
-	vbox.add_child(music_hbox)
+	menu_vbox.add_child(music_hbox)
+	tabs.add_child(menu_vbox)
 
-	var separator = HSeparator.new()
-	separator.name = "PlayFabSeparator"
-	vbox.add_child(separator)
+	# ── Onglet Analytics ─────────────────────────────────────────────────────
+	var analytics_vbox = VBoxContainer.new()
+	analytics_vbox.name = "Analytics"
+	analytics_vbox.add_theme_constant_override("separation", 4)
 
-	var playfab_label = Label.new()
-	playfab_label.text = "PlayFab Analytics"
-	playfab_label.add_theme_font_size_override("font_size", 16)
-	vbox.add_child(playfab_label)
+	var pf_section_lbl = Label.new()
+	pf_section_lbl.text = "PlayFab Analytics"
+	pf_section_lbl.add_theme_font_size_override("font_size", 16)
+	analytics_vbox.add_child(pf_section_lbl)
 
-	var pf_title_label = Label.new()
-	pf_title_label.text = "Title ID"
-	vbox.add_child(pf_title_label)
+	var pf_title_lbl = Label.new()
+	pf_title_lbl.text = "Title ID"
+	analytics_vbox.add_child(pf_title_lbl)
 
 	_playfab_title_id_edit = LineEdit.new()
 	_playfab_title_id_edit.name = "PlayFabTitleIdEdit"
 	_playfab_title_id_edit.placeholder_text = "Laisser vide pour désactiver"
-	vbox.add_child(_playfab_title_id_edit)
+	analytics_vbox.add_child(_playfab_title_id_edit)
 
 	_playfab_enabled_check = CheckButton.new()
 	_playfab_enabled_check.name = "PlayFabEnabledCheck"
 	_playfab_enabled_check.text = "Activer le tracking PlayFab"
-	vbox.add_child(_playfab_enabled_check)
+	analytics_vbox.add_child(_playfab_enabled_check)
 
-	var links_separator = HSeparator.new()
-	links_separator.name = "LinksSeparator"
-	vbox.add_child(links_separator)
+	tabs.add_child(analytics_vbox)
 
-	var links_label = Label.new()
-	links_label.text = "Liens externes"
-	links_label.add_theme_font_size_override("font_size", 16)
-	vbox.add_child(links_label)
+	# ── Onglet Liens ─────────────────────────────────────────────────────────
+	var liens_vbox = VBoxContainer.new()
+	liens_vbox.name = "Liens"
+	liens_vbox.add_theme_constant_override("separation", 4)
 
-	var patreon_label = Label.new()
-	patreon_label.text = "URL Patreon"
-	vbox.add_child(patreon_label)
+	var patreon_lbl = Label.new()
+	patreon_lbl.text = "URL Patreon"
+	liens_vbox.add_child(patreon_lbl)
 
 	_patreon_url_edit = LineEdit.new()
 	_patreon_url_edit.name = "PatreonUrlEdit"
 	_patreon_url_edit.placeholder_text = "https://www.patreon.com/..."
-	vbox.add_child(_patreon_url_edit)
+	liens_vbox.add_child(_patreon_url_edit)
 
-	var itchio_label = Label.new()
-	itchio_label.text = "URL itch.io"
-	vbox.add_child(itchio_label)
+	var itchio_lbl = Label.new()
+	itchio_lbl.text = "URL itch.io"
+	liens_vbox.add_child(itchio_lbl)
 
 	_itchio_url_edit = LineEdit.new()
 	_itchio_url_edit.name = "ItchioUrlEdit"
 	_itchio_url_edit.placeholder_text = "https://votrejeu.itch.io/..."
-	vbox.add_child(_itchio_url_edit)
+	liens_vbox.add_child(_itchio_url_edit)
 
-	add_child(vbox)
+	tabs.add_child(liens_vbox)
 
+	# ── Onglet Game Over ─────────────────────────────────────────────────────
+	var go_vbox = VBoxContainer.new()
+	go_vbox.name = "GameOver"
+	go_vbox.add_theme_constant_override("separation", 4)
+
+	var go_bg_lbl = Label.new()
+	go_bg_lbl.text = "Image de fond"
+	go_vbox.add_child(go_bg_lbl)
+
+	var go_bg_hbox = HBoxContainer.new()
+	go_bg_hbox.name = "GameOverBgHBox"
+
+	_game_over_bg_edit = LineEdit.new()
+	_game_over_bg_edit.name = "GameOverBgEdit"
+	_game_over_bg_edit.editable = false
+	_game_over_bg_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	go_bg_hbox.add_child(_game_over_bg_edit)
+
+	var go_browse_btn = Button.new()
+	go_browse_btn.name = "GameOverBrowseButton"
+	go_browse_btn.text = "Parcourir..."
+	go_browse_btn.pressed.connect(_on_game_over_browse_pressed)
+	go_bg_hbox.add_child(go_browse_btn)
+
+	var go_clear_btn = Button.new()
+	go_clear_btn.name = "GameOverClearBgButton"
+	go_clear_btn.text = "✕"
+	go_clear_btn.pressed.connect(_on_game_over_clear_bg_pressed)
+	go_bg_hbox.add_child(go_clear_btn)
+
+	go_vbox.add_child(go_bg_hbox)
+
+	_game_over_bg_preview = TextureRect.new()
+	_game_over_bg_preview.name = "GameOverBgPreview"
+	_game_over_bg_preview.custom_minimum_size = Vector2(200, 112)
+	_game_over_bg_preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_game_over_bg_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	go_vbox.add_child(_game_over_bg_preview)
+
+	var go_title_lbl = Label.new()
+	go_title_lbl.text = "Titre"
+	go_vbox.add_child(go_title_lbl)
+
+	_game_over_title_edit = LineEdit.new()
+	_game_over_title_edit.name = "GameOverTitleEdit"
+	_game_over_title_edit.placeholder_text = "Game Over"
+	go_vbox.add_child(_game_over_title_edit)
+
+	var go_subtitle_lbl = Label.new()
+	go_subtitle_lbl.text = "Sous-titre"
+	go_vbox.add_child(go_subtitle_lbl)
+
+	_game_over_subtitle_edit = LineEdit.new()
+	_game_over_subtitle_edit.name = "GameOverSubtitleEdit"
+	go_vbox.add_child(_game_over_subtitle_edit)
+
+	tabs.add_child(go_vbox)
+
+	# ── Onglet À suivre ───────────────────────────────────────────────────────
+	var tbc_vbox = VBoxContainer.new()
+	tbc_vbox.name = "ASuivre"
+	tbc_vbox.add_theme_constant_override("separation", 4)
+
+	var tbc_bg_lbl = Label.new()
+	tbc_bg_lbl.text = "Image de fond"
+	tbc_vbox.add_child(tbc_bg_lbl)
+
+	var tbc_bg_hbox = HBoxContainer.new()
+	tbc_bg_hbox.name = "ToBeContinuedBgHBox"
+
+	_to_be_continued_bg_edit = LineEdit.new()
+	_to_be_continued_bg_edit.name = "ToBeContinuedBgEdit"
+	_to_be_continued_bg_edit.editable = false
+	_to_be_continued_bg_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tbc_bg_hbox.add_child(_to_be_continued_bg_edit)
+
+	var tbc_browse_btn = Button.new()
+	tbc_browse_btn.name = "ToBeContinuedBrowseButton"
+	tbc_browse_btn.text = "Parcourir..."
+	tbc_browse_btn.pressed.connect(_on_tbc_browse_pressed)
+	tbc_bg_hbox.add_child(tbc_browse_btn)
+
+	var tbc_clear_btn = Button.new()
+	tbc_clear_btn.name = "ToBeContinuedClearBgButton"
+	tbc_clear_btn.text = "✕"
+	tbc_clear_btn.pressed.connect(_on_tbc_clear_bg_pressed)
+	tbc_bg_hbox.add_child(tbc_clear_btn)
+
+	tbc_vbox.add_child(tbc_bg_hbox)
+
+	_to_be_continued_bg_preview = TextureRect.new()
+	_to_be_continued_bg_preview.name = "ToBeContinuedBgPreview"
+	_to_be_continued_bg_preview.custom_minimum_size = Vector2(200, 112)
+	_to_be_continued_bg_preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_to_be_continued_bg_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	tbc_vbox.add_child(_to_be_continued_bg_preview)
+
+	var tbc_title_lbl = Label.new()
+	tbc_title_lbl.text = "Titre"
+	tbc_vbox.add_child(tbc_title_lbl)
+
+	_to_be_continued_title_edit = LineEdit.new()
+	_to_be_continued_title_edit.name = "ToBeContinuedTitleEdit"
+	_to_be_continued_title_edit.placeholder_text = "À suivre..."
+	tbc_vbox.add_child(_to_be_continued_title_edit)
+
+	var tbc_subtitle_lbl = Label.new()
+	tbc_subtitle_lbl.text = "Sous-titre"
+	tbc_vbox.add_child(tbc_subtitle_lbl)
+
+	_to_be_continued_subtitle_edit = LineEdit.new()
+	_to_be_continued_subtitle_edit.name = "ToBeContinuedSubtitleEdit"
+	tbc_vbox.add_child(_to_be_continued_subtitle_edit)
+
+	tabs.add_child(tbc_vbox)
+
+	# Titres des onglets (après ajout des enfants)
+	tabs.set_tab_title(0, "Menu")
+	tabs.set_tab_title(1, "Analytics")
+	tabs.set_tab_title(2, "Liens")
+	tabs.set_tab_title(3, "Game Over")
+	tabs.set_tab_title(4, "À suivre")
+
+	add_child(tabs)
 	confirmed.connect(_on_confirmed)
+
 
 func setup(story, story_base_path: String = "") -> void:
 	_menu_title_edit.text = story.menu_title
@@ -171,10 +311,19 @@ func setup(story, story_base_path: String = "") -> void:
 	_playfab_enabled_check.button_pressed = story.playfab_enabled
 	_patreon_url_edit.text = story.patreon_url if story.get("patreon_url") != null else ""
 	_itchio_url_edit.text = story.itchio_url if story.get("itchio_url") != null else ""
+	_game_over_bg_edit.text = story.game_over_background if story.get("game_over_background") != null else ""
+	_game_over_title_edit.text = story.game_over_title if story.get("game_over_title") != null else ""
+	_game_over_subtitle_edit.text = story.game_over_subtitle if story.get("game_over_subtitle") != null else ""
+	_to_be_continued_bg_edit.text = story.to_be_continued_background if story.get("to_be_continued_background") != null else ""
+	_to_be_continued_title_edit.text = story.to_be_continued_title if story.get("to_be_continued_title") != null else ""
+	_to_be_continued_subtitle_edit.text = story.to_be_continued_subtitle if story.get("to_be_continued_subtitle") != null else ""
 	_story_base_path = story_base_path
 	_current_menu_music = story.menu_music if story.get("menu_music") != null else ""
 	_update_menu_music_label()
 	_update_preview()
+	_update_game_over_preview()
+	_update_tbc_preview()
+
 
 func get_menu_title() -> String:
 	return _menu_title_edit.text
@@ -187,6 +336,39 @@ func get_menu_background() -> String:
 
 func get_menu_music() -> String:
 	return _current_menu_music
+
+func get_playfab_title_id() -> String:
+	return _playfab_title_id_edit.text
+
+func get_playfab_enabled() -> bool:
+	return _playfab_enabled_check.button_pressed
+
+func get_patreon_url() -> String:
+	return _patreon_url_edit.text
+
+func get_itchio_url() -> String:
+	return _itchio_url_edit.text
+
+func get_game_over_title() -> String:
+	return _game_over_title_edit.text
+
+func get_game_over_subtitle() -> String:
+	return _game_over_subtitle_edit.text
+
+func get_game_over_background() -> String:
+	return _game_over_bg_edit.text
+
+func get_to_be_continued_title() -> String:
+	return _to_be_continued_title_edit.text
+
+func get_to_be_continued_subtitle() -> String:
+	return _to_be_continued_subtitle_edit.text
+
+func get_to_be_continued_background() -> String:
+	return _to_be_continued_bg_edit.text
+
+
+# ── Handlers Menu ────────────────────────────────────────────────────────────
 
 func _on_browse_pressed() -> void:
 	var picker = Window.new()
@@ -240,17 +422,66 @@ func _update_preview() -> void:
 	else:
 		_bg_preview.texture = null
 
-func get_playfab_title_id() -> String:
-	return _playfab_title_id_edit.text
 
-func get_playfab_enabled() -> bool:
-	return _playfab_enabled_check.button_pressed
+# ── Handlers Game Over ───────────────────────────────────────────────────────
 
-func get_patreon_url() -> String:
-	return _patreon_url_edit.text
+func _on_game_over_browse_pressed() -> void:
+	var picker = Window.new()
+	picker.set_script(ImagePickerDialogScript)
+	add_child(picker)
+	picker.setup(ImagePickerDialogScript.Mode.BACKGROUND, _story_base_path)
+	picker.image_selected.connect(_on_game_over_bg_selected)
+	picker.popup_centered()
 
-func get_itchio_url() -> String:
-	return _itchio_url_edit.text
+func _on_game_over_bg_selected(path: String) -> void:
+	_game_over_bg_edit.text = path
+	_update_game_over_preview()
+
+func _on_game_over_clear_bg_pressed() -> void:
+	_game_over_bg_edit.text = ""
+	_game_over_bg_preview.texture = null
+
+func _update_game_over_preview() -> void:
+	if _game_over_bg_edit.text == "":
+		_game_over_bg_preview.texture = null
+		return
+	var img = Image.new()
+	if img.load(_game_over_bg_edit.text) == OK:
+		_game_over_bg_preview.texture = ImageTexture.create_from_image(img)
+	else:
+		_game_over_bg_preview.texture = null
+
+
+# ── Handlers À suivre ────────────────────────────────────────────────────────
+
+func _on_tbc_browse_pressed() -> void:
+	var picker = Window.new()
+	picker.set_script(ImagePickerDialogScript)
+	add_child(picker)
+	picker.setup(ImagePickerDialogScript.Mode.BACKGROUND, _story_base_path)
+	picker.image_selected.connect(_on_tbc_bg_selected)
+	picker.popup_centered()
+
+func _on_tbc_bg_selected(path: String) -> void:
+	_to_be_continued_bg_edit.text = path
+	_update_tbc_preview()
+
+func _on_tbc_clear_bg_pressed() -> void:
+	_to_be_continued_bg_edit.text = ""
+	_to_be_continued_bg_preview.texture = null
+
+func _update_tbc_preview() -> void:
+	if _to_be_continued_bg_edit.text == "":
+		_to_be_continued_bg_preview.texture = null
+		return
+	var img = Image.new()
+	if img.load(_to_be_continued_bg_edit.text) == OK:
+		_to_be_continued_bg_preview.texture = ImageTexture.create_from_image(img)
+	else:
+		_to_be_continued_bg_preview.texture = null
+
+
+# ── Confirmation ─────────────────────────────────────────────────────────────
 
 static func _validate_url(url: String) -> String:
 	var trimmed = url.strip_edges()
@@ -261,4 +492,10 @@ static func _validate_url(url: String) -> String:
 	return ""
 
 func _on_confirmed() -> void:
-	menu_config_confirmed.emit(_menu_title_edit.text, _menu_subtitle_edit.text, _menu_bg_edit.text, _current_menu_music, _playfab_title_id_edit.text, _playfab_enabled_check.button_pressed, _validate_url(_patreon_url_edit.text), _validate_url(_itchio_url_edit.text))
+	menu_config_confirmed.emit(
+		_menu_title_edit.text, _menu_subtitle_edit.text, _menu_bg_edit.text,
+		_current_menu_music, _playfab_title_id_edit.text, _playfab_enabled_check.button_pressed,
+		_validate_url(_patreon_url_edit.text), _validate_url(_itchio_url_edit.text),
+		_game_over_title_edit.text, _game_over_subtitle_edit.text, _game_over_bg_edit.text,
+		_to_be_continued_title_edit.text, _to_be_continued_subtitle_edit.text, _to_be_continued_bg_edit.text
+	)
