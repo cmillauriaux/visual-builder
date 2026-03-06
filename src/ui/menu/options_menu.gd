@@ -5,6 +5,7 @@ extends PanelContainer
 const GameSettings = preload("res://src/ui/menu/game_settings.gd")
 const StoryI18nService = preload("res://src/services/story_i18n_service.gd")
 const GameTheme = preload("res://src/ui/themes/game_theme.gd")
+const UIScale = preload("res://src/ui/themes/ui_scale.gd")
 
 signal closed
 signal applied
@@ -42,7 +43,7 @@ var _ui_label_pairs: Array = []
 
 func build_ui() -> void:
 	visible = false
-	custom_minimum_size = Vector2(600, 500)
+	custom_minimum_size = Vector2(UIScale.scale(600), UIScale.scale(500))
 
 	var root_vbox = VBoxContainer.new()
 	add_child(root_vbox)
@@ -54,7 +55,7 @@ func build_ui() -> void:
 	var title_label = Label.new()
 	title_label.text = "Options"
 	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title_label.add_theme_font_size_override("font_size", 22)
+	title_label.add_theme_font_size_override("font_size", UIScale.scale(22))
 	title_bar.add_child(title_label)
 	_ui_label_pairs.append([title_label, "Options"])
 
@@ -214,7 +215,7 @@ func apply_ui_translations(i18n_dict: Dictionary) -> void:
 func _add_section_label(parent: Control, text: String) -> Label:
 	var label = Label.new()
 	label.text = text
-	label.add_theme_font_size_override("font_size", 18)
+	label.add_theme_font_size_override("font_size", UIScale.scale(18))
 	label.add_theme_color_override("font_color", GameTheme.COLOR_TEXT_SECONDARY)
 	parent.add_child(label)
 	_ui_label_pairs.append([label, text])
@@ -262,7 +263,7 @@ func _add_slider_row(parent: Control, label_text: String) -> HSlider:
 	slider.max_value = 100
 	slider.step = 1
 	slider.value = 80
-	slider.custom_minimum_size.x = 200
+	slider.custom_minimum_size.x = UIScale.scale(200)
 	hbox.add_child(slider)
 	return slider
 

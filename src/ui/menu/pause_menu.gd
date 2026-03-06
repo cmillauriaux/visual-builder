@@ -4,6 +4,7 @@ extends Control
 
 const StoryI18nService = preload("res://src/services/story_i18n_service.gd")
 const GameTheme = preload("res://src/ui/themes/game_theme.gd")
+const UIScale = preload("res://src/ui/themes/ui_scale.gd")
 
 var _patreon_url: String = ""
 var _itchio_url: String = ""
@@ -47,24 +48,24 @@ func build_ui() -> void:
 	add_child(center)
 
 	var panel = PanelContainer.new()
-	panel.custom_minimum_size = Vector2(300, 0)
+	panel.custom_minimum_size = Vector2(UIScale.scale(300), 0)
 	center.add_child(panel)
 
 	var vbox = VBoxContainer.new()
 	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	vbox.add_theme_constant_override("separation", 12)
+	vbox.add_theme_constant_override("separation", UIScale.scale(12))
 	panel.add_child(vbox)
 
 	# Titre
 	_title_label = Label.new()
 	_title_label.text = "Pause"
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_title_label.add_theme_font_size_override("font_size", 32)
+	_title_label.add_theme_font_size_override("font_size", UIScale.scale(32))
 	vbox.add_child(_title_label)
 
 	# Spacer
 	var spacer = Control.new()
-	spacer.custom_minimum_size.y = 40
+	spacer.custom_minimum_size.y = UIScale.scale(40)
 	vbox.add_child(spacer)
 
 	# Boutons
@@ -153,5 +154,5 @@ func _on_itchio_pressed() -> void:
 func _create_menu_button(text: String) -> Button:
 	var btn = Button.new()
 	btn.text = text
-	btn.custom_minimum_size = Vector2(300, 50)
+	btn.custom_minimum_size = Vector2(UIScale.scale(300), UIScale.scale(50))
 	return btn

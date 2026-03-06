@@ -6,6 +6,7 @@ extends Control
 
 const GameSaveManager = preload("res://src/persistence/game_save_manager.gd")
 const GameTheme = preload("res://src/ui/themes/game_theme.gd")
+const UIScale = preload("res://src/ui/themes/ui_scale.gd")
 
 signal save_slot_pressed(index: int)
 signal load_slot_pressed(index: int)
@@ -41,11 +42,11 @@ func build_ui() -> void:
 	add_child(center)
 
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(960, 600)
+	panel.custom_minimum_size = Vector2(UIScale.scale(960), UIScale.scale(600))
 	center.add_child(panel)
 
 	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 16)
+	vbox.add_theme_constant_override("separation", UIScale.scale(16))
 	panel.add_child(vbox)
 
 	# En-tête : titre + bouton fermer
@@ -54,14 +55,14 @@ func build_ui() -> void:
 
 	_title_label = Label.new()
 	_title_label.text = "Sauvegardes"
-	_title_label.add_theme_font_size_override("font_size", 28)
+	_title_label.add_theme_font_size_override("font_size", UIScale.scale(28))
 	_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(_title_label)
 
 	var close_btn := Button.new()
 	close_btn.text = "✕"
-	close_btn.custom_minimum_size = Vector2(50, 50)
-	close_btn.add_theme_font_size_override("font_size", 24)
+	close_btn.custom_minimum_size = Vector2(UIScale.scale(50), UIScale.scale(50))
+	close_btn.add_theme_font_size_override("font_size", UIScale.scale(24))
 	close_btn.pressed.connect(func(): close_pressed.emit())
 	GameTheme.apply_close_style(close_btn)
 	header.add_child(close_btn)
@@ -174,7 +175,7 @@ func _refresh_auto_saves() -> void:
 		empty_lbl.text = "Aucune sauvegarde automatique"
 		empty_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		empty_lbl.add_theme_color_override("font_color", Color("#C4A882"))
-		empty_lbl.add_theme_font_size_override("font_size", 18)
+		empty_lbl.add_theme_font_size_override("font_size", UIScale.scale(18))
 		_auto_content.add_child(empty_lbl)
 		return
 
@@ -199,7 +200,7 @@ func _refresh_quick_saves() -> void:
 		empty_lbl.text = "Aucune sauvegarde rapide"
 		empty_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		empty_lbl.add_theme_color_override("font_color", Color("#C4A882"))
-		empty_lbl.add_theme_font_size_override("font_size", 18)
+		empty_lbl.add_theme_font_size_override("font_size", UIScale.scale(18))
 		_quick_content.add_child(empty_lbl)
 
 
@@ -209,7 +210,7 @@ func _build_autosave_card(entry: Dictionary, display_index: int) -> Control:
 	var has_screenshot: bool = entry.get("has_screenshot", false)
 
 	var card := PanelContainer.new()
-	card.custom_minimum_size = Vector2(290, 0)
+	card.custom_minimum_size = Vector2(UIScale.scale(290), 0)
 	card.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	card.name = "AutosaveCard_%d" % display_index
 	GameTheme.apply_dark_panel_style(card)
@@ -220,7 +221,7 @@ func _build_autosave_card(entry: Dictionary, display_index: int) -> Control:
 
 	# Thumbnail screenshot
 	var thumb := TextureRect.new()
-	thumb.custom_minimum_size = Vector2(290, 163)
+	thumb.custom_minimum_size = Vector2(UIScale.scale(290), UIScale.scale(163))
 	thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	thumb.name = "AutoThumbnail_%d" % display_index
@@ -239,21 +240,21 @@ func _build_autosave_card(entry: Dictionary, display_index: int) -> Control:
 
 	var chap_label := Label.new()
 	chap_label.text = data.get("chapter_name", "")
-	chap_label.add_theme_font_size_override("font_size", 13)
+	chap_label.add_theme_font_size_override("font_size", UIScale.scale(13))
 	chap_label.add_theme_color_override("font_color", Color("#E8D5B5"))
 	chap_label.name = "AutoChapterLabel_%d" % display_index
 	info_vbox.add_child(chap_label)
 
 	var scene_label := Label.new()
 	scene_label.text = data.get("scene_name", "")
-	scene_label.add_theme_font_size_override("font_size", 12)
+	scene_label.add_theme_font_size_override("font_size", UIScale.scale(12))
 	scene_label.add_theme_color_override("font_color", Color("#C4A882"))
 	scene_label.name = "AutoSceneLabel_%d" % display_index
 	info_vbox.add_child(scene_label)
 
 	var date_label := Label.new()
 	date_label.text = data.get("timestamp", "")
-	date_label.add_theme_font_size_override("font_size", 11)
+	date_label.add_theme_font_size_override("font_size", UIScale.scale(11))
 	date_label.add_theme_color_override("font_color", Color("#A08060"))
 	date_label.name = "AutoDateLabel_%d" % display_index
 	info_vbox.add_child(date_label)
@@ -272,7 +273,7 @@ func _build_autosave_card(entry: Dictionary, display_index: int) -> Control:
 
 func _build_quicksave_card(data: Dictionary) -> Control:
 	var card := PanelContainer.new()
-	card.custom_minimum_size = Vector2(290, 0)
+	card.custom_minimum_size = Vector2(UIScale.scale(290), 0)
 	card.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	card.name = "QuicksaveCard"
 	GameTheme.apply_dark_panel_style(card)
@@ -283,7 +284,7 @@ func _build_quicksave_card(data: Dictionary) -> Control:
 
 	# Thumbnail screenshot
 	var thumb := TextureRect.new()
-	thumb.custom_minimum_size = Vector2(290, 163)
+	thumb.custom_minimum_size = Vector2(UIScale.scale(290), UIScale.scale(163))
 	thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	thumb.name = "QuickThumbnail"
@@ -301,21 +302,21 @@ func _build_quicksave_card(data: Dictionary) -> Control:
 
 	var chap_label := Label.new()
 	chap_label.text = data.get("chapter_name", "")
-	chap_label.add_theme_font_size_override("font_size", 13)
+	chap_label.add_theme_font_size_override("font_size", UIScale.scale(13))
 	chap_label.add_theme_color_override("font_color", Color("#E8D5B5"))
 	chap_label.name = "QuickChapterLabel"
 	info_vbox.add_child(chap_label)
 
 	var scene_label := Label.new()
 	scene_label.text = data.get("scene_name", "")
-	scene_label.add_theme_font_size_override("font_size", 12)
+	scene_label.add_theme_font_size_override("font_size", UIScale.scale(12))
 	scene_label.add_theme_color_override("font_color", Color("#C4A882"))
 	scene_label.name = "QuickSceneLabel"
 	info_vbox.add_child(scene_label)
 
 	var date_label := Label.new()
 	date_label.text = data.get("timestamp", "")
-	date_label.add_theme_font_size_override("font_size", 11)
+	date_label.add_theme_font_size_override("font_size", UIScale.scale(11))
 	date_label.add_theme_color_override("font_color", Color("#A08060"))
 	date_label.name = "QuickDateLabel"
 	info_vbox.add_child(date_label)
@@ -340,7 +341,7 @@ func _build_slot_card(entry: Dictionary) -> Control:
 	var has_screenshot: bool = entry.get("has_screenshot", false)
 
 	var card := PanelContainer.new()
-	card.custom_minimum_size = Vector2(290, 0)
+	card.custom_minimum_size = Vector2(UIScale.scale(290), 0)
 	card.name = "Slot_%d" % idx
 	GameTheme.apply_dark_panel_style(card)
 
@@ -350,7 +351,7 @@ func _build_slot_card(entry: Dictionary) -> Control:
 
 	# Thumbnail screenshot
 	var thumb := TextureRect.new()
-	thumb.custom_minimum_size = Vector2(290, 163)
+	thumb.custom_minimum_size = Vector2(UIScale.scale(290), UIScale.scale(163))
 	thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	thumb.name = "Thumbnail"
@@ -370,21 +371,21 @@ func _build_slot_card(entry: Dictionary) -> Control:
 
 		var chap_label := Label.new()
 		chap_label.text = data.get("chapter_name", "")
-		chap_label.add_theme_font_size_override("font_size", 13)
+		chap_label.add_theme_font_size_override("font_size", UIScale.scale(13))
 		chap_label.add_theme_color_override("font_color", Color("#E8D5B5"))
 		chap_label.name = "ChapterLabel"
 		info_vbox.add_child(chap_label)
 
 		var scene_label := Label.new()
 		scene_label.text = data.get("scene_name", "")
-		scene_label.add_theme_font_size_override("font_size", 12)
+		scene_label.add_theme_font_size_override("font_size", UIScale.scale(12))
 		scene_label.add_theme_color_override("font_color", Color("#C4A882"))
 		scene_label.name = "SceneLabel"
 		info_vbox.add_child(scene_label)
 
 		var date_label := Label.new()
 		date_label.text = data.get("timestamp", "")
-		date_label.add_theme_font_size_override("font_size", 11)
+		date_label.add_theme_font_size_override("font_size", UIScale.scale(11))
 		date_label.add_theme_color_override("font_color", Color("#A08060"))
 		date_label.name = "DateLabel"
 		info_vbox.add_child(date_label)
@@ -468,35 +469,35 @@ func _show_confirm_dialog(message: String, on_yes: Callable) -> void:
 	_confirm_overlay.add_child(center)
 
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(360, 0)
+	panel.custom_minimum_size = Vector2(UIScale.scale(360), 0)
 	center.add_child(panel)
 
 	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 16)
+	vbox.add_theme_constant_override("separation", UIScale.scale(16))
 	panel.add_child(vbox)
 
 	var lbl := Label.new()
 	lbl.text = message
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	lbl.add_theme_font_size_override("font_size", 18)
+	lbl.add_theme_font_size_override("font_size", UIScale.scale(18))
 	vbox.add_child(lbl)
 
 	var btn_row := HBoxContainer.new()
-	btn_row.add_theme_constant_override("separation", 16)
+	btn_row.add_theme_constant_override("separation", UIScale.scale(16))
 	btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	vbox.add_child(btn_row)
 
 	var yes_btn := Button.new()
 	yes_btn.text = "Oui"
 	yes_btn.name = "ConfirmYesButton"
-	yes_btn.custom_minimum_size = Vector2(120, 44)
+	yes_btn.custom_minimum_size = Vector2(UIScale.scale(120), UIScale.scale(44))
 	yes_btn.pressed.connect(on_yes)
 	btn_row.add_child(yes_btn)
 
 	var no_btn := Button.new()
 	no_btn.text = "Non"
 	no_btn.name = "ConfirmNoButton"
-	no_btn.custom_minimum_size = Vector2(120, 44)
+	no_btn.custom_minimum_size = Vector2(UIScale.scale(120), UIScale.scale(44))
 	no_btn.pressed.connect(func(): _confirm_overlay.visible = false)
 	btn_row.add_child(no_btn)
 

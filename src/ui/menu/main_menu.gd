@@ -7,6 +7,7 @@ const GameSettings = preload("res://src/ui/menu/game_settings.gd")
 const TextureLoader = preload("res://src/ui/shared/texture_loader.gd")
 const StoryI18nService = preload("res://src/services/story_i18n_service.gd")
 const GameTheme = preload("res://src/ui/themes/game_theme.gd")
+const UIScale = preload("res://src/ui/themes/ui_scale.gd")
 
 signal new_game_pressed
 signal load_game_pressed
@@ -69,7 +70,7 @@ func build_ui() -> void:
 	vbox.add_child(banner_wrapper)
 
 	var banner_stack = Control.new()
-	banner_stack.custom_minimum_size = Vector2(500, 140)
+	banner_stack.custom_minimum_size = Vector2(UIScale.scale(500), UIScale.scale(140))
 	banner_wrapper.add_child(banner_stack)
 
 	var banner_tex = load(GameTheme.ASSETS_PATH + "banner_hanging.png")
@@ -93,19 +94,19 @@ func build_ui() -> void:
 
 	_title_label = Label.new()
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_title_label.add_theme_font_size_override("font_size", 36)
+	_title_label.add_theme_font_size_override("font_size", UIScale.scale(36))
 	_title_label.add_theme_color_override("font_color", Color.WHITE)
 	label_vbox.add_child(_title_label)
 
 	_subtitle_label = Label.new()
 	_subtitle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_subtitle_label.add_theme_font_size_override("font_size", 18)
+	_subtitle_label.add_theme_font_size_override("font_size", UIScale.scale(18))
 	_subtitle_label.add_theme_color_override("font_color", Color(1, 1, 1, 0.8))
 	label_vbox.add_child(_subtitle_label)
 
 	# Spacer
 	var spacer = Control.new()
-	spacer.custom_minimum_size.y = 60
+	spacer.custom_minimum_size.y = UIScale.scale(60)
 	vbox.add_child(spacer)
 
 	# Boutons
@@ -237,5 +238,5 @@ func _on_itchio_pressed() -> void:
 func _create_menu_button(text: String) -> Button:
 	var btn = Button.new()
 	btn.text = text
-	btn.custom_minimum_size = Vector2(300, 50)
+	btn.custom_minimum_size = Vector2(UIScale.scale(300), UIScale.scale(50))
 	return btn

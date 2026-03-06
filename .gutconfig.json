@@ -16,7 +16,8 @@
     "res://specs/game/",
     "res://specs/export/",
     "res://specs/controllers/",
-    "res://specs/display/"
+    "res://specs/display/",
+    "res://specs/ui/themes/"
   ],
   "prefix": "test_",
   "suffix": ".gd",

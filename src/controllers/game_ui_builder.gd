@@ -2,6 +2,7 @@ extends RefCounted
 
 ## Construit l'arborescence UI du jeu standalone (play-only, pas d'éditeur).
 
+const UIScale = preload("res://src/ui/themes/ui_scale.gd")
 const SequenceVisualEditorScript = preload("res://src/ui/sequence/sequence_visual_editor.gd")
 const ForegroundTransitionScript = preload("res://src/ui/visual/foreground_transition.gd")
 const SequenceFxPlayerScript = preload("res://src/ui/visual/sequence_fx_player.gd")
@@ -46,17 +47,18 @@ static func _build_visual_editor(game: Control) -> void:
 
 
 static func _build_play_overlay(game: Control) -> void:
+	var s := UIScale.get_scale()
 	game._play_overlay = PanelContainer.new()
 	game._play_overlay.visible = false
 	game._play_overlay.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	game._play_overlay.offset_top = -150
+	game._play_overlay.offset_top = -roundi(150 * s)
 	game._play_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 
 	var play_vbox = VBoxContainer.new()
 	game._play_overlay.add_child(play_vbox)
 
 	game._play_character_label = Label.new()
-	game._play_character_label.add_theme_font_size_override("font_size", 20)
+	game._play_character_label.add_theme_font_size_override("font_size", UIScale.scale(20))
 	game._play_character_label.add_theme_color_override("font_color", Color("#5C3A1E"))
 	play_vbox.add_child(game._play_character_label)
 
@@ -68,30 +70,31 @@ static func _build_play_overlay(game: Control) -> void:
 	play_vbox.add_child(game._play_text_label)
 
 	# Boutons de jeu — créés ici, ajoutés dans _build_play_buttons_bar() à la fin
+	var btn_size := Vector2(UIScale.scale(120), UIScale.scale(30))
 	game._quicksave_button = Button.new()
 	game._quicksave_button.text = "Save (F5)"
-	game._quicksave_button.custom_minimum_size = Vector2(120, 30)
+	game._quicksave_button.custom_minimum_size = btn_size
 	game._quicksave_button.clip_text = true
 
 	game._quickload_button = Button.new()
 	game._quickload_button.text = "Load (F9)"
-	game._quickload_button.custom_minimum_size = Vector2(120, 30)
+	game._quickload_button.custom_minimum_size = btn_size
 	game._quickload_button.clip_text = true
 
 	game._auto_play_button = Button.new()
 	game._auto_play_button.text = "Auto"
-	game._auto_play_button.custom_minimum_size = Vector2(120, 30)
+	game._auto_play_button.custom_minimum_size = btn_size
 	game._auto_play_button.clip_text = true
 
 	game._skip_button = Button.new()
 	game._skip_button.text = "Skip (S)"
-	game._skip_button.custom_minimum_size = Vector2(120, 30)
+	game._skip_button.custom_minimum_size = btn_size
 	game._skip_button.clip_text = true
 	game._skip_button.disabled = true
 
 	game._history_button = Button.new()
 	game._history_button.text = "Histo (H)"
-	game._history_button.custom_minimum_size = Vector2(120, 30)
+	game._history_button.custom_minimum_size = btn_size
 	game._history_button.clip_text = true
 	game._history_button.disabled = true
 
@@ -107,7 +110,7 @@ static func _build_play_overlay(game: Control) -> void:
 	game._choice_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 
 	game._choice_panel = PanelContainer.new()
-	game._choice_panel.custom_minimum_size = Vector2(400, 0)
+	game._choice_panel.custom_minimum_size = Vector2(UIScale.scale(400), 0)
 	game._choice_overlay.add_child(game._choice_panel)
 
 	# --- Play Title Overlay ---
@@ -121,24 +124,25 @@ static func _build_play_overlay(game: Control) -> void:
 	
 	game._play_title_label = Label.new()
 	game._play_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	game._play_title_label.add_theme_font_size_override("font_size", 48)
+	game._play_title_label.add_theme_font_size_override("font_size", UIScale.scale(48))
 	game._play_title_label.add_theme_color_override("font_color", Color.WHITE)
 	title_vbox.add_child(game._play_title_label)
 
 	game._play_subtitle_label = Label.new()
 	game._play_subtitle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	game._play_subtitle_label.add_theme_font_size_override("font_size", 24)
+	game._play_subtitle_label.add_theme_font_size_override("font_size", UIScale.scale(24))
 	game._play_subtitle_label.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8))
 	title_vbox.add_child(game._play_subtitle_label)
 
 
 static func _build_play_buttons_bar(game: Control) -> void:
+	var s := UIScale.get_scale()
 	game._play_buttons_bar = HBoxContainer.new()
 	game._play_buttons_bar.visible = false
 	game._play_buttons_bar.alignment = BoxContainer.ALIGNMENT_END
 	game._play_buttons_bar.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	game._play_buttons_bar.offset_top = -188
-	game._play_buttons_bar.offset_bottom = -150
+	game._play_buttons_bar.offset_top = -roundi(188 * s)
+	game._play_buttons_bar.offset_bottom = -roundi(150 * s)
 	game._play_buttons_bar.offset_right = -3
 	game._play_buttons_bar.mouse_filter = Control.MOUSE_FILTER_PASS
 	game._play_buttons_bar.add_theme_constant_override("separation", 4)
@@ -151,14 +155,15 @@ static func _build_play_buttons_bar(game: Control) -> void:
 
 
 static func _build_toast_overlay(game: Control) -> void:
+	var s := UIScale.get_scale()
 	game._toast_overlay = PanelContainer.new()
 	game._toast_overlay.visible = false
 	game._toast_overlay.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	game._toast_overlay.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	game._toast_overlay.grow_vertical = Control.GROW_DIRECTION_END
-	game._toast_overlay.offset_top = 8
-	game._toast_overlay.offset_right = -8
-	game._toast_overlay.custom_minimum_size = Vector2(300, 0)
+	game._toast_overlay.offset_top = roundi(8 * s)
+	game._toast_overlay.offset_right = -roundi(8 * s)
+	game._toast_overlay.custom_minimum_size = Vector2(UIScale.scale(300), 0)
 	game._toast_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	game._toast_overlay.z_index = 100
 	game.add_child(game._toast_overlay)
@@ -187,43 +192,44 @@ static func _build_quickload_confirm(game: Control) -> void:
 	game._quickload_confirm_overlay.add_child(center)
 
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(400, 0)
+	panel.custom_minimum_size = Vector2(UIScale.scale(400), 0)
 	center.add_child(panel)
 
 	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 16)
+	vbox.add_theme_constant_override("separation", UIScale.scale(16))
 	panel.add_child(vbox)
 
 	game._quickload_confirm_label = Label.new()
 	game._quickload_confirm_label.text = "Charger la sauvegarde rapide ?"
 	game._quickload_confirm_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	game._quickload_confirm_label.add_theme_font_size_override("font_size", 20)
+	game._quickload_confirm_label.add_theme_font_size_override("font_size", UIScale.scale(20))
 	vbox.add_child(game._quickload_confirm_label)
 
 	var hbox := HBoxContainer.new()
 	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	hbox.add_theme_constant_override("separation", 16)
+	hbox.add_theme_constant_override("separation", UIScale.scale(16))
 	vbox.add_child(hbox)
 
 	game._quickload_yes_btn = Button.new()
 	game._quickload_yes_btn.text = "Oui"
-	game._quickload_yes_btn.custom_minimum_size = Vector2(120, 40)
+	game._quickload_yes_btn.custom_minimum_size = Vector2(UIScale.scale(120), UIScale.scale(40))
 	hbox.add_child(game._quickload_yes_btn)
 
 	game._quickload_no_btn = Button.new()
 	game._quickload_no_btn.text = "Non"
-	game._quickload_no_btn.custom_minimum_size = Vector2(120, 40)
+	game._quickload_no_btn.custom_minimum_size = Vector2(UIScale.scale(120), UIScale.scale(40))
 	hbox.add_child(game._quickload_no_btn)
 
 
 static func _build_menu_button(game: Control) -> void:
+	var s := UIScale.get_scale()
 	game._menu_button = Button.new()
 	game._menu_button.text = "☰ Menu"
 	game._menu_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-	game._menu_button.offset_left = -100
-	game._menu_button.offset_right = -10
-	game._menu_button.offset_top = 10
-	game._menu_button.offset_bottom = 40
+	game._menu_button.offset_left = -roundi(100 * s)
+	game._menu_button.offset_right = -roundi(10 * s)
+	game._menu_button.offset_top = roundi(10 * s)
+	game._menu_button.offset_bottom = roundi(40 * s)
 	game._menu_button.visible = false
 	game._menu_button.process_mode = Node.PROCESS_MODE_ALWAYS
 	game.add_child(game._menu_button)
@@ -261,7 +267,7 @@ static func _build_story_selector(game: Control) -> void:
 
 	game._story_selector = PanelContainer.new()
 	game._story_selector.name = "StorySelector"
-	game._story_selector.custom_minimum_size = Vector2(500, 400)
+	game._story_selector.custom_minimum_size = Vector2(UIScale.scale(500), UIScale.scale(400))
 	center.add_child(game._story_selector)
 
 	var vbox = VBoxContainer.new()
@@ -270,7 +276,7 @@ static func _build_story_selector(game: Control) -> void:
 	game._story_selector_title = Label.new()
 	game._story_selector_title.text = "Sélectionnez une histoire"
 	game._story_selector_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	game._story_selector_title.add_theme_font_size_override("font_size", 24)
+	game._story_selector_title.add_theme_font_size_override("font_size", UIScale.scale(24))
 	vbox.add_child(game._story_selector_title)
 
 	var separator = HSeparator.new()
@@ -326,13 +332,14 @@ static func _build_music_player(game: Control) -> void:
 
 
 static func _build_variable_display(game: Control) -> void:
+	var s := UIScale.get_scale()
 	# ScrollContainer sur le bord gauche (toute la hauteur avec marges)
 	game._variable_sidebar_scroll = ScrollContainer.new()
 	game._variable_sidebar_scroll.set_anchors_preset(Control.PRESET_LEFT_WIDE)
-	game._variable_sidebar_scroll.offset_left = 10
-	game._variable_sidebar_scroll.offset_right = 130
-	game._variable_sidebar_scroll.offset_top = 50
-	game._variable_sidebar_scroll.offset_bottom = -160
+	game._variable_sidebar_scroll.offset_left = roundi(10 * s)
+	game._variable_sidebar_scroll.offset_right = roundi(130 * s)
+	game._variable_sidebar_scroll.offset_top = roundi(50 * s)
+	game._variable_sidebar_scroll.offset_bottom = -roundi(160 * s)
 	game._variable_sidebar_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
 	game._variable_sidebar_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
 	game._variable_sidebar_scroll.visible = false

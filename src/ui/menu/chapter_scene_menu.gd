@@ -5,6 +5,7 @@ extends Control
 ## Les scènes verrouillées sont grisées avec "Chapitre N" / "??????".
 
 const GameTheme = preload("res://src/ui/themes/game_theme.gd")
+const UIScale = preload("res://src/ui/themes/ui_scale.gd")
 
 signal scene_selected(chapter_uuid: String, scene_uuid: String)
 signal close_pressed
@@ -30,11 +31,11 @@ func build_ui() -> void:
 	add_child(center)
 
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(800, 500)
+	panel.custom_minimum_size = Vector2(UIScale.scale(800), UIScale.scale(500))
 	center.add_child(panel)
 
 	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 16)
+	vbox.add_theme_constant_override("separation", UIScale.scale(16))
 	panel.add_child(vbox)
 
 	# En-tête
@@ -43,14 +44,14 @@ func build_ui() -> void:
 
 	_title_label = Label.new()
 	_title_label.text = "Chapitres / Scènes"
-	_title_label.add_theme_font_size_override("font_size", 28)
+	_title_label.add_theme_font_size_override("font_size", UIScale.scale(28))
 	_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(_title_label)
 
 	var close_btn := Button.new()
 	close_btn.text = "✕"
-	close_btn.custom_minimum_size = Vector2(50, 50)
-	close_btn.add_theme_font_size_override("font_size", 24)
+	close_btn.custom_minimum_size = Vector2(UIScale.scale(50), UIScale.scale(50))
+	close_btn.add_theme_font_size_override("font_size", UIScale.scale(24))
 	close_btn.pressed.connect(func(): close_pressed.emit())
 	GameTheme.apply_close_style(close_btn)
 	header.add_child(close_btn)
@@ -102,7 +103,7 @@ func _build_chapter_section(chapter, ch_idx: int, max_chapter_idx: int, max_scen
 	# En-tête du chapitre
 	var chap_label := Label.new()
 	chap_label.text = "Chapitre %d — %s" % [ch_idx + 1, chapter.chapter_name]
-	chap_label.add_theme_font_size_override("font_size", 20)
+	chap_label.add_theme_font_size_override("font_size", UIScale.scale(20))
 	chap_label.add_theme_color_override("font_color", Color("#E8D5B5"))
 	chap_label.name = "ChapterHeader"
 	section.add_child(chap_label)
@@ -135,7 +136,7 @@ func _is_scene_unlocked(ch_idx: int, sc_idx: int, max_chapter_idx: int, max_scen
 func _build_unlocked_scene(parent: FlowContainer, chapter, scene, sc_idx: int) -> void:
 	var btn := Button.new()
 	btn.text = scene.scene_name
-	btn.custom_minimum_size = Vector2(160, 60)
+	btn.custom_minimum_size = Vector2(UIScale.scale(160), UIScale.scale(60))
 	btn.name = "SceneButton_%d" % sc_idx
 	btn.pressed.connect(func(): scene_selected.emit(chapter.uuid, scene.uuid))
 	parent.add_child(btn)
@@ -143,7 +144,7 @@ func _build_unlocked_scene(parent: FlowContainer, chapter, scene, sc_idx: int) -
 
 func _build_locked_scene(parent: FlowContainer, ch_idx: int, sc_idx: int) -> void:
 	var card := PanelContainer.new()
-	card.custom_minimum_size = Vector2(160, 60)
+	card.custom_minimum_size = Vector2(UIScale.scale(160), UIScale.scale(60))
 	card.name = "LockedScene_%d" % sc_idx
 	card.self_modulate = Color(1, 1, 1, 0.4)
 
@@ -154,7 +155,7 @@ func _build_locked_scene(parent: FlowContainer, ch_idx: int, sc_idx: int) -> voi
 	var chap_lbl := Label.new()
 	chap_lbl.text = "Chapitre %d" % (ch_idx + 1)
 	chap_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	chap_lbl.add_theme_font_size_override("font_size", 12)
+	chap_lbl.add_theme_font_size_override("font_size", UIScale.scale(12))
 	chap_lbl.add_theme_color_override("font_color", Color("#A08060"))
 	chap_lbl.name = "LockedChapterLabel"
 	inner.add_child(chap_lbl)
@@ -162,7 +163,7 @@ func _build_locked_scene(parent: FlowContainer, ch_idx: int, sc_idx: int) -> voi
 	var scene_lbl := Label.new()
 	scene_lbl.text = "??????"
 	scene_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	scene_lbl.add_theme_font_size_override("font_size", 16)
+	scene_lbl.add_theme_font_size_override("font_size", UIScale.scale(16))
 	scene_lbl.add_theme_color_override("font_color", Color("#6B5A45"))
 	scene_lbl.name = "LockedSceneLabel"
 	inner.add_child(scene_lbl)

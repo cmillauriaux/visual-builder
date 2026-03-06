@@ -5,6 +5,7 @@ extends Node
 
 const StoryI18nService = preload("res://src/services/story_i18n_service.gd")
 const AutoPlayManagerScript = preload("res://src/services/auto_play_manager.gd")
+const UIScale = preload("res://src/ui/themes/ui_scale.gd")
 
 var _game: Control
 var _sequence_editor_ctrl: Control
@@ -261,7 +262,7 @@ func on_choice_display_requested(choices) -> void:
 	var title_label = Label.new()
 	title_label.text = StoryI18nService.get_ui_string("Faites votre choix", _i18n)
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title_label.add_theme_font_size_override("font_size", 18)
+	title_label.add_theme_font_size_override("font_size", UIScale.scale(18))
 	vbox.add_child(title_label)
 	for i in range(choices.size()):
 		var btn = Button.new()
@@ -606,18 +607,18 @@ func _show_history_panel() -> void:
 	overlay.add_child(center)
 
 	var panel = PanelContainer.new()
-	panel.custom_minimum_size = Vector2(600, 400)
+	panel.custom_minimum_size = Vector2(UIScale.scale(600), UIScale.scale(400))
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	center.add_child(panel)
 
 	var vbox = VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 8)
+	vbox.add_theme_constant_override("separation", UIScale.scale(8))
 	panel.add_child(vbox)
 
 	var title = Label.new()
 	title.text = "Historique"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 18)
+	title.add_theme_font_size_override("font_size", UIScale.scale(18))
 	vbox.add_child(title)
 
 	var sep = HSeparator.new()
@@ -625,7 +626,7 @@ func _show_history_panel() -> void:
 
 	var scroll = ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.custom_minimum_size = Vector2(0, 300)
+	scroll.custom_minimum_size = Vector2(0, UIScale.scale(300))
 	vbox.add_child(scroll)
 
 	var entries_vbox = VBoxContainer.new()

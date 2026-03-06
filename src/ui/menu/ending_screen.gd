@@ -5,6 +5,7 @@ extends Control
 
 const TextureLoader = preload("res://src/ui/shared/texture_loader.gd")
 const GameTheme = preload("res://src/ui/themes/game_theme.gd")
+const UIScale = preload("res://src/ui/themes/ui_scale.gd")
 
 signal back_to_menu_pressed
 signal load_last_autosave_pressed
@@ -49,19 +50,19 @@ func build_ui(default_title: String = "") -> void:
 
 	_title_label = Label.new()
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_title_label.add_theme_font_size_override("font_size", 64)
+	_title_label.add_theme_font_size_override("font_size", UIScale.scale(64))
 	_title_label.add_theme_color_override("font_color", Color.WHITE)
 	_title_label.text = _default_title
 	vbox.add_child(_title_label)
 
 	_subtitle_label = Label.new()
 	_subtitle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_subtitle_label.add_theme_font_size_override("font_size", 24)
+	_subtitle_label.add_theme_font_size_override("font_size", UIScale.scale(24))
 	_subtitle_label.add_theme_color_override("font_color", Color(1, 1, 1, 0.8))
 	vbox.add_child(_subtitle_label)
 
 	var spacer = Control.new()
-	spacer.custom_minimum_size.y = 60
+	spacer.custom_minimum_size.y = UIScale.scale(60)
 	vbox.add_child(spacer)
 
 	_load_autosave_button = _create_button("Charger la dernière sauvegarde")
@@ -131,5 +132,5 @@ func _on_itchio_pressed() -> void:
 func _create_button(text: String) -> Button:
 	var btn = Button.new()
 	btn.text = text
-	btn.custom_minimum_size = Vector2(300, 50)
+	btn.custom_minimum_size = Vector2(UIScale.scale(300), UIScale.scale(50))
 	return btn
