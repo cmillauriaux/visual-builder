@@ -310,3 +310,31 @@ func test_apply_emits_applied_signal():
 	_menu.load_from_settings(_settings)
 	_menu._apply_button.emit_signal("pressed")
 	assert_signal_emitted(_menu, "applied")
+
+# --- autosave_enabled ---
+
+func test_has_autosave_enabled_check():
+	assert_not_null(_menu._autosave_enabled_check)
+	assert_is(_menu._autosave_enabled_check, CheckButton)
+
+func test_load_values_autosave_enabled_true():
+	_settings.autosave_enabled = true
+	_menu.load_from_settings(_settings)
+	assert_true(_menu._autosave_enabled_check.button_pressed)
+
+func test_load_values_autosave_enabled_false():
+	_settings.autosave_enabled = false
+	_menu.load_from_settings(_settings)
+	assert_false(_menu._autosave_enabled_check.button_pressed)
+
+func test_apply_autosave_enabled_true():
+	_menu.load_from_settings(_settings)
+	_menu._autosave_enabled_check.button_pressed = true
+	_menu.apply_to_settings(_settings, _test_cfg_path)
+	assert_true(_settings.autosave_enabled)
+
+func test_apply_autosave_enabled_false():
+	_menu.load_from_settings(_settings)
+	_menu._autosave_enabled_check.button_pressed = false
+	_menu.apply_to_settings(_settings, _test_cfg_path)
+	assert_false(_settings.autosave_enabled)

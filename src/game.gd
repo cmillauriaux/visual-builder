@@ -104,6 +104,9 @@ func _ready() -> void:
 
 	GameUIBuilder.build(self)
 
+	# Configurer le contrôleur de jeu avec les réglages
+	_story_play_ctrl.setup(null, _settings.autosave_enabled)
+
 	# Vérifier si un chemin de story est défini dans les paramètres du projet (via override.cfg)
 	var overridden_path = ProjectSettings.get_setting("application/config/story_path", "")
 	if overridden_path != "":
@@ -139,6 +142,9 @@ func _ready() -> void:
 	_analytics.set_script(PlayFabAnalyticsServiceScript)
 	_analytics.name = "PlayFabAnalytics"
 	add_child(_analytics)
+
+	# Connecter le signal autosave
+	_story_play_ctrl.autosave_triggered.connect(_on_autosave_triggered)
 
 	# Connecter les signaux analytics du story play controller
 	_story_play_ctrl.chapter_entered.connect(_on_analytics_chapter_entered)
@@ -255,6 +261,7 @@ func _on_options_applied() -> void:
 	_play_ctrl.set_auto_play_enabled(_settings.auto_play_enabled)
 	_play_ctrl.set_typewriter_speed(_settings.typewriter_speed)
 	_play_ctrl.set_dialogue_opacity(_settings.dialogue_opacity / 100.0)
+	_story_play_ctrl._autosave_enabled = _settings.autosave_enabled
 
 
 func _show_main_menu(story) -> void:
@@ -379,8 +386,23 @@ func _on_save_slot(slot_index: int) -> void:
 	get_tree().paused = false
 
 
+func _on_autosave_triggered() -> void:
+	if _current_story == null:
+		return
+	var screenshot := get_viewport().get_texture().get_image()
+	var state := _collect_game_state()
+	GameSaveManager.autosave(state, screenshot)
+
+
 func _on_load_slot(slot_index: int) -> void:
-	var save_data := GameSaveManager.load_game(slot_index)
+	var save_data: Dictionary
+	if slot_index == -1:
+		save_data = GameSaveManager.quickload()
+	elif slot_index < -1:
+		var auto_slot := -(slot_index + 2)
+		save_data = GameSaveManager.load_autosave(auto_slot)
+	else:
+		save_data = GameSaveManager.load_game(slot_index)
 	if save_data.is_empty():
 		return
 	_save_load_menu.hide_menu()

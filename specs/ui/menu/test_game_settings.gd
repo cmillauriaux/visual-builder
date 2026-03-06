@@ -224,3 +224,23 @@ func test_typewriter_speed_values():
 	assert_eq(GameSettings.TYPEWRITER_SPEEDS[1], 0.03)
 	assert_eq(GameSettings.TYPEWRITER_SPEEDS[2], 0.015)
 	assert_eq(GameSettings.TYPEWRITER_SPEEDS[3], 0.0)
+
+
+# --- autosave_enabled ---
+
+func test_default_autosave_enabled():
+	assert_eq(_settings.autosave_enabled, true)
+
+func test_save_and_load_autosave_enabled_false():
+	_settings.autosave_enabled = false
+	_settings.save_settings(_test_cfg_path)
+	var loaded = GameSettings.new()
+	loaded.load_settings(_test_cfg_path)
+	assert_eq(loaded.autosave_enabled, false)
+
+func test_save_and_load_autosave_enabled_true():
+	_settings.autosave_enabled = true
+	_settings.save_settings(_test_cfg_path)
+	var loaded = GameSettings.new()
+	loaded.load_settings(_test_cfg_path)
+	assert_eq(loaded.autosave_enabled, true)

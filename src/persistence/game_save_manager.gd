@@ -8,6 +8,109 @@ const SAVE_VERSION: int = 1
 const NUM_SLOTS: int = 6
 const SAVE_DIR: String = "user://saves"
 const QUICKSAVE_DIR: String = "user://saves/quicksave"
+const NUM_AUTOSAVE_SLOTS: int = 10
+const AUTOSAVE_INDEX_PATH: String = "user://saves/autosave_index.dat"
+
+
+static func get_autosave_dir(slot_index: int) -> String:
+	return "%s/autosave_%d" % [SAVE_DIR, slot_index]
+
+
+static func get_autosave_save_path(slot_index: int) -> String:
+	return "%s/save.json" % get_autosave_dir(slot_index)
+
+
+static func get_autosave_screenshot_path(slot_index: int) -> String:
+	return "%s/screenshot.png" % get_autosave_dir(slot_index)
+
+
+## Lit l'index courant de rotation des auto-saves (0–9). Retourne 0 par défaut.
+static func _get_current_autosave_index() -> int:
+	if not FileAccess.file_exists(AUTOSAVE_INDEX_PATH):
+		return 0
+	var file := FileAccess.open(AUTOSAVE_INDEX_PATH, FileAccess.READ)
+	if file == null:
+		return 0
+	var content := file.get_as_text()
+	file.close()
+	var parsed = JSON.parse_string(content)
+	if parsed == null or not parsed is float and not parsed is int:
+		return 0
+	return int(parsed)
+
+
+## Persiste l'index courant dans autosave_index.dat.
+static func _save_autosave_index(index: int) -> void:
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(SAVE_DIR))
+	var file := FileAccess.open(AUTOSAVE_INDEX_PATH, FileAccess.WRITE)
+	if file == null:
+		return
+	file.store_string(JSON.stringify(index))
+	file.close()
+
+
+## Sauvegarde automatique avec rotation sur NUM_AUTOSAVE_SLOTS slots.
+## Retourne true si la sauvegarde a réussi.
+static func autosave(state: Dictionary, screenshot: Image) -> bool:
+	var index := _get_current_autosave_index()
+	var slot := index % NUM_AUTOSAVE_SLOTS
+	var dir_path := get_autosave_dir(slot)
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(dir_path))
+
+	var save_path := get_autosave_save_path(slot)
+	var file := FileAccess.open(save_path, FileAccess.WRITE)
+	if file == null:
+		return false
+	var data := state.duplicate()
+	data["version"] = SAVE_VERSION
+	file.store_string(JSON.stringify(data, "\t"))
+	file.close()
+
+	if screenshot != null:
+		screenshot.save_png(get_autosave_screenshot_path(slot))
+
+	_save_autosave_index((index + 1) % NUM_AUTOSAVE_SLOTS)
+	return true
+
+
+## Charge les données d'un slot autosave. Retourne {} si le slot est vide ou invalide.
+static func load_autosave(slot_index: int) -> Dictionary:
+	var save_path := get_autosave_save_path(slot_index)
+	if not FileAccess.file_exists(save_path):
+		return {}
+	var file := FileAccess.open(save_path, FileAccess.READ)
+	if file == null:
+		return {}
+	var content := file.get_as_text()
+	file.close()
+	var parsed = JSON.parse_string(content)
+	if parsed == null or not parsed is Dictionary:
+		return {}
+	return parsed
+
+
+## Retourne la liste de toutes les auto-saves existantes, triées de la plus récente à la plus ancienne.
+## Chaque entrée : { slot_index, data, has_screenshot }
+static func list_autosaves() -> Array:
+	var current := _get_current_autosave_index()
+	var result: Array = []
+
+	# Parcourir les slots dans l'ordre inverse de la rotation (le plus récent en premier)
+	for i in range(NUM_AUTOSAVE_SLOTS):
+		var slot := (current - 1 - i + NUM_AUTOSAVE_SLOTS * 2) % NUM_AUTOSAVE_SLOTS
+		var save_path := get_autosave_save_path(slot)
+		if not FileAccess.file_exists(save_path):
+			continue
+		var data := load_autosave(slot)
+		if data.is_empty():
+			continue
+		result.append({
+			"slot_index": slot,
+			"data": data,
+			"has_screenshot": FileAccess.file_exists(get_autosave_screenshot_path(slot)),
+		})
+
+	return result
 
 
 static func get_slot_dir(slot_index: int) -> String:

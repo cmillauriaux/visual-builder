@@ -15,6 +15,7 @@ signal scene_entered(scene_name: String, scene_uuid: String)
 signal sequence_entered(sequence_name: String, sequence_uuid: String)
 signal choice_made(sequence_uuid: String, choice_index: int, choice_text: String)
 signal story_finished_with_reason(reason: String)
+signal autosave_triggered
 
 var _state: int = State.IDLE
 var _story = null
@@ -24,10 +25,12 @@ var _current_sequence = null
 var _user_stopped: bool = false
 var _variables: Dictionary = {}  # String → Variant
 var _notification_service: RefCounted
+var _autosave_enabled: bool = true
 
 
-func setup(notification_service: RefCounted) -> void:
+func setup(notification_service: RefCounted, autosave_enabled: bool = true) -> void:
 	_notification_service = notification_service
+	_autosave_enabled = autosave_enabled
 
 func get_state() -> int:
 	return _state
@@ -117,6 +120,7 @@ func start_play_from_save(story, chapter, scene, sequence, variables: Dictionary
 ## Trouve l'entry point d'une scène (séquence ou condition) et démarre le play.
 func _start_scene_entry(scene) -> void:
 	scene_entered.emit(scene.scene_name, scene.uuid)
+	_trigger_autosave()
 	var entry = _find_scene_entry(scene)
 	if entry == null:
 		_finish("error")
@@ -195,6 +199,7 @@ func on_sequence_finished() -> void:
 		if seq.ending.choices.size() == 0:
 			_finish("no_ending")
 			return
+		_trigger_autosave()
 		_state = State.WAITING_FOR_CHOICE
 		choice_display_requested.emit(seq.ending.choices)
 	else:
@@ -279,6 +284,17 @@ func _finish(reason: String) -> void:
 	if reason == "game_over" or reason == "to_be_continued":
 		story_finished_with_reason.emit(reason)
 	play_finished.emit(reason)
+
+
+## Déclenche l'auto-save si activé, et émet autosave_triggered + notification.
+func _trigger_autosave() -> void:
+	if not _autosave_enabled:
+		return
+	autosave_triggered.emit()
+	if _notification_service:
+		_notification_service.show_notification("Auto-save...")
+	else:
+		notification_triggered.emit("Auto-save...")
 
 # --- Utilitaires ---
 

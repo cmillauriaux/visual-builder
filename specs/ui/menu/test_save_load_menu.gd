@@ -12,6 +12,7 @@ func before_each() -> void:
 	# Nettoyer les slots avant chaque test
 	for i in range(GameSaveManager.NUM_SLOTS):
 		GameSaveManager.delete_save(i)
+	_clean_autosaves()
 	_menu = Control.new()
 	_menu.set_script(SaveLoadMenuScript)
 	_menu.build_ui()
@@ -22,6 +23,21 @@ func after_each() -> void:
 	for i in range(GameSaveManager.NUM_SLOTS):
 		GameSaveManager.delete_save(i)
 	GameSaveManager.delete_quicksave()
+	_clean_autosaves()
+
+
+func _clean_autosaves() -> void:
+	for i in range(GameSaveManager.NUM_AUTOSAVE_SLOTS):
+		var dir := GameSaveManager.get_autosave_dir(i)
+		var save_path := dir + "/save.json"
+		var png_path := dir + "/screenshot.png"
+		if FileAccess.file_exists(save_path):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(save_path))
+		if FileAccess.file_exists(png_path):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(png_path))
+	var idx_path := GameSaveManager.AUTOSAVE_INDEX_PATH
+	if FileAccess.file_exists(idx_path):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(idx_path))
 
 
 # --- État initial ---
@@ -240,11 +256,68 @@ func test_grid_is_in_tab_zero() -> void:
 	assert_not_null(found, "_grid doit être dans le premier onglet")
 
 
-func test_auto_tab_has_coming_soon_label() -> void:
+func test_auto_tab_no_save_shows_placeholder() -> void:
 	_menu.show_as_load_mode()
 	var tab1: Node = _menu._tab_container.get_child(1)
-	var lbl: Label = _find_label_with_text(tab1, "À venir")
-	assert_not_null(lbl, "L'onglet Automatiques doit afficher 'À venir'")
+	var lbl: Label = _find_label_with_text(tab1, "Aucune sauvegarde automatique")
+	assert_not_null(lbl, "L'onglet Automatiques sans autosave doit afficher 'Aucune sauvegarde automatique'")
+
+
+func test_auto_tab_with_save_shows_load_button() -> void:
+	_make_autosave("Chapitre Auto", "Scène Auto")
+	_menu.show_as_load_mode()
+	var tab1: Node = _menu._tab_container.get_child(1)
+	var load_btn: Node = _find_child_by_name(tab1, "AutoLoadButton_0")
+	assert_not_null(load_btn, "Onglet Automatiques avec autosave doit afficher AutoLoadButton_0")
+
+
+func test_auto_tab_with_save_shows_chapter_label() -> void:
+	_make_autosave("Chapitre Auto", "Scène Auto")
+	_menu.show_as_load_mode()
+	var tab1: Node = _menu._tab_container.get_child(1)
+	var lbl: Node = _find_child_by_name(tab1, "AutoChapterLabel_0")
+	assert_not_null(lbl, "AutoChapterLabel_0 doit exister")
+	assert_eq((lbl as Label).text, "Chapitre Auto")
+
+
+func test_auto_tab_load_button_emits_signal_with_slot_index() -> void:
+	_make_autosave()
+	_menu.show_as_load_mode()
+	watch_signals(_menu)
+	var tab1: Node = _menu._tab_container.get_child(1)
+	var load_btn: Node = _find_child_by_name(tab1, "AutoLoadButton_0")
+	assert_not_null(load_btn)
+	(load_btn as Button).pressed.emit()
+	assert_signal_emitted(_menu, "load_slot_pressed")
+	# L'index doit être négatif (-(slot_index + 2))
+	var params = get_signal_parameters(_menu, "load_slot_pressed", 0)
+	assert_true(params[0] < -1, "L'index doit être <= -2 pour distinguer des autosaves")
+
+
+func test_auto_tab_multiple_saves_shows_multiple_cards() -> void:
+	_make_autosave("Chapitre 1", "Scène 1")
+	_make_autosave("Chapitre 2", "Scène 2")
+	_make_autosave("Chapitre 3", "Scène 3")
+	_menu.show_as_load_mode()
+	var tab1: Node = _menu._tab_container.get_child(1)
+	# Chercher tous les AutoLoadButton_N
+	var btn0: Node = _find_child_by_name(tab1, "AutoLoadButton_0")
+	var btn1: Node = _find_child_by_name(tab1, "AutoLoadButton_1")
+	var btn2: Node = _find_child_by_name(tab1, "AutoLoadButton_2")
+	assert_not_null(btn0, "AutoLoadButton_0 doit exister")
+	assert_not_null(btn1, "AutoLoadButton_1 doit exister")
+	assert_not_null(btn2, "AutoLoadButton_2 doit exister")
+
+
+func test_auto_tab_shows_most_recent_first() -> void:
+	_make_autosave("Premier", "Scène 1")
+	_make_autosave("Deuxième", "Scène 2")
+	_make_autosave("Troisième", "Scène 3")
+	_menu.show_as_load_mode()
+	var tab1: Node = _menu._tab_container.get_child(1)
+	var lbl: Node = _find_child_by_name(tab1, "AutoChapterLabel_0")
+	assert_not_null(lbl)
+	assert_eq((lbl as Label).text, "Troisième", "La plus récente doit être en premier")
 
 
 func test_quick_tab_no_save_shows_placeholder() -> void:
@@ -299,6 +372,22 @@ func test_load_mode_tab_bar_visible() -> void:
 
 
 # --- Helpers ---
+
+func _make_autosave(chapter_name: String = "Chapitre Auto", scene_name: String = "Scène Auto") -> void:
+	var state := {
+		"timestamp": "2026-03-06 10:00:00",
+		"story_path": "",
+		"chapter_uuid": "chap-auto",
+		"chapter_name": chapter_name,
+		"scene_uuid": "scene-auto",
+		"scene_name": scene_name,
+		"sequence_uuid": "seq-auto",
+		"sequence_name": "Intro",
+		"dialogue_index": 0,
+		"variables": {},
+	}
+	GameSaveManager.autosave(state, null)
+
 
 func _make_quicksave(chapter_name: String = "Chapitre Rapide", scene_name: String = "Scène Rapide") -> void:
 	var state := {

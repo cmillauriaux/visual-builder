@@ -25,6 +25,7 @@ var _auto_play_enabled_check: CheckButton
 var _auto_play_delay_option: OptionButton
 var _typewriter_speed_option: OptionButton
 var _dialogue_opacity_slider: HSlider
+var _autosave_enabled_check: CheckButton
 
 const AUTO_PLAY_DELAYS := [1.0, 2.0, 3.0, 5.0]
 const AUTO_PLAY_DELAY_LABELS := ["1s", "2s", "3s", "5s"]
@@ -105,6 +106,7 @@ func build_ui() -> void:
 	_auto_play_delay_option = _add_option_row(content, "Delai auto-play", AUTO_PLAY_DELAY_LABELS)
 	_auto_play_enabled_check.toggled.connect(_on_auto_play_toggled)
 	_typewriter_speed_option = _add_option_row(content, "Vitesse texte", TYPEWRITER_SPEED_LABELS)
+	_autosave_enabled_check = _add_check_row(content, "Auto-save")
 
 	# Bouton Appliquer
 	_apply_button = Button.new()
@@ -149,6 +151,9 @@ func load_from_settings(settings: RefCounted) -> void:
 	var speed_idx = TYPEWRITER_SPEEDS.find(settings.typewriter_speed)
 	_typewriter_speed_option.selected = max(speed_idx, 0)
 
+	# Auto-save
+	_autosave_enabled_check.button_pressed = settings.autosave_enabled
+
 
 func apply_to_settings(settings: RefCounted, path: String = GameSettings.SETTINGS_PATH) -> void:
 	var res_idx = _resolution_option.selected
@@ -170,6 +175,7 @@ func apply_to_settings(settings: RefCounted, path: String = GameSettings.SETTING
 	var speed_idx = _typewriter_speed_option.selected
 	if speed_idx >= 0 and speed_idx < TYPEWRITER_SPEEDS.size():
 		settings.typewriter_speed = TYPEWRITER_SPEEDS[speed_idx]
+	settings.autosave_enabled = _autosave_enabled_check.button_pressed
 	settings.save_settings(path)
 	settings.apply_settings()
 

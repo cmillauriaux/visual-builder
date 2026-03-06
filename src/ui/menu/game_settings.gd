@@ -29,6 +29,7 @@ var auto_play_enabled: bool = false
 var auto_play_delay: float = 2.0
 var typewriter_speed: float = 0.03
 var dialogue_opacity: int = 80
+var autosave_enabled: bool = true
 
 const TYPEWRITER_SPEEDS: Array[float] = [0.06, 0.03, 0.015, 0.0]
 const TYPEWRITER_SPEED_LABELS: Array[String] = ["Lent", "Normal", "Rapide", "Instantané"]
@@ -50,6 +51,7 @@ func load_settings(path: String = SETTINGS_PATH) -> void:
 	auto_play_enabled = cfg.get_value("gameplay", "auto_play_enabled", false)
 	auto_play_delay = cfg.get_value("gameplay", "auto_play_delay", 2.0)
 	typewriter_speed = cfg.get_value("gameplay", "typewriter_speed", 0.03)
+	autosave_enabled = cfg.get_value("gameplay", "autosave_enabled", true)
 
 
 func save_settings(path: String = SETTINGS_PATH) -> void:
@@ -66,6 +68,7 @@ func save_settings(path: String = SETTINGS_PATH) -> void:
 	cfg.set_value("gameplay", "auto_play_enabled", auto_play_enabled)
 	cfg.set_value("gameplay", "auto_play_delay", auto_play_delay)
 	cfg.set_value("gameplay", "typewriter_speed", typewriter_speed)
+	cfg.set_value("gameplay", "autosave_enabled", autosave_enabled)
 	cfg.save(path)
 
 
