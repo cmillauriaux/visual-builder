@@ -14,6 +14,7 @@ signal load_pressed
 signal options_pressed
 signal new_game_pressed
 signal quit_pressed
+signal chapters_scenes_pressed
 
 # UI
 var _overlay: ColorRect
@@ -21,6 +22,7 @@ var _title_label: Label
 var _resume_button: Button
 var _save_button: Button
 var _load_button: Button
+var _chapters_scenes_button: Button
 var _options_button: Button
 var _new_game_button: Button
 var _patreon_button: Button
@@ -78,6 +80,10 @@ func build_ui() -> void:
 	_load_button.pressed.connect(func(): load_pressed.emit())
 	vbox.add_child(_load_button)
 
+	_chapters_scenes_button = _create_menu_button("Chapitres / Scènes")
+	_chapters_scenes_button.pressed.connect(func(): chapters_scenes_pressed.emit())
+	vbox.add_child(_chapters_scenes_button)
+
 	_options_button = _create_menu_button("Options")
 	_options_button.pressed.connect(func(): options_pressed.emit())
 	vbox.add_child(_options_button)
@@ -111,6 +117,7 @@ func apply_ui_translations(i18n_dict: Dictionary) -> void:
 	_resume_button.text = StoryI18nService.get_ui_string("Reprendre", i18n_dict)
 	_save_button.text = StoryI18nService.get_ui_string("Sauvegarder", i18n_dict)
 	_load_button.text = StoryI18nService.get_ui_string("Charger", i18n_dict)
+	_chapters_scenes_button.text = StoryI18nService.get_ui_string("Chapitres / Scènes", i18n_dict)
 	_options_button.text = StoryI18nService.get_ui_string("Options", i18n_dict)
 	_new_game_button.text = StoryI18nService.get_ui_string("Nouvelle partie", i18n_dict)
 	_patreon_button.text = StoryI18nService.get_ui_string("Patreon", i18n_dict)

@@ -42,6 +42,15 @@ func test_has_load_game_button():
 	assert_not_null(_menu._load_game_button)
 	assert_eq(_menu._load_game_button.text, "Charger partie")
 
+func test_has_chapters_scenes_button():
+	assert_not_null(_menu._chapters_scenes_button)
+	assert_eq(_menu._chapters_scenes_button.text, "Chapitres / Scènes")
+
+func test_chapters_scenes_signal():
+	watch_signals(_menu)
+	_menu._chapters_scenes_button.pressed.emit()
+	assert_signal_emitted(_menu, "chapters_scenes_pressed")
+
 func test_has_options_button():
 	assert_not_null(_menu._options_button)
 	assert_eq(_menu._options_button.text, "Options")

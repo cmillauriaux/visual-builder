@@ -58,6 +58,11 @@ var _pending_screenshot: Image = null
 # Contexte d'ouverture de la grille : "pause" ou "main"
 var _save_load_context: String = "pause"
 
+# UI — Chapter/Scene menu
+var _chapter_scene_menu: Control
+# Contexte d'ouverture : "pause" ou "main"
+var _chapter_scene_context: String = "pause"
+
 # UI — Story selector
 var _story_selector: PanelContainer
 var _story_selector_title: Label
@@ -160,6 +165,7 @@ func _ready() -> void:
 	# Connecter les signaux du menu principal
 	_main_menu.new_game_pressed.connect(_on_new_game)
 	_main_menu.load_game_pressed.connect(_on_load_game)
+	_main_menu.chapters_scenes_pressed.connect(_on_main_menu_chapters_scenes_pressed)
 	_main_menu.quit_pressed.connect(_on_quit)
 	_main_menu.options_applied.connect(_on_options_applied)
 	_main_menu.set_settings(_settings)
@@ -173,9 +179,14 @@ func _ready() -> void:
 	_pause_menu.resume_pressed.connect(_on_pause_resume)
 	_pause_menu.save_pressed.connect(_on_pause_save)
 	_pause_menu.load_pressed.connect(_on_pause_load)
+	_pause_menu.chapters_scenes_pressed.connect(_on_chapters_scenes_pressed)
 	_pause_menu.new_game_pressed.connect(_on_pause_new_game)
 	_pause_menu.quit_pressed.connect(_on_pause_quit)
 	_pause_menu.options_pressed.connect(_on_pause_options)
+
+	# Connecter les signaux du menu chapitres/scènes
+	_chapter_scene_menu.scene_selected.connect(_on_chapter_scene_selected)
+	_chapter_scene_menu.close_pressed.connect(_on_chapter_scene_close)
 
 	# Options menu (pause context)
 	_pause_options_center = CenterContainer.new()
@@ -386,6 +397,87 @@ func _on_pause_load() -> void:
 	_pause_menu.hide_menu()
 	_save_load_context = "pause"
 	_save_load_menu.show_as_load_mode()
+
+
+func _on_main_menu_chapters_scenes_pressed() -> void:
+	if _current_story == null:
+		return
+	_main_menu.hide_menu()
+	_chapter_scene_context = "main"
+	_open_chapter_scene_menu()
+
+
+func _on_chapters_scenes_pressed() -> void:
+	if _current_story == null:
+		return
+	_pause_menu.hide_menu()
+	_chapter_scene_context = "pause"
+	_open_chapter_scene_menu()
+
+
+func _open_chapter_scene_menu() -> void:
+	var max_chapter_idx := 0
+	var max_scene_idx := 0
+	# Analyser toutes les sauvegardes pour trouver la progression maximale
+	var all_save_data: Array = []
+	for entry in GameSaveManager.list_saves():
+		if entry.get("has_data", false):
+			all_save_data.append(entry.get("data", {}))
+	for entry in GameSaveManager.list_autosaves():
+		all_save_data.append(entry.get("data", {}))
+	if GameSaveManager.quicksave_exists():
+		all_save_data.append(GameSaveManager.quickload())
+
+	for save_data in all_save_data:
+		var ch_uuid: String = save_data.get("chapter_uuid", "")
+		var sc_uuid: String = save_data.get("scene_uuid", "")
+		var ch_idx := _find_chapter_index(_current_story, ch_uuid)
+		var sc_idx := _find_scene_index(_current_story, ch_idx, sc_uuid)
+		if ch_idx > max_chapter_idx or (ch_idx == max_chapter_idx and sc_idx > max_scene_idx):
+			max_chapter_idx = ch_idx
+			max_scene_idx = sc_idx
+
+	_chapter_scene_menu.show_menu(_current_story, max_chapter_idx, max_scene_idx)
+
+
+func _on_chapter_scene_selected(chapter_uuid: String, scene_uuid: String) -> void:
+	_chapter_scene_menu.hide_menu()
+	get_tree().paused = false
+	var chapter = _current_story.find_chapter(chapter_uuid) if _current_story else null
+	var scene = chapter.find_scene(scene_uuid) if chapter else null
+	if chapter == null or scene == null:
+		return
+	_play_ctrl.stop_current()
+	_story_play_ctrl.start_play_scene(_current_story, chapter, scene)
+
+
+func _on_chapter_scene_close() -> void:
+	_chapter_scene_menu.hide_menu()
+	if _chapter_scene_context == "main":
+		_show_main_menu(_current_story)
+	else:
+		_pause_menu.show_menu()
+
+
+## Retourne l'index de chapitre par UUID, ou 0 si non trouvé.
+func _find_chapter_index(story, chapter_uuid: String) -> int:
+	if story == null or chapter_uuid == "":
+		return 0
+	for i in range(story.chapters.size()):
+		if story.chapters[i].uuid == chapter_uuid:
+			return i
+	return 0
+
+
+## Retourne l'index de scène dans le chapitre (par UUID), ou 0 si non trouvé.
+func _find_scene_index(story, chapter_idx: int, scene_uuid: String) -> int:
+	if story == null or scene_uuid == "" or chapter_idx < 0 or chapter_idx >= story.chapters.size():
+		return 0
+	var chapter = story.chapters[chapter_idx]
+	for j in range(chapter.scenes.size()):
+		if chapter.scenes[j].uuid == scene_uuid:
+			return j
+	return 0
 
 
 ## Collecte l'état courant du jeu pour une sauvegarde.

@@ -11,6 +11,7 @@ const MainMenuScript = preload("res://src/ui/menu/main_menu.gd")
 const EndingScreenScript = preload("res://src/ui/menu/ending_screen.gd")
 const PauseMenuScript = preload("res://src/ui/menu/pause_menu.gd")
 const SaveLoadMenuScript = preload("res://src/ui/menu/save_load_menu.gd")
+const ChapterSceneMenuScript = preload("res://src/ui/menu/chapter_scene_menu.gd")
 const GameTheme = preload("res://src/ui/themes/game_theme.gd")
 const VariableSidebarScript = preload("res://src/ui/play/variable_sidebar.gd")
 const VariableDetailsOverlayScript = preload("res://src/ui/play/variable_details_overlay.gd")
@@ -26,6 +27,7 @@ static func build(game: Control) -> void:
 	_build_main_menu(game)
 	_build_ending_screens(game)
 	_build_save_load_menu(game)
+	_build_chapter_scene_menu(game)
 	_build_pause_menu(game)
 	_build_variable_display(game)
 	_build_menu_button(game)
@@ -293,6 +295,13 @@ static func _build_save_load_menu(game: Control) -> void:
 	game._save_load_menu.set_script(SaveLoadMenuScript)
 	game._save_load_menu.build_ui()
 	game.add_child(game._save_load_menu)
+
+
+static func _build_chapter_scene_menu(game: Control) -> void:
+	game._chapter_scene_menu = Control.new()
+	game._chapter_scene_menu.set_script(ChapterSceneMenuScript)
+	game._chapter_scene_menu.build_ui()
+	game.add_child(game._chapter_scene_menu)
 
 
 static func _build_music_player(game: Control) -> void:
