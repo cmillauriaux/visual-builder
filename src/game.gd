@@ -566,10 +566,18 @@ func _on_save_slot(slot_index: int) -> void:
 func _on_autosave_triggered() -> void:
 	if _current_story == null:
 		return
+	# Capture le screenshot immédiatement (rapide, copie mémoire)
 	var screenshot := get_viewport().get_texture().get_image()
 	var state := _collect_game_state()
-	GameSaveManager.autosave(state, screenshot)
 	_update_cached_progression(state)
+	# Écriture JSON + encodage PNG en tâche de fond pour ne pas bloquer le gameplay
+	WorkerThreadPool.add_task(_autosave_background.bind(state, screenshot))
+
+
+## Exécute l'écriture de la sauvegarde automatique en arrière-plan (thread worker).
+## Toutes les données sont passées par valeur — aucun accès au scene tree.
+static func _autosave_background(state: Dictionary, screenshot: Image) -> void:
+	GameSaveManager.autosave(state, screenshot)
 
 
 func _on_load_slot(slot_index: int) -> void:
