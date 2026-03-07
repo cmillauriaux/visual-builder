@@ -136,7 +136,9 @@ func test_ensure_own_foregrounds_copies():
 	assert_eq(_sequence.dialogues[1].foregrounds.size(), 1)
 	assert_eq(_sequence.dialogues[1].foregrounds[0].fg_name, "Héros")
 	assert_eq(_sequence.dialogues[1].foregrounds[0].transition_type, "fade")
-	# Vérifier que c'est une copie indépendante
+	# UUID doit être préservé (même entité visuelle)
+	assert_eq(_sequence.dialogues[1].foregrounds[0].uuid, fg.uuid, "UUID préservé lors de la copie")
+	# Vérifier que c'est une copie indépendante (propriétés modifiables séparément)
 	_sequence.dialogues[1].foregrounds[0].fg_name = "Modifié"
 	assert_eq(dlg0.foregrounds[0].fg_name, "Héros", "Original non modifié")
 

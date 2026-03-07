@@ -22,6 +22,7 @@ var _choice_panel: PanelContainer
 var _menu_button: Button
 
 var _previous_play_foregrounds: Array = []
+var _seen_fg_uuids: Dictionary = {}
 var _user_stopped: bool = false
 var _i18n: Dictionary = {}
 var _current_playing_sequence = null
@@ -162,6 +163,7 @@ func stop_current() -> void:
 func on_sequence_play_requested(seq) -> void:
 	_sequence_editor_ctrl.load_sequence(seq)
 	_previous_play_foregrounds = []
+	_seen_fg_uuids = {}
 	_current_playing_sequence = seq
 
 	# Préparer les visuels d'ouverture : n'afficher que les foregrounds statiques
@@ -340,7 +342,9 @@ func on_play_dialogue_changed(index: int) -> void:
 
 	# Compute foreground transitions
 	var new_fgs = _sequence_editor_ctrl.get_effective_foregrounds(index)
-	var transitions = _foreground_transition.compute_transitions(_previous_play_foregrounds, new_fgs)
+	var transitions = _foreground_transition.compute_transitions(_previous_play_foregrounds, new_fgs, _seen_fg_uuids)
+	for fg in new_fgs:
+		_seen_fg_uuids[fg.uuid] = true
 	_previous_play_foregrounds = new_fgs
 
 	# Phase 1 : Cloner les anciens nœuds AVANT la mise à jour visuelle
@@ -761,6 +765,7 @@ func _cleanup_play() -> void:
 	if _play_overlay.get_parent():
 		_play_overlay.get_parent().remove_child(_play_overlay)
 	_previous_play_foregrounds = []
+	_seen_fg_uuids = {}
 	# Masquer l'affichage des variables
 	if _game._variable_sidebar:
 		_game._variable_sidebar.visible = false

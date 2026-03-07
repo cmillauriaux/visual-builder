@@ -35,7 +35,7 @@ var _fg_clipboard = ForegroundClipboardScript.new()
 
 # --- Foreground interaction ---
 var _fg_visual_map: Dictionary = {}   # uuid → Control wrapper
-var _selected_fg_uuid: String = ""
+var _selected_fg_uuids: Array = []
 var _dragging_fg: bool = false
 var _resizing_fg: bool = false
 var _drag_start_pos: Vector2 = Vector2.ZERO
@@ -43,8 +43,16 @@ var _drag_start_wrapper_pos: Vector2 = Vector2.ZERO
 var _resize_start_pos: Vector2 = Vector2.ZERO
 var _resize_start_scale: float = 1.0
 
+## Backward-compatible accessor — returns last selected UUID or "".
+var _selected_fg_uuid: String:
+	get:
+		if _selected_fg_uuids.is_empty():
+			return ""
+		return _selected_fg_uuids[-1]
+
 # --- Context menu ---
 var _context_menu: PopupMenu = null
+var _bg_context_menu: PopupMenu = null
 var _context_menu_uuid: String = ""
 
 signal foreground_selected(uuid: String)
@@ -107,9 +115,18 @@ func _ready() -> void:
 	_context_menu.add_item("Supprimer", 0)
 	_context_menu.add_item("Copier les paramètres", 1)
 	_context_menu.add_item("Coller les paramètres", 2)
+	_context_menu.add_separator()
+	_context_menu.add_item("Copier le foreground", 3)
+	_context_menu.add_item("Coller le foreground", 4)
 	_context_menu.id_pressed.connect(_on_context_menu_id_pressed)
 	_update_context_menu_state()
 	add_child(_context_menu)
+
+	_bg_context_menu = PopupMenu.new()
+	_bg_context_menu.name = "BackgroundContextMenu"
+	_bg_context_menu.add_item("Coller le foreground", 4)
+	_bg_context_menu.id_pressed.connect(_on_context_menu_id_pressed)
+	add_child(_bg_context_menu)
 
 	EventBus.play_started.connect(_on_play_started)
 
@@ -170,6 +187,10 @@ func _gui_input(event: InputEvent) -> void:
 		elif mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
 			# Click on empty space → deselect
 			_deselect_foreground()
+		elif mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed:
+			# Right-click on background → show paste-only menu
+			_show_bg_context_menu(mb.global_position)
+			accept_event()
 	elif event is InputEventMouseMotion and _is_panning:
 		var mm := event as InputEventMouseMotion
 		_pan_offset += mm.relative
@@ -202,9 +223,11 @@ func _input(event: InputEvent) -> void:
 	if not is_visible_in_tree():
 		return
 	if event is InputEventKey and event.pressed and event.keycode == KEY_DELETE:
-		if _selected_fg_uuid != "":
-			remove_foreground(_selected_fg_uuid)
+		if not _selected_fg_uuids.is_empty():
+			var uuids_to_remove = _selected_fg_uuids.duplicate()
 			_deselect_foreground()
+			for uuid in uuids_to_remove:
+				remove_foreground(uuid)
 			get_viewport().set_input_as_handled()
 
 # --- Background visual ---
@@ -343,26 +366,38 @@ func _update_single_fg_visual(fg) -> void:
 	if fg.uuid not in _transitioning_uuids:
 		wrapper.modulate.a = fg.opacity
 
-	# Selection border
+	# Selection border — visible for all selected foregrounds
+	var is_selected = fg.uuid in _selected_fg_uuids
 	var border: ColorRect = wrapper.get_node("SelectionBorder")
-	border.visible = (_selected_fg_uuid == fg.uuid)
+	border.visible = is_selected
 	border.size = wrapper.size
 
-	# Resize handle
+	# Resize handle — only for single selection
 	var handle: ColorRect = wrapper.get_node("ResizeHandle")
-	handle.visible = (_selected_fg_uuid == fg.uuid)
+	handle.visible = is_selected and _selected_fg_uuids.size() == 1
 	handle.position = wrapper.size - Vector2(20, 20)
 
 # --- Foreground interaction ---
 
-func _select_foreground(uuid: String) -> void:
-	_selected_fg_uuid = uuid
-	foreground_selected.emit(uuid)
+func _select_foreground(uuid: String, shift: bool = false) -> void:
+	if shift:
+		if uuid in _selected_fg_uuids:
+			_selected_fg_uuids.erase(uuid)
+			if _selected_fg_uuids.is_empty():
+				foreground_deselected.emit()
+			else:
+				foreground_selected.emit(_selected_fg_uuids[-1])
+		else:
+			_selected_fg_uuids.append(uuid)
+			foreground_selected.emit(uuid)
+	else:
+		_selected_fg_uuids = [uuid]
+		foreground_selected.emit(uuid)
 	_update_foreground_visuals()
 
 func _deselect_foreground() -> void:
-	if _selected_fg_uuid != "":
-		_selected_fg_uuid = ""
+	if not _selected_fg_uuids.is_empty():
+		_selected_fg_uuids.clear()
 		foreground_deselected.emit()
 		_update_foreground_visuals()
 
@@ -373,13 +408,14 @@ func _on_fg_gui_input(event: InputEvent, uuid: String) -> void:
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
 		if mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed:
-			_select_foreground(uuid)
+			if uuid not in _selected_fg_uuids:
+				_select_foreground(uuid)
 			_show_context_menu(uuid, mb.global_position)
 			accept_event()
 			return
 		if mb.button_index == MOUSE_BUTTON_LEFT:
 			if mb.pressed:
-				_select_foreground(uuid)
+				_select_foreground(uuid, mb.shift_pressed)
 				_dragging_fg = true
 				_drag_start_pos = mb.global_position
 				var wrapper = _fg_visual_map.get(uuid)
@@ -391,7 +427,7 @@ func _on_fg_gui_input(event: InputEvent, uuid: String) -> void:
 					_apply_snap_to_foreground(uuid)
 					_update_foreground_visuals()
 				_dragging_fg = false
-	elif event is InputEventMouseMotion and _dragging_fg and _selected_fg_uuid == uuid:
+	elif event is InputEventMouseMotion and _dragging_fg and uuid in _selected_fg_uuids:
 		var mm := event as InputEventMouseMotion
 		var wrapper = _fg_visual_map.get(uuid)
 		if wrapper:
@@ -444,18 +480,36 @@ func _show_context_menu(uuid: String, global_pos: Vector2) -> void:
 	_context_menu.position = Vector2i(global_pos)
 	_context_menu.popup()
 
+func _show_bg_context_menu(global_pos: Vector2) -> void:
+	_context_menu_uuid = ""
+	_update_bg_context_menu_state()
+	_bg_context_menu.position = Vector2i(global_pos)
+	_bg_context_menu.popup()
+
 func _update_context_menu_state() -> void:
 	if _context_menu == null:
 		return
 	var paste_idx = _context_menu.get_item_index(2)
 	if paste_idx >= 0:
 		_context_menu.set_item_disabled(paste_idx, not _fg_clipboard.has_data())
+	var paste_fg_idx = _context_menu.get_item_index(4)
+	if paste_fg_idx >= 0:
+		_context_menu.set_item_disabled(paste_fg_idx, not _fg_clipboard.has_foreground_data())
+
+func _update_bg_context_menu_state() -> void:
+	if _bg_context_menu == null:
+		return
+	var paste_fg_idx = _bg_context_menu.get_item_index(4)
+	if paste_fg_idx >= 0:
+		_bg_context_menu.set_item_disabled(paste_fg_idx, not _fg_clipboard.has_foreground_data())
 
 func _on_context_menu_id_pressed(id: int) -> void:
 	if id == 0:  # Supprimer
-		if _context_menu_uuid != "":
-			remove_foreground(_context_menu_uuid)
+		if not _selected_fg_uuids.is_empty():
+			var uuids_to_remove = _selected_fg_uuids.duplicate()
 			_deselect_foreground()
+			for uuid in uuids_to_remove:
+				remove_foreground(uuid)
 			_context_menu_uuid = ""
 	elif id == 1:  # Copier les paramètres
 		if _context_menu_uuid != "":
@@ -463,6 +517,10 @@ func _on_context_menu_id_pressed(id: int) -> void:
 	elif id == 2:  # Coller les paramètres
 		if _context_menu_uuid != "":
 			_paste_foreground_params(_context_menu_uuid)
+	elif id == 3:  # Copier le foreground
+		_copy_selected_foregrounds()
+	elif id == 4:  # Coller le foreground
+		_paste_foreground()
 
 # --- Grid ---
 
@@ -522,6 +580,35 @@ func _paste_foreground_params(uuid: String) -> void:
 		return
 	if _fg_clipboard.paste_to(fg):
 		_update_foreground_visuals()
+
+func _copy_foreground(uuid: String) -> void:
+	var fg = find_foreground(uuid)
+	if fg == null:
+		return
+	_fg_clipboard.copy_foreground(fg)
+
+func _copy_selected_foregrounds() -> void:
+	if _selected_fg_uuids.is_empty():
+		return
+	var fgs := []
+	for uuid in _selected_fg_uuids:
+		var fg = find_foreground(uuid)
+		if fg:
+			fgs.append(fg)
+	if fgs.size() == 1:
+		_fg_clipboard.copy_foreground(fgs[0])
+	elif fgs.size() > 1:
+		_fg_clipboard.copy_foregrounds(fgs)
+
+func _paste_foreground() -> void:
+	if _sequence == null:
+		return
+	var new_fgs = _fg_clipboard.paste_foregrounds()
+	if new_fgs.is_empty():
+		return
+	for new_fg in new_fgs:
+		_sequence.foregrounds.append(new_fg)
+	_update_foreground_visuals()
 
 # --- Data controller (existing API, unchanged) ---
 

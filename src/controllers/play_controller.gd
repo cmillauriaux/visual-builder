@@ -14,6 +14,7 @@ var _music_player: Node = null
 
 # État du play
 var _previous_play_foregrounds: Array = []
+var _seen_fg_uuids: Dictionary = {}
 var _is_story_play_mode: bool = false
 var _story_play_return_level: String = ""
 var _current_playing_sequence = null
@@ -40,6 +41,7 @@ func is_story_play_mode() -> bool:
 
 func on_play_pressed() -> void:
 	_previous_play_foregrounds = []
+	_seen_fg_uuids = {}
 	EventBus.play_started.emit("sequence")
 
 	var seq = _sequence_editor_ctrl.get_sequence()
@@ -148,7 +150,9 @@ func on_play_dialogue_changed(index: int) -> void:
 	
 	# Foreground transitions logic
 	var new_fgs = _sequence_editor_ctrl.get_effective_foregrounds(index)
-	var transitions = _foreground_transition.compute_transitions(_previous_play_foregrounds, new_fgs)
+	var transitions = _foreground_transition.compute_transitions(_previous_play_foregrounds, new_fgs, _seen_fg_uuids)
+	for fg in new_fgs:
+		_seen_fg_uuids[fg.uuid] = true
 	_previous_play_foregrounds = new_fgs
 
 	# On notifie le visuel pour qu'il gère ses tweens/clones
@@ -319,9 +323,10 @@ func on_story_play_sequence_requested(seq) -> void:
 	_main._editor_main.navigate_to_sequence(seq.uuid)
 	if _main._editor_main._current_sequence:
 		_main.load_sequence_editors(_main._editor_main._current_sequence)
-	
+
 	_main.update_editor_mode()
 	_previous_play_foregrounds = []
+	_seen_fg_uuids = {}
 	_current_playing_sequence = seq
 
 	# Nettoyer les transitions précédentes (ex: reste de pixelisation ou fondu)

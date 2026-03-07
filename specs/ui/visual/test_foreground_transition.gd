@@ -131,6 +131,36 @@ func test_replaced_fg_different_uuids():
 	assert_true(has_fade_out, "L'ancien foreground doit avoir un fade_out")
 	assert_true(has_fade_in, "Le nouveau foreground doit avoir un fade_in")
 
+# --- Seen UUIDs (pas de re-fade après première apparition) ---
+
+func test_no_fade_in_if_already_seen():
+	var fg = _make_fg("a", "img.png", "fade", 1.0)
+	var seen = {"a": true}
+	var result = _transition.compute_transitions([], [fg], seen)
+	assert_eq(result.size(), 0, "Foreground déjà vu → pas de fade_in")
+
+func test_fade_in_only_first_time_with_seen():
+	var fg = _make_fg("a", "img.png", "fade", 1.0)
+	# Premier appel sans seen → fade_in
+	var result1 = _transition.compute_transitions([], [fg], {})
+	assert_eq(result1.size(), 1)
+	assert_eq(result1[0]["action"], "fade_in")
+	# Deuxième appel avec seen → pas de fade_in
+	var result2 = _transition.compute_transitions([], [fg], {"a": true})
+	assert_eq(result2.size(), 0)
+
+func test_fade_out_still_works_with_seen():
+	var fg = _make_fg("a", "img.png", "fade", 0.5)
+	var seen = {"a": true}
+	var result = _transition.compute_transitions([fg], [], seen)
+	assert_eq(result.size(), 1, "fade_out n'est pas affecté par seen_uuids")
+	assert_eq(result[0]["action"], "fade_out")
+
+func test_seen_does_not_affect_type_none():
+	var fg = _make_fg("a", "img.png", "none", 0.5)
+	var result = _transition.compute_transitions([], [fg], {})
+	assert_eq(result.size(), 0, "transition_type=none → jamais de fade_in")
+
 # --- Application de transition sur un Control ---
 
 func test_apply_fade_in():

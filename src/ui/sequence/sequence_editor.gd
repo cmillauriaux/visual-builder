@@ -80,6 +80,7 @@ func ensure_own_foregrounds(dialogue_index: int) -> void:
 
 func _copy_foreground(fg):
 	var copy = ForegroundScript.new()
+	copy.uuid = fg.uuid
 	copy.fg_name = fg.fg_name
 	copy.image = fg.image
 	copy.z_order = fg.z_order

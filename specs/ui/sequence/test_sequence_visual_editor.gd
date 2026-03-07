@@ -210,10 +210,13 @@ func test_on_play_started_deselects_foreground():
 
 func test_context_menu_created():
 	assert_not_null(_editor._context_menu)
-	assert_eq(_editor._context_menu.item_count, 3)
+	assert_eq(_editor._context_menu.item_count, 6)
 	assert_eq(_editor._context_menu.get_item_text(0), "Supprimer")
 	assert_eq(_editor._context_menu.get_item_text(1), "Copier les paramètres")
 	assert_eq(_editor._context_menu.get_item_text(2), "Coller les paramètres")
+	# index 3 = séparateur
+	assert_eq(_editor._context_menu.get_item_text(4), "Copier le foreground")
+	assert_eq(_editor._context_menu.get_item_text(5), "Coller le foreground")
 
 func test_show_context_menu_sets_uuid():
 	_editor.load_sequence(_sequence)
@@ -226,6 +229,7 @@ func test_context_menu_delete_removes_foreground():
 	_editor.load_sequence(_sequence)
 	_editor.add_foreground("Hero", "hero.png")
 	var uuid = _sequence.foregrounds[0].uuid
+	_editor._select_foreground(uuid)
 	_editor._show_context_menu(uuid, Vector2(100, 100))
 	_editor._on_context_menu_id_pressed(0)
 	assert_eq(_sequence.foregrounds.size(), 0)
@@ -236,6 +240,7 @@ func test_context_menu_delete_correct_foreground():
 	_editor.add_foreground("A", "a.png")
 	_editor.add_foreground("B", "b.png")
 	var uuid_a = _sequence.foregrounds[0].uuid
+	_editor._select_foreground(uuid_a)
 	_editor._show_context_menu(uuid_a, Vector2(100, 100))
 	_editor._on_context_menu_id_pressed(0)
 	assert_eq(_sequence.foregrounds.size(), 1)

@@ -2,7 +2,7 @@ extends Node
 
 ## Gère le calcul et l'application des transitions visuelles entre foregrounds.
 
-func compute_transitions(old_fgs: Array, new_fgs: Array) -> Array:
+func compute_transitions(old_fgs: Array, new_fgs: Array, seen_uuids: Dictionary = {}) -> Array:
 	var transitions: Array = []
 	var old_map: Dictionary = {}
 	var new_map: Dictionary = {}
@@ -24,8 +24,8 @@ func compute_transitions(old_fgs: Array, new_fgs: Array) -> Array:
 	# Foregrounds ajoutés ou remplacés
 	for fg in new_fgs:
 		if not old_map.has(fg.uuid):
-			# Nouveau FG sans prédécesseur
-			if fg.transition_type != "none":
+			# Nouveau FG sans prédécesseur — fondu uniquement à la première apparition
+			if fg.transition_type != "none" and not seen_uuids.has(fg.uuid):
 				transitions.append({
 					"uuid": fg.uuid,
 					"action": "fade_in",
