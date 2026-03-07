@@ -35,6 +35,7 @@ signal sequence_delete_requested(sequence_uuid: String)
 signal condition_delete_requested(condition_uuid: String)
 signal entry_point_changed(uuid: String)
 signal sequences_transition_requested(uuids: Array, property: String, value: String)
+signal sequence_foregrounds_paste_requested(target_uuid: String, clipboard_data: Dictionary)
 
 var _scene_data = null
 var _node_map: Dictionary = {}  # uuid → GraphNode
@@ -47,6 +48,7 @@ var _connection_type_map: Dictionary = {}  # "from→to" → "transition"|"choic
 var _tooltip_panel: PanelContainer
 var _tooltip_label: Label
 var _hovered_key: String = ""
+var _fg_clipboard: Dictionary = {}  # Clipboard pour copier/coller les foregrounds entre séquences
 
 func _ready() -> void:
 	connection_lines_thickness = 6.0
@@ -416,6 +418,9 @@ func _create_node(uuid: String, item_name: String, pos: Vector2, subtitle: Strin
 	node.delete_requested.connect(_on_sequence_delete_requested)
 	node.entry_point_toggled.connect(_on_entry_point_toggled)
 	node.transition_selected.connect(_on_node_transition_selected)
+	node.foregrounds_copy_requested.connect(_on_foregrounds_copy_requested)
+	node.foregrounds_paste_requested.connect(_on_foregrounds_paste_requested)
+	_update_node_fg_menu_state(node, uuid)
 	_node_map[uuid] = node
 
 func _on_node_transition_selected(uuid: String, property: String, value: String) -> void:
@@ -560,3 +565,57 @@ func _create_terminal_node(uuid: String, display_name: String, pos: Vector2, ter
 	node.add_theme_stylebox_override("titlebar_selected", stylebox_sel)
 	_node_map[uuid] = node
 	_terminal_uuids[uuid] = terminal_type
+
+func _on_foregrounds_copy_requested(uuid: String) -> void:
+	var seq = _find_sequence(uuid)
+	if seq == null:
+		return
+	var seq_fgs := []
+	for fg in seq.foregrounds:
+		seq_fgs.append(fg.to_dict())
+	var dlg_fgs := []
+	for dlg in seq.dialogues:
+		var dlg_fg_arr := []
+		for fg in dlg.foregrounds:
+			dlg_fg_arr.append(fg.to_dict())
+		dlg_fgs.append(dlg_fg_arr)
+	_fg_clipboard = {
+		"sequence_foregrounds": seq_fgs,
+		"dialogue_foregrounds": dlg_fgs,
+	}
+	_update_all_fg_menu_states()
+
+func _on_foregrounds_paste_requested(uuid: String) -> void:
+	if _fg_clipboard.is_empty():
+		return
+	sequence_foregrounds_paste_requested.emit(uuid, _fg_clipboard)
+
+func _find_sequence(uuid: String):
+	if _scene_data == null:
+		return null
+	for seq in _scene_data.sequences:
+		if seq.uuid == uuid:
+			return seq
+	return null
+
+func _sequence_has_foregrounds(uuid: String) -> bool:
+	var seq = _find_sequence(uuid)
+	if seq == null:
+		return false
+	if seq.foregrounds.size() > 0:
+		return true
+	for dlg in seq.dialogues:
+		if dlg.foregrounds.size() > 0:
+			return true
+	return false
+
+func _update_node_fg_menu_state(node, uuid: String) -> void:
+	node.set_copy_foregrounds_enabled(_sequence_has_foregrounds(uuid))
+	node.set_paste_foregrounds_enabled(not _fg_clipboard.is_empty())
+
+func _update_all_fg_menu_states() -> void:
+	for uuid in _node_map:
+		var node = _node_map[uuid]
+		if _condition_uuids.has(uuid) or _terminal_uuids.has(uuid):
+			continue
+		_update_node_fg_menu_state(node, uuid)

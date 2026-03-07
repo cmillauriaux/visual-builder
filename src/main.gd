@@ -224,6 +224,7 @@ func _connect_signals() -> void:
 	_sequence_graph_view.sequence_rename_requested.connect(_nav_ctrl.on_sequence_rename_requested)
 	_sequence_graph_view.sequence_delete_requested.connect(_nav_ctrl.on_sequence_delete_requested)
 	_sequence_graph_view.sequences_transition_requested.connect(_nav_ctrl.on_sequences_transition_requested)
+	_sequence_graph_view.sequence_foregrounds_paste_requested.connect(_nav_ctrl.on_sequence_foregrounds_paste)
 	_sequence_graph_view.condition_double_clicked.connect(_nav_ctrl.on_condition_double_clicked)
 	_sequence_graph_view.condition_rename_requested.connect(_nav_ctrl.on_condition_rename_requested)
 	_sequence_graph_view.condition_delete_requested.connect(_nav_ctrl.on_condition_delete_requested)

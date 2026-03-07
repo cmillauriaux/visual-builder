@@ -7,6 +7,8 @@ signal rename_requested(uuid: String)
 signal delete_requested(uuid: String)
 signal entry_point_toggled(uuid: String, checked: bool)
 signal transition_selected(uuid: String, property: String, value: String)
+signal foregrounds_copy_requested(uuid: String)
+signal foregrounds_paste_requested(uuid: String)
 
 var _uuid: String = ""
 var _item_name: String = ""
@@ -81,6 +83,10 @@ func setup_sequence_options() -> void:
 	_out_trans_menu.id_pressed.connect(_on_out_trans_selected)
 	_popup_menu.add_child(_out_trans_menu)
 	_popup_menu.add_submenu_item("Transition de sortie", "OutTransitionMenu")
+
+	_popup_menu.add_separator()
+	_popup_menu.add_item("Copier les foregrounds", 3)
+	_popup_menu.add_item("Coller les foregrounds", 4)
 
 func _on_in_trans_selected(id: int) -> void:
 	var types = ["none", "fade", "pixelate"]
@@ -205,6 +211,20 @@ func _gui_input(event: InputEvent) -> void:
 		_popup_menu.popup()
 		accept_event()
 
+func set_copy_foregrounds_enabled(enabled: bool) -> void:
+	if _popup_menu == null:
+		return
+	var idx = _popup_menu.get_item_index(3)
+	if idx >= 0:
+		_popup_menu.set_item_disabled(idx, not enabled)
+
+func set_paste_foregrounds_enabled(enabled: bool) -> void:
+	if _popup_menu == null:
+		return
+	var idx = _popup_menu.get_item_index(4)
+	if idx >= 0:
+		_popup_menu.set_item_disabled(idx, not enabled)
+
 func _on_popup_id_pressed(id: int) -> void:
 	if id == 0:
 		rename_requested.emit(_uuid)
@@ -214,3 +234,7 @@ func _on_popup_id_pressed(id: int) -> void:
 		entry_point_toggled.emit(_uuid, new_checked)
 	elif id == 2:
 		delete_requested.emit(_uuid)
+	elif id == 3:
+		foregrounds_copy_requested.emit(_uuid)
+	elif id == 4:
+		foregrounds_paste_requested.emit(_uuid)

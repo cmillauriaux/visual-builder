@@ -22,6 +22,7 @@ const RemoveSequenceCommand = preload("res://src/commands/remove_sequence_comman
 const RemoveConditionCommand = preload("res://src/commands/remove_condition_command.gd")
 const SetSequenceTransitionCommand = preload("res://src/commands/set_sequence_transition_command.gd")
 const EditorState = preload("res://src/controllers/editor_state.gd")
+const ForegroundScript = preload("res://src/models/foreground.gd")
 
 var _main: Control
 var _rename_dialog: ConfirmationDialog
@@ -154,6 +155,34 @@ func on_sequences_transition_requested(uuids: Array, property: String, value: St
 	var cmd = SetSequenceTransitionCommand.new(sequences, property, value)
 	_main._undo_redo.push_and_execute(cmd)
 	# Pas besoin de recharger tout le graphe, mais on notifie d'une modification
+	EventBus.story_modified.emit()
+
+
+func on_sequence_foregrounds_paste(target_uuid: String, clipboard_data: Dictionary) -> void:
+	if _main._editor_main._current_scene == null:
+		return
+	var seq = _main._editor_main._current_scene.find_sequence(target_uuid)
+	if seq == null:
+		return
+
+	# Remplacer les foregrounds de la séquence
+	var new_seq_fgs := []
+	for fg_dict in clipboard_data.get("sequence_foregrounds", []):
+		var fg = ForegroundScript.from_dict(fg_dict)
+		fg.uuid = ForegroundScript._generate_uuid()
+		new_seq_fgs.append(fg)
+	seq.foregrounds = new_seq_fgs
+
+	# Appliquer les foregrounds dialogue par dialogue (par index)
+	var dlg_fgs_data: Array = clipboard_data.get("dialogue_foregrounds", [])
+	for i in range(mini(seq.dialogues.size(), dlg_fgs_data.size())):
+		var new_dlg_fgs := []
+		for fg_dict in dlg_fgs_data[i]:
+			var fg = ForegroundScript.from_dict(fg_dict)
+			fg.uuid = ForegroundScript._generate_uuid()
+			new_dlg_fgs.append(fg)
+		seq.dialogues[i].foregrounds = new_dlg_fgs
+
 	EventBus.story_modified.emit()
 
 
