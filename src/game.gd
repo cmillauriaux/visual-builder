@@ -92,6 +92,10 @@ var _toast_overlay: PanelContainer
 var _toast_label: Label
 var _toast_generation: int = 0
 
+# UI — Loading overlay (chargement PCK entre chapitres)
+var _loading_overlay: Control
+var _loading_overlay_label: Label
+
 # UI — Quickload confirmation
 var _quickload_confirm_overlay: Control
 var _quickload_confirm_label: Label
@@ -174,6 +178,10 @@ func _ready() -> void:
 	_story_play_ctrl.sequence_entered.connect(_on_analytics_sequence_entered)
 	_story_play_ctrl.choice_made.connect(_on_analytics_choice_made)
 	_story_play_ctrl.story_finished_with_reason.connect(_on_analytics_story_finished)
+
+	# Connecter les signaux de chargement PCK entre chapitres
+	_story_play_ctrl.chapter_loading_started.connect(_on_chapter_loading_started)
+	_story_play_ctrl.chapter_loading_finished.connect(_on_chapter_loading_finished)
 
 	# Connecter les signaux du menu principal
 	_main_menu.new_game_pressed.connect(_on_new_game)
@@ -825,6 +833,26 @@ func _configure_analytics(story) -> void:
 	_analytics.configure(story.playfab_title_id, story.playfab_enabled)
 	if _analytics.is_configured():
 		_analytics.login_anonymous()
+
+
+func _on_chapter_loading_started(chapter_name: String) -> void:
+	_loading_overlay.visible = true
+	_loading_overlay_label.text = StoryI18nService.get_ui_string("Chargement...", _i18n_dict)
+	if _pck_loader:
+		var progress_cb = func(_n: String, progress: float):
+			_loading_overlay_label.text = StoryI18nService.get_ui_string("Chargement...", _i18n_dict) + " %d%%" % int(progress * 100)
+		_pck_loader.chapter_load_progress.connect(progress_cb)
+		# Stocker la callback pour la déconnecter plus tard
+		set_meta("_loading_progress_cb", progress_cb)
+
+
+func _on_chapter_loading_finished() -> void:
+	_loading_overlay.visible = false
+	if _pck_loader and has_meta("_loading_progress_cb"):
+		var cb = get_meta("_loading_progress_cb")
+		if _pck_loader.chapter_load_progress.is_connected(cb):
+			_pck_loader.chapter_load_progress.disconnect(cb)
+		remove_meta("_loading_progress_cb")
 
 
 func _on_analytics_chapter_entered(chapter_name: String, chapter_uuid: String) -> void:

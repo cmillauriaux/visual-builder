@@ -16,6 +16,8 @@ signal sequence_entered(sequence_name: String, sequence_uuid: String)
 signal choice_made(sequence_uuid: String, choice_index: int, choice_text: String)
 signal story_finished_with_reason(reason: String)
 signal autosave_triggered
+signal chapter_loading_started(chapter_name: String)
+signal chapter_loading_finished
 
 var _state: int = State.IDLE
 var _story = null
@@ -39,6 +41,7 @@ func set_pck_loader(loader: RefCounted) -> void:
 
 
 ## Charge le PCK du chapitre si nécessaire (no-op si pas de split PCK).
+## Émet chapter_loading_started/finished pour que game.gd affiche un overlay.
 func _ensure_chapter_pck(chapter) -> void:
 	if _pck_loader == null:
 		return
@@ -46,7 +49,9 @@ func _ensure_chapter_pck(chapter) -> void:
 		return
 	if _pck_loader.is_chapter_loaded(chapter.uuid):
 		return
+	chapter_loading_started.emit(chapter.chapter_name)
 	await _pck_loader.ensure_chapter_loaded(chapter.uuid)
+	chapter_loading_finished.emit()
 
 func get_state() -> int:
 	return _state

@@ -29,6 +29,8 @@ var _itchio_button: Button
 var _quit_button: Button
 var _options_menu: PanelContainer
 var _options_center: CenterContainer
+var _menu_content: CenterContainer
+var _loading_overlay: CenterContainer
 var _loading_label: Label
 
 # Settings partagés
@@ -56,10 +58,11 @@ func build_ui() -> void:
 	_overlay.color = Color(0, 0, 0, 0.4)
 	add_child(_overlay)
 
-	# Conteneur centré
-	var center = CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(center)
+	# Conteneur centré (contenu du menu : bannière + boutons)
+	_menu_content = CenterContainer.new()
+	_menu_content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(_menu_content)
+	var center = _menu_content
 
 	var vbox = VBoxContainer.new()
 	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -146,20 +149,18 @@ func build_ui() -> void:
 		_quit_button.visible = false
 	vbox.add_child(_quit_button)
 
-	# Loading label (affiché pendant le téléchargement des PCK chapitres)
+	# Écran de chargement (background du menu visible, boutons cachés, texte centré)
+	_loading_overlay = CenterContainer.new()
+	_loading_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_loading_overlay.visible = false
+	add_child(_loading_overlay)
+
 	_loading_label = Label.new()
 	_loading_label.text = "Chargement..."
 	_loading_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_loading_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_loading_label.add_theme_font_size_override("font_size", UIScale.scale(24))
+	_loading_label.add_theme_font_size_override("font_size", UIScale.scale(28))
 	_loading_label.add_theme_color_override("font_color", Color.WHITE)
-	_loading_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
-	_loading_label.offset_top = -UIScale.scale(80)
-	_loading_label.offset_bottom = -UIScale.scale(40)
-	_loading_label.offset_left = -UIScale.scale(200)
-	_loading_label.offset_right = UIScale.scale(200)
-	_loading_label.visible = false
-	add_child(_loading_label)
+	_loading_overlay.add_child(_loading_label)
 
 	# Sous-menu Options (centré via CenterContainer)
 	_options_center = CenterContainer.new()
@@ -242,7 +243,8 @@ func apply_ui_translations(i18n_dict: Dictionary) -> void:
 
 
 func set_loading_visible(is_visible: bool) -> void:
-	_loading_label.visible = is_visible
+	_menu_content.visible = not is_visible
+	_loading_overlay.visible = is_visible
 	if not is_visible:
 		_loading_label.text = "Chargement..."
 
