@@ -186,3 +186,114 @@ func _create_minimal_story():
 	chapter.scenes.append(scene)
 	story.chapters.append(chapter)
 	return story
+
+
+# --- Mouse click advance (060) ---
+
+func test_is_advance_input_spacebar() -> void:
+	var event = InputEventKey.new()
+	event.pressed = true
+	event.keycode = KEY_SPACE
+	assert_true(_game._play_ctrl._is_advance_input(event), "spacebar should be advance input")
+
+
+func test_is_advance_input_mouse_left_click() -> void:
+	var event = InputEventMouseButton.new()
+	event.pressed = true
+	event.button_index = MOUSE_BUTTON_LEFT
+	assert_true(_game._play_ctrl._is_advance_input(event), "left click should be advance input")
+
+
+func test_is_advance_input_mouse_right_click_rejected() -> void:
+	var event = InputEventMouseButton.new()
+	event.pressed = true
+	event.button_index = MOUSE_BUTTON_RIGHT
+	assert_false(_game._play_ctrl._is_advance_input(event), "right click should not be advance input")
+
+
+func test_is_advance_input_key_release_rejected() -> void:
+	var event = InputEventKey.new()
+	event.pressed = false
+	event.keycode = KEY_SPACE
+	assert_false(_game._play_ctrl._is_advance_input(event), "key release should not be advance input")
+
+
+func test_is_advance_input_other_key_rejected() -> void:
+	var event = InputEventKey.new()
+	event.pressed = true
+	event.keycode = KEY_A
+	assert_false(_game._play_ctrl._is_advance_input(event), "other keys should not be advance input")
+
+
+func test_mouse_click_ignored_when_choice_visible() -> void:
+	var seq = _create_sequence_with_dialogue("Alice", "Hello")
+	_game._sequence_editor_ctrl.load_sequence(seq)
+	_game._sequence_editor_ctrl.start_play()
+	_game._play_ctrl.on_play_dialogue_changed(0)
+	# Show all text first
+	_game._sequence_editor_ctrl.skip_typewriter()
+	_game._play_text_label.visible_characters = _game._sequence_editor_ctrl.get_visible_characters()
+	# Make choice overlay visible
+	_game._choice_overlay.visible = true
+	# Attempt mouse click — should not advance
+	var event = InputEventMouseButton.new()
+	event.pressed = true
+	event.button_index = MOUSE_BUTTON_LEFT
+	_game._play_ctrl._input(event)
+	# Still playing (not advanced past the only dialogue)
+	assert_true(_game._sequence_editor_ctrl.is_playing(), "should still be playing when choice visible")
+
+
+func test_mouse_click_ignored_when_history_open() -> void:
+	var seq = _create_sequence_with_dialogue("Alice", "Hello")
+	_game._sequence_editor_ctrl.load_sequence(seq)
+	_game._sequence_editor_ctrl.start_play()
+	_game._play_ctrl.on_play_dialogue_changed(0)
+	_game._sequence_editor_ctrl.skip_typewriter()
+	_game._play_text_label.visible_characters = _game._sequence_editor_ctrl.get_visible_characters()
+	# Open history
+	_game._play_ctrl._history_open = true
+	var event = InputEventMouseButton.new()
+	event.pressed = true
+	event.button_index = MOUSE_BUTTON_LEFT
+	_game._play_ctrl._input(event)
+	assert_true(_game._sequence_editor_ctrl.is_playing(), "should still be playing when history open")
+
+
+# --- Choice keyboard navigation (060) ---
+
+const ChoiceScript = preload("res://src/models/choice.gd")
+
+func test_choice_display_first_button_has_focus() -> void:
+	var choices = []
+	for t in ["Option A", "Option B", "Option C"]:
+		var c = ChoiceScript.new()
+		c.text = t
+		choices.append(c)
+	_game._play_ctrl.on_choice_display_requested(choices)
+	# Wait one frame for deferred grab_focus
+	await get_tree().process_frame
+	var vbox = _game._choice_panel.get_child(0)
+	# First child is the title label, buttons start at index 1
+	var first_btn = vbox.get_child(1)
+	assert_true(first_btn.has_focus(), "first choice button should have focus")
+	_game._play_ctrl._hide_choice_overlay()
+
+
+func test_choice_buttons_have_cyclic_focus() -> void:
+	var choices = []
+	for t in ["Option A", "Option B", "Option C"]:
+		var c = ChoiceScript.new()
+		c.text = t
+		choices.append(c)
+	_game._play_ctrl.on_choice_display_requested(choices)
+	var vbox = _game._choice_panel.get_child(0)
+	var first_btn = vbox.get_child(1)
+	var last_btn = vbox.get_child(3)
+	# focus_neighbor_top/bottom are set to absolute paths after nodes are in tree
+	assert_ne(first_btn.focus_neighbor_top, NodePath(""), "first btn should have top neighbor set")
+	assert_ne(last_btn.focus_neighbor_bottom, NodePath(""), "last btn should have bottom neighbor set")
+	# Verify they point to each other by resolving the paths
+	assert_eq(first_btn.get_node(first_btn.focus_neighbor_top), last_btn, "first btn top should resolve to last btn")
+	assert_eq(last_btn.get_node(last_btn.focus_neighbor_bottom), first_btn, "last btn bottom should resolve to first btn")
+	_game._play_ctrl._hide_choice_overlay()

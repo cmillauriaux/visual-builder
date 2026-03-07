@@ -264,18 +264,28 @@ func on_choice_display_requested(choices) -> void:
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title_label.add_theme_font_size_override("font_size", UIScale.scale(18))
 	vbox.add_child(title_label)
+	var buttons: Array[Button] = []
 	for i in range(choices.size()):
 		var btn = Button.new()
 		btn.text = choices[i].text
+		btn.focus_mode = Control.FOCUS_ALL
 		var idx = i
 		var choice_text = choices[i].text
 		btn.pressed.connect(func(): _on_choice_selected(idx, choice_text))
 		vbox.add_child(btn)
+		buttons.append(btn)
 	_choice_panel.add_child(vbox)
 	_choice_overlay.visible = true
 	if not _choice_overlay.get_parent():
 		_game.add_child(_choice_overlay)
 		_game.move_child(_game._menu_button, -1)
+	# Cyclic focus: last ↓ → first, first ↑ → last (must be set after nodes are in tree)
+	if buttons.size() > 1:
+		buttons[0].focus_neighbor_top = buttons[buttons.size() - 1].get_path()
+		buttons[buttons.size() - 1].focus_neighbor_bottom = buttons[0].get_path()
+	# Focus first choice button
+	if buttons.size() > 0:
+		buttons[0].call_deferred("grab_focus")
 
 
 func on_play_finished(reason: String) -> void:
@@ -437,16 +447,26 @@ func on_typewriter_tick() -> void:
 
 # --- Input ---
 
+func _is_advance_input(event: InputEvent) -> bool:
+	if event is InputEventKey and event.pressed and event.keycode == KEY_SPACE:
+		return true
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		return true
+	return false
+
+
 func _input(event: InputEvent) -> void:
 	if _is_showing_title:
-		if event is InputEventKey and event.pressed and event.keycode == KEY_SPACE:
+		if _is_advance_input(event):
 			_hide_title_screen()
 			get_viewport().set_input_as_handled()
 		return
 
 	if not _sequence_editor_ctrl.is_playing():
 		return
-	if event is InputEventKey and event.pressed and event.keycode == KEY_SPACE:
+	if _is_advance_input(event):
+		if _choice_overlay.visible or _history_open:
+			return
 		if _auto_play:
 			_auto_play.stop_timer()
 		if not _sequence_editor_ctrl.is_text_fully_displayed():
