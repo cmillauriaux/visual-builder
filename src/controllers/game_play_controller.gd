@@ -471,6 +471,13 @@ func _input(event: InputEvent) -> void:
 	if _is_advance_input(event):
 		if _choice_overlay.visible or _history_open:
 			return
+		# Don't consume mouse clicks targeting the menu button or play buttons
+		if event is InputEventMouseButton:
+			var mouse_pos = event.position
+			if _menu_button.visible and _menu_button.get_global_rect().has_point(mouse_pos):
+				return
+			if _play_buttons_bar and _play_buttons_bar.visible and _play_buttons_bar.get_global_rect().has_point(mouse_pos):
+				return
 		if _auto_play:
 			_auto_play.stop_timer()
 		if not _sequence_editor_ctrl.is_text_fully_displayed():

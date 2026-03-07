@@ -106,6 +106,7 @@ var _current_story_path: String = ""
 var _settings: RefCounted
 var _i18n_dict: Dictionary = {}
 var _cached_max_progression: Dictionary = {"chapter": -1, "scene": -1}
+var _play_ui_state_before_menu: Dictionary = {}
 
 
 func _ready() -> void:
@@ -368,6 +369,7 @@ func _on_game_over_load_autosave() -> void:
 func _on_menu_button_pressed() -> void:
 	# Capturer le screenshot avant d'afficher le menu (sans overlay)
 	_pending_screenshot = get_viewport().get_texture().get_image()
+	_hide_play_ui_for_menu()
 	get_tree().paused = true
 	_pause_menu.show_menu()
 
@@ -393,6 +395,7 @@ func _on_pause_options_closed() -> void:
 
 func _on_pause_resume() -> void:
 	_pause_menu.hide_menu()
+	_restore_play_ui_after_menu()
 	get_tree().paused = false
 
 
@@ -447,6 +450,29 @@ func _on_chapter_scene_close() -> void:
 		_show_main_menu(_current_story)
 	else:
 		_pause_menu.show_menu()
+
+
+func _hide_play_ui_for_menu() -> void:
+	_play_ui_state_before_menu = {
+		"play_overlay": _play_overlay.visible,
+		"choice_overlay": _choice_overlay.visible,
+		"play_buttons_bar": _play_buttons_bar.visible if _play_buttons_bar else false,
+		"menu_button": _menu_button.visible,
+	}
+	_play_overlay.visible = false
+	_choice_overlay.visible = false
+	if _play_buttons_bar:
+		_play_buttons_bar.visible = false
+	_menu_button.visible = false
+
+
+func _restore_play_ui_after_menu() -> void:
+	_play_overlay.visible = _play_ui_state_before_menu.get("play_overlay", false)
+	_choice_overlay.visible = _play_ui_state_before_menu.get("choice_overlay", false)
+	if _play_buttons_bar:
+		_play_buttons_bar.visible = _play_ui_state_before_menu.get("play_buttons_bar", false)
+	_menu_button.visible = _play_ui_state_before_menu.get("menu_button", false)
+	_play_ui_state_before_menu = {}
 
 
 ## Appelé à chaque entrée dans une nouvelle scène pour réévaluer le Skip.
