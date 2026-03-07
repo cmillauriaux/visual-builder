@@ -315,12 +315,12 @@ func test_same_scene_sequence_transition_no_autosave() -> void:
 	_game._current_story = story
 	_game._current_story_path = "res://story"
 
-	var autosave_count := 0
-	_game._story_play_ctrl.autosave_triggered.connect(func(): autosave_count += 1)
+	var counter := [0]
+	_game._story_play_ctrl.autosave_triggered.connect(func(): counter[0] += 1)
 
 	# Démarrer la lecture (scene_entry déclenche 1 autosave)
 	_game._play_ctrl.start_story(story)
-	var initial_autosave_count := autosave_count
+	var initial_count: int = counter[0]
 
 	# Avancer tous les dialogues de seq1 pour déclencher la transition vers seq2
 	for i in range(2):
@@ -329,32 +329,32 @@ func test_same_scene_sequence_transition_no_autosave() -> void:
 
 	# Vérifier qu'aucun autosave supplémentaire n'a été déclenché
 	# (redirect_sequence ne passe pas par _start_scene_entry)
-	assert_eq(autosave_count, initial_autosave_count,
+	assert_eq(counter[0], initial_count,
 		"transition séquence→séquence (même scène) ne devrait pas déclencher d'autosave supplémentaire")
 
 
 ## Vérifie que _trigger_autosave émet le signal quand activé.
 func test_trigger_autosave_emits_signal() -> void:
-	var autosave_count := 0
-	_game._story_play_ctrl.autosave_triggered.connect(func(): autosave_count += 1)
+	var counter := [0]  # Array pour contourner la capture par valeur des closures GDScript
+	_game._story_play_ctrl.autosave_triggered.connect(func(): counter[0] += 1)
 	_game._story_play_ctrl._autosave_enabled = true
 
 	_game._story_play_ctrl._trigger_autosave()
 
-	assert_eq(autosave_count, 1,
-		"_trigger_autosave devrait émettre autosave_triggered (count: %d)" % autosave_count)
+	assert_eq(counter[0], 1,
+		"_trigger_autosave devrait émettre autosave_triggered (count: %d)" % counter[0])
 
 
 ## Vérifie que _trigger_autosave n'émet PAS le signal quand désactivé.
 func test_trigger_autosave_does_not_emit_when_disabled() -> void:
-	var autosave_count := 0
-	_game._story_play_ctrl.autosave_triggered.connect(func(): autosave_count += 1)
+	var counter := [0]
+	_game._story_play_ctrl.autosave_triggered.connect(func(): counter[0] += 1)
 	_game._story_play_ctrl._autosave_enabled = false
 
 	_game._story_play_ctrl._trigger_autosave()
 
-	assert_eq(autosave_count, 0,
-		"_trigger_autosave ne devrait pas émettre si désactivé (count: %d)" % autosave_count)
+	assert_eq(counter[0], 0,
+		"_trigger_autosave ne devrait pas émettre si désactivé (count: %d)" % counter[0])
 
 
 ## Vérifie que _open_chapter_scene_menu utilise le cache et ne scanne pas les sauvegardes.

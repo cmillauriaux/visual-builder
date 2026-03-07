@@ -42,6 +42,30 @@ func test_fx_type_eyes_blink():
 	assert_eq(fx.fx_type, "eyes_blink")
 
 
+func test_fx_type_flash():
+	var fx = SequenceFx.new()
+	fx.fx_type = "flash"
+	assert_eq(fx.fx_type, "flash")
+
+
+func test_fx_type_zoom():
+	var fx = SequenceFx.new()
+	fx.fx_type = "zoom"
+	assert_eq(fx.fx_type, "zoom")
+
+
+func test_fx_type_vignette():
+	var fx = SequenceFx.new()
+	fx.fx_type = "vignette"
+	assert_eq(fx.fx_type, "vignette")
+
+
+func test_fx_type_desaturation():
+	var fx = SequenceFx.new()
+	fx.fx_type = "desaturation"
+	assert_eq(fx.fx_type, "desaturation")
+
+
 func test_duration_clamped_min():
 	var fx = SequenceFx.new()
 	fx.duration = 0.01
@@ -78,6 +102,17 @@ func test_intensity_valid_value():
 	assert_eq(fx.intensity, 1.5)
 
 
+func test_color_default():
+	var fx = SequenceFx.new()
+	assert_eq(fx.color, Color.WHITE)
+
+
+func test_color_set():
+	var fx = SequenceFx.new()
+	fx.color = Color.RED
+	assert_eq(fx.color, Color.RED)
+
+
 func test_to_dict():
 	var fx = SequenceFx.new()
 	fx.uuid = "fx-001"
@@ -89,6 +124,13 @@ func test_to_dict():
 	assert_eq(dict["fx_type"], "screen_shake")
 	assert_eq(dict["duration"], 1.0)
 	assert_eq(dict["intensity"], 2.0)
+
+
+func test_to_dict_includes_color():
+	var fx = SequenceFx.new()
+	fx.color = Color.RED
+	var dict = fx.to_dict()
+	assert_eq(dict["color"], Color.RED.to_html())
 
 
 func test_from_dict():
@@ -105,12 +147,30 @@ func test_from_dict():
 	assert_eq(fx.intensity, 0.5)
 
 
+func test_from_dict_with_color():
+	var dict = {
+		"uuid": "fx-003",
+		"fx_type": "flash",
+		"duration": 0.5,
+		"intensity": 1.0,
+		"color": Color.YELLOW.to_html(),
+	}
+	var fx = SequenceFx.from_dict(dict)
+	assert_eq(fx.color, Color.YELLOW)
+
+
 func test_from_dict_defaults():
 	var dict = {}
 	var fx = SequenceFx.from_dict(dict)
 	assert_eq(fx.fx_type, "fade_in")
 	assert_eq(fx.duration, 0.5)
 	assert_eq(fx.intensity, 1.0)
+
+
+func test_from_dict_without_color_defaults_to_white():
+	var dict = {"fx_type": "flash"}
+	var fx = SequenceFx.from_dict(dict)
+	assert_eq(fx.color, Color.WHITE)
 
 
 func test_from_dict_invalid_type_falls_back():

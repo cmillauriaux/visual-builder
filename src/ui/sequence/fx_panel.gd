@@ -32,6 +32,10 @@ func _build_ui() -> void:
 	popup.add_item("Fondu (fade in)", 0)
 	popup.add_item("Tremblement (screen shake)", 1)
 	popup.add_item("Clignement (eyes blink)", 2)
+	popup.add_item("Flash", 3)
+	popup.add_item("Zoom", 4)
+	popup.add_item("Vignette", 5)
+	popup.add_item("Désaturation", 6)
 	popup.id_pressed.connect(_on_add_fx_type_selected)
 
 	_fx_list_container = VBoxContainer.new()
@@ -104,6 +108,19 @@ func _build_fx_row(fx, index: int) -> HBoxContainer:
 	int_spin.value_changed.connect(func(val): _on_intensity_changed(index, val))
 	row.add_child(int_spin)
 
+	# Color picker (only for flash)
+	if fx.fx_type == "flash":
+		var color_label = Label.new()
+		color_label.text = "Couleur:"
+		row.add_child(color_label)
+
+		var color_btn = ColorPickerButton.new()
+		color_btn.name = "ColorPicker"
+		color_btn.color = fx.color
+		color_btn.custom_minimum_size = Vector2(40, 0)
+		color_btn.color_changed.connect(func(c): _on_color_changed(index, c))
+		row.add_child(color_btn)
+
 	# Delete button
 	var del_btn = Button.new()
 	del_btn.name = "DeleteButton"
@@ -122,6 +139,14 @@ func _get_fx_label(fx_type: String) -> String:
 			return "Fondu"
 		"eyes_blink":
 			return "Clignement"
+		"flash":
+			return "Flash"
+		"zoom":
+			return "Zoom"
+		"vignette":
+			return "Vignette"
+		"desaturation":
+			return "Désaturation"
 		_:
 			return fx_type
 
@@ -137,6 +162,14 @@ func _on_add_fx_type_selected(id: int) -> void:
 			fx.fx_type = "screen_shake"
 		2:
 			fx.fx_type = "eyes_blink"
+		3:
+			fx.fx_type = "flash"
+		4:
+			fx.fx_type = "zoom"
+		5:
+			fx.fx_type = "vignette"
+		6:
+			fx.fx_type = "desaturation"
 	_sequence.fx.append(fx)
 	_rebuild_list()
 	fx_changed.emit()
@@ -146,6 +179,7 @@ func _on_type_changed(index: int, type_idx: int) -> void:
 	if _sequence == null or index >= _sequence.fx.size():
 		return
 	_sequence.fx[index].fx_type = SequenceFxScript.VALID_FX_TYPES[type_idx]
+	_rebuild_list()
 	fx_changed.emit()
 
 
@@ -160,6 +194,13 @@ func _on_intensity_changed(index: int, value: float) -> void:
 	if _sequence == null or index >= _sequence.fx.size():
 		return
 	_sequence.fx[index].intensity = value
+	fx_changed.emit()
+
+
+func _on_color_changed(index: int, new_color: Color) -> void:
+	if _sequence == null or index >= _sequence.fx.size():
+		return
+	_sequence.fx[index].color = new_color
 	fx_changed.emit()
 
 

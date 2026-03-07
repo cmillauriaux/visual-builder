@@ -4,8 +4,9 @@ var uuid: String = ""
 var _fx_type: String = "fade_in"
 var _duration: float = 0.5
 var _intensity: float = 1.0
+var _color: Color = Color.WHITE
 
-const VALID_FX_TYPES = ["screen_shake", "fade_in", "eyes_blink"]
+const VALID_FX_TYPES = ["screen_shake", "fade_in", "eyes_blink", "flash", "zoom", "vignette", "desaturation"]
 
 var fx_type: String:
 	get:
@@ -27,6 +28,12 @@ var intensity: float:
 		return _intensity
 	set(value):
 		_intensity = clampf(value, 0.1, 3.0)
+
+var color: Color:
+	get:
+		return _color
+	set(value):
+		_color = value
 
 
 func _init():
@@ -59,6 +66,7 @@ func to_dict() -> Dictionary:
 		"fx_type": fx_type,
 		"duration": duration,
 		"intensity": intensity,
+		"color": color.to_html(),
 	}
 
 
@@ -69,4 +77,7 @@ static func from_dict(d: Dictionary):
 	fx.fx_type = d.get("fx_type", "fade_in")
 	fx.duration = d.get("duration", 0.5)
 	fx.intensity = d.get("intensity", 1.0)
+	var color_str = d.get("color", "")
+	if color_str != "":
+		fx.color = Color.from_string(color_str, Color.WHITE)
 	return fx

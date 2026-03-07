@@ -9,6 +9,36 @@ var _current_tween: Tween = null
 var _fx_nodes: Array = []
 var _target: Control = null
 var _original_position: Vector2 = Vector2.ZERO
+var _original_scale: Vector2 = Vector2.ONE
+var _original_pivot: Vector2 = Vector2.ZERO
+
+## FX persistants (restent jusqu'à la séquence suivante)
+const PERSISTENT_FX_TYPES = ["vignette", "desaturation"]
+var _persistent_fx: Dictionary = {}  # fx_type -> overlay node
+
+const VIGNETTE_SHADER = """
+shader_type canvas_item;
+uniform float strength : hint_range(0.0, 3.0) = 0.0;
+
+void fragment() {
+	vec2 uv = UV;
+	float dist = distance(uv, vec2(0.5));
+	float vignette = smoothstep(0.3, 0.7, dist) * strength;
+	COLOR = vec4(0.0, 0.0, 0.0, vignette);
+}
+"""
+
+const DESATURATION_SHADER = """
+shader_type canvas_item;
+uniform sampler2D screen_texture : hint_screen_texture, filter_linear_mipmap;
+uniform float amount : hint_range(0.0, 1.0) = 0.0;
+
+void fragment() {
+	vec4 col = texture(screen_texture, SCREEN_UV);
+	float gray = dot(col.rgb, vec3(0.299, 0.587, 0.114));
+	COLOR = vec4(mix(col.rgb, vec3(gray), amount), col.a);
+}
+"""
 
 const PIXELATE_SHADER = """
 shader_type canvas_item;
@@ -16,25 +46,51 @@ uniform sampler2D screen_texture : hint_screen_texture, filter_linear_mipmap;
 uniform float amount : hint_range(0.0, 512.0) = 0.0;
 
 void fragment() {
-    if (amount > 0.0) {
-        vec2 size = vec2(textureSize(screen_texture, 0));
-        float pixel_size = amount;
-        vec2 uv = floor(SCREEN_UV * size / pixel_size) * pixel_size / size;
-        COLOR = texture(screen_texture, uv);
-    } else {
-        COLOR = texture(screen_texture, SCREEN_UV);
-    }
+	if (amount > 0.0) {
+		vec2 size = vec2(textureSize(screen_texture, 0));
+		float pixel_size = amount;
+		vec2 uv = floor(SCREEN_UV * size / pixel_size) * pixel_size / size;
+		COLOR = texture(screen_texture, uv);
+	} else {
+		COLOR = texture(screen_texture, SCREEN_UV);
+	}
 }
 """
 
 func play_fx_list(fx_list: Array, target: Control) -> void:
-	stop_fx()
-	if fx_list.is_empty():
+	# Déterminer quels FX persistants la nouvelle liste contient
+	var new_persistent_types: Array = []
+	for fx in fx_list:
+		if fx.fx_type in PERSISTENT_FX_TYPES:
+			new_persistent_types.append(fx.fx_type)
+
+	# Supprimer les FX persistants qui ne sont PAS dans la nouvelle liste
+	var types_to_remove: Array = []
+	for fx_type in _persistent_fx:
+		if fx_type not in new_persistent_types:
+			types_to_remove.append(fx_type)
+	for fx_type in types_to_remove:
+		var overlay = _persistent_fx[fx_type]
+		if is_instance_valid(overlay):
+			overlay.queue_free()
+		_persistent_fx.erase(fx_type)
+
+	# Filtrer les FX persistants déjà actifs (éviter le clignotement)
+	var filtered_fx_list: Array = []
+	for fx in fx_list:
+		if fx.fx_type in PERSISTENT_FX_TYPES and fx.fx_type in _persistent_fx:
+			continue  # déjà affiché, on le garde tel quel
+		filtered_fx_list.append(fx)
+
+	# Arrêter les FX transitoires (pas les persistants)
+	_stop_transient_fx()
+
+	if filtered_fx_list.is_empty():
 		fx_finished.emit()
 		return
 	_target = target
 	_playing = true
-	_play_next(fx_list.duplicate(), target)
+	_play_next(filtered_fx_list.duplicate(), target)
 
 
 func play_transition(type: String, duration: float, is_in: bool, target: Control) -> void:
@@ -152,12 +208,19 @@ func _play_pixelate_out_transition(duration: float, target: Control) -> void:
 
 
 func stop_fx() -> void:
+	_stop_transient_fx()
+	_cleanup_persistent_fx()
+
+
+func _stop_transient_fx() -> void:
 	if _current_tween and _current_tween.is_valid():
 		_current_tween.kill()
 		_current_tween = null
 	_cleanup_fx_nodes()
 	if _target and is_instance_valid(_target):
 		_target.position = _original_position
+		_target.scale = _original_scale
+		_target.pivot_offset = _original_pivot
 	_playing = false
 
 
@@ -182,6 +245,14 @@ func _play_single_fx(fx, target: Control, on_done: Callable) -> void:
 			_play_fade_in(fx, target, on_done)
 		"eyes_blink":
 			_play_eyes_blink(fx, target, on_done)
+		"flash":
+			_play_flash(fx, target, on_done)
+		"zoom":
+			_play_zoom(fx, target, on_done)
+		"vignette":
+			_play_vignette(fx, target, on_done)
+		"desaturation":
+			_play_desaturation(fx, target, on_done)
 		_:
 			on_done.call()
 
@@ -250,10 +321,10 @@ func _play_eyes_blink(fx, target: Control, on_done: Callable) -> void:
 	_current_tween = create_tween()
 	# Phase 1: stay closed
 	_current_tween.tween_interval(closed_duration)
-	# Phase 2: open — top bar shrinks upward, bottom bar moves down and shrinks
-	_current_tween.tween_property(top_bar, "size:y", 0.0, open_duration).set_parallel(false)
-	_current_tween.tween_property(bottom_bar, "position:y", target_size.y, open_duration).set_parallel(true)
-	_current_tween.tween_property(bottom_bar, "size:y", 0.0, open_duration).set_parallel(true)
+	# Phase 2: open — top bar shrinks upward, bottom bar moves down and shrinks (parallel)
+	_current_tween.tween_property(top_bar, "size:y", 0.0, open_duration)
+	_current_tween.parallel().tween_property(bottom_bar, "position:y", target_size.y, open_duration)
+	_current_tween.parallel().tween_property(bottom_bar, "size:y", 0.0, open_duration)
 	_current_tween.finished.connect(func():
 		if is_instance_valid(top_bar):
 			_fx_nodes.erase(top_bar)
@@ -265,8 +336,109 @@ func _play_eyes_blink(fx, target: Control, on_done: Callable) -> void:
 	)
 
 
+func _play_flash(fx, target: Control, on_done: Callable) -> void:
+	var overlay = ColorRect.new()
+	overlay.name = "FxFlashOverlay"
+	overlay.color = Color(fx.color.r, fx.color.g, fx.color.b, 0.0)
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	target.add_child(overlay)
+	_fx_nodes.append(overlay)
+
+	var peak_alpha = minf(fx.intensity, 1.0)
+	var fade_in_dur = fx.duration * 0.3
+	var hold_dur = fx.duration * 0.2
+	var fade_out_dur = fx.duration * 0.5
+
+	_current_tween = create_tween()
+	_current_tween.tween_property(overlay, "color:a", peak_alpha, fade_in_dur)
+	_current_tween.tween_interval(hold_dur)
+	_current_tween.tween_property(overlay, "color:a", 0.0, fade_out_dur)
+	_current_tween.finished.connect(func():
+		if is_instance_valid(overlay):
+			_fx_nodes.erase(overlay)
+			overlay.queue_free()
+		on_done.call()
+	)
+
+
+func _play_zoom(fx, target: Control, on_done: Callable) -> void:
+	_original_scale = target.scale
+	_original_pivot = target.pivot_offset
+	target.pivot_offset = target.size / 2.0
+
+	var zoom_level = 1.0 + fx.intensity * 0.15
+	var zoom_in_dur = fx.duration * 0.4
+	var hold_dur = fx.duration * 0.2
+	var zoom_out_dur = fx.duration * 0.4
+
+	_current_tween = create_tween()
+	_current_tween.tween_property(target, "scale", Vector2(zoom_level, zoom_level), zoom_in_dur).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	_current_tween.tween_interval(hold_dur)
+	_current_tween.tween_property(target, "scale", Vector2.ONE, zoom_out_dur).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	_current_tween.finished.connect(func():
+		target.scale = _original_scale
+		target.pivot_offset = _original_pivot
+		on_done.call()
+	)
+
+
+func _play_vignette(fx, target: Control, on_done: Callable) -> void:
+	var overlay = ColorRect.new()
+	overlay.name = "FxVignetteOverlay"
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	target.add_child(overlay)
+	_persistent_fx["vignette"] = overlay
+
+	var mat = ShaderMaterial.new()
+	var shader = Shader.new()
+	shader.code = VIGNETTE_SHADER
+	mat.shader = shader
+	overlay.material = mat
+	mat.set_shader_parameter("strength", 0.0)
+
+	_current_tween = create_tween()
+	_current_tween.tween_method(func(v): mat.set_shader_parameter("strength", v), 0.0, fx.intensity, fx.duration)
+	_current_tween.finished.connect(func():
+		on_done.call()
+	)
+
+
+func _play_desaturation(fx, target: Control, on_done: Callable) -> void:
+	var overlay = ColorRect.new()
+	overlay.name = "FxDesaturationOverlay"
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	target.add_child(overlay)
+	_persistent_fx["desaturation"] = overlay
+
+	var mat = ShaderMaterial.new()
+	var shader = Shader.new()
+	shader.code = DESATURATION_SHADER
+	mat.shader = shader
+	overlay.material = mat
+	mat.set_shader_parameter("amount", 0.0)
+
+	var peak_amount = minf(fx.intensity, 1.0)
+
+	_current_tween = create_tween()
+	_current_tween.tween_method(func(v): mat.set_shader_parameter("amount", v), 0.0, peak_amount, fx.duration)
+	_current_tween.finished.connect(func():
+		on_done.call()
+	)
+
+
 func _cleanup_fx_nodes() -> void:
 	for node in _fx_nodes:
 		if is_instance_valid(node):
 			node.queue_free()
 	_fx_nodes.clear()
+
+
+func _cleanup_persistent_fx() -> void:
+	for fx_type in _persistent_fx:
+		var overlay = _persistent_fx[fx_type]
+		if is_instance_valid(overlay):
+			overlay.queue_free()
+	_persistent_fx.clear()
