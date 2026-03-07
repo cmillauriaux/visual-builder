@@ -52,31 +52,60 @@ static func rename(old_path: String, new_name: String, category_service = null) 
 
 static func update_story_references(story, old_path: String, new_path: String) -> int:
 	## Met à jour toutes les propriétés du modèle Story référençant old_path.
+	## Compare par suffixe relatif (assets/...) pour gérer les chemins absolus et relatifs.
 	## Retourne le nombre de références modifiées.
 	var count := 0
 	if story == null:
 		return count
 
-	if story.menu_background == old_path:
-		story.menu_background = new_path
+	var old_rel := _to_assets_relative(old_path)
+	var replacement := _to_assets_relative(new_path)
+	if replacement == "":
+		replacement = new_path
+
+	if _paths_match(story.menu_background, old_path, old_rel):
+		story.menu_background = replacement
 		count += 1
 
 	for chapter in story.chapters:
 		for scene in chapter.scenes:
 			for seq in scene.sequences:
-				if seq.background == old_path:
-					seq.background = new_path
+				if _paths_match(seq.background, old_path, old_rel):
+					seq.background = replacement
 					count += 1
 				for fg in seq.foregrounds:
-					if fg.image == old_path:
-						fg.image = new_path
+					if _paths_match(fg.image, old_path, old_rel):
+						fg.image = replacement
 						count += 1
 				for dlg in seq.dialogues:
 					for fg in dlg.foregrounds:
-						if fg.image == old_path:
-							fg.image = new_path
+						if _paths_match(fg.image, old_path, old_rel):
+							fg.image = replacement
 							count += 1
 	return count
+
+
+static func _paths_match(stored_path: String, old_path: String, old_rel: String) -> bool:
+	## Compare un chemin stocké avec l'ancien chemin, en gérant les formats
+	## absolus et relatifs (ex: "assets/foregrounds/img.png" vs "C:/.../assets/foregrounds/img.png").
+	if stored_path == "":
+		return false
+	if stored_path == old_path:
+		return true
+	var stored_rel := _to_assets_relative(stored_path)
+	return stored_rel != "" and stored_rel == old_rel
+
+
+static func _to_assets_relative(path: String) -> String:
+	## Extrait le chemin relatif à partir de "assets/" dans le chemin donné.
+	## Ex: "C:/Users/.../assets/foregrounds/img.png" → "assets/foregrounds/img.png"
+	var normalized := path.replace("\\", "/")
+	var idx := normalized.find("/assets/")
+	if idx >= 0:
+		return normalized.substr(idx + 1)
+	if normalized.begins_with("assets/"):
+		return normalized
+	return ""
 
 
 static func _transfer_categories(category_service, old_path: String, new_path: String) -> void:

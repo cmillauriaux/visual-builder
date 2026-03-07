@@ -17,6 +17,7 @@ const ImageCategoryService = preload("res://src/services/image_category_service.
 const CategoryManagerDialogScript = preload("res://src/ui/dialogs/category_manager_dialog.gd")
 const ImageRenameService = preload("res://src/services/image_rename_service.gd")
 const ImageFileDialog = preload("res://src/ui/shared/image_file_dialog.gd")
+const StorySaver = preload("res://src/persistence/story_saver.gd")
 
 signal image_renamed(old_path: String, new_path: String)
 
@@ -24,6 +25,7 @@ enum Mode { BACKGROUND, FOREGROUND }
 
 var _mode: int = Mode.FOREGROUND
 var _story_base_path: String = ""
+var _story = null
 var _selected_path: String = ""
 var _selected_gallery_item = null
 var _category_service: RefCounted = null
@@ -73,9 +75,10 @@ func _ready() -> void:
 	close_requested.connect(_on_cancel)
 	_build_ui()
 
-func setup(mode: int, story_base_path: String) -> void:
+func setup(mode: int, story_base_path: String, story = null) -> void:
 	_mode = mode
 	_story_base_path = story_base_path
+	_story = story
 	if mode == Mode.BACKGROUND:
 		title = "Sélectionner un background"
 	else:
@@ -693,6 +696,11 @@ func _show_rename_dialog(image_path: String) -> void:
 		var new_name := line_edit.text.strip_edges()
 		var result := ImageRenameService.rename(image_path, new_name, _category_service)
 		if result["ok"] and not result["same_name"]:
+			if _story != null:
+				ImageRenameService.update_story_references(_story, image_path, result["new_path"])
+				_story.touch()
+				if _story_base_path != "":
+					StorySaver.save_story(_story, _story_base_path)
 			if _story_base_path != "":
 				_category_service.save_to(_story_base_path)
 			image_renamed.emit(image_path, result["new_path"])

@@ -10,6 +10,7 @@ const ImageCategoryService = preload("res://src/services/image_category_service.
 const CategoryManagerDialogScript = preload("res://src/ui/dialogs/category_manager_dialog.gd")
 const ImageRenameService = preload("res://src/services/image_rename_service.gd")
 const ImageNormalizerDialogScript = preload("res://src/ui/dialogs/image_normalizer_dialog.gd")
+const StorySaver = preload("res://src/persistence/story_saver.gd")
 
 signal image_renamed(old_path: String, new_path: String)
 
@@ -418,6 +419,8 @@ func _show_rename_dialog(image_path: String) -> void:
 			if _story != null:
 				ImageRenameService.update_story_references(_story, image_path, result["new_path"])
 				_story.touch()
+				if _story_base_path != "":
+					StorySaver.save_story(_story, _story_base_path)
 			if _story_base_path != "":
 				_category_service.save_to(_story_base_path)
 			image_renamed.emit(image_path, result["new_path"])

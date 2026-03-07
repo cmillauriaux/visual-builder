@@ -27,6 +27,7 @@ var _to_be_continued_bg_edit: LineEdit
 var _to_be_continued_bg_preview: TextureRect
 var _to_be_continued_title_edit: LineEdit
 var _to_be_continued_subtitle_edit: LineEdit
+var _story = null
 var _story_base_path: String = ""
 var _current_menu_music: String = ""
 
@@ -317,6 +318,7 @@ func setup(story, story_base_path: String = "") -> void:
 	_to_be_continued_bg_edit.text = story.to_be_continued_background if story.get("to_be_continued_background") != null else ""
 	_to_be_continued_title_edit.text = story.to_be_continued_title if story.get("to_be_continued_title") != null else ""
 	_to_be_continued_subtitle_edit.text = story.to_be_continued_subtitle if story.get("to_be_continued_subtitle") != null else ""
+	_story = story
 	_story_base_path = story_base_path
 	_current_menu_music = story.menu_music if story.get("menu_music") != null else ""
 	_update_menu_music_label()
@@ -374,7 +376,7 @@ func _on_browse_pressed() -> void:
 	var picker = Window.new()
 	picker.set_script(ImagePickerDialogScript)
 	add_child(picker)
-	picker.setup(ImagePickerDialogScript.Mode.BACKGROUND, _story_base_path)
+	picker.setup(ImagePickerDialogScript.Mode.BACKGROUND, _story_base_path, _story)
 	picker.image_selected.connect(_on_bg_image_selected)
 	picker.popup_centered()
 
@@ -429,7 +431,7 @@ func _on_game_over_browse_pressed() -> void:
 	var picker = Window.new()
 	picker.set_script(ImagePickerDialogScript)
 	add_child(picker)
-	picker.setup(ImagePickerDialogScript.Mode.BACKGROUND, _story_base_path)
+	picker.setup(ImagePickerDialogScript.Mode.BACKGROUND, _story_base_path, _story)
 	picker.image_selected.connect(_on_game_over_bg_selected)
 	picker.popup_centered()
 
@@ -458,7 +460,7 @@ func _on_tbc_browse_pressed() -> void:
 	var picker = Window.new()
 	picker.set_script(ImagePickerDialogScript)
 	add_child(picker)
-	picker.setup(ImagePickerDialogScript.Mode.BACKGROUND, _story_base_path)
+	picker.setup(ImagePickerDialogScript.Mode.BACKGROUND, _story_base_path, _story)
 	picker.image_selected.connect(_on_tbc_bg_selected)
 	picker.popup_centered()
 

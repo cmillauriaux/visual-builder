@@ -263,7 +263,7 @@ func _on_image_btn_pressed(index: int) -> void:
 	# Trouver le noeud racine pour ajouter le dialog
 	var root = get_tree().root if get_tree() else self
 	root.add_child(dialog)
-	dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _story_base_path)
+	dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _story_base_path, _story)
 	dialog.image_selected.connect(func(path):
 		update_image(index, path)
 		_rebuild_list()

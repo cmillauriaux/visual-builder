@@ -54,7 +54,8 @@ func _open_image_picker(mode: int, on_selected: Callable) -> void:
 	picker.set_script(ImagePickerDialogScript)
 	_main.add_child(picker)
 	var story_base_path = _main._get_story_base_path()
-	picker.setup(mode, story_base_path)
+	var story = _main._editor_main._story if _main._editor_main else null
+	picker.setup(mode, story_base_path, story)
 	picker.image_selected.connect(on_selected)
 	
 	# Pre-fill IA source image
