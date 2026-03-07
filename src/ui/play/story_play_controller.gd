@@ -26,11 +26,27 @@ var _user_stopped: bool = false
 var _variables: Dictionary = {}  # String → Variant
 var _notification_service: RefCounted
 var _autosave_enabled: bool = true
+var _pck_loader: RefCounted = null  # PckChapterLoader
 
 
 func setup(notification_service: RefCounted, autosave_enabled: bool = true) -> void:
 	_notification_service = notification_service
 	_autosave_enabled = autosave_enabled
+
+
+func set_pck_loader(loader: RefCounted) -> void:
+	_pck_loader = loader
+
+
+## Charge le PCK du chapitre si nécessaire (no-op si pas de split PCK).
+func _ensure_chapter_pck(chapter) -> void:
+	if _pck_loader == null:
+		return
+	if not _pck_loader.has_manifest():
+		return
+	if _pck_loader.is_chapter_loaded(chapter.uuid):
+		return
+	await _pck_loader.ensure_chapter_loaded(chapter.uuid)
 
 func get_state() -> int:
 	return _state
@@ -61,6 +77,7 @@ func start_play_story(story) -> void:
 		_finish("error")
 		return
 	_current_chapter = chapter
+	await _ensure_chapter_pck(chapter)
 	chapter_entered.emit(chapter.chapter_name, chapter.uuid)
 	var scene = _find_entry(chapter.scenes, chapter.entry_point_uuid)
 	if scene == null:
@@ -74,6 +91,7 @@ func start_play_chapter(story, chapter) -> void:
 		return
 	_story = story
 	_current_chapter = chapter
+	await _ensure_chapter_pck(chapter)
 	chapter_entered.emit(chapter.chapter_name, chapter.uuid)
 	_user_stopped = false
 	_variables = {}
@@ -91,6 +109,7 @@ func start_play_scene(story, chapter, scene) -> void:
 		return
 	_story = story
 	_current_chapter = chapter
+	await _ensure_chapter_pck(chapter)
 	chapter_entered.emit(chapter.chapter_name, chapter.uuid)
 	_current_scene = scene
 	_user_stopped = false
@@ -110,6 +129,7 @@ func start_play_from_save(story, chapter, scene, sequence, variables: Dictionary
 	_current_sequence = sequence
 	_variables = variables.duplicate()
 	_user_stopped = false
+	await _ensure_chapter_pck(chapter)
 	_state = State.PLAYING_SEQUENCE
 	chapter_entered.emit(chapter.chapter_name, chapter.uuid)
 	scene_entered.emit(scene.scene_name, scene.uuid)
@@ -264,6 +284,7 @@ func _resolve_consequence(consequence) -> void:
 				_finish("error")
 				return
 			_current_chapter = target_ch
+			await _ensure_chapter_pck(target_ch)
 			chapter_entered.emit(target_ch.chapter_name, target_ch.uuid)
 			var scene = _find_entry(target_ch.scenes, target_ch.entry_point_uuid)
 			if scene == null:

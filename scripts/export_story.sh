@@ -118,6 +118,8 @@ resolve_user_path() {
         echo "$HOME/Library/Application Support/Godot/app_userdata/$project_name/${path#user://}"
     elif [[ "$OSTYPE" == "linux"* ]]; then
         echo "$HOME/.local/share/godot/app_userdata/$project_name/${path#user://}"
+    elif [[ "$OSTYPE" == "msys"* || "$OSTYPE" == "cygwin"* ]]; then
+        echo "$APPDATA/Godot/app_userdata/$project_name/${path#user://}"
     else
         error "OS non supporté pour la résolution user:// : $OSTYPE"
     fi
@@ -265,19 +267,31 @@ trap cleanup EXIT
 
 # 5. Copier le projet (sans .godot, .git, build, .claude)
 info "Copie du projet..."
-rsync -a \
-    --exclude='.godot/' \
-    --exclude='.git/' \
-    --exclude='build/' \
-    --exclude='.claude/' \
-    --exclude='specs/' \
-    --exclude='addons/gut/' \
-    "$PROJECT_DIR/" "$TEMP_PROJECT/"
+if command -v rsync &>/dev/null; then
+    rsync -a \
+        --exclude='.godot/' \
+        --exclude='.git/' \
+        --exclude='build/' \
+        --exclude='.claude/' \
+        --exclude='specs/' \
+        --exclude='addons/gut/' \
+        "$PROJECT_DIR/" "$TEMP_PROJECT/"
+else
+    # Fallback sans rsync (Windows/Git Bash)
+    cp -a "$PROJECT_DIR/." "$TEMP_PROJECT/"
+    rm -rf "$TEMP_PROJECT/.godot" "$TEMP_PROJECT/.git" "$TEMP_PROJECT/build" \
+           "$TEMP_PROJECT/.claude" "$TEMP_PROJECT/specs" "$TEMP_PROJECT/addons/gut"
+fi
 
 # 6. Copier la story dans res://story/ (sans artbook pour éviter les doublons)
 info "Copie de la story..."
 mkdir -p "$TEMP_PROJECT/story"
-rsync -a --exclude='artbook/' "$STORY_DIR/" "$TEMP_PROJECT/story/"
+if command -v rsync &>/dev/null; then
+    rsync -a --exclude='artbook/' "$STORY_DIR/" "$TEMP_PROJECT/story/"
+else
+    cp -a "$STORY_DIR/." "$TEMP_PROJECT/story/"
+    rm -rf "$TEMP_PROJECT/story/artbook"
+fi
 
 # 6b. Optimiser les fichiers audio pour le web (si ffmpeg est disponible)
 if [[ "$PLATFORM" != "web" ]]; then
@@ -285,12 +299,13 @@ if [[ "$PLATFORM" != "web" ]]; then
 elif ! command -v ffmpeg &>/dev/null; then
     info "ffmpeg non trouvé — optimisation audio ignorée"
 else
-    AUDIO_FILES=$(find "$TEMP_PROJECT/story" \( -name "*.mp3" -o -name "*.ogg" -o -name "*.wav" \) 2>/dev/null)
-    AUDIO_COUNT=$(echo "$AUDIO_FILES" | grep -c . || true)
+    AUDIO_LIST="$TEMP_DIR/audio_files.txt"
+    find "$TEMP_PROJECT/story" \( -name "*.mp3" -o -name "*.ogg" -o -name "*.wav" \) > "$AUDIO_LIST" 2>/dev/null
+    AUDIO_COUNT=$(wc -l < "$AUDIO_LIST" | tr -d ' ')
     info "Fichiers audio trouvés : $AUDIO_COUNT"
     if [[ "$AUDIO_COUNT" -gt 0 ]]; then
         info "Optimisation de $AUDIO_COUNT fichiers audio (128kbps)..."
-        echo "$AUDIO_FILES" | while read -r audio_file; do
+        while IFS= read -r audio_file; do
             [[ -z "$audio_file" ]] && continue
             tmp_file="${audio_file}.tmp.mp3"
             info "  → $(basename "$audio_file")"
@@ -300,11 +315,15 @@ else
                 rm -f "$tmp_file"
                 info "  ⚠ Échec pour $(basename "$audio_file")"
             fi
-        done
+        done < "$AUDIO_LIST"
     fi
 fi
 
-# 7. Réécrire les chemins images via Godot headless
+# 7. Importer les ressources (nécessaire avant le script de réécriture)
+info "Import des ressources..."
+run_logged "$GODOT_BIN" --headless --path "$TEMP_PROJECT" --import || true
+
+# 7b. Réécrire les chemins images via Godot headless
 info "Réécriture des chemins images..."
 run_logged "$GODOT_BIN" --headless --path "$TEMP_PROJECT" --script res://src/export/rewrite_runner.gd || \
     error "Échec de la réécriture des chemins"
@@ -371,11 +390,7 @@ else
     EXPORT_FILE="$OUTPUT_DIR/${SAFE_NAME}.$EXPORT_EXT"
 fi
 
-# 12. Lancer l'import Godot (génère le cache .godot/)
-info "Import des ressources..."
-run_logged "$GODOT_BIN" --headless --path "$TEMP_PROJECT" --import || true
-
-# 13. Lancer l'export
+# 12. Lancer l'export
 info "Export en cours ($PLATFORM)..."
 run_logged "$GODOT_BIN" --headless --path "$TEMP_PROJECT" --export-release "$PRESET_NAME" "$EXPORT_FILE"
 EXPORT_EXIT=$?
@@ -386,14 +401,45 @@ if [[ $EXPORT_EXIT -ne 0 ]]; then
     error "L'export a échoué. Consultez le log : $LOG_FILE"
 fi
 
-if [[ -f "$EXPORT_FILE" ]]; then
-    log ""
-    info "Export réussi !"
-    info "Fichier : $EXPORT_FILE"
-    info "Log : $LOG_FILE"
-    if [[ "$PLATFORM" == "web" ]]; then
-        info "Pour tester : ouvrir $EXPORT_FILE dans un navigateur (via un serveur local)"
-    fi
-else
+if [[ ! -f "$EXPORT_FILE" ]]; then
     error "L'export semble avoir échoué — fichier non trouvé : $EXPORT_FILE. Consultez le log : $LOG_FILE"
+fi
+
+# 13. Découper en PCK par chapitre (web uniquement)
+if [[ "$PLATFORM" == "web" ]]; then
+    info "Découpage PCK par chapitre..."
+    EXPORT_DIR="$(dirname "$EXPORT_FILE")"
+    run_logged "$GODOT_BIN" --headless --path "$TEMP_PROJECT" \
+        --script res://src/export/pck_chapter_builder.gd \
+        -- --output "$EXPORT_DIR"
+
+    if [[ $? -eq 0 ]]; then
+        # Ré-exporter le core PCK allégé (sans les assets chapitres supprimés)
+        info "Ré-export du core PCK allégé..."
+        run_logged "$GODOT_BIN" --headless --path "$TEMP_PROJECT" --export-release "$PRESET_NAME" "$EXPORT_FILE"
+
+        PCK_COUNT=$(find "$EXPORT_DIR" -name "chapter_*.pck" 2>/dev/null | wc -l | tr -d ' ')
+        info "$PCK_COUNT PCK chapitres créés"
+    else
+        info "⚠ Échec du découpage PCK (non bloquant — export monolithique conservé)"
+    fi
+fi
+
+# 14. Créer le fichier _headers pour Cloudflare Pages (COOP/COEP requis par SharedArrayBuffer)
+if [[ "$PLATFORM" == "web" ]]; then
+    HEADERS_FILE="$EXPORT_DIR/_headers"
+    cat > "$HEADERS_FILE" << 'HEADERS_EOF'
+/*
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: require-corp
+HEADERS_EOF
+    info "Fichier _headers créé pour Cloudflare Pages (COOP/COEP)"
+fi
+
+log ""
+info "Export réussi !"
+info "Fichier : $EXPORT_FILE"
+info "Log : $LOG_FILE"
+if [[ "$PLATFORM" == "web" ]]; then
+    info "Pour tester : ouvrir $EXPORT_FILE dans un navigateur (via un serveur local)"
 fi

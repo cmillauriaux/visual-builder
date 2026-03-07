@@ -29,6 +29,7 @@ var _itchio_button: Button
 var _quit_button: Button
 var _options_menu: PanelContainer
 var _options_center: CenterContainer
+var _loading_label: Label
 
 # Settings partagés
 var _settings: RefCounted
@@ -145,6 +146,21 @@ func build_ui() -> void:
 		_quit_button.visible = false
 	vbox.add_child(_quit_button)
 
+	# Loading label (affiché pendant le téléchargement des PCK chapitres)
+	_loading_label = Label.new()
+	_loading_label.text = "Chargement..."
+	_loading_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_loading_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_loading_label.add_theme_font_size_override("font_size", UIScale.scale(24))
+	_loading_label.add_theme_color_override("font_color", Color.WHITE)
+	_loading_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	_loading_label.offset_top = -UIScale.scale(80)
+	_loading_label.offset_bottom = -UIScale.scale(40)
+	_loading_label.offset_left = -UIScale.scale(200)
+	_loading_label.offset_right = UIScale.scale(200)
+	_loading_label.visible = false
+	add_child(_loading_label)
+
 	# Sous-menu Options (centré via CenterContainer)
 	_options_center = CenterContainer.new()
 	var options_center = _options_center
@@ -223,6 +239,16 @@ func apply_ui_translations(i18n_dict: Dictionary) -> void:
 	_quit_button.text = StoryI18nService.get_ui_string("Quitter", i18n_dict)
 	_options_menu.apply_ui_translations(i18n_dict)
 	_update_display()
+
+
+func set_loading_visible(is_visible: bool) -> void:
+	_loading_label.visible = is_visible
+	if not is_visible:
+		_loading_label.text = "Chargement..."
+
+
+func update_loading_text(text: String) -> void:
+	_loading_label.text = text
 
 
 func _on_patreon_pressed() -> void:

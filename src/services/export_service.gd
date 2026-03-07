@@ -205,9 +205,24 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 			f_log.store_string(line)
 		f_log.close()
 
+	# 9b. Découper en PCK par chapitre (web uniquement)
+	if platform == "web" and exit_code == 0 and FileAccess.file_exists(export_file):
+		_split_pck_by_chapter(abs_temp_project, export_file.get_base_dir(), godot_bin, log_path)
+
+	# 9c. Créer le fichier _headers pour Cloudflare Pages (COOP/COEP requis par SharedArrayBuffer)
+	if platform == "web" and exit_code == 0:
+		var headers_path = export_file.get_base_dir() + "/_headers"
+		var f_headers = FileAccess.open(headers_path, FileAccess.WRITE)
+		if f_headers:
+			f_headers.store_line("/*")
+			f_headers.store_line("  Cross-Origin-Opener-Policy: same-origin")
+			f_headers.store_line("  Cross-Origin-Embedder-Policy: require-corp")
+			f_headers.close()
+			_append_log(log_path, "→ Fichier _headers créé pour Cloudflare Pages (COOP/COEP)")
+
 	# 10. Nettoyage
 	_remove_dir_recursive(abs_temp_base)
-	
+
 	if exit_code == 0 and FileAccess.file_exists(export_file):
 		return ExportResult.new(true, abs_output_path, log_path)
 	else:
@@ -368,6 +383,50 @@ func extract_export_error(log_path: String) -> String:
 		
 	return "
 ".join(reasons)
+
+
+func _split_pck_by_chapter(temp_project: String, export_dir: String, godot_bin: String, log_path: String) -> void:
+	_append_log(log_path, "→ Découpage PCK par chapitre...")
+
+	# Lancer le script headless pour créer les PCK chapitres
+	var split_output = []
+	var split_args = [
+		"--path", temp_project, "--headless",
+		"--script", "res://src/export/pck_chapter_builder.gd",
+		"--", "--output", export_dir
+	]
+	var split_exit = OS.execute(godot_bin, split_args, split_output, true)
+
+	for line in split_output:
+		_append_log(log_path, "  " + line.strip_edges())
+
+	if split_exit != 0:
+		_append_log(log_path, "  ⚠ Échec du découpage PCK (non bloquant)")
+		return
+
+	# Re-exporter le core PCK sans les assets chapitres (qui ont été supprimés par le builder)
+	_append_log(log_path, "→ Ré-export du core PCK allégé...")
+	var pck_path = export_dir + "/index.pck"
+	var reexport_output = []
+	var preset_name = "Web"
+	var export_file = export_dir + "/index.html"
+	var reexport_args = ["--path", temp_project, "--headless", "--export-release", preset_name, export_file]
+	OS.execute(godot_bin, reexport_args, reexport_output, true)
+
+	for line in reexport_output:
+		_append_log(log_path, "  " + line.strip_edges())
+
+	# Compter les PCK chapitres créés
+	var dir = DirAccess.open(export_dir)
+	if dir:
+		var count = 0
+		dir.list_dir_begin()
+		var fname = dir.get_next()
+		while fname != "":
+			if fname.begins_with("chapter_") and fname.ends_with(".pck"):
+				count += 1
+			fname = dir.get_next()
+		_append_log(log_path, "→ %d PCK chapitres créés" % count)
 
 
 func _optimize_audio_files(story_dir: String, log_path: String) -> void:

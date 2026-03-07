@@ -17,6 +17,7 @@ const StoryI18nService = preload("res://src/services/story_i18n_service.gd")
 const GameSaveManager = preload("res://src/persistence/game_save_manager.gd")
 const OptionsMenuScript = preload("res://src/ui/menu/options_menu.gd")
 const PlayFabAnalyticsServiceScript = preload("res://src/services/playfab_analytics_service.gd")
+const PckChapterLoaderScript = preload("res://src/services/pck_chapter_loader.gd")
 
 ## Chemin vers la story à charger automatiquement.
 ## Si vide, affiche le sélecteur. Peut pointer vers res:// ou user://.
@@ -99,6 +100,9 @@ var _quickload_no_btn: Button
 
 # Analytics
 var _analytics: Node
+
+# PCK chapter loader
+var _pck_loader: RefCounted
 
 # State
 var _current_story = null
@@ -254,6 +258,12 @@ func _load_story_and_show_menu(path: String) -> void:
 		
 	_current_story = story
 	_current_story_path = path
+
+	# Initialiser le chargeur de PCK chapitres (pour les exports avec split PCK)
+	_pck_loader = PckChapterLoaderScript.new()
+	_pck_loader.setup(path, get_tree())
+	_story_play_ctrl.set_pck_loader(_pck_loader)
+
 	_reload_i18n()
 	_load_max_progression()
 	_configure_analytics(story)
@@ -325,7 +335,29 @@ func _show_main_menu(story) -> void:
 		_music_player.play_menu_music(story.menu_music)
 
 
+## Précharge un PCK chapitre sur le web en affichant la progression dans le menu.
+func _preload_chapter_with_ui(chapter_uuid: String) -> void:
+	if not _pck_loader or not _pck_loader.has_manifest() or OS.get_name() != "Web":
+		return
+	if _pck_loader.is_chapter_loaded(chapter_uuid):
+		return
+	_main_menu.set_loading_visible(true)
+	var progress_cb = func(_name: String, progress: float):
+		_main_menu.update_loading_text("Chargement... %d%%" % int(progress * 100))
+	_pck_loader.chapter_load_progress.connect(progress_cb)
+	var ok = await _pck_loader.ensure_chapter_loaded(chapter_uuid)
+	_pck_loader.chapter_load_progress.disconnect(progress_cb)
+	_main_menu.set_loading_visible(false)
+	if not ok:
+		push_warning("PckChapterLoader: failed to preload chapter %s" % chapter_uuid)
+
+
 func _on_new_game() -> void:
+	# Sur le web, charger le PCK du 1er chapitre AVANT de cacher le menu
+	if _pck_loader and _pck_loader.has_manifest() and OS.get_name() == "Web":
+		var chapter = _story_play_ctrl._find_entry(_current_story.chapters, _current_story.entry_point_uuid)
+		if chapter:
+			await _preload_chapter_with_ui(chapter.uuid)
 	_main_menu.hide_menu()
 	_analytics.track_event("story_started", {
 		"story_title": _current_story.title,
@@ -440,6 +472,7 @@ func _on_chapter_scene_selected(chapter_uuid: String, scene_uuid: String) -> voi
 	var scene = chapter.find_scene(scene_uuid) if chapter else null
 	if chapter == null or scene == null:
 		return
+	await _preload_chapter_with_ui(chapter_uuid)
 	_play_ctrl.stop_current()
 	_story_play_ctrl.start_play_scene(_current_story, chapter, scene)
 
@@ -630,6 +663,10 @@ func _on_load_slot(slot_index: int) -> void:
 		_current_story = story
 		_current_story_path = target_path
 		_reload_i18n()
+	# Précharger le PCK du chapitre sauvegardé si nécessaire
+	var saved_chapter_uuid: String = save_data.get("chapter_uuid", "")
+	if saved_chapter_uuid != "":
+		await _preload_chapter_with_ui(saved_chapter_uuid)
 	# Reprendre depuis la sauvegarde
 	_analytics.track_event("story_loaded", {
 		"story_title": _current_story.title if _current_story else "",
@@ -657,6 +694,11 @@ func _on_save_load_close() -> void:
 func _on_pause_new_game() -> void:
 	_pause_menu.hide_menu()
 	get_tree().paused = false
+	# Précharger le PCK du 1er chapitre si nécessaire
+	if _current_story:
+		var chapter = _story_play_ctrl._find_entry(_current_story.chapters, _current_story.entry_point_uuid)
+		if chapter:
+			await _preload_chapter_with_ui(chapter.uuid)
 	_analytics.track_event("story_started", {
 		"story_title": _current_story.title if _current_story else "",
 		"story_version": _current_story.version if _current_story else "",
