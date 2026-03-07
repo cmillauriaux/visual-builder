@@ -7,7 +7,8 @@ extends RefCounted
 ## Sur un petit écran ou un écran haute densité, scale > 1.0 pour que les
 ## éléments UI gardent la même taille physique en millimètres.
 ##
-## Formule : ui_scale = (dpi / 96) / godot_canvas_scale
+## Formule : ui_scale = (logical_dpi / 96) / godot_canvas_scale
+## où logical_dpi = screen_dpi / screen_scale (pour compenser le HiDPI/Retina)
 ## où godot_canvas_scale = min(phys_w / 1920, phys_h / 1080)
 
 const DESIGN_WIDTH := 1920.0
@@ -39,7 +40,11 @@ static func reset() -> void:
 
 static func _compute_scale() -> float:
 	var win_size: Vector2i = DisplayServer.window_get_size()
-	var dpi: float = max(float(DisplayServer.screen_get_dpi()), REFERENCE_DPI)
+	# window_get_size() returns logical pixels; screen_get_dpi() returns physical DPI.
+	# Divide by screen_get_scale() to get the effective DPI in logical coordinates
+	# (avoids double-counting HiDPI/Retina scaling that Godot handles transparently).
+	var screen_scale: float = maxf(DisplayServer.screen_get_scale(), 1.0)
+	var dpi: float = max(float(DisplayServer.screen_get_dpi()) / screen_scale, REFERENCE_DPI)
 
 	# Si la fenêtre n'a pas encore de taille valide, retourner 1.0
 	if win_size.x <= 0 or win_size.y <= 0:

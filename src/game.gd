@@ -105,6 +105,7 @@ var _current_story = null
 var _current_story_path: String = ""
 var _settings: RefCounted
 var _i18n_dict: Dictionary = {}
+var _cached_max_progression: Dictionary = {"chapter": -1, "scene": -1}
 
 
 func _ready() -> void:
@@ -253,6 +254,7 @@ func _load_story_and_show_menu(path: String) -> void:
 	_current_story = story
 	_current_story_path = path
 	_reload_i18n()
+	_load_max_progression()
 	_configure_analytics(story)
 	_show_main_menu(_current_story)
 
@@ -423,27 +425,8 @@ func _on_chapters_scenes_pressed() -> void:
 
 
 func _open_chapter_scene_menu() -> void:
-	var max_chapter_idx := 0
-	var max_scene_idx := 0
-	# Analyser toutes les sauvegardes pour trouver la progression maximale
-	var all_save_data: Array = []
-	for entry in GameSaveManager.list_saves():
-		if entry.get("has_data", false):
-			all_save_data.append(entry.get("data", {}))
-	for entry in GameSaveManager.list_autosaves():
-		all_save_data.append(entry.get("data", {}))
-	if GameSaveManager.quicksave_exists():
-		all_save_data.append(GameSaveManager.quickload())
-
-	for save_data in all_save_data:
-		var ch_uuid: String = save_data.get("chapter_uuid", "")
-		var sc_uuid: String = save_data.get("scene_uuid", "")
-		var ch_idx := _find_chapter_index(_current_story, ch_uuid)
-		var sc_idx := _find_scene_index(_current_story, ch_idx, sc_uuid)
-		if ch_idx > max_chapter_idx or (ch_idx == max_chapter_idx and sc_idx > max_scene_idx):
-			max_chapter_idx = ch_idx
-			max_scene_idx = sc_idx
-
+	var max_chapter_idx: int = maxi(_cached_max_progression["chapter"], 0)
+	var max_scene_idx: int = maxi(_cached_max_progression["scene"], 0)
 	_chapter_scene_menu.show_menu(_current_story, max_chapter_idx, max_scene_idx)
 
 
@@ -471,12 +454,11 @@ func _on_scene_entered_update_skip(_scene_name: String, _scene_uuid: String) -> 
 	_update_skip_availability()
 
 
-## Met à jour la progression max et l'état du bouton Skip selon la scène courante.
+## Met à jour l'état du bouton Skip selon la scène courante (utilise le cache).
 func _update_skip_availability() -> void:
 	if _current_story == null:
 		return
-	var prog := _compute_max_progression()
-	_play_ctrl.set_skip_progression(prog["chapter"], prog["scene"])
+	_play_ctrl.set_skip_progression(_cached_max_progression["chapter"], _cached_max_progression["scene"])
 	var chapter = _story_play_ctrl.get_current_chapter()
 	var scene = _story_play_ctrl.get_current_scene()
 	var ch_idx := _find_chapter_index(_current_story, chapter.uuid if chapter else "")
@@ -484,8 +466,9 @@ func _update_skip_availability() -> void:
 	_play_ctrl.update_skip_availability(ch_idx, sc_idx)
 
 
-## Analyse toutes les sauvegardes et retourne la progression maximale atteinte.
-func _compute_max_progression() -> Dictionary:
+## Charge la progression maximale depuis toutes les sauvegardes et met en cache.
+## Appelé une seule fois au chargement de la story.
+func _load_max_progression() -> void:
 	var max_ch := -1
 	var max_sc := -1
 	var all_saves: Array = []
@@ -504,7 +487,21 @@ func _compute_max_progression() -> Dictionary:
 		if ch_idx > max_ch or (ch_idx == max_ch and sc_idx > max_sc):
 			max_ch = ch_idx
 			max_sc = sc_idx
-	return {"chapter": max_ch, "scene": max_sc}
+	_cached_max_progression = {"chapter": max_ch, "scene": max_sc}
+
+
+## Met à jour le cache de progression à partir d'un état de sauvegarde.
+func _update_cached_progression(save_data: Dictionary) -> void:
+	if _current_story == null:
+		return
+	var ch_uuid: String = save_data.get("chapter_uuid", "")
+	var sc_uuid: String = save_data.get("scene_uuid", "")
+	var ch_idx := _find_chapter_index(_current_story, ch_uuid)
+	var sc_idx := _find_scene_index(_current_story, ch_idx, sc_uuid)
+	var max_ch: int = _cached_max_progression["chapter"]
+	var max_sc: int = _cached_max_progression["scene"]
+	if ch_idx > max_ch or (ch_idx == max_ch and sc_idx > max_sc):
+		_cached_max_progression = {"chapter": ch_idx, "scene": sc_idx}
 
 
 ## Retourne l'index de chapitre par UUID, ou 0 si non trouvé.
@@ -554,6 +551,7 @@ func _collect_game_state() -> Dictionary:
 func _on_save_slot(slot_index: int) -> void:
 	var state := _collect_game_state()
 	GameSaveManager.save_game(slot_index, state, _pending_screenshot)
+	_update_cached_progression(state)
 	_analytics.track_event("story_saved", {
 		"story_title": _current_story.title if _current_story else "",
 		"slot_index": slot_index,
@@ -571,6 +569,7 @@ func _on_autosave_triggered() -> void:
 	var screenshot := get_viewport().get_texture().get_image()
 	var state := _collect_game_state()
 	GameSaveManager.autosave(state, screenshot)
+	_update_cached_progression(state)
 
 
 func _on_load_slot(slot_index: int) -> void:
@@ -809,6 +808,7 @@ func _on_quicksave() -> void:
 	var state := _collect_game_state()
 	var ok := GameSaveManager.quicksave(state, screenshot)
 	if ok:
+		_update_cached_progression(state)
 		_show_toast(StoryI18nService.get_ui_string("Sauvegarde rapide effectuée", _i18n_dict))
 		_analytics.track_event("quicksave", {
 			"story_title": _current_story.title if _current_story else "",
