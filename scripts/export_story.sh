@@ -274,10 +274,35 @@ rsync -a \
     --exclude='addons/gut/' \
     "$PROJECT_DIR/" "$TEMP_PROJECT/"
 
-# 6. Copier la story dans res://story/
+# 6. Copier la story dans res://story/ (sans artbook pour éviter les doublons)
 info "Copie de la story..."
 mkdir -p "$TEMP_PROJECT/story"
-rsync -a "$STORY_DIR/" "$TEMP_PROJECT/story/"
+rsync -a --exclude='artbook/' "$STORY_DIR/" "$TEMP_PROJECT/story/"
+
+# 6b. Optimiser les fichiers audio pour le web (si ffmpeg est disponible)
+if [[ "$PLATFORM" != "web" ]]; then
+    info "Optimisation audio ignorée (plateforme: $PLATFORM)"
+elif ! command -v ffmpeg &>/dev/null; then
+    info "ffmpeg non trouvé — optimisation audio ignorée"
+else
+    AUDIO_FILES=$(find "$TEMP_PROJECT/story" \( -name "*.mp3" -o -name "*.ogg" -o -name "*.wav" \) 2>/dev/null)
+    AUDIO_COUNT=$(echo "$AUDIO_FILES" | grep -c . || true)
+    info "Fichiers audio trouvés : $AUDIO_COUNT"
+    if [[ "$AUDIO_COUNT" -gt 0 ]]; then
+        info "Optimisation de $AUDIO_COUNT fichiers audio (128kbps)..."
+        echo "$AUDIO_FILES" | while read -r audio_file; do
+            [[ -z "$audio_file" ]] && continue
+            tmp_file="${audio_file}.tmp.mp3"
+            info "  → $(basename "$audio_file")"
+            if ffmpeg -y -i "$audio_file" -b:a 128k -ac 2 "$tmp_file" -loglevel error 2>&1; then
+                mv "$tmp_file" "$audio_file"
+            else
+                rm -f "$tmp_file"
+                info "  ⚠ Échec pour $(basename "$audio_file")"
+            fi
+        done
+    fi
+fi
 
 # 7. Réécrire les chemins images via Godot headless
 info "Réécriture des chemins images..."

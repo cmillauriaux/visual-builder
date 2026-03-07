@@ -60,13 +60,17 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 	var excludes = [".godot", ".git", "build", ".claude", "specs", "addons/gut", "stories"]
 	_copy_dir_recursive(project_root, abs_temp_project, excludes)
 	
-	# 3. Copier la story dans res://story/
+	# 3. Copier la story dans res://story/ (sans artbook pour éviter les doublons)
 	var abs_story_dir = ProjectSettings.globalize_path(story_path)
 	var abs_temp_story = abs_temp_project + "/story"
 	DirAccess.make_dir_recursive_absolute(abs_temp_story)
-	_copy_dir_recursive(abs_story_dir, abs_temp_story)
+	_copy_dir_recursive(abs_story_dir, abs_temp_story, ["artbook"])
 	
-	# 3b. Copier le menu_background comme boot splash si défini
+	# 3b. Optimiser les fichiers audio pour le web (si ffmpeg est disponible)
+	if platform == "web":
+		_optimize_audio_files(abs_temp_story, log_path)
+
+	# 3c. Copier le menu_background comme boot splash si défini
 	var boot_splash_res_path := ""
 	if story.menu_background != "":
 		var bg_abs_src = abs_story_dir + "/" + story.menu_background
@@ -364,6 +368,67 @@ func extract_export_error(log_path: String) -> String:
 		
 	return "
 ".join(reasons)
+
+
+func _optimize_audio_files(story_dir: String, log_path: String) -> void:
+	# Vérifier que ffmpeg est disponible
+	var test_output = []
+	var test_exit = OS.execute("ffmpeg", ["-version"], test_output)
+	if test_exit != 0:
+		_append_log(log_path, "→ ffmpeg non trouvé — optimisation audio ignorée")
+		return
+
+	# Trouver les fichiers audio
+	var audio_files = _find_audio_files(story_dir)
+	if audio_files.is_empty():
+		_append_log(log_path, "→ Aucun fichier audio trouvé")
+		return
+
+	_append_log(log_path, "→ Optimisation de %d fichiers audio (128kbps)..." % audio_files.size())
+
+	for audio_file in audio_files:
+		var tmp_file = audio_file + ".tmp.mp3"
+		var output = []
+		var exit_code = OS.execute("ffmpeg", ["-y", "-i", audio_file, "-b:a", "128k", "-ac", "2", tmp_file, "-loglevel", "error"], output, true)
+		if exit_code == 0 and FileAccess.file_exists(tmp_file):
+			DirAccess.remove_absolute(audio_file)
+			DirAccess.rename_absolute(tmp_file, audio_file)
+			_append_log(log_path, "  → " + audio_file.get_file())
+		else:
+			if FileAccess.file_exists(tmp_file):
+				DirAccess.remove_absolute(tmp_file)
+			_append_log(log_path, "  ⚠ Échec pour " + audio_file.get_file())
+
+
+func _find_audio_files(dir_path: String) -> Array:
+	var result = []
+	var dir = DirAccess.open(dir_path)
+	if dir == null:
+		return result
+	dir.list_dir_begin()
+	var file_name = dir.get_next()
+	while file_name != "":
+		if file_name == "." or file_name == "..":
+			file_name = dir.get_next()
+			continue
+		var full_path = dir_path + "/" + file_name
+		if dir.current_is_dir():
+			result.append_array(_find_audio_files(full_path))
+		else:
+			var ext = file_name.get_extension().to_lower()
+			if ext == "mp3" or ext == "ogg" or ext == "wav":
+				result.append(full_path)
+		file_name = dir.get_next()
+	return result
+
+
+func _append_log(log_path: String, message: String) -> void:
+	var f = FileAccess.open(log_path, FileAccess.READ_WRITE)
+	if f:
+		f.seek_end()
+		f.store_line(message)
+		f.close()
+	print(message)
 
 
 func _strip_ansi_codes(text: String) -> String:
