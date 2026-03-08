@@ -753,6 +753,93 @@ func test_ia_set_inputs_enabled_includes_workflow():
 	_dialog._ia_set_inputs_enabled(true)
 	assert_false(_dialog._ia_workflow_option.disabled)
 
+# --- Onglet IA : Nom de l'image ---
+
+func test_ia_has_name_input():
+	assert_not_null(_dialog._ia_name_input)
+	assert_is(_dialog._ia_name_input, LineEdit)
+
+func test_ia_name_input_initially_empty():
+	assert_eq(_dialog._ia_name_input.text, "")
+
+func test_ia_name_input_initially_not_editable():
+	assert_false(_dialog._ia_name_input.editable)
+
+func test_ia_name_input_has_placeholder():
+	assert_ne(_dialog._ia_name_input.placeholder_text, "")
+
+func test_ia_name_input_editable_after_generation():
+	var img = Image.create(2, 2, false, Image.FORMAT_RGB8)
+	_dialog._on_ia_generation_completed(img)
+	assert_true(_dialog._ia_name_input.editable)
+
+func test_ia_name_input_prefilled_after_generation():
+	var img = Image.create(2, 2, false, Image.FORMAT_RGB8)
+	_dialog._on_ia_generation_completed(img)
+	assert_string_starts_with(_dialog._ia_name_input.text, "ai_")
+
+func test_ia_name_input_disabled_during_generation():
+	_dialog._ia_set_inputs_enabled(false)
+	assert_false(_dialog._ia_name_input.editable)
+
+func test_ia_name_input_enabled_after_generation():
+	_dialog._ia_set_inputs_enabled(false)
+	_dialog._ia_set_inputs_enabled(true)
+	assert_true(_dialog._ia_name_input.editable)
+
+func test_ia_accept_uses_custom_name():
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
+	var img = Image.create(2, 2, false, Image.FORMAT_RGB8)
+	_dialog._ia_generated_image = img
+	_dialog._ia_name_input.text = "mon_personnage"
+	watch_signals(_dialog)
+	_dialog._on_ia_accept_pressed()
+	assert_signal_emitted(_dialog, "image_selected")
+	var args = get_signal_parameters(_dialog, "image_selected")
+	assert_string_contains(args[0], "mon_personnage.png")
+
+func test_ia_accept_fallback_name_when_empty():
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
+	var img = Image.create(2, 2, false, Image.FORMAT_RGB8)
+	_dialog._ia_generated_image = img
+	_dialog._ia_name_input.text = ""
+	watch_signals(_dialog)
+	_dialog._on_ia_accept_pressed()
+	assert_signal_emitted(_dialog, "image_selected")
+	var args = get_signal_parameters(_dialog, "image_selected")
+	assert_string_contains(args[0], "ai_")
+
+func test_ia_accept_rejects_invalid_name():
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
+	var img = Image.create(2, 2, false, Image.FORMAT_RGB8)
+	_dialog._ia_generated_image = img
+	_dialog._ia_name_input.text = "nom avec espaces"
+	watch_signals(_dialog)
+	_dialog._on_ia_accept_pressed()
+	assert_signal_not_emitted(_dialog, "image_selected")
+
+func test_ia_accept_shows_error_on_invalid_name():
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
+	var img = Image.create(2, 2, false, Image.FORMAT_RGB8)
+	_dialog._ia_generated_image = img
+	_dialog._ia_name_input.text = "nom avec espaces"
+	_dialog._on_ia_accept_pressed()
+	assert_ne(_dialog._ia_status_label.text, "")
+
+func test_ia_accept_handles_name_conflict():
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
+	var dir = _test_dir + "/assets/foregrounds"
+	DirAccess.make_dir_recursive_absolute(dir)
+	_create_minimal_png(dir + "/existing.png")
+	var img = Image.create(2, 2, false, Image.FORMAT_RGB8)
+	_dialog._ia_generated_image = img
+	_dialog._ia_name_input.text = "existing"
+	watch_signals(_dialog)
+	_dialog._on_ia_accept_pressed()
+	assert_signal_emitted(_dialog, "image_selected")
+	var args = get_signal_parameters(_dialog, "image_selected")
+	assert_string_contains(args[0], "existing_1.png")
+
 # --- Popup "Choisir une image source" : filtre catégories ---
 
 func test_ia_choose_gallery_filter_no_checkboxes_shows_all():

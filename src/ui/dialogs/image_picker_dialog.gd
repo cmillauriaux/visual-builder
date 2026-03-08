@@ -58,6 +58,7 @@ var _ia_generate_btn: Button
 var _ia_result_preview: TextureRect
 var _ia_status_label: Label
 var _ia_progress_bar: ProgressBar
+var _ia_name_input: LineEdit
 var _ia_accept_btn: Button
 var _ia_regenerate_btn: Button
 
@@ -418,6 +419,16 @@ func _build_ia_tab() -> void:
 	_ia_progress_bar.indeterminate = true
 	vbox.add_child(_ia_progress_bar)
 
+	# --- Image name ---
+	var name_label = Label.new()
+	name_label.text = "Nom de l'image :"
+	vbox.add_child(name_label)
+
+	_ia_name_input = LineEdit.new()
+	_ia_name_input.placeholder_text = "Nom du fichier (sans extension)"
+	_ia_name_input.editable = false
+	vbox.add_child(_ia_name_input)
+
 	# --- Action buttons ---
 	var action_hbox = HBoxContainer.new()
 	action_hbox.add_theme_constant_override("separation", 8)
@@ -777,6 +788,7 @@ func _ia_set_inputs_enabled(enabled: bool) -> void:
 	_ia_url_input.editable = enabled
 	_ia_token_input.editable = enabled
 	_ia_prompt_input.editable = enabled
+	_ia_name_input.editable = enabled
 	_ia_choose_source_btn.disabled = not enabled
 	_ia_choose_gallery_btn.disabled = not enabled
 	_ia_workflow_option.disabled = not enabled
@@ -941,6 +953,8 @@ func _on_ia_generate_pressed() -> void:
 	_ia_regenerate_btn.disabled = true
 	_ia_generated_image = null
 	_ia_result_preview.texture = null
+	_ia_name_input.text = ""
+	_ia_name_input.editable = false
 	_ia_set_inputs_enabled(false)
 	_ia_show_status("Lancement...")
 
@@ -955,6 +969,9 @@ func _on_ia_generation_completed(image: Image) -> void:
 	var tex = ImageTexture.create_from_image(image)
 	_ia_result_preview.texture = tex
 	_ia_show_success("Génération terminée !")
+	var timestamp = str(Time.get_unix_time_from_system()).replace(".", "_")
+	_ia_name_input.text = "ai_" + timestamp
+	_ia_name_input.editable = true
 	_ia_accept_btn.disabled = false
 	_ia_regenerate_btn.disabled = false
 	_ia_set_inputs_enabled(true)
@@ -973,10 +990,23 @@ func _on_ia_accept_pressed() -> void:
 	if _ia_generated_image == null:
 		return
 
-	var timestamp = str(Time.get_unix_time_from_system()).replace(".", "_")
+	var name = _ia_name_input.text.strip_edges()
+	if name == "":
+		var timestamp = str(Time.get_unix_time_from_system()).replace(".", "_")
+		name = "ai_" + timestamp
+
+	var format_error = ImageRenameService.validate_name_format(name)
+	if format_error != "":
+		_ia_show_error(format_error)
+		return
+
 	var dir_path = _get_assets_dir()
 	DirAccess.make_dir_recursive_absolute(dir_path)
-	var file_path = dir_path + "/ai_" + timestamp + ".png"
+	var file_path = dir_path + "/" + name + ".png"
+
+	if FileAccess.file_exists(file_path):
+		file_path = _resolve_unique_path(dir_path, name + ".png")
+
 	_ia_generated_image.save_png(file_path)
 
 	image_selected.emit(file_path)
