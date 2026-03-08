@@ -2,7 +2,7 @@ extends ConfirmationDialog
 
 ## Dialogue de configuration du jeu (menu, analytics, liens, écrans de fin).
 
-signal menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_background: String, menu_music: String, playfab_title_id: String, playfab_enabled: bool, patreon_url: String, itchio_url: String, game_over_title: String, game_over_subtitle: String, game_over_background: String, to_be_continued_title: String, to_be_continued_subtitle: String, to_be_continued_background: String, app_icon: String)
+signal menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_background: String, menu_music: String, playfab_title_id: String, playfab_enabled: bool, patreon_url: String, itchio_url: String, game_over_title: String, game_over_subtitle: String, game_over_background: String, to_be_continued_title: String, to_be_continued_subtitle: String, to_be_continued_background: String, app_icon: String, show_title_banner: bool)
 
 const ImagePickerDialogScript = preload("res://src/ui/dialogs/image_picker_dialog.gd")
 const AudioPickerDialogScript = preload("res://src/ui/dialogs/audio_picker_dialog.gd")
@@ -30,6 +30,7 @@ var _to_be_continued_subtitle_edit: LineEdit
 var _app_icon_edit: LineEdit
 var _app_icon_preview: TextureRect
 var _app_icon_warning: Label
+var _show_title_banner_check: CheckButton
 var _story = null
 var _story_base_path: String = ""
 var _current_menu_music: String = ""
@@ -64,6 +65,12 @@ func _init():
 	_menu_subtitle_edit = LineEdit.new()
 	_menu_subtitle_edit.name = "MenuSubtitleEdit"
 	menu_vbox.add_child(_menu_subtitle_edit)
+
+	_show_title_banner_check = CheckButton.new()
+	_show_title_banner_check.name = "ShowTitleBannerCheck"
+	_show_title_banner_check.text = "Afficher le bandeau titre / sous-titre"
+	_show_title_banner_check.button_pressed = true
+	menu_vbox.add_child(_show_title_banner_check)
 
 	var bg_lbl = Label.new()
 	bg_lbl.text = "Image de fond"
@@ -382,6 +389,7 @@ func setup(story, story_base_path: String = "") -> void:
 	_to_be_continued_title_edit.text = story.to_be_continued_title if story.get("to_be_continued_title") != null else ""
 	_to_be_continued_subtitle_edit.text = story.to_be_continued_subtitle if story.get("to_be_continued_subtitle") != null else ""
 	_app_icon_edit.text = story.app_icon if story.get("app_icon") != null else ""
+	_show_title_banner_check.button_pressed = story.show_title_banner if story.get("show_title_banner") != null else true
 	_story = story
 	_story_base_path = story_base_path
 	_current_menu_music = story.menu_music if story.get("menu_music") != null else ""
@@ -436,6 +444,9 @@ func get_to_be_continued_background() -> String:
 
 func get_app_icon() -> String:
 	return _app_icon_edit.text
+
+func get_show_title_banner() -> bool:
+	return _show_title_banner_check.button_pressed
 
 
 # ── Utilitaires chemins ──────────────────────────────────────────────────────
@@ -620,5 +631,5 @@ func _on_confirmed() -> void:
 		_validate_url(_patreon_url_edit.text), _validate_url(_itchio_url_edit.text),
 		_game_over_title_edit.text, _game_over_subtitle_edit.text, _game_over_bg_edit.text,
 		_to_be_continued_title_edit.text, _to_be_continued_subtitle_edit.text, _to_be_continued_bg_edit.text,
-		_app_icon_edit.text
+		_app_icon_edit.text, _show_title_banner_check.button_pressed
 	)

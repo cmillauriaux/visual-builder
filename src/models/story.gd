@@ -32,6 +32,7 @@ var to_be_continued_title: String = ""
 var to_be_continued_subtitle: String = ""
 var to_be_continued_background: String = ""
 var app_icon: String = ""
+var show_title_banner: bool = true
 
 func _init():
 	var now = _iso_now()
@@ -135,6 +136,7 @@ func to_dict() -> Dictionary:
 			},
 		},
 		"app_icon": app_icon,
+		"show_title_banner": show_title_banner,
 	}
 
 static func from_dict(d: Dictionary):
@@ -193,6 +195,7 @@ static func from_dict(d: Dictionary):
 			story.to_be_continued_background = tbc.get("background", "")
 
 	story.app_icon = d.get("app_icon", "")
+	story.show_title_banner = d.get("show_title_banner", true)
 
 	return story
 

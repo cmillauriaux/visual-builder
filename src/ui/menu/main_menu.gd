@@ -32,6 +32,7 @@ var _options_center: CenterContainer
 var _menu_content: CenterContainer
 var _loading_overlay: CenterContainer
 var _loading_label: Label
+var _banner_wrapper: CenterContainer
 
 # Settings partagés
 var _settings: RefCounted
@@ -70,7 +71,8 @@ func build_ui() -> void:
 	center.add_child(vbox)
 
 	# Bannière avec titre et sous-titre superposés
-	var banner_wrapper = CenterContainer.new()
+	_banner_wrapper = CenterContainer.new()
+	var banner_wrapper = _banner_wrapper
 	vbox.add_child(banner_wrapper)
 
 	var banner_stack = Control.new()
@@ -193,6 +195,9 @@ func _update_display() -> void:
 	var title_to_use = _current_story.menu_title if _current_story.menu_title != "" else _current_story.title
 	_title_label.text = StoryI18nService.get_ui_string(title_to_use, _last_i18n_dict)
 	_subtitle_label.text = StoryI18nService.get_ui_string(_current_story.menu_subtitle, _last_i18n_dict)
+
+	var show_banner = _current_story.show_title_banner if _current_story.get("show_title_banner") != null else true
+	_banner_wrapper.visible = show_banner
 
 	if _current_story.menu_background != "":
 		var full_path = _current_base_path.path_join(_current_story.menu_background)
