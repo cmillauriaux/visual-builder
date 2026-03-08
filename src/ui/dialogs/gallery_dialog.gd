@@ -486,8 +486,8 @@ func _show_replace_dialog(image_path: String) -> void:
 	scroll.add_child(grid)
 	dialog.set_meta("grid", grid)
 
-	var selected_path := ""
-	var selected_panel: Panel = null
+	# État partagé via Dictionary pour garantir la propagation entre closures
+	var state := {"path": "", "panel": null}
 
 	var validate_btn = Button.new()
 	validate_btn.text = "Valider"
@@ -523,10 +523,10 @@ func _show_replace_dialog(image_path: String) -> void:
 
 		container.gui_input.connect(func(event: InputEvent):
 			if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-				if selected_panel != null:
-					selected_panel.modulate = Color(1, 1, 1, 1)
-				selected_path = path
-				selected_panel = container
+				if state.panel != null:
+					state.panel.modulate = Color(1, 1, 1, 1)
+				state.path = path
+				state.panel = container
 				container.modulate = Color(0.6, 0.8, 1.0, 1.0)
 				validate_btn.disabled = false
 		)
@@ -546,8 +546,9 @@ func _show_replace_dialog(image_path: String) -> void:
 	btn_hbox.add_child(cancel_btn)
 
 	validate_btn.pressed.connect(func():
+		var chosen_path: String = state.path
 		dialog.queue_free()
-		_show_replace_confirmation(image_path, selected_path)
+		_show_replace_confirmation(image_path, chosen_path)
 	)
 	btn_hbox.add_child(validate_btn)
 
