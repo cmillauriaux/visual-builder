@@ -7,6 +7,7 @@ const ExportDialogScript = preload("res://src/ui/dialogs/export_dialog.gd")
 const GalleryDialogScript = preload("res://src/ui/dialogs/gallery_dialog.gd")
 const NotificationDialogScript = preload("res://src/ui/dialogs/notification_dialog.gd")
 const LanguageManagerDialogScript = preload("res://src/ui/dialogs/language_manager_dialog.gd")
+const AIStudioDialogScript = preload("res://src/ui/dialogs/ai_studio_dialog.gd")
 const I18nDialogScript = preload("res://src/ui/dialogs/i18n_dialog.gd")
 const StoryI18nService = preload("res://src/services/story_i18n_service.gd")
 
@@ -36,6 +37,7 @@ func on_parametres_menu_pressed(id: int) -> void:
 		2: on_gallery_pressed()
 		3: on_notifications_pressed()
 		4: on_languages_pressed()
+		5: on_ai_studio_pressed()
 
 
 func on_export_pressed() -> void:
@@ -93,6 +95,16 @@ func on_gallery_pressed() -> void:
 	var dialog = Window.new()
 	dialog.set_script(GalleryDialogScript)
 	dialog.close_requested.connect(dialog.queue_free)
+	_main.add_child(dialog)
+	dialog.setup(_main._editor_main._story, _main._get_story_base_path())
+	dialog.popup_centered()
+
+
+func on_ai_studio_pressed() -> void:
+	if _main._editor_main._story == null:
+		return
+	var dialog = Window.new()
+	dialog.set_script(AIStudioDialogScript)
 	_main.add_child(dialog)
 	dialog.setup(_main._editor_main._story, _main._get_story_base_path())
 	dialog.popup_centered()

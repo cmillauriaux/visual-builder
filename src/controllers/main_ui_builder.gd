@@ -108,6 +108,8 @@ static func _build_top_bar(main: Control) -> void:
 	parametres_popup.add_item("Galerie", 2)
 	parametres_popup.add_item("Notifications", 3)
 	parametres_popup.add_separator()
+	parametres_popup.add_item("Studio IA", 5)
+	parametres_popup.add_separator()
 	parametres_popup.add_item("Langues", 4)
 	main._top_bar.add_child(main._parametres_menu)
 
