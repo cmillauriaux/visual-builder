@@ -79,6 +79,7 @@ func play_menu_music(path: String) -> void:
 
 
 ## Résout un chemin audio (absolu ou relatif à base_path).
+## Gère les chemins res://, user://, relatifs, et absolus système.
 static func _resolve_path(path: String, base_path: String) -> String:
 	if path == "":
 		return ""
@@ -88,6 +89,12 @@ static func _resolve_path(path: String, base_path: String) -> String:
 		var full = base_path.path_join(path)
 		if FileAccess.file_exists(full):
 			return full
+		# Fallback : essayer avec juste le nom du fichier dans assets/music/ et assets/fx/
+		var filename = path.get_file()
+		for subfolder in ["assets/music", "assets/fx"]:
+			var fallback = base_path.path_join(subfolder).path_join(filename)
+			if FileAccess.file_exists(fallback):
+				return fallback
 	return ""
 
 

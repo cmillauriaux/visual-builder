@@ -234,6 +234,8 @@ func _collect_menu_assets(story) -> Dictionary:
 		assets[story.game_over_background] = true
 	if story.get("to_be_continued_background") and story.to_be_continued_background != "":
 		assets[story.to_be_continued_background] = true
+	if story.get("app_icon") and story.app_icon != "":
+		assets[story.app_icon] = true
 	return assets
 
 

@@ -365,7 +365,8 @@ func _show_main_menu(story) -> void:
 		itchio_url
 	)
 	if _music_player and story.get("menu_music") != null and story.menu_music != "":
-		_music_player.play_menu_music(story.menu_music)
+		var music_path = MusicPlayer._resolve_path(story.menu_music, _current_story_path)
+		_music_player.play_menu_music(music_path)
 
 
 ## Précharge un PCK chapitre sur le web en affichant la progression dans le menu.
