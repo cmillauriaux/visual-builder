@@ -280,6 +280,16 @@ func test_expression_workflow_split_step_scales_with_steps():
 	var wf = _client.build_workflow("img.png", "smile", 42, true, 1.0, 10, ComfyUIClient.WorkflowType.EXPRESSION)
 	assert_eq(wf["split_sigmas"]["inputs"]["step"], 5)
 
+func test_expression_workflow_denoise_controls_split_step():
+	# denoise=0.8 → split at step 20% = int(10 * 0.2) = 2
+	var wf = _client.build_workflow("img.png", "smile", 42, true, 1.0, 10, ComfyUIClient.WorkflowType.EXPRESSION, 0.8)
+	assert_eq(wf["split_sigmas"]["inputs"]["step"], 2)
+
+func test_expression_workflow_low_denoise():
+	# denoise=0.2 → split at step 80% = int(10 * 0.8) = 8
+	var wf = _client.build_workflow("img.png", "smile", 42, true, 1.0, 10, ComfyUIClient.WorkflowType.EXPRESSION, 0.2)
+	assert_eq(wf["split_sigmas"]["inputs"]["step"], 8)
+
 func test_creation_workflow_uses_empty_latent():
 	var wf = _client.build_workflow("img.png", "a cat", 42, true, 1.0, 4, ComfyUIClient.WorkflowType.CREATION)
 	assert_eq(wf["75:64"]["inputs"]["latent_image"], ["75:66", 0])

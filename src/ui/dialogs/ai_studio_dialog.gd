@@ -64,6 +64,8 @@ var _expr_cfg_slider: HSlider
 var _expr_cfg_value_label: Label
 var _expr_steps_slider: HSlider
 var _expr_steps_value_label: Label
+var _expr_denoise_slider: HSlider
+var _expr_denoise_value_label: Label
 var _expr_expression_checkboxes: Array = []
 var _expr_custom_container: VBoxContainer
 var _expr_custom_input: LineEdit
@@ -463,6 +465,29 @@ func _build_expressions_tab() -> void:
 	_expr_steps_value_label.text = "4"
 	_expr_steps_value_label.custom_minimum_size.x = 32
 	steps_hbox.add_child(_expr_steps_value_label)
+
+	# Denoise slider
+	var denoise_hbox = HBoxContainer.new()
+	denoise_hbox.add_theme_constant_override("separation", 8)
+	vbox.add_child(denoise_hbox)
+
+	var denoise_label = Label.new()
+	denoise_label.text = "Denoise :"
+	denoise_hbox.add_child(denoise_label)
+
+	_expr_denoise_slider = HSlider.new()
+	_expr_denoise_slider.min_value = 0.1
+	_expr_denoise_slider.max_value = 1.0
+	_expr_denoise_slider.step = 0.05
+	_expr_denoise_slider.value = 0.5
+	_expr_denoise_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_expr_denoise_slider.value_changed.connect(func(val: float): _expr_denoise_value_label.text = str(snapped(val, 0.05)))
+	denoise_hbox.add_child(_expr_denoise_slider)
+
+	_expr_denoise_value_label = Label.new()
+	_expr_denoise_value_label.text = "0.5"
+	_expr_denoise_value_label.custom_minimum_size.x = 32
+	denoise_hbox.add_child(_expr_denoise_value_label)
 
 	vbox.add_child(HSeparator.new())
 
@@ -936,7 +961,8 @@ func _process_next_expression() -> void:
 
 	var cfg_value = _expr_cfg_slider.value
 	var steps_value = int(_expr_steps_slider.value)
-	_expr_client.generate(config, _expr_source_image_path, item["prompt"], true, cfg_value, steps_value, ComfyUIClient.WorkflowType.EXPRESSION)
+	var denoise_value = _expr_denoise_slider.value
+	_expr_client.generate(config, _expr_source_image_path, item["prompt"], true, cfg_value, steps_value, ComfyUIClient.WorkflowType.EXPRESSION, denoise_value)
 
 
 func _on_expr_item_completed(image: Image) -> void:
@@ -1008,6 +1034,7 @@ func _expr_set_inputs_enabled(enabled: bool) -> void:
 	else:
 		_expr_choose_gallery_btn.disabled = not enabled
 	_expr_prefix_input.editable = enabled
+	_expr_denoise_slider.editable = enabled
 	_expr_custom_input.editable = enabled
 	_expr_add_custom_btn.disabled = not enabled
 	for cb in _expr_expression_checkboxes:

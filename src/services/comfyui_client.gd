@@ -18,6 +18,7 @@ var _cancelled: bool = false
 var _remove_background: bool = true
 var _cfg: float = 1.0
 var _steps: int = 4
+var _denoise: float = 0.5
 var _workflow_type: int = WorkflowType.CREATION
 
 # --- Workflow template (Flux 2 Klein + BiRefNet) ---
@@ -389,9 +390,9 @@ func is_generating() -> bool:
 
 # --- Build workflow with dynamic parameters ---
 
-func build_workflow(filename: String, prompt_text: String, seed: int, remove_background: bool = true, cfg: float = 1.0, steps: int = 4, workflow_type: int = WorkflowType.CREATION) -> Dictionary:
+func build_workflow(filename: String, prompt_text: String, seed: int, remove_background: bool = true, cfg: float = 1.0, steps: int = 4, workflow_type: int = WorkflowType.CREATION, denoise: float = 0.5) -> Dictionary:
 	if workflow_type == WorkflowType.EXPRESSION:
-		return _build_expression_workflow(filename, prompt_text, seed, remove_background, cfg, steps)
+		return _build_expression_workflow(filename, prompt_text, seed, remove_background, cfg, steps, denoise)
 	var wf = WORKFLOW_TEMPLATE.duplicate(true)
 	wf["76"]["inputs"]["image"] = filename
 	wf["75:74"]["inputs"]["text"] = prompt_text
@@ -405,7 +406,7 @@ func build_workflow(filename: String, prompt_text: String, seed: int, remove_bac
 		wf.erase("100")
 	return wf
 
-func _build_expression_workflow(filename: String, prompt_text: String, seed: int, remove_background: bool, cfg: float, steps: int) -> Dictionary:
+func _build_expression_workflow(filename: String, prompt_text: String, seed: int, remove_background: bool, cfg: float, steps: int, denoise: float = 0.5) -> Dictionary:
 	var wf = EXPRESSION_WORKFLOW_TEMPLATE.duplicate(true)
 	wf["76"]["inputs"]["image"] = filename
 	wf["75:74"]["inputs"]["text"] = prompt_text
@@ -415,9 +416,8 @@ func _build_expression_workflow(filename: String, prompt_text: String, seed: int
 	# img2img : partir de l'image source encodée (pas d'un canvas vierge)
 	# pour préserver les caractéristiques visuelles (couleur des yeux, etc.)
 	wf["75:64"]["inputs"]["latent_image"] = ["75:79:78", 0]
-	# SplitSigmas : ne débruiter que la 2e moitié du schedule (denoise ~50%)
-	# Assez pour changer l'expression, pas assez pour changer les yeux
-	var split_step = max(1, int(steps / 2))
+	# SplitSigmas : contrôle du denoise (0.1 = peu de changement, 1.0 = régénération totale)
+	var split_step = max(1, roundi(steps * (1.0 - denoise)))
 	wf["split_sigmas"] = {
 		"class_type": "SplitSigmas",
 		"inputs": {
@@ -506,7 +506,7 @@ func parse_history_response(json_str: String, prompt_id: String) -> Dictionary:
 
 # --- Full generation flow ---
 
-func generate(config: RefCounted, source_image_path: String, prompt_text: String, remove_background: bool = true, cfg: float = 1.0, steps: int = 4, workflow_type: int = WorkflowType.CREATION) -> void:
+func generate(config: RefCounted, source_image_path: String, prompt_text: String, remove_background: bool = true, cfg: float = 1.0, steps: int = 4, workflow_type: int = WorkflowType.CREATION, denoise: float = 0.5) -> void:
 	if _generating:
 		generation_failed.emit("Une génération est déjà en cours")
 		return
@@ -517,6 +517,7 @@ func generate(config: RefCounted, source_image_path: String, prompt_text: String
 	_remove_background = remove_background
 	_cfg = cfg
 	_steps = steps
+	_denoise = denoise
 	_workflow_type = workflow_type
 
 	generation_progress.emit("Chargement de l'image source...")
@@ -567,7 +568,7 @@ func _do_upload(filename: String, file_bytes: PackedByteArray, prompt_text: Stri
 
 func _do_prompt(filename: String, prompt_text: String) -> void:
 	var seed = randi()
-	var workflow = build_workflow(filename, prompt_text, seed, _remove_background, _cfg, _steps, _workflow_type)
+	var workflow = build_workflow(filename, prompt_text, seed, _remove_background, _cfg, _steps, _workflow_type, _denoise)
 	var payload = JSON.stringify({"prompt": workflow})
 
 	var http = HTTPRequest.new()
