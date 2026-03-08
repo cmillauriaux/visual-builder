@@ -5,6 +5,7 @@ extends Node
 ## Ne fait rien si title_id est vide ou si enabled est false.
 
 const DEVICE_ID_PATH = "user://playfab_device_id.txt"
+const LOCALSTORAGE_KEY = "playfab_device_id"
 const BATCH_SIZE_THRESHOLD = 10
 const FLUSH_INTERVAL_SEC = 10.0
 const MAX_BATCH_SIZE = 200
@@ -148,6 +149,15 @@ func _on_events_completed(result: int, response_code: int, _headers: PackedStrin
 # --- Device ID ---
 
 func _load_or_create_device_id() -> String:
+	# Sur le web, utiliser localStorage (plus fiable que IndexedDB/user://)
+	if OS.has_feature("web"):
+		var stored = JavaScriptBridge.eval("localStorage.getItem('%s')" % LOCALSTORAGE_KEY)
+		if stored is String and stored != "":
+			return stored
+		var new_id = _generate_uuid()
+		JavaScriptBridge.eval("localStorage.setItem('%s', '%s')" % [LOCALSTORAGE_KEY, new_id])
+		return new_id
+	# Sur les plateformes natives, utiliser le fichier classique
 	if FileAccess.file_exists(DEVICE_ID_PATH):
 		var file = FileAccess.open(DEVICE_ID_PATH, FileAccess.READ)
 		if file:

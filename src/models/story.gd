@@ -31,6 +31,7 @@ var game_over_background: String = ""
 var to_be_continued_title: String = ""
 var to_be_continued_subtitle: String = ""
 var to_be_continued_background: String = ""
+var app_icon: String = ""
 
 func _init():
 	var now = _iso_now()
@@ -133,6 +134,7 @@ func to_dict() -> Dictionary:
 				"background": to_be_continued_background,
 			},
 		},
+		"app_icon": app_icon,
 	}
 
 static func from_dict(d: Dictionary):
@@ -189,6 +191,8 @@ static func from_dict(d: Dictionary):
 			story.to_be_continued_title = tbc.get("title", "")
 			story.to_be_continued_subtitle = tbc.get("subtitle", "")
 			story.to_be_continued_background = tbc.get("background", "")
+
+	story.app_icon = d.get("app_icon", "")
 
 	return story
 
