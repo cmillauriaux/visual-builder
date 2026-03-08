@@ -8,6 +8,8 @@ signal generation_completed(image: Image)
 signal generation_failed(error: String)
 signal generation_progress(status: String)
 
+enum WorkflowType { CREATION = 0, EXPRESSION = 1 }
+
 var _generating: bool = false
 var _prompt_id: String = ""
 var _config: RefCounted = null
@@ -16,6 +18,7 @@ var _cancelled: bool = false
 var _remove_background: bool = true
 var _cfg: float = 1.0
 var _steps: int = 4
+var _workflow_type: int = WorkflowType.CREATION
 
 # --- Workflow template (Flux 2 Klein + BiRefNet) ---
 # Reproduit exactement Edit_Image_Transparent_API.json
@@ -180,12 +183,215 @@ const WORKFLOW_TEMPLATE: Dictionary = {
 	}
 }
 
+# --- Expression workflow template (Flux 2 Klein + face detect/mask/composite + BiRefNet) ---
+# Même base de génération que Création (noeuds 75:xx) + détection de visage YOLO +
+# masquage + composition sur l'original pour ne modifier que le visage.
+# Paramètres dynamiques : 76.inputs.image, 75:74.inputs.text, 75:73.inputs.noise_seed,
+#                         75:63.inputs.cfg, 75:62.inputs.steps
+
+const EXPRESSION_WORKFLOW_TEMPLATE: Dictionary = {
+	"9": {
+		"class_type": "SaveImage",
+		"inputs": {
+			"filename_prefix": "ExpressionEdit",
+			"images": ["106", 0]
+		}
+	},
+	"76": {
+		"class_type": "LoadImage",
+		"inputs": {
+			"image": ""
+		}
+	},
+	"99": {
+		"class_type": "UltralyticsDetectorProvider",
+		"inputs": {
+			"model_name": "bbox/face_yolov8m.pt"
+		}
+	},
+	"100": {
+		"class_type": "BboxDetectorCombined_v2",
+		"inputs": {
+			"threshold": 0.4,
+			"dilation": 40,
+			"bbox_detector": ["99", 0],
+			"image": ["76", 0]
+		}
+	},
+	"101": {
+		"class_type": "GrowMask",
+		"inputs": {
+			"expand": 40,
+			"tapered_corners": true,
+			"mask": ["100", 0]
+		}
+	},
+	"102": {
+		"class_type": "ImpactGaussianBlurMask",
+		"inputs": {
+			"kernel_size": 20,
+			"sigma": 10,
+			"mask": ["101", 0]
+		}
+	},
+	"103": {
+		"class_type": "ImageCompositeMasked",
+		"inputs": {
+			"x": 0,
+			"y": 0,
+			"resize_source": false,
+			"destination": ["76", 0],
+			"source": ["75:65", 0],
+			"mask": ["102", 0]
+		}
+	},
+	"106": {
+		"class_type": "BiRefNetRMBG",
+		"inputs": {
+			"model": "BiRefNet-general",
+			"mask_blur": 0,
+			"mask_offset": 0,
+			"invert_output": false,
+			"refine_foreground": true,
+			"background": "Alpha",
+			"background_color": "#222222",
+			"image": ["103", 0]
+		}
+	},
+	"75:61": {
+		"class_type": "KSamplerSelect",
+		"inputs": {
+			"sampler_name": "euler"
+		}
+	},
+	"75:64": {
+		"class_type": "SamplerCustomAdvanced",
+		"inputs": {
+			"noise": ["75:73", 0],
+			"guider": ["75:63", 0],
+			"sampler": ["75:61", 0],
+			"sigmas": ["75:62", 0],
+			"latent_image": ["75:66", 0]
+		}
+	},
+	"75:65": {
+		"class_type": "VAEDecode",
+		"inputs": {
+			"samples": ["75:64", 0],
+			"vae": ["75:72", 0]
+		}
+	},
+	"75:73": {
+		"class_type": "RandomNoise",
+		"inputs": {
+			"noise_seed": 0
+		}
+	},
+	"75:70": {
+		"class_type": "UNETLoader",
+		"inputs": {
+			"unet_name": "flux-2-klein-9b-fp8.safetensors",
+			"weight_dtype": "default"
+		}
+	},
+	"75:71": {
+		"class_type": "CLIPLoader",
+		"inputs": {
+			"clip_name": "qwen_3_8b_fp8mixed.safetensors",
+			"type": "flux2",
+			"device": "default"
+		}
+	},
+	"75:72": {
+		"class_type": "VAELoader",
+		"inputs": {
+			"vae_name": "flux2-vae.safetensors"
+		}
+	},
+	"75:66": {
+		"class_type": "EmptyFlux2LatentImage",
+		"inputs": {
+			"width": ["75:81", 0],
+			"height": ["75:81", 1],
+			"batch_size": 1
+		}
+	},
+	"75:80": {
+		"class_type": "ImageScaleToTotalPixels",
+		"inputs": {
+			"upscale_method": "nearest-exact",
+			"megapixels": 1,
+			"resolution_steps": 1,
+			"image": ["76", 0]
+		}
+	},
+	"75:63": {
+		"class_type": "CFGGuider",
+		"inputs": {
+			"cfg": 1,
+			"model": ["75:70", 0],
+			"positive": ["75:79:77", 0],
+			"negative": ["75:79:76", 0]
+		}
+	},
+	"75:62": {
+		"class_type": "Flux2Scheduler",
+		"inputs": {
+			"steps": 4,
+			"width": ["75:81", 0],
+			"height": ["75:81", 1]
+		}
+	},
+	"75:74": {
+		"class_type": "CLIPTextEncode",
+		"inputs": {
+			"text": "",
+			"clip": ["75:71", 0]
+		}
+	},
+	"75:81": {
+		"class_type": "GetImageSize",
+		"inputs": {
+			"image": ["75:80", 0]
+		}
+	},
+	"75:79:76": {
+		"class_type": "ReferenceLatent",
+		"inputs": {
+			"conditioning": ["75:82", 0],
+			"latent": ["75:79:78", 0]
+		}
+	},
+	"75:79:78": {
+		"class_type": "VAEEncode",
+		"inputs": {
+			"pixels": ["75:80", 0],
+			"vae": ["75:72", 0]
+		}
+	},
+	"75:79:77": {
+		"class_type": "ReferenceLatent",
+		"inputs": {
+			"conditioning": ["75:74", 0],
+			"latent": ["75:79:78", 0]
+		}
+	},
+	"75:82": {
+		"class_type": "ConditioningZeroOut",
+		"inputs": {
+			"conditioning": ["75:74", 0]
+		}
+	}
+}
+
 func is_generating() -> bool:
 	return _generating
 
 # --- Build workflow with dynamic parameters ---
 
-func build_workflow(filename: String, prompt_text: String, seed: int, remove_background: bool = true, cfg: float = 1.0, steps: int = 4) -> Dictionary:
+func build_workflow(filename: String, prompt_text: String, seed: int, remove_background: bool = true, cfg: float = 1.0, steps: int = 4, workflow_type: int = WorkflowType.CREATION) -> Dictionary:
+	if workflow_type == WorkflowType.EXPRESSION:
+		return _build_expression_workflow(filename, prompt_text, seed, remove_background, cfg, steps)
 	var wf = WORKFLOW_TEMPLATE.duplicate(true)
 	wf["76"]["inputs"]["image"] = filename
 	wf["75:74"]["inputs"]["text"] = prompt_text
@@ -197,6 +403,18 @@ func build_workflow(filename: String, prompt_text: String, seed: int, remove_bac
 		# sans passer par BiRefNetRMBG (pas de suppression de fond)
 		wf["9"]["inputs"]["images"] = ["75:65", 0]
 		wf.erase("100")
+	return wf
+
+func _build_expression_workflow(filename: String, prompt_text: String, seed: int, remove_background: bool, cfg: float, steps: int) -> Dictionary:
+	var wf = EXPRESSION_WORKFLOW_TEMPLATE.duplicate(true)
+	wf["76"]["inputs"]["image"] = filename
+	wf["75:74"]["inputs"]["text"] = prompt_text
+	wf["75:73"]["inputs"]["noise_seed"] = seed
+	wf["75:63"]["inputs"]["cfg"] = cfg
+	wf["75:62"]["inputs"]["steps"] = steps
+	if not remove_background:
+		wf["9"]["inputs"]["images"] = ["103", 0]
+		wf.erase("106")
 	return wf
 
 # --- Multipart body builder ---
@@ -262,7 +480,7 @@ func parse_history_response(json_str: String, prompt_id: String) -> Dictionary:
 
 # --- Full generation flow ---
 
-func generate(config: RefCounted, source_image_path: String, prompt_text: String, remove_background: bool = true, cfg: float = 1.0, steps: int = 4) -> void:
+func generate(config: RefCounted, source_image_path: String, prompt_text: String, remove_background: bool = true, cfg: float = 1.0, steps: int = 4, workflow_type: int = WorkflowType.CREATION) -> void:
 	if _generating:
 		generation_failed.emit("Une génération est déjà en cours")
 		return
@@ -273,6 +491,7 @@ func generate(config: RefCounted, source_image_path: String, prompt_text: String
 	_remove_background = remove_background
 	_cfg = cfg
 	_steps = steps
+	_workflow_type = workflow_type
 
 	generation_progress.emit("Chargement de l'image source...")
 
@@ -322,7 +541,7 @@ func _do_upload(filename: String, file_bytes: PackedByteArray, prompt_text: Stri
 
 func _do_prompt(filename: String, prompt_text: String) -> void:
 	var seed = randi()
-	var workflow = build_workflow(filename, prompt_text, seed, _remove_background, _cfg, _steps)
+	var workflow = build_workflow(filename, prompt_text, seed, _remove_background, _cfg, _steps, _workflow_type)
 	var payload = JSON.stringify({"prompt": workflow})
 
 	var http = HTTPRequest.new()

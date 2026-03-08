@@ -42,6 +42,7 @@ var _gallery_category_checkboxes: Array = []
 var _gallery_context_menu: PopupMenu
 
 # IA tab UI
+var _ia_workflow_option: OptionButton
 var _ia_url_input: LineEdit
 var _ia_token_input: LineEdit
 var _ia_source_path_label: Label
@@ -279,6 +280,17 @@ func _build_ia_tab() -> void:
 	_ia_token_input.secret = true
 	_ia_token_input.placeholder_text = "Laisser vide si pas d'auth"
 	vbox.add_child(_ia_token_input)
+
+	# --- Workflow selector ---
+	var workflow_label = Label.new()
+	workflow_label.text = "Workflow :"
+	vbox.add_child(workflow_label)
+
+	_ia_workflow_option = OptionButton.new()
+	_ia_workflow_option.add_item("Création", 0)
+	_ia_workflow_option.add_item("Expression", 1)
+	_ia_workflow_option.selected = 0
+	vbox.add_child(_ia_workflow_option)
 
 	# --- Image source ---
 	var source_label = Label.new()
@@ -767,6 +779,7 @@ func _ia_set_inputs_enabled(enabled: bool) -> void:
 	_ia_prompt_input.editable = enabled
 	_ia_choose_source_btn.disabled = not enabled
 	_ia_choose_gallery_btn.disabled = not enabled
+	_ia_workflow_option.disabled = not enabled
 
 func _on_ia_choose_source() -> void:
 	var dialog = ImageFileDialog.new()
@@ -934,7 +947,8 @@ func _on_ia_generate_pressed() -> void:
 	var remove_bg = (_mode != Mode.BACKGROUND)
 	var cfg_value = _ia_cfg_slider.value
 	var steps_value = int(_ia_steps_slider.value)
-	_ia_client.generate(config, _ia_source_image_path, _ia_prompt_input.text, remove_bg, cfg_value, steps_value)
+	var workflow_type = _ia_workflow_option.get_selected_id()
+	_ia_client.generate(config, _ia_source_image_path, _ia_prompt_input.text, remove_bg, cfg_value, steps_value, workflow_type)
 
 func _on_ia_generation_completed(image: Image) -> void:
 	_ia_generated_image = image

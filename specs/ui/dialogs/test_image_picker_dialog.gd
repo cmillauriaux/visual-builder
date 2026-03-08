@@ -720,6 +720,39 @@ func test_gallery_has_image_renamed_signal():
 	assert_true(_dialog.has_signal("image_renamed"))
 
 
+# --- Onglet IA : Workflow selector ---
+
+func test_ia_has_workflow_option():
+	assert_not_null(_dialog._ia_workflow_option)
+	assert_is(_dialog._ia_workflow_option, OptionButton)
+
+func test_ia_workflow_option_has_two_items():
+	assert_eq(_dialog._ia_workflow_option.item_count, 2)
+
+func test_ia_workflow_option_first_is_creation():
+	assert_eq(_dialog._ia_workflow_option.get_item_text(0), "Création")
+
+func test_ia_workflow_option_second_is_expression():
+	assert_eq(_dialog._ia_workflow_option.get_item_text(1), "Expression")
+
+func test_ia_workflow_option_default_is_creation():
+	assert_eq(_dialog._ia_workflow_option.selected, 0)
+
+func test_ia_workflow_option_creation_id_is_0():
+	assert_eq(_dialog._ia_workflow_option.get_item_id(0), 0)
+
+func test_ia_workflow_option_expression_id_is_1():
+	assert_eq(_dialog._ia_workflow_option.get_item_id(1), 1)
+
+func test_ia_set_inputs_disabled_includes_workflow():
+	_dialog._ia_set_inputs_enabled(false)
+	assert_true(_dialog._ia_workflow_option.disabled)
+
+func test_ia_set_inputs_enabled_includes_workflow():
+	_dialog._ia_set_inputs_enabled(false)
+	_dialog._ia_set_inputs_enabled(true)
+	assert_false(_dialog._ia_workflow_option.disabled)
+
 # --- Popup "Choisir une image source" : filtre catégories ---
 
 func test_ia_choose_gallery_filter_no_checkboxes_shows_all():

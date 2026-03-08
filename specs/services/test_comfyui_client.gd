@@ -178,3 +178,89 @@ func test_initial_state_not_generating():
 func test_cancel_when_not_generating():
 	_client.cancel()
 	assert_false(_client.is_generating(), "Cancel when idle should remain idle")
+
+# --- WorkflowType enum ---
+
+func test_workflow_type_creation_is_0():
+	assert_eq(ComfyUIClient.WorkflowType.CREATION, 0)
+
+func test_workflow_type_expression_is_1():
+	assert_eq(ComfyUIClient.WorkflowType.EXPRESSION, 1)
+
+# --- build_workflow with Expression workflow ---
+
+func test_expression_workflow_returns_dictionary():
+	var wf = _client.build_workflow("test.png", "smile", 42, true, 1.0, 4, ComfyUIClient.WorkflowType.EXPRESSION)
+	assert_typeof(wf, TYPE_DICTIONARY)
+
+func test_expression_workflow_contains_required_nodes():
+	var wf = _client.build_workflow("test.png", "smile", 42, true, 1.0, 4, ComfyUIClient.WorkflowType.EXPRESSION)
+	assert_has(wf, "76", "LoadImage node must exist")
+	assert_has(wf, "75:74", "Prompt node must exist")
+	assert_has(wf, "75:73", "RandomNoise node must exist")
+	assert_has(wf, "9", "SaveImage node must exist")
+	assert_has(wf, "99", "Face detector provider must exist")
+	assert_has(wf, "100", "BboxDetector must exist")
+	assert_has(wf, "103", "ImageCompositeMasked must exist")
+	assert_has(wf, "106", "BiRefNetRMBG node must exist")
+
+func test_expression_workflow_sets_filename():
+	var wf = _client.build_workflow("my_face.png", "smile", 1, true, 1.0, 4, ComfyUIClient.WorkflowType.EXPRESSION)
+	assert_eq(wf["76"]["inputs"]["image"], "my_face.png")
+
+func test_expression_workflow_sets_prompt():
+	var wf = _client.build_workflow("img.png", "happy smile", 1, true, 1.0, 4, ComfyUIClient.WorkflowType.EXPRESSION)
+	assert_eq(wf["75:74"]["inputs"]["text"], "happy smile")
+
+func test_expression_workflow_sets_seed():
+	var wf = _client.build_workflow("img.png", "smile", 99999, true, 1.0, 4, ComfyUIClient.WorkflowType.EXPRESSION)
+	assert_eq(wf["75:73"]["inputs"]["noise_seed"], 99999)
+
+func test_expression_workflow_sets_cfg():
+	var wf = _client.build_workflow("img.png", "smile", 42, true, 5.0, 4, ComfyUIClient.WorkflowType.EXPRESSION)
+	assert_eq(wf["75:63"]["inputs"]["cfg"], 5.0)
+
+func test_expression_workflow_sets_steps():
+	var wf = _client.build_workflow("img.png", "smile", 42, true, 1.0, 10, ComfyUIClient.WorkflowType.EXPRESSION)
+	assert_eq(wf["75:62"]["inputs"]["steps"], 10)
+
+func test_expression_workflow_includes_rmbg_by_default():
+	var wf = _client.build_workflow("img.png", "smile", 42, true, 1.0, 4, ComfyUIClient.WorkflowType.EXPRESSION)
+	assert_has(wf, "106", "BiRefNetRMBG node should exist")
+	assert_eq(wf["9"]["inputs"]["images"], ["106", 0])
+
+func test_expression_workflow_no_remove_bg_excludes_rmbg():
+	var wf = _client.build_workflow("img.png", "smile", 42, false, 1.0, 4, ComfyUIClient.WorkflowType.EXPRESSION)
+	assert_false(wf.has("106"), "BiRefNetRMBG node should not exist when remove_background is false")
+
+func test_expression_workflow_no_remove_bg_save_points_to_composite():
+	var wf = _client.build_workflow("img.png", "smile", 42, false, 1.0, 4, ComfyUIClient.WorkflowType.EXPRESSION)
+	assert_eq(wf["9"]["inputs"]["images"], ["103", 0])
+
+func test_expression_workflow_has_face_detection_pipeline():
+	var wf = _client.build_workflow("img.png", "smile", 42, true, 1.0, 4, ComfyUIClient.WorkflowType.EXPRESSION)
+	assert_eq(wf["99"]["class_type"], "UltralyticsDetectorProvider")
+	assert_eq(wf["100"]["class_type"], "BboxDetectorCombined_v2")
+	assert_eq(wf["101"]["class_type"], "GrowMask")
+	assert_eq(wf["102"]["class_type"], "ImpactGaussianBlurMask")
+
+func test_expression_workflow_has_composite_node():
+	var wf = _client.build_workflow("img.png", "smile", 42, true, 1.0, 4, ComfyUIClient.WorkflowType.EXPRESSION)
+	assert_eq(wf["103"]["class_type"], "ImageCompositeMasked")
+	assert_eq(wf["103"]["inputs"]["destination"], ["76", 0])
+	assert_eq(wf["103"]["inputs"]["source"], ["75:65", 0])
+
+func test_expression_workflow_rmbg_takes_from_composite():
+	var wf = _client.build_workflow("img.png", "smile", 42, true, 1.0, 4, ComfyUIClient.WorkflowType.EXPRESSION)
+	assert_eq(wf["106"]["inputs"]["image"], ["103", 0])
+
+func test_expression_workflow_no_remove_bg_keeps_face_detection():
+	var wf = _client.build_workflow("img.png", "smile", 42, false, 1.0, 4, ComfyUIClient.WorkflowType.EXPRESSION)
+	assert_has(wf, "99", "Face detector should remain")
+	assert_has(wf, "100", "BboxDetector should remain")
+	assert_has(wf, "103", "Composite should remain")
+
+func test_default_workflow_type_is_creation():
+	var wf = _client.build_workflow("test.png", "a cat", 42)
+	assert_has(wf, "76", "Default should use creation workflow")
+	assert_false(wf.has("99"), "Default should not have face detector")
