@@ -676,3 +676,312 @@ func test_replace_unused_image_deletes_without_error():
 		_test_dir + "/assets/backgrounds/other.png"
 	)
 	assert_false(FileAccess.file_exists(_test_dir + "/assets/backgrounds/unused.png"))
+
+
+# --- _format_size ---
+
+func test_format_size_bytes():
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	assert_eq(_dialog._format_size(0), "0 o")
+	assert_eq(_dialog._format_size(512), "512 o")
+	assert_eq(_dialog._format_size(1023), "1023 o")
+
+
+func test_format_size_kilobytes():
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	assert_eq(_dialog._format_size(1024), "1.0 Ko")
+	assert_eq(_dialog._format_size(1536), "1.5 Ko")
+
+
+func test_format_size_megabytes():
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	assert_eq(_dialog._format_size(1048576), "1.0 Mo")
+	assert_eq(_dialog._format_size(2621440), "2.5 Mo")
+
+
+# --- _on_close ---
+
+func test_on_close_hides_dialog():
+	_dialog.visible = true
+	_dialog._on_close()
+	assert_false(_dialog.visible)
+
+
+# --- _list_images ---
+
+func test_list_images_returns_empty_for_nonexistent_dir():
+	var result = _dialog._list_images(_test_dir + "/nonexistent")
+	assert_eq(result, [])
+
+
+func test_list_images_filters_non_image_files():
+	_create_test_image(_test_dir + "/assets/backgrounds/img.png")
+	# Create a non-image file
+	var f = FileAccess.open(_test_dir + "/assets/backgrounds/notes.txt", FileAccess.WRITE)
+	f.store_string("hello")
+	f.close()
+	var result = _dialog._list_images(_test_dir + "/assets/backgrounds")
+	assert_eq(result.size(), 1)
+	assert_string_contains(result[0], "img.png")
+
+
+func test_list_images_accepts_jpg_jpeg_webp():
+	# Create files with various image extensions
+	for ext in ["jpg", "jpeg", "webp"]:
+		var f = FileAccess.open(_test_dir + "/assets/backgrounds/img." + ext, FileAccess.WRITE)
+		f.store_string("fake")
+		f.close()
+	var result = _dialog._list_images(_test_dir + "/assets/backgrounds")
+	assert_eq(result.size(), 3)
+
+
+# --- _show_image_preview ---
+
+func test_show_image_preview_empty_path_does_nothing():
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	# Should not crash
+	_dialog._show_image_preview("")
+	assert_true(true, "No crash on empty path")
+
+
+# --- Grid visibility ---
+
+func test_bg_grid_visible_when_has_images():
+	_create_test_image(_test_dir + "/assets/backgrounds/bg1.png")
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	assert_true(_dialog._bg_grid.visible)
+
+
+func test_bg_grid_hidden_when_empty():
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	assert_false(_dialog._bg_grid.visible)
+
+
+func test_fg_grid_visible_when_has_images():
+	_create_test_image(_test_dir + "/assets/foregrounds/fg1.png")
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	assert_true(_dialog._fg_grid.visible)
+
+
+func test_fg_grid_hidden_when_empty():
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	assert_false(_dialog._fg_grid.visible)
+
+
+# --- Gallery item label ---
+
+func test_gallery_item_displays_filename():
+	_create_test_image(_test_dir + "/assets/backgrounds/my_image.png")
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	var item = _dialog._bg_grid.get_child(0)
+	var vbox = item.get_child(0) as VBoxContainer
+	var name_label = vbox.get_child(1) as Label
+	assert_eq(name_label.text, "my_image.png")
+
+
+# --- _get_selected_categories ---
+
+func test_get_selected_categories_returns_empty_when_none_checked():
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	assert_eq(_dialog._get_selected_categories(), [])
+
+
+func test_get_selected_categories_returns_checked():
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	for cb in _dialog._category_checkboxes:
+		if cb.text == "Base":
+			cb.button_pressed = true
+	var selected = _dialog._get_selected_categories()
+	assert_eq(selected.size(), 1)
+	assert_eq(selected[0], "Base")
+
+
+# --- Context menu category checked state ---
+
+func test_context_menu_category_checked_when_assigned():
+	_create_test_image(_test_dir + "/assets/backgrounds/bg1.png")
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	_dialog._category_service.assign_image_to_category("backgrounds/bg1.png", "Base")
+	_dialog._show_context_menu(_test_dir + "/assets/backgrounds/bg1.png", Vector2(100, 100))
+	# Category items start after Renommer + Remplacer + separator = index 3
+	var base_idx = _dialog._context_menu.get_item_index(0) # id 0 = first category
+	assert_true(_dialog._context_menu.is_item_checked(base_idx))
+
+
+func test_context_menu_category_unchecked_when_not_assigned():
+	_create_test_image(_test_dir + "/assets/backgrounds/bg1.png")
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	_dialog._show_context_menu(_test_dir + "/assets/backgrounds/bg1.png", Vector2(100, 100))
+	var base_idx = _dialog._context_menu.get_item_index(0)
+	assert_false(_dialog._context_menu.is_item_checked(base_idx))
+
+
+# --- Context menu replaces old one ---
+
+func test_context_menu_replaces_previous():
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	_dialog._show_context_menu(_test_dir + "/assets/backgrounds/a.png", Vector2(10, 10))
+	var first_menu = _dialog._context_menu
+	_dialog._show_context_menu(_test_dir + "/assets/backgrounds/b.png", Vector2(20, 20))
+	assert_ne(_dialog._context_menu, first_menu)
+
+
+# --- _show_replace_dialog with no candidates ---
+
+func test_replace_dialog_not_shown_when_no_candidates():
+	_create_test_image(_test_dir + "/assets/backgrounds/only.png")
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	var before_count = _dialog.get_child_count()
+	_dialog._show_replace_dialog(_test_dir + "/assets/backgrounds/only.png")
+	assert_eq(_dialog.get_child_count(), before_count)
+
+
+# --- _show_replace_confirmation ---
+
+func test_show_replace_confirmation_creates_dialog():
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	var before_count = _dialog.get_child_count()
+	_dialog._show_replace_confirmation("/tmp/old.png", "/tmp/new.png")
+	assert_gt(_dialog.get_child_count(), before_count)
+
+
+func test_show_replace_confirmation_dialog_text():
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	_dialog._show_replace_confirmation("/tmp/old.png", "/tmp/new.png")
+	var confirm: ConfirmationDialog = null
+	for child in _dialog.get_children():
+		if child is ConfirmationDialog:
+			confirm = child
+	assert_not_null(confirm)
+	assert_string_contains(confirm.dialog_text, "old.png")
+	assert_string_contains(confirm.dialog_text, "new.png")
+
+
+# --- _on_clean_pressed ---
+
+func test_clean_pressed_shows_info_when_all_used():
+	_create_test_image(_test_dir + "/assets/backgrounds/used.png")
+	var story = StoryScript.new()
+	story.title = "Test"
+	story.menu_background = _test_dir + "/assets/backgrounds/used.png"
+	_dialog.setup(story, _test_dir)
+	var before_count = _dialog.get_child_count()
+	_dialog._on_clean_pressed()
+	# Should add an AcceptDialog
+	assert_gt(_dialog.get_child_count(), before_count)
+	var info: AcceptDialog = null
+	for child in _dialog.get_children():
+		if child is AcceptDialog and not child is ConfirmationDialog:
+			info = child
+	assert_not_null(info)
+	assert_string_contains(info.dialog_text, "utilisées")
+
+
+func test_clean_pressed_shows_confirm_when_unused_exist():
+	_create_test_image(_test_dir + "/assets/backgrounds/unused.png")
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	var before_count = _dialog.get_child_count()
+	_dialog._on_clean_pressed()
+	# Should add a ConfirmationDialog
+	assert_gt(_dialog.get_child_count(), before_count)
+	var confirm: ConfirmationDialog = null
+	for child in _dialog.get_children():
+		if child is ConfirmationDialog:
+			confirm = child
+	assert_not_null(confirm)
+	assert_string_contains(confirm.dialog_text, "fichier(s)")
+
+
+# --- _execute_replace without story ---
+
+func test_execute_replace_without_story_does_not_crash():
+	_create_test_image(_test_dir + "/assets/backgrounds/old.png")
+	_create_test_image(_test_dir + "/assets/backgrounds/new.png")
+	_dialog._story = null
+	_dialog._story_base_path = _test_dir
+	_dialog._category_service = ImageCategoryService.new()
+	_dialog._used_images = []
+	# Need grids initialized for _refresh
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	_dialog._story = null
+	_dialog._execute_replace(
+		_test_dir + "/assets/backgrounds/old.png",
+		_test_dir + "/assets/backgrounds/new.png"
+	)
+	assert_false(FileAccess.file_exists(_test_dir + "/assets/backgrounds/old.png"))
+
+
+# --- _open_category_manager ---
+
+func test_open_category_manager_adds_window():
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	var before_count = _dialog.get_child_count()
+	_dialog._open_category_manager()
+	assert_gt(_dialog.get_child_count(), before_count)
+
+
+# --- _on_normalize_pressed ---
+
+func test_on_normalize_pressed_adds_window():
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	var before_count = _dialog.get_child_count()
+	_dialog._on_normalize_pressed()
+	assert_gt(_dialog.get_child_count(), before_count)
+
+
+# --- Setup with empty base path ---
+
+func test_setup_with_empty_base_path():
+	var story = StoryScript.new()
+	story.title = "Empty Path"
+	_dialog.setup(story, "")
+	assert_eq(_dialog.title, "Galerie — Empty Path")
+	assert_not_null(_dialog._category_service)
+
+
+# --- image_renamed signal ---
+
+func test_image_renamed_signal_exists():
+	assert_has_signal(_dialog, "image_renamed")
