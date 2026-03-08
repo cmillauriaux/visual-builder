@@ -13,37 +13,45 @@ static func dict_to_yaml(d: Dictionary, indent: int = 0) -> String:
 		lines.append(prefix + _serialize_key_value(key, value, indent))
 	return "\n".join(lines)
 
+## Sérialise une clé YAML en la quotant si elle contient des caractères spéciaux.
+static func _key_to_yaml(key: String) -> String:
+	if key.contains(":") or key.contains("#") or key.contains('"') or \
+			key.begins_with(" ") or key.ends_with(" ") or key == "":
+		return '"%s"' % key.replace("\\", "\\\\").replace('"', '\\"')
+	return key
+
 static func _serialize_key_value(key: String, value, indent: int) -> String:
+	var k = _key_to_yaml(key)
 	if value == null:
-		return "%s: null" % key
+		return "%s: null" % k
 	elif value is String:
-		return '%s: "%s"' % [key, value.replace('"', '\\"')]
+		return '%s: "%s"' % [k, value.replace('"', '\\"')]
 	elif value is bool:
-		return "%s: %s" % [key, "true" if value else "false"]
+		return "%s: %s" % [k, "true" if value else "false"]
 	elif value is int:
-		return "%s: %s" % [key, str(value)]
+		return "%s: %s" % [k, str(value)]
 	elif value is float:
-		return "%s: %s" % [key, str(value)]
+		return "%s: %s" % [k, str(value)]
 	elif value is Dictionary:
 		if value.is_empty():
-			return "%s: {}" % key
+			return "%s: {}" % k
 		# Petit dict (position-like) → inline
 		if _is_small_dict(value):
-			return "%s: { %s }" % [key, _inline_dict(value)]
+			return "%s: { %s }" % [k, _inline_dict(value)]
 		# Grand dict → nested
 		var nested = dict_to_yaml(value, indent + 1)
-		return "%s:\n%s" % [key, nested]
+		return "%s:\n%s" % [k, nested]
 	elif value is Array:
 		if value.is_empty():
-			return "%s: []" % key
+			return "%s: []" % k
 		var arr_lines := PackedStringArray()
-		arr_lines.append("%s:" % key)
+		arr_lines.append("%s:" % k)
 		var child_prefix = "  ".repeat(indent + 1)
 		for item in value:
 			if item is Dictionary:
 				var first = true
-				for k in item:
-					var serialized = _serialize_key_value(k, item[k], indent + 2)
+				for ik in item:
+					var serialized = _serialize_key_value(ik, item[ik], indent + 2)
 					if first:
 						arr_lines.append(child_prefix + "- " + serialized)
 						first = false
@@ -52,7 +60,7 @@ static func _serialize_key_value(key: String, value, indent: int) -> String:
 			else:
 				arr_lines.append(child_prefix + "- " + _serialize_value(item))
 		return "\n".join(arr_lines)
-	return "%s: %s" % [key, str(value)]
+	return "%s: %s" % [k, str(value)]
 
 static func _is_small_dict(d: Dictionary) -> bool:
 	if d.size() > 3:
@@ -65,7 +73,7 @@ static func _is_small_dict(d: Dictionary) -> bool:
 static func _inline_dict(d: Dictionary) -> String:
 	var parts := PackedStringArray()
 	for key in d:
-		parts.append("%s: %s" % [key, _serialize_value(d[key])])
+		parts.append("%s: %s" % [_key_to_yaml(key), _serialize_value(d[key])])
 	return ", ".join(parts)
 
 static func _serialize_value(value) -> String:
@@ -82,6 +90,29 @@ static func yaml_to_dict(yaml: String) -> Dictionary:
 	var result = {}
 	_parse_block(lines, 0, 0, result)
 	return result
+
+## Extrait [key, rest] depuis une ligne YAML stripped.
+## Gère les clés entre guillemets doubles (avec `:` ou autres caractères spéciaux).
+## Retourne [] si la ligne n'est pas une paire clé:valeur valide.
+static func _split_key_rest(stripped: String) -> Array:
+	if stripped.begins_with('"'):
+		var i = 1
+		while i < stripped.length():
+			if stripped[i] == '\\':
+				i += 2
+				continue
+			if stripped[i] == '"':
+				var key = stripped.substr(1, i - 1).replace('\\"', '"').replace("\\\\", "\\")
+				var after = stripped.substr(i + 1).strip_edges()
+				if after.begins_with(":"):
+					return [key, after.substr(1).strip_edges()]
+				return []
+			i += 1
+		return []
+	var colon_pos = stripped.find(":")
+	if colon_pos < 0:
+		return []
+	return [stripped.substr(0, colon_pos).strip_edges(), stripped.substr(colon_pos + 1).strip_edges()]
 
 static func _get_indent(line: String) -> int:
 	var count = 0
@@ -113,13 +144,13 @@ static func _parse_block(lines: Array, start: int, base_indent: int, target: Dic
 		if stripped.begins_with("- "):
 			return i
 
-		var colon_pos = stripped.find(":")
-		if colon_pos < 0:
+		var kv = _split_key_rest(stripped)
+		if kv.is_empty():
 			i += 1
 			continue
 
-		var key = stripped.substr(0, colon_pos).strip_edges()
-		var rest = stripped.substr(colon_pos + 1).strip_edges()
+		var key = kv[0]
+		var rest = kv[1]
 
 		if rest == "":
 			# Bloc enfant — déterminer si c'est un array ou un dict
@@ -165,12 +196,12 @@ static func _parse_array(lines: Array, start: int, base_indent: int, target: Arr
 		var item_content = stripped.substr(2).strip_edges()
 
 		# Déterminer si c'est un dict item ou un scalar
-		var colon_pos = item_content.find(":")
-		if colon_pos > 0:
+		var item_kv = _split_key_rest(item_content)
+		if not item_kv.is_empty():
 			# C'est un dict item
 			var item_dict = {}
-			var item_key = item_content.substr(0, colon_pos).strip_edges()
-			var item_rest = item_content.substr(colon_pos + 1).strip_edges()
+			var item_key = item_kv[0]
+			var item_rest = item_kv[1]
 			item_dict[item_key] = _parse_value(item_rest)
 
 			# Lire les lignes suivantes du même item
@@ -185,10 +216,10 @@ static func _parse_array(lines: Array, start: int, base_indent: int, target: Arr
 				# Les propriétés de l'item sont indentées de 2 de plus que le "-"
 				if next_indent < base_indent or next_stripped.begins_with("- "):
 					break
-				var nc = next_stripped.find(":")
-				if nc > 0:
-					var nk = next_stripped.substr(0, nc).strip_edges()
-					var nv = next_stripped.substr(nc + 1).strip_edges()
+				var nkv = _split_key_rest(next_stripped)
+				if not nkv.is_empty():
+					var nk = nkv[0]
+					var nv = nkv[1]
 					if nv == "":
 						# Sous-bloc dans l'array item
 						if i + 1 < lines.size() and lines[i + 1].strip_edges().begins_with("- "):

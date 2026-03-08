@@ -44,19 +44,25 @@ $GODOT --path .
 
 GUT est configuré avec `"should_exit": true` dans `.gutconfig.json`, ce qui fait quitter Godot automatiquement après les tests. Le `timeout` sert uniquement de filet de sécurité.
 
+Les tests incluent désormais un rapport de **couverture de code** via l'addon `godot-code-coverage` et des hooks dans `specs/`.
+
 ```bash
 # Détection du binaire Godot
 GODOT=${GODOT_PATH:-$(command -v godot || echo "/Applications/Godot.app/Contents/MacOS/Godot")}
 
-# Lancer tous les tests GUT
+# Lancer tous les tests GUT (inclut le rapport de couverture à la fin)
 timeout 120 $GODOT --headless --path . -s addons/gut/gut_cmdln.gd
-```
-# Lancer un fichier de test spécifique
-timeout 30 $GODOT --headless --path . -s addons/gut/gut_cmdln.gd -gtest=res://specs/test_example.gd
 
-# Lancer uniquement les tests e2e
-timeout 60 $GODOT --headless --path . -s addons/gut/gut_cmdln.gd -gdir=res://specs/e2e/
+# Lancer un fichier de test spécifique (la couverture sera aussi affichée pour ce fichier)
+timeout 30 $GODOT --headless --path . -s addons/gut/gut_cmdln.gd -gtest=res://specs/models/test_story.gd
 ```
+
+### Configuration de la couverture
+- **Plugin** : `res://addons/coverage/`
+- **Pre-run hook** : `res://specs/pre_run_hook.gd` (instrumente les scripts de `res://src/`)
+- **Post-run hook** : `res://specs/post_run_hook.gd` (génère le rapport et vérifie les cibles)
+- **Cibles actuelles** : 65% total, 0% par fichier (pour le monitoring).
+
 
 ## Project Structure
 

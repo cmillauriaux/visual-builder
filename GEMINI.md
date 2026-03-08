@@ -40,7 +40,10 @@ This project provides a professional-grade tool for creating visual novels witho
 Tests use the GUT framework.
 - **Run All Tests:** `godot --headless --path . -s addons/gut/gut_cmdln.gd`
 - **Run Specific Test:** `godot --headless --path . -s addons/gut/gut_cmdln.gd -gtest=res://specs/path_to_test.gd`
-- **Run E2E Tests Only:** `godot --headless --path . -s addons/gut/gut_cmdln.gd -gdir=res://specs/e2e/`
+
+**Code Coverage:**
+The project uses the `godot-code-coverage` plugin integrated via GUT hooks (`pre_run_hook.gd` and `post_run_hook.gd` in `specs/`). It automatically reports coverage for all scripts in `res://src/` after each test run.
+- Current total target: 65% (current coverage is ~72%).
 
 ## Development Conventions
 - **Specifications First:** Every feature must have a corresponding Markdown specification in `specs/` before implementation.

@@ -139,6 +139,30 @@ func test_roundtrip_nested():
 	assert_eq(restored["dialogues"].size(), 1)
 	assert_eq(restored["dialogues"][0]["character"], "Héros")
 
+func test_write_key_with_colon():
+	var d = {"Bonjour: monde": "Hello: world"}
+	var yaml = YamlParser.dict_to_yaml(d)
+	assert_true(yaml.find('"Bonjour: monde"') >= 0, "La clé avec ':' doit être quotée")
+
+func test_read_quoted_key():
+	var yaml = '"Bonjour: monde": "Hello: world"'
+	var d = YamlParser.yaml_to_dict(yaml)
+	assert_true(d.has("Bonjour: monde"), "La clé quotée doit être parsée correctement")
+	assert_eq(d["Bonjour: monde"], "Hello: world")
+
+func test_roundtrip_key_with_colon():
+	# Cas typique i18n : clé source = valeur source
+	var original = {
+		"Bonjour: monde": "Bonjour: monde",
+		"Titre sans deux-points": "Titre sans deux-points",
+		"Erreur (cible introuvable ou contenu vide)": "Erreur (cible introuvable ou contenu vide)",
+	}
+	var yaml = YamlParser.dict_to_yaml(original)
+	var restored = YamlParser.yaml_to_dict(yaml)
+	assert_eq(restored["Bonjour: monde"], "Bonjour: monde")
+	assert_eq(restored["Titre sans deux-points"], "Titre sans deux-points")
+	assert_eq(restored["Erreur (cible introuvable ou contenu vide)"], "Erreur (cible introuvable ou contenu vide)")
+
 func test_roundtrip_story_yaml():
 	# Reproduit le format exact de story.yaml de la spec
 	var original = {
