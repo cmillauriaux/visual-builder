@@ -18,6 +18,7 @@ const SCALE_MIN := 0.5
 const SCALE_MAX := 5.0
 
 static var _scale: float = -1.0
+static var _user_multiplier: float = 1.0
 
 
 ## Retourne le facteur d'échelle UI courant.
@@ -33,9 +34,22 @@ static func scale(pixels: float) -> int:
 	return roundi(pixels * get_scale())
 
 
+## Définit le multiplicateur utilisateur (1.0 = petit, 1.25 = moyen, 1.5 = gros).
+## Invalide le cache pour forcer un recalcul.
+static func set_user_multiplier(multiplier: float) -> void:
+	_user_multiplier = multiplier
+	_scale = -1.0
+
+
+## Retourne le multiplicateur utilisateur courant.
+static func get_user_multiplier() -> float:
+	return _user_multiplier
+
+
 ## Remet à zéro le cache (utile pour les tests).
 static func reset() -> void:
 	_scale = -1.0
+	_user_multiplier = 1.0
 
 
 static func _compute_scale() -> float:
@@ -59,5 +73,5 @@ static func _compute_scale() -> float:
 	godot_scale = maxf(godot_scale, 0.01)
 
 	# Pour maintenir la même taille physique qu'à 96 DPI / 1920x1080 :
-	var raw_scale := (dpi / REFERENCE_DPI) / godot_scale
+	var raw_scale := (dpi / REFERENCE_DPI) / godot_scale * _user_multiplier
 	return clampf(raw_scale, SCALE_MIN, SCALE_MAX)

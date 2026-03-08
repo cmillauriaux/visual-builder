@@ -18,6 +18,8 @@ const GameSaveManager = preload("res://src/persistence/game_save_manager.gd")
 const OptionsMenuScript = preload("res://src/ui/menu/options_menu.gd")
 const PlayFabAnalyticsServiceScript = preload("res://src/services/playfab_analytics_service.gd")
 const PckChapterLoaderScript = preload("res://src/services/pck_chapter_loader.gd")
+const UIScale = preload("res://src/ui/themes/ui_scale.gd")
+const PwaInstallPromptScript = preload("res://src/ui/menu/pwa_install_prompt.gd")
 
 ## Chemin vers la story à charger automatiquement.
 ## Si vide, affiche le sélecteur. Peut pointer vers res:// ou user://.
@@ -92,6 +94,9 @@ var _toast_overlay: PanelContainer
 var _toast_label: Label
 var _toast_generation: int = 0
 
+# UI — PWA install prompt
+var _pwa_install_prompt: Control
+
 # UI — Quickload confirmation
 var _quickload_confirm_overlay: Control
 var _quickload_confirm_label: Label
@@ -119,6 +124,9 @@ func _ready() -> void:
 	_settings.load_settings()
 	_settings.apply_settings()
 
+	# Appliquer le multiplicateur d'échelle UI avant de construire l'interface
+	UIScale.set_user_multiplier(_settings.get_ui_scale_factor())
+
 	GameUIBuilder.build(self)
 
 	# Configurer le contrôleur de jeu avec les réglages
@@ -143,6 +151,7 @@ func _ready() -> void:
 	_play_ctrl.set_auto_play_enabled(_settings.auto_play_enabled)
 	_play_ctrl.set_typewriter_speed(_settings.typewriter_speed)
 	_play_ctrl.set_dialogue_opacity(_settings.dialogue_opacity / 100.0)
+	_play_ctrl.set_toolbar_visible(_settings.toolbar_visible)
 	_typewriter_timer.timeout.connect(_play_ctrl.on_typewriter_tick)
 	_story_play_ctrl.sequence_play_requested.connect(_play_ctrl.on_sequence_play_requested)
 	_story_play_ctrl.choice_display_requested.connect(_play_ctrl.on_choice_display_requested)
@@ -227,6 +236,13 @@ func _ready() -> void:
 	_quickload_yes_btn.pressed.connect(_do_quickload)
 	_quickload_no_btn.pressed.connect(_cancel_quickload)
 
+	# PWA install prompt
+	_pwa_install_prompt = Control.new()
+	_pwa_install_prompt.set_script(PwaInstallPromptScript)
+	_pwa_install_prompt.build_ui()
+	_pwa_install_prompt.closed.connect(_on_pwa_prompt_closed)
+	add_child(_pwa_install_prompt)
+
 	# Chercher si un chemin est forcé via override.cfg/settings
 	var override_path = ProjectSettings.get_setting("application/config/story_path", "")
 	if override_path != "":
@@ -268,6 +284,7 @@ func _load_story_and_show_menu(path: String) -> void:
 	_load_max_progression()
 	_configure_analytics(story)
 	_show_main_menu(_current_story)
+	_pwa_install_prompt.show_if_needed(_settings.pwa_prompt_dismissed)
 
 
 func _reload_i18n() -> void:
@@ -296,12 +313,20 @@ func _apply_ui_lang() -> void:
 
 
 func _on_options_applied() -> void:
+	# Vérifier si l'échelle UI a changé — nécessite un rechargement de la scène
+	var new_multiplier: float = _settings.get_ui_scale_factor()
+	if not is_equal_approx(new_multiplier, UIScale.get_user_multiplier()):
+		UIScale.set_user_multiplier(new_multiplier)
+		get_tree().reload_current_scene()
+		return
+
 	_reload_i18n()
 	_play_ctrl.set_auto_play_delay(_settings.auto_play_delay)
 	_play_ctrl.set_auto_play_enabled(_settings.auto_play_enabled)
 	_play_ctrl.set_typewriter_speed(_settings.typewriter_speed)
 	_play_ctrl.set_dialogue_opacity(_settings.dialogue_opacity / 100.0)
 	_story_play_ctrl._autosave_enabled = _settings.autosave_enabled
+	_play_ctrl.set_toolbar_visible(_settings.toolbar_visible)
 
 
 func _show_main_menu(story) -> void:
@@ -503,7 +528,7 @@ func _restore_play_ui_after_menu() -> void:
 	_play_overlay.visible = _play_ui_state_before_menu.get("play_overlay", false)
 	_choice_overlay.visible = _play_ui_state_before_menu.get("choice_overlay", false)
 	if _play_buttons_bar:
-		_play_buttons_bar.visible = _play_ui_state_before_menu.get("play_buttons_bar", false)
+		_play_buttons_bar.visible = _play_ui_state_before_menu.get("play_buttons_bar", false) and _settings.toolbar_visible
 	_menu_button.visible = _play_ui_state_before_menu.get("menu_button", false)
 	_play_ui_state_before_menu = {}
 
@@ -945,3 +970,11 @@ func _show_toast(message: String) -> void:
 		if _toast_generation == gen:
 			_toast_overlay.visible = false
 	)
+
+
+# --- PWA Install Prompt ---
+
+func _on_pwa_prompt_closed(dont_show_again: bool) -> void:
+	if dont_show_again:
+		_settings.pwa_prompt_dismissed = true
+		_settings.save_settings()

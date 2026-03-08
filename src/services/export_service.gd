@@ -166,8 +166,10 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 		if preset_content.find("include_filter=\"") != -1:
 			if preset_content.find("*.yaml") == -1:
 				preset_content = preset_content.replace("include_filter=\"", "include_filter=\"*.yaml,")
+			if preset_content.find("*.json") == -1:
+				preset_content = preset_content.replace("include_filter=\"", "include_filter=\"*.json,")
 		else:
-			preset_content = preset_content.replace("[preset.0]", "[preset.0]\ninclude_filter=\"*.yaml\"")
+			preset_content = preset_content.replace("[preset.0]", "[preset.0]\ninclude_filter=\"*.yaml, *.json\"")
 
 		var f_preset = FileAccess.open(preset_dst, FileAccess.WRITE)
 		if f_preset:
@@ -209,7 +211,11 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 	if platform == "web" and exit_code == 0 and FileAccess.file_exists(export_file):
 		_split_pck_by_chapter(abs_temp_project, export_file.get_base_dir(), godot_bin, log_path)
 
-	# 9c. Créer le fichier _headers pour Cloudflare Pages (COOP/COEP requis par SharedArrayBuffer)
+	# 9c. Cache-bust : hasher et renommer les fichiers engine (web uniquement)
+	if platform == "web" and exit_code == 0 and FileAccess.file_exists(export_file):
+		_cache_bust_web_export(export_file.get_base_dir(), log_path)
+
+	# 9d. Créer le fichier _headers pour Cloudflare Pages
 	if platform == "web" and exit_code == 0:
 		var headers_path = export_file.get_base_dir() + "/_headers"
 		var f_headers = FileAccess.open(headers_path, FileAccess.WRITE)
@@ -217,8 +223,18 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 			f_headers.store_line("/*")
 			f_headers.store_line("  Cross-Origin-Opener-Policy: same-origin")
 			f_headers.store_line("  Cross-Origin-Embedder-Policy: require-corp")
+			f_headers.store_line("/index.html")
+			f_headers.store_line("  Cache-Control: no-cache")
+			f_headers.store_line("/*.js")
+			f_headers.store_line("  Cache-Control: public, max-age=31536000, immutable")
+			f_headers.store_line("/*.wasm")
+			f_headers.store_line("  Cache-Control: public, max-age=31536000, immutable")
+			f_headers.store_line("/*.pck")
+			f_headers.store_line("  Cache-Control: public, max-age=31536000, immutable")
+			f_headers.store_line("/*.png")
+			f_headers.store_line("  Cache-Control: public, max-age=86400")
 			f_headers.close()
-			_append_log(log_path, "→ Fichier _headers créé pour Cloudflare Pages (COOP/COEP)")
+			_append_log(log_path, "→ Fichier _headers créé (COOP/COEP + cache)")
 
 	# 10. Nettoyage
 	_remove_dir_recursive(abs_temp_base)
@@ -404,9 +420,35 @@ func _split_pck_by_chapter(temp_project: String, export_dir: String, godot_bin: 
 		_append_log(log_path, "  ⚠ Échec du découpage PCK (non bloquant)")
 		return
 
-	# Re-exporter le core PCK sans les assets chapitres (qui ont été supprimés par le builder)
+	# Cache-bust : hasher et renommer les PCK chapitres AVANT le re-export
+	_append_log(log_path, "→ Cache-bust : hashage des PCK chapitres...")
+	var manifest_path_temp = temp_project + "/story/pck_manifest.json"
+	var manifest_text = ""
+	if FileAccess.file_exists(manifest_path_temp):
+		manifest_text = FileAccess.get_file_as_string(manifest_path_temp)
+
+	var dir = DirAccess.open(export_dir)
+	if dir and manifest_text != "":
+		dir.list_dir_begin()
+		var fname = dir.get_next()
+		while fname != "":
+			if fname.begins_with("chapter_") and fname.ends_with(".pck"):
+				var full_path = export_dir + "/" + fname
+				var hash = _compute_file_hash(full_path)
+				var base = fname.get_basename()
+				var new_name = base + "." + hash + ".pck"
+				dir.rename(fname, new_name)
+				manifest_text = manifest_text.replace(fname, new_name)
+				_append_log(log_path, "  %s → %s" % [fname, new_name])
+			fname = dir.get_next()
+
+		var f_manifest = FileAccess.open(manifest_path_temp, FileAccess.WRITE)
+		if f_manifest:
+			f_manifest.store_string(manifest_text)
+			f_manifest.close()
+
+	# Re-exporter le core PCK (bake le manifest avec les noms hashés)
 	_append_log(log_path, "→ Ré-export du core PCK allégé...")
-	var pck_path = export_dir + "/index.pck"
 	var reexport_output = []
 	var preset_name = "Web"
 	var export_file = export_dir + "/index.html"
@@ -417,15 +459,15 @@ func _split_pck_by_chapter(temp_project: String, export_dir: String, godot_bin: 
 		_append_log(log_path, "  " + line.strip_edges())
 
 	# Compter les PCK chapitres créés
-	var dir = DirAccess.open(export_dir)
-	if dir:
+	var dir2 = DirAccess.open(export_dir)
+	if dir2:
 		var count = 0
-		dir.list_dir_begin()
-		var fname = dir.get_next()
-		while fname != "":
-			if fname.begins_with("chapter_") and fname.ends_with(".pck"):
+		dir2.list_dir_begin()
+		var fname2 = dir2.get_next()
+		while fname2 != "":
+			if fname2.begins_with("chapter_") and fname2.ends_with(".pck"):
 				count += 1
-			fname = dir.get_next()
+			fname2 = dir2.get_next()
 		_append_log(log_path, "→ %d PCK chapitres créés" % count)
 
 
@@ -500,3 +542,62 @@ func _strip_ansi_codes(text: String) -> String:
 		else:
 			break
 	return clean
+
+
+## Calcule un hash MD5 court (8 caractères hex) du contenu d'un fichier.
+func _compute_file_hash(file_path: String) -> String:
+	var ctx = HashingContext.new()
+	ctx.start(HashingContext.HASH_MD5)
+	var f = FileAccess.open(file_path, FileAccess.READ)
+	if f == null:
+		return "00000000"
+	while not f.eof_reached():
+		var chunk = f.get_buffer(65536)
+		if chunk.size() > 0:
+			ctx.update(chunk)
+	f.close()
+	var hash_bytes = ctx.finish()
+	return hash_bytes.hex_encode().substr(0, 8)
+
+
+## Cache-bust : hasher et renommer les fichiers engine web, mettre à jour index.html.
+func _cache_bust_web_export(export_dir: String, log_path: String) -> void:
+	var pck_path = export_dir + "/index.pck"
+	if not FileAccess.file_exists(pck_path):
+		return
+
+	var deploy_hash = _compute_file_hash(pck_path)
+	_append_log(log_path, "→ Cache-bust : hash de déploiement %s" % deploy_hash)
+
+	var d = DirAccess.open(export_dir)
+	if d == null:
+		return
+
+	# Renommer les fichiers engine principaux
+	for ext in ["js", "wasm", "pck"]:
+		var old_name = "index." + ext
+		var new_name = "index." + deploy_hash + "." + ext
+		if FileAccess.file_exists(export_dir + "/" + old_name):
+			d.rename(old_name, new_name)
+			_append_log(log_path, "  %s → %s" % [old_name, new_name])
+
+	# Renommer les audio worklets
+	for worklet in ["audio.worklet.js", "audio.position.worklet.js"]:
+		var old_name = "index." + worklet
+		var new_name = "index." + deploy_hash + "." + worklet
+		if FileAccess.file_exists(export_dir + "/" + old_name):
+			d.rename(old_name, new_name)
+			_append_log(log_path, "  %s → %s" % [old_name, new_name])
+
+	# Mettre à jour index.html
+	var html_path = export_dir + "/index.html"
+	var html = FileAccess.get_file_as_string(html_path)
+	html = html.replace('src="index.js"', 'src="index.%s.js"' % deploy_hash)
+	html = html.replace('"executable":"index"', '"executable":"index.%s"' % deploy_hash)
+	html = html.replace('"index.pck":', '"index.%s.pck":' % deploy_hash)
+	html = html.replace('"index.wasm":', '"index.%s.wasm":' % deploy_hash)
+	var f_html = FileAccess.open(html_path, FileAccess.WRITE)
+	if f_html:
+		f_html.store_string(html)
+		f_html.close()
+	_append_log(log_path, "  index.html mis à jour")

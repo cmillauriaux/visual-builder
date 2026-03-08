@@ -338,3 +338,74 @@ func test_apply_autosave_enabled_false():
 	_menu._autosave_enabled_check.button_pressed = false
 	_menu.apply_to_settings(_settings, _test_cfg_path)
 	assert_false(_settings.autosave_enabled)
+
+
+# --- Échelle UI ---
+
+func test_has_ui_scale_option():
+	assert_not_null(_menu._ui_scale_option)
+	assert_is(_menu._ui_scale_option, OptionButton)
+
+func test_ui_scale_option_has_3_items():
+	assert_eq(_menu._ui_scale_option.item_count, 3)
+
+func test_ui_scale_option_labels():
+	assert_eq(_menu._ui_scale_option.get_item_text(0), "Petit")
+	assert_eq(_menu._ui_scale_option.get_item_text(1), "Moyen")
+	assert_eq(_menu._ui_scale_option.get_item_text(2), "Gros")
+
+func test_load_values_ui_scale_default():
+	_settings.ui_scale_mode = 0
+	_menu.load_from_settings(_settings)
+	assert_eq(_menu._ui_scale_option.selected, 0)
+
+func test_load_values_ui_scale_medium():
+	_settings.ui_scale_mode = 1
+	_menu.load_from_settings(_settings)
+	assert_eq(_menu._ui_scale_option.selected, 1)
+
+func test_load_values_ui_scale_large():
+	_settings.ui_scale_mode = 2
+	_menu.load_from_settings(_settings)
+	assert_eq(_menu._ui_scale_option.selected, 2)
+
+func test_apply_ui_scale_medium():
+	_menu.load_from_settings(_settings)
+	_menu._ui_scale_option.selected = 1
+	_menu.apply_to_settings(_settings, _test_cfg_path)
+	assert_eq(_settings.ui_scale_mode, 1)
+
+func test_apply_ui_scale_large():
+	_menu.load_from_settings(_settings)
+	_menu._ui_scale_option.selected = 2
+	_menu.apply_to_settings(_settings, _test_cfg_path)
+	assert_eq(_settings.ui_scale_mode, 2)
+
+
+# --- Barre d'outils ---
+
+func test_has_toolbar_visible_check():
+	assert_not_null(_menu._toolbar_visible_check)
+	assert_is(_menu._toolbar_visible_check, CheckButton)
+
+func test_load_values_toolbar_visible_true():
+	_settings.toolbar_visible = true
+	_menu.load_from_settings(_settings)
+	assert_true(_menu._toolbar_visible_check.button_pressed)
+
+func test_load_values_toolbar_visible_false():
+	_settings.toolbar_visible = false
+	_menu.load_from_settings(_settings)
+	assert_false(_menu._toolbar_visible_check.button_pressed)
+
+func test_apply_toolbar_visible_true():
+	_menu.load_from_settings(_settings)
+	_menu._toolbar_visible_check.button_pressed = true
+	_menu.apply_to_settings(_settings, _test_cfg_path)
+	assert_true(_settings.toolbar_visible)
+
+func test_apply_toolbar_visible_false():
+	_menu.load_from_settings(_settings)
+	_menu._toolbar_visible_check.button_pressed = false
+	_menu.apply_to_settings(_settings, _test_cfg_path)
+	assert_false(_settings.toolbar_visible)

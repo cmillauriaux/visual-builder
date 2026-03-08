@@ -38,6 +38,7 @@ var _typewriter_speed: float = 0.03
 var _dialogue_opacity: float = 0.8
 var _skip_max_chapter_index: int = -1
 var _skip_max_scene_index: int = -1
+var _toolbar_visible: bool = true
 
 var _dialogue_history: Array[Dictionary] = []
 var _history_button: Button = null
@@ -71,6 +72,10 @@ func set_dialogue_opacity(value: float) -> void:
 func set_auto_play_enabled(enabled: bool) -> void:
 	if _auto_play and enabled != _auto_play.enabled:
 		_auto_play.toggle()
+
+
+func set_toolbar_visible(p_visible: bool) -> void:
+	_toolbar_visible = p_visible
 
 
 func get_auto_play_manager() -> RefCounted:
@@ -218,7 +223,7 @@ func _start_sequence_actually() -> void:
 	if _sequence_editor_ctrl.is_playing():
 		_play_overlay.visible = true
 		if _play_buttons_bar:
-			_play_buttons_bar.visible = true
+			_play_buttons_bar.visible = _toolbar_visible
 			_game.move_child(_play_buttons_bar, -1)
 		_game.add_child(_play_overlay)
 		_game.move_child(_play_overlay, _game.get_child_count() - 1)

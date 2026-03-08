@@ -30,14 +30,52 @@ var auto_play_delay: float = 2.0
 var typewriter_speed: float = 0.03
 var dialogue_opacity: int = 80
 var autosave_enabled: bool = true
+var ui_scale_mode: int = -1  # -1 = pas encore initialisé, utilise le défaut plateforme
+var toolbar_visible: bool = true
+var pwa_prompt_dismissed: bool = false
 
 const TYPEWRITER_SPEEDS: Array[float] = [0.06, 0.03, 0.015, 0.0]
 const TYPEWRITER_SPEED_LABELS: Array[String] = ["Lent", "Normal", "Rapide", "Instantané"]
+
+const UI_SCALE_FACTORS: Array[float] = [1.25, 1.5, 2.0]
+const UI_SCALE_LABELS: Array[String] = ["Petit", "Moyen", "Gros"]
+
+## Mode Petit=0, Moyen=1, Gros=2
+## Mobile (iOS/Android) et web mobile → Gros (2)
+## Desktop et web desktop → Moyen (1)
+static func get_default_ui_scale_mode() -> int:
+	var os_name := OS.get_name()
+	if os_name == "iOS" or os_name == "Android":
+		return 2
+	if os_name == "Web" and _is_mobile_browser():
+		return 2
+	return 1
+
+
+static func _is_mobile_browser() -> bool:
+	if OS.get_name() != "Web":
+		return false
+	if not ClassDB.class_exists(&"JavaScriptBridge"):
+		return false
+	var js = ClassDB.instantiate(&"JavaScriptBridge")
+	if js == null:
+		return false
+	# Utiliser Engine.get_singleton ou un appel direct ne fonctionne pas en GDScript
+	# pour les classes non-singleton. On utilise Expression pour évaluer dynamiquement.
+	var expr := Expression.new()
+	if expr.parse("JavaScriptBridge.eval('navigator.userAgent || \"\"')") != OK:
+		return false
+	var result = expr.execute()
+	if expr.has_execute_failed() or result == null:
+		return false
+	var ua: String = str(result).to_lower()
+	return ua.contains("mobile") or ua.contains("android") or ua.contains("iphone") or ua.contains("ipad")
 
 
 func load_settings(path: String = SETTINGS_PATH) -> void:
 	var cfg = ConfigFile.new()
 	if cfg.load(path) != OK:
+		ui_scale_mode = get_default_ui_scale_mode()
 		return
 	resolution.x = cfg.get_value("display", "resolution_x", 1920)
 	resolution.y = cfg.get_value("display", "resolution_y", 1080)
@@ -52,6 +90,9 @@ func load_settings(path: String = SETTINGS_PATH) -> void:
 	auto_play_delay = cfg.get_value("gameplay", "auto_play_delay", 2.0)
 	typewriter_speed = cfg.get_value("gameplay", "typewriter_speed", 0.03)
 	autosave_enabled = cfg.get_value("gameplay", "autosave_enabled", true)
+	ui_scale_mode = cfg.get_value("display", "ui_scale_mode", get_default_ui_scale_mode())
+	toolbar_visible = cfg.get_value("display", "toolbar_visible", true)
+	pwa_prompt_dismissed = cfg.get_value("display", "pwa_prompt_dismissed", false)
 
 
 func save_settings(path: String = SETTINGS_PATH) -> void:
@@ -69,7 +110,17 @@ func save_settings(path: String = SETTINGS_PATH) -> void:
 	cfg.set_value("gameplay", "auto_play_delay", auto_play_delay)
 	cfg.set_value("gameplay", "typewriter_speed", typewriter_speed)
 	cfg.set_value("gameplay", "autosave_enabled", autosave_enabled)
+	cfg.set_value("display", "ui_scale_mode", ui_scale_mode)
+	cfg.set_value("display", "toolbar_visible", toolbar_visible)
+	cfg.set_value("display", "pwa_prompt_dismissed", pwa_prompt_dismissed)
 	cfg.save(path)
+
+
+func get_ui_scale_factor() -> float:
+	var mode := ui_scale_mode if ui_scale_mode >= 0 else get_default_ui_scale_mode()
+	if mode >= 0 and mode < UI_SCALE_FACTORS.size():
+		return UI_SCALE_FACTORS[mode]
+	return 1.0
 
 
 func apply_settings() -> void:

@@ -27,6 +27,8 @@ var _auto_play_delay_option: OptionButton
 var _typewriter_speed_option: OptionButton
 var _dialogue_opacity_slider: HSlider
 var _autosave_enabled_check: CheckButton
+var _ui_scale_option: OptionButton
+var _toolbar_visible_check: CheckButton
 
 const AUTO_PLAY_DELAYS := [1.0, 2.0, 3.0, 5.0]
 const AUTO_PLAY_DELAY_LABELS := ["1s", "2s", "3s", "5s"]
@@ -81,6 +83,8 @@ func build_ui() -> void:
 	_resolution_option = _add_option_row(content, "Résolution", GameSettings.RESOLUTION_LABELS)
 	_fullscreen_check = _add_check_row(content, "Plein écran")
 	_dialogue_opacity_slider = _add_slider_row(content, "Opacité dialogue")
+	_ui_scale_option = _add_option_row(content, "Échelle UI", GameSettings.UI_SCALE_LABELS)
+	_toolbar_visible_check = _add_check_row(content, "Barre d'outils")
 
 	content.add_child(HSeparator.new())
 
@@ -155,6 +159,13 @@ func load_from_settings(settings: RefCounted) -> void:
 	# Auto-save
 	_autosave_enabled_check.button_pressed = settings.autosave_enabled
 
+	# UI scale
+	var scale_mode: int = settings.ui_scale_mode if settings.ui_scale_mode >= 0 else GameSettings.get_default_ui_scale_mode()
+	_ui_scale_option.selected = clampi(scale_mode, 0, GameSettings.UI_SCALE_LABELS.size() - 1)
+
+	# Toolbar
+	_toolbar_visible_check.button_pressed = settings.toolbar_visible
+
 
 func apply_to_settings(settings: RefCounted, path: String = GameSettings.SETTINGS_PATH) -> void:
 	var res_idx = _resolution_option.selected
@@ -177,6 +188,10 @@ func apply_to_settings(settings: RefCounted, path: String = GameSettings.SETTING
 	if speed_idx >= 0 and speed_idx < TYPEWRITER_SPEEDS.size():
 		settings.typewriter_speed = TYPEWRITER_SPEEDS[speed_idx]
 	settings.autosave_enabled = _autosave_enabled_check.button_pressed
+	var scale_idx = _ui_scale_option.selected
+	if scale_idx >= 0 and scale_idx < GameSettings.UI_SCALE_FACTORS.size():
+		settings.ui_scale_mode = scale_idx
+	settings.toolbar_visible = _toolbar_visible_check.button_pressed
 	settings.save_settings(path)
 	settings.apply_settings()
 

@@ -244,3 +244,91 @@ func test_save_and_load_autosave_enabled_true():
 	var loaded = GameSettings.new()
 	loaded.load_settings(_test_cfg_path)
 	assert_eq(loaded.autosave_enabled, true)
+
+
+# --- ui_scale_mode ---
+
+func test_default_ui_scale_mode():
+	assert_eq(_settings.ui_scale_mode, -1, "ui_scale_mode vaut -1 avant chargement (défaut plateforme)")
+
+func test_save_and_load_ui_scale_mode_medium():
+	_settings.ui_scale_mode = 1
+	_settings.save_settings(_test_cfg_path)
+	var loaded = GameSettings.new()
+	loaded.load_settings(_test_cfg_path)
+	assert_eq(loaded.ui_scale_mode, 1)
+
+func test_save_and_load_ui_scale_mode_large():
+	_settings.ui_scale_mode = 2
+	_settings.save_settings(_test_cfg_path)
+	var loaded = GameSettings.new()
+	loaded.load_settings(_test_cfg_path)
+	assert_eq(loaded.ui_scale_mode, 2)
+
+func test_ui_scale_factors_count():
+	assert_eq(GameSettings.UI_SCALE_FACTORS.size(), 3)
+
+func test_ui_scale_factors_values():
+	assert_eq(GameSettings.UI_SCALE_FACTORS[0], 1.25)
+	assert_eq(GameSettings.UI_SCALE_FACTORS[1], 1.5)
+	assert_eq(GameSettings.UI_SCALE_FACTORS[2], 2.0)
+
+func test_ui_scale_labels_count():
+	assert_eq(GameSettings.UI_SCALE_LABELS.size(), 3)
+
+func test_ui_scale_labels_values():
+	assert_eq(GameSettings.UI_SCALE_LABELS[0], "Petit")
+	assert_eq(GameSettings.UI_SCALE_LABELS[1], "Moyen")
+	assert_eq(GameSettings.UI_SCALE_LABELS[2], "Gros")
+
+func test_get_ui_scale_factor_small():
+	_settings.ui_scale_mode = 0
+	assert_eq(_settings.get_ui_scale_factor(), 1.25)
+
+func test_get_ui_scale_factor_medium():
+	_settings.ui_scale_mode = 1
+	assert_eq(_settings.get_ui_scale_factor(), 1.5)
+
+func test_get_ui_scale_factor_large():
+	_settings.ui_scale_mode = 2
+	assert_eq(_settings.get_ui_scale_factor(), 2.0)
+
+func test_get_ui_scale_factor_invalid_returns_default():
+	_settings.ui_scale_mode = 99
+	assert_eq(_settings.get_ui_scale_factor(), 1.0)
+
+func test_get_ui_scale_factor_minus_one_uses_platform_default():
+	_settings.ui_scale_mode = -1
+	var expected_mode := GameSettings.get_default_ui_scale_mode()
+	assert_eq(_settings.get_ui_scale_factor(), GameSettings.UI_SCALE_FACTORS[expected_mode])
+
+func test_get_default_ui_scale_mode_returns_valid_index():
+	var mode := GameSettings.get_default_ui_scale_mode()
+	assert_true(mode >= 0 and mode < GameSettings.UI_SCALE_FACTORS.size(),
+		"default mode %d doit être un index valide" % mode)
+
+func test_load_without_file_uses_platform_default():
+	_settings.load_settings("user://nonexistent_ui_scale_test.cfg")
+	var expected := GameSettings.get_default_ui_scale_mode()
+	assert_eq(_settings.ui_scale_mode, expected,
+		"Sans fichier config, ui_scale_mode doit être le défaut plateforme")
+
+
+# --- toolbar_visible ---
+
+func test_default_toolbar_visible():
+	assert_eq(_settings.toolbar_visible, true)
+
+func test_save_and_load_toolbar_visible_false():
+	_settings.toolbar_visible = false
+	_settings.save_settings(_test_cfg_path)
+	var loaded = GameSettings.new()
+	loaded.load_settings(_test_cfg_path)
+	assert_eq(loaded.toolbar_visible, false)
+
+func test_save_and_load_toolbar_visible_true():
+	_settings.toolbar_visible = true
+	_settings.save_settings(_test_cfg_path)
+	var loaded = GameSettings.new()
+	loaded.load_settings(_test_cfg_path)
+	assert_eq(loaded.toolbar_visible, true)

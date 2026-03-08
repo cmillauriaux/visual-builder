@@ -26,6 +26,18 @@ if [[ "$OSTYPE" == "darwin"* ]] && command -v gsed &>/dev/null; then
     SED_BIN="gsed"
 fi
 
+# Calcule un hash MD5 court (8 caractères) du contenu d'un fichier (cross-platform)
+compute_hash() {
+    local file="$1"
+    if command -v md5sum &>/dev/null; then
+        md5sum "$file" | cut -c1-8
+    elif command -v md5 &>/dev/null; then
+        md5 -q "$file" | cut -c1-8
+    else
+        cksum "$file" | awk '{printf "%08x", $1}'
+    fi
+}
+
 # --- Fonctions utilitaires ---
 
 usage() {
@@ -414,7 +426,22 @@ if [[ "$PLATFORM" == "web" ]]; then
         -- --output "$EXPORT_DIR"
 
     if [[ $? -eq 0 ]]; then
-        # Ré-exporter le core PCK allégé (sans les assets chapitres supprimés)
+        # 13b. Cache-bust : hasher et renommer les PCK chapitres (AVANT le re-export)
+        info "Cache-bust : hashage des PCK chapitres..."
+        MANIFEST="$TEMP_PROJECT/story/pck_manifest.json"
+        for pck_file in "$EXPORT_DIR"/chapter_*.pck; do
+            [ -f "$pck_file" ] || continue
+            HASH=$(compute_hash "$pck_file")
+            BASE=$(basename "$pck_file" .pck)
+            NEW_NAME="${BASE}.${HASH}.pck"
+            mv "$pck_file" "$EXPORT_DIR/$NEW_NAME"
+            if [ -f "$MANIFEST" ]; then
+                "$SED_BIN" -i "s|${BASE}.pck|${NEW_NAME}|g" "$MANIFEST"
+            fi
+            info "  ${BASE}.pck → $NEW_NAME"
+        done
+
+        # 13c. Ré-exporter le core PCK allégé (bake le manifest avec les noms hashés)
         info "Ré-export du core PCK allégé..."
         run_logged "$GODOT_BIN" --headless --path "$TEMP_PROJECT" --export-release "$PRESET_NAME" "$EXPORT_FILE"
 
@@ -423,17 +450,56 @@ if [[ "$PLATFORM" == "web" ]]; then
     else
         info "⚠ Échec du découpage PCK (non bloquant — export monolithique conservé)"
     fi
+
+    # 13d. Cache-bust : hasher et renommer les fichiers engine
+    if [ -f "$EXPORT_DIR/index.pck" ]; then
+        DEPLOY_HASH=$(compute_hash "$EXPORT_DIR/index.pck")
+        info "Cache-bust : hash de déploiement $DEPLOY_HASH"
+
+        # Renommer les fichiers engine
+        for ext in js wasm pck; do
+            if [ -f "$EXPORT_DIR/index.$ext" ]; then
+                mv "$EXPORT_DIR/index.$ext" "$EXPORT_DIR/index.${DEPLOY_HASH}.$ext"
+                info "  index.$ext → index.${DEPLOY_HASH}.$ext"
+            fi
+        done
+
+        # Renommer les audio worklets
+        for worklet in audio.worklet.js audio.position.worklet.js; do
+            if [ -f "$EXPORT_DIR/index.$worklet" ]; then
+                mv "$EXPORT_DIR/index.$worklet" "$EXPORT_DIR/index.${DEPLOY_HASH}.$worklet"
+                info "  index.$worklet → index.${DEPLOY_HASH}.$worklet"
+            fi
+        done
+
+        # Mettre à jour index.html
+        "$SED_BIN" -i "s|src=\"index.js\"|src=\"index.${DEPLOY_HASH}.js\"|" "$EXPORT_DIR/index.html"
+        "$SED_BIN" -i "s|\"executable\":\"index\"|\"executable\":\"index.${DEPLOY_HASH}\"|" "$EXPORT_DIR/index.html"
+        "$SED_BIN" -i "s|\"index.pck\":|\"index.${DEPLOY_HASH}.pck\":|" "$EXPORT_DIR/index.html"
+        "$SED_BIN" -i "s|\"index.wasm\":|\"index.${DEPLOY_HASH}.wasm\":|" "$EXPORT_DIR/index.html"
+        info "  index.html mis à jour"
+    fi
 fi
 
-# 14. Créer le fichier _headers pour Cloudflare Pages (COOP/COEP requis par SharedArrayBuffer)
+# 14. Créer le fichier _headers pour Cloudflare Pages
 if [[ "$PLATFORM" == "web" ]]; then
     HEADERS_FILE="$EXPORT_DIR/_headers"
     cat > "$HEADERS_FILE" << 'HEADERS_EOF'
 /*
   Cross-Origin-Opener-Policy: same-origin
   Cross-Origin-Embedder-Policy: require-corp
+/index.html
+  Cache-Control: no-cache
+/*.js
+  Cache-Control: public, max-age=31536000, immutable
+/*.wasm
+  Cache-Control: public, max-age=31536000, immutable
+/*.pck
+  Cache-Control: public, max-age=31536000, immutable
+/*.png
+  Cache-Control: public, max-age=86400
 HEADERS_EOF
-    info "Fichier _headers créé pour Cloudflare Pages (COOP/COEP)"
+    info "Fichier _headers créé pour Cloudflare Pages (COOP/COEP + cache)"
 fi
 
 log ""

@@ -59,3 +59,32 @@ func test_clamp_min() -> void:
 
 func test_clamp_max() -> void:
 	assert_eq(UIScale.SCALE_MAX, 5.0, "SCALE_MAX = 5.0")
+
+
+# --- User multiplier ---
+
+func test_default_user_multiplier() -> void:
+	assert_eq(UIScale.get_user_multiplier(), 1.0, "multiplicateur par défaut = 1.0")
+
+func test_set_user_multiplier() -> void:
+	UIScale.set_user_multiplier(1.5)
+	assert_eq(UIScale.get_user_multiplier(), 1.5, "multiplicateur défini à 1.5")
+
+func test_set_user_multiplier_invalidates_cache() -> void:
+	UIScale.get_scale()  # force le calcul
+	UIScale.set_user_multiplier(1.25)
+	assert_true(UIScale._scale < 0.0, "set_user_multiplier remet le cache à -1")
+
+func test_reset_clears_user_multiplier() -> void:
+	UIScale.set_user_multiplier(1.5)
+	UIScale.reset()
+	assert_eq(UIScale.get_user_multiplier(), 1.0, "reset remet le multiplicateur à 1.0")
+
+func test_user_multiplier_affects_scale_function() -> void:
+	UIScale._scale = 1.0
+	assert_eq(UIScale.scale(100), 100, "scale(100) = 100 sans multiplicateur")
+	UIScale.set_user_multiplier(1.5)
+	# Après set_user_multiplier, le cache est invalidé, donc get_scale() recalcule
+	# On force manuellement pour tester l'effet
+	UIScale._scale = 1.5
+	assert_eq(UIScale.scale(100), 150, "scale(100) = 150 avec multiplicateur 1.5")
