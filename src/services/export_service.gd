@@ -502,10 +502,9 @@ func _split_pck_by_chapter(temp_project: String, export_dir: String, godot_bin: 
 
 
 func _optimize_audio_files(story_dir: String, log_path: String) -> void:
-	# Vérifier que ffmpeg est disponible
-	var test_output = []
-	var test_exit = OS.execute("ffmpeg", ["-version"], test_output)
-	if test_exit != 0:
+	# Trouver ffmpeg (Godot ne voit pas toujours le PATH complet)
+	var ffmpeg_bin = _find_ffmpeg()
+	if ffmpeg_bin == "":
 		_append_log(log_path, "→ ffmpeg non trouvé — optimisation audio ignorée")
 		return
 
@@ -520,7 +519,7 @@ func _optimize_audio_files(story_dir: String, log_path: String) -> void:
 	for audio_file in audio_files:
 		var tmp_file = audio_file + ".tmp.mp3"
 		var output = []
-		var exit_code = OS.execute("ffmpeg", ["-y", "-i", audio_file, "-b:a", "128k", "-ac", "2", tmp_file, "-loglevel", "error"], output, true)
+		var exit_code = OS.execute(ffmpeg_bin, ["-y", "-i", audio_file, "-b:a", "128k", "-ac", "2", tmp_file, "-loglevel", "error"], output, true)
 		if exit_code == 0 and FileAccess.file_exists(tmp_file):
 			DirAccess.remove_absolute(audio_file)
 			DirAccess.rename_absolute(tmp_file, audio_file)
@@ -551,6 +550,25 @@ func _find_audio_files(dir_path: String) -> Array:
 				result.append(full_path)
 		file_name = dir.get_next()
 	return result
+
+
+func _find_ffmpeg() -> String:
+	# 1. Essai direct (fonctionne si ffmpeg est dans le PATH de Godot)
+	var test_output = []
+	if OS.execute("ffmpeg", ["-version"], test_output) == 0:
+		return "ffmpeg"
+	# 2. Chemins courants par OS
+	var candidates = []
+	if OS.get_name() == "macOS":
+		candidates = ["/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg"]
+	elif OS.get_name() == "Linux":
+		candidates = ["/usr/bin/ffmpeg", "/usr/local/bin/ffmpeg"]
+	elif OS.get_name() == "Windows":
+		candidates = ["C:/ffmpeg/bin/ffmpeg.exe"]
+	for path in candidates:
+		if FileAccess.file_exists(path):
+			return path
+	return ""
 
 
 ## Réécriture directe des chemins dans les fichiers YAML (fallback si le script headless échoue).

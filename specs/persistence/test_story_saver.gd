@@ -273,6 +273,39 @@ func test_save_copies_menu_background_to_assets():
 	assert_true(FileAccess.file_exists(_test_dir + "/assets/backgrounds/menu_bg.png"))
 	assert_eq(story.menu_background, "assets/backgrounds/menu_bg.png")
 
+func test_save_copies_app_icon_to_assets():
+	var src_dir = _test_dir + "/src"
+	DirAccess.make_dir_recursive_absolute(src_dir)
+	var src_path = src_dir + "/icon.png"
+	_create_minimal_png(src_path)
+	var story = _create_test_story()
+	story.app_icon = src_path
+	StorySaver.save_story(story, _test_dir)
+	assert_true(FileAccess.file_exists(_test_dir + "/assets/icons/icon.png"))
+	assert_eq(story.app_icon, "assets/icons/icon.png")
+
+func test_save_copies_game_over_background_to_assets():
+	var src_dir = _test_dir + "/src"
+	DirAccess.make_dir_recursive_absolute(src_dir)
+	var src_path = src_dir + "/game_over.png"
+	_create_minimal_png(src_path)
+	var story = _create_test_story()
+	story.game_over_background = src_path
+	StorySaver.save_story(story, _test_dir)
+	assert_true(FileAccess.file_exists(_test_dir + "/assets/backgrounds/game_over.png"))
+	assert_eq(story.game_over_background, "assets/backgrounds/game_over.png")
+
+func test_save_copies_to_be_continued_background_to_assets():
+	var src_dir = _test_dir + "/src"
+	DirAccess.make_dir_recursive_absolute(src_dir)
+	var src_path = src_dir + "/tbc.png"
+	_create_minimal_png(src_path)
+	var story = _create_test_story()
+	story.to_be_continued_background = src_path
+	StorySaver.save_story(story, _test_dir)
+	assert_true(FileAccess.file_exists(_test_dir + "/assets/backgrounds/tbc.png"))
+	assert_eq(story.to_be_continued_background, "assets/backgrounds/tbc.png")
+
 func test_save_does_not_copy_if_already_in_assets():
 	var story = _create_test_story()
 	DirAccess.make_dir_recursive_absolute(_test_dir + "/assets/backgrounds")

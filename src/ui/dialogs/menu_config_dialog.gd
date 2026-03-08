@@ -438,6 +438,25 @@ func get_app_icon() -> String:
 	return _app_icon_edit.text
 
 
+# ── Utilitaires chemins ──────────────────────────────────────────────────────
+
+func _to_relative_path(abs_path: String) -> String:
+	if abs_path == "" or _story_base_path == "":
+		return abs_path
+	var prefix = _story_base_path + "/"
+	if abs_path.begins_with(prefix):
+		return abs_path.substr(prefix.length())
+	return abs_path
+
+func _resolve_path(rel_path: String) -> String:
+	if rel_path == "":
+		return ""
+	if rel_path.begins_with("/") or rel_path.begins_with("user://") or rel_path.begins_with("res://"):
+		return rel_path
+	if _story_base_path != "":
+		return _story_base_path + "/" + rel_path
+	return rel_path
+
 # ── Handlers Menu ────────────────────────────────────────────────────────────
 
 func _on_browse_pressed() -> void:
@@ -449,7 +468,7 @@ func _on_browse_pressed() -> void:
 	picker.popup_centered()
 
 func _on_bg_image_selected(path: String) -> void:
-	_menu_bg_edit.text = path
+	_menu_bg_edit.text = _to_relative_path(path)
 	_update_preview()
 
 func _on_clear_bg_pressed() -> void:
@@ -487,7 +506,7 @@ func _update_preview() -> void:
 		_bg_preview.texture = null
 		return
 	var img = Image.new()
-	if img.load(_menu_bg_edit.text) == OK:
+	if img.load(_resolve_path(_menu_bg_edit.text)) == OK:
 		_bg_preview.texture = ImageTexture.create_from_image(img)
 	else:
 		_bg_preview.texture = null
@@ -504,7 +523,7 @@ func _on_game_over_browse_pressed() -> void:
 	picker.popup_centered()
 
 func _on_game_over_bg_selected(path: String) -> void:
-	_game_over_bg_edit.text = path
+	_game_over_bg_edit.text = _to_relative_path(path)
 	_update_game_over_preview()
 
 func _on_game_over_clear_bg_pressed() -> void:
@@ -516,7 +535,7 @@ func _update_game_over_preview() -> void:
 		_game_over_bg_preview.texture = null
 		return
 	var img = Image.new()
-	if img.load(_game_over_bg_edit.text) == OK:
+	if img.load(_resolve_path(_game_over_bg_edit.text)) == OK:
 		_game_over_bg_preview.texture = ImageTexture.create_from_image(img)
 	else:
 		_game_over_bg_preview.texture = null
@@ -533,7 +552,7 @@ func _on_tbc_browse_pressed() -> void:
 	picker.popup_centered()
 
 func _on_tbc_bg_selected(path: String) -> void:
-	_to_be_continued_bg_edit.text = path
+	_to_be_continued_bg_edit.text = _to_relative_path(path)
 	_update_tbc_preview()
 
 func _on_tbc_clear_bg_pressed() -> void:
@@ -545,7 +564,7 @@ func _update_tbc_preview() -> void:
 		_to_be_continued_bg_preview.texture = null
 		return
 	var img = Image.new()
-	if img.load(_to_be_continued_bg_edit.text) == OK:
+	if img.load(_resolve_path(_to_be_continued_bg_edit.text)) == OK:
 		_to_be_continued_bg_preview.texture = ImageTexture.create_from_image(img)
 	else:
 		_to_be_continued_bg_preview.texture = null
@@ -557,12 +576,12 @@ func _on_icon_browse_pressed() -> void:
 	var picker = Window.new()
 	picker.set_script(ImagePickerDialogScript)
 	add_child(picker)
-	picker.setup(ImagePickerDialogScript.Mode.BACKGROUND, _story_base_path, _story)
+	picker.setup(ImagePickerDialogScript.Mode.ICON, _story_base_path, _story)
 	picker.image_selected.connect(_on_icon_selected)
 	picker.popup_centered()
 
 func _on_icon_selected(path: String) -> void:
-	_app_icon_edit.text = path
+	_app_icon_edit.text = _to_relative_path(path)
 	_update_icon_preview()
 
 func _on_icon_clear_pressed() -> void:
@@ -576,7 +595,7 @@ func _update_icon_preview() -> void:
 		_app_icon_warning.visible = false
 		return
 	var img = Image.new()
-	if img.load(_app_icon_edit.text) == OK:
+	if img.load(_resolve_path(_app_icon_edit.text)) == OK:
 		_app_icon_preview.texture = ImageTexture.create_from_image(img)
 		_app_icon_warning.visible = img.get_width() != img.get_height()
 	else:

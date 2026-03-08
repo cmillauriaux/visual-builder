@@ -21,7 +21,7 @@ const StorySaver = preload("res://src/persistence/story_saver.gd")
 
 signal image_renamed(old_path: String, new_path: String)
 
-enum Mode { BACKGROUND, FOREGROUND }
+enum Mode { BACKGROUND, FOREGROUND, ICON }
 
 var _mode: int = Mode.FOREGROUND
 var _story_base_path: String = ""
@@ -543,6 +543,8 @@ func _on_cancel() -> void:
 func _get_assets_dir() -> String:
 	if _mode == Mode.BACKGROUND:
 		return _story_base_path + "/assets/backgrounds"
+	if _mode == Mode.ICON:
+		return _story_base_path + "/assets/icons"
 	return _story_base_path + "/assets/foregrounds"
 
 func _list_gallery_images() -> Array:

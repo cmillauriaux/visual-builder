@@ -46,6 +46,8 @@ func _init():
 			for sequence in scene.sequences:
 				_collect_sequence_assets(sequence, assets)
 		# Dédupliquer et exclure les assets menu (normaliser pour comparer correctement)
+		# Les assets partagés entre chapitres sont volontairement dupliqués dans chaque
+		# chapter PCK pour rester sous la limite de taille Cloudflare (20 Mo/fichier).
 		var unique := {}
 		for path in assets:
 			var norm = _normalize_path(path)

@@ -16,6 +16,7 @@ static func save_story(story, base_path: String, lang: String = "fr") -> void:
 	DirAccess.make_dir_recursive_absolute(base_path)
 	DirAccess.make_dir_recursive_absolute(base_path + "/assets/backgrounds")
 	DirAccess.make_dir_recursive_absolute(base_path + "/assets/foregrounds")
+	DirAccess.make_dir_recursive_absolute(base_path + "/assets/icons")
 	DirAccess.make_dir_recursive_absolute(base_path + "/chapters")
 
 	# S'assurer que le loader utilise ce chemin pour les chargements ultérieurs
@@ -122,8 +123,14 @@ static func _read_file(path: String) -> String:
 # --- Relocalisation des assets ---
 
 static func _relocate_assets(story, base_path: String) -> void:
+	# App icon
+	story.app_icon = _relocate_image(story.app_icon, base_path, "icons")
 	# Menu background
 	story.menu_background = _relocate_image(story.menu_background, base_path, "backgrounds")
+	# Game over background
+	story.game_over_background = _relocate_image(story.game_over_background, base_path, "backgrounds")
+	# To be continued background
+	story.to_be_continued_background = _relocate_image(story.to_be_continued_background, base_path, "backgrounds")
 
 	# Images des variables
 	for var_def in story.variables:
