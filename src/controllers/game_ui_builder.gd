@@ -36,6 +36,7 @@ static func build(game: Control) -> void:
 	# Play buttons bar (Save, Load, Auto) — added last so it renders on top of everything
 	_build_play_buttons_bar(game)
 	_build_toast_overlay(game)
+	_build_loading_overlay(game)
 	_build_quickload_confirm(game)
 
 
@@ -172,6 +173,31 @@ static func _build_toast_overlay(game: Control) -> void:
 	game._toast_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 	game._toast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	game._toast_overlay.add_child(game._toast_label)
+
+
+static func _build_loading_overlay(game: Control) -> void:
+	game._loading_overlay = Control.new()
+	game._loading_overlay.visible = false
+	game._loading_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	game._loading_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	game._loading_overlay.z_index = 90
+	game.add_child(game._loading_overlay)
+
+	var bg := ColorRect.new()
+	bg.color = Color(0, 0, 0, 0.7)
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	game._loading_overlay.add_child(bg)
+
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	game._loading_overlay.add_child(center)
+
+	game._loading_overlay_label = Label.new()
+	game._loading_overlay_label.text = "Chargement..."
+	game._loading_overlay_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	game._loading_overlay_label.add_theme_font_size_override("font_size", UIScale.scale(28))
+	game._loading_overlay_label.add_theme_color_override("font_color", Color.WHITE)
+	center.add_child(game._loading_overlay_label)
 
 
 static func _build_quickload_confirm(game: Control) -> void:

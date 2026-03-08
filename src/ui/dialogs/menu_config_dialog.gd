@@ -2,7 +2,7 @@ extends ConfirmationDialog
 
 ## Dialogue de configuration du jeu (menu, analytics, liens, écrans de fin).
 
-signal menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_background: String, menu_music: String, playfab_title_id: String, playfab_enabled: bool, patreon_url: String, itchio_url: String, game_over_title: String, game_over_subtitle: String, game_over_background: String, to_be_continued_title: String, to_be_continued_subtitle: String, to_be_continued_background: String)
+signal menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_background: String, menu_music: String, playfab_title_id: String, playfab_enabled: bool, patreon_url: String, itchio_url: String, game_over_title: String, game_over_subtitle: String, game_over_background: String, to_be_continued_title: String, to_be_continued_subtitle: String, to_be_continued_background: String, app_icon: String)
 
 const ImagePickerDialogScript = preload("res://src/ui/dialogs/image_picker_dialog.gd")
 const AudioPickerDialogScript = preload("res://src/ui/dialogs/audio_picker_dialog.gd")
@@ -27,6 +27,9 @@ var _to_be_continued_bg_edit: LineEdit
 var _to_be_continued_bg_preview: TextureRect
 var _to_be_continued_title_edit: LineEdit
 var _to_be_continued_subtitle_edit: LineEdit
+var _app_icon_edit: LineEdit
+var _app_icon_preview: TextureRect
+var _app_icon_warning: Label
 var _story = null
 var _story_base_path: String = ""
 var _current_menu_music: String = ""
@@ -124,7 +127,67 @@ func _init():
 	music_hbox.add_child(_clear_music_button)
 
 	menu_vbox.add_child(music_hbox)
-	tabs.add_child(menu_vbox)
+
+	# Section Icône (dans l'onglet Menu)
+	var icon_sep = HSeparator.new()
+	menu_vbox.add_child(icon_sep)
+
+	var icon_lbl = Label.new()
+	icon_lbl.text = "Icône de l'application"
+	icon_lbl.add_theme_font_size_override("font_size", 16)
+	menu_vbox.add_child(icon_lbl)
+
+	var icon_info_lbl = Label.new()
+	icon_info_lbl.text = "Image carrée, recommandé : 1024×1024"
+	icon_info_lbl.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
+	menu_vbox.add_child(icon_info_lbl)
+
+	var icon_hbox = HBoxContainer.new()
+	icon_hbox.name = "IconHBox"
+
+	_app_icon_edit = LineEdit.new()
+	_app_icon_edit.name = "AppIconEdit"
+	_app_icon_edit.editable = false
+	_app_icon_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	icon_hbox.add_child(_app_icon_edit)
+
+	var icon_browse_btn = Button.new()
+	icon_browse_btn.name = "IconBrowseButton"
+	icon_browse_btn.text = "Parcourir..."
+	icon_browse_btn.pressed.connect(_on_icon_browse_pressed)
+	icon_hbox.add_child(icon_browse_btn)
+
+	var icon_clear_btn = Button.new()
+	icon_clear_btn.name = "IconClearButton"
+	icon_clear_btn.text = "✕"
+	icon_clear_btn.pressed.connect(_on_icon_clear_pressed)
+	icon_hbox.add_child(icon_clear_btn)
+
+	menu_vbox.add_child(icon_hbox)
+
+	_app_icon_preview = TextureRect.new()
+	_app_icon_preview.name = "IconPreview"
+	_app_icon_preview.custom_minimum_size = Vector2(100, 100)
+	_app_icon_preview.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	_app_icon_preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_app_icon_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	menu_vbox.add_child(_app_icon_preview)
+
+	_app_icon_warning = Label.new()
+	_app_icon_warning.name = "IconWarning"
+	_app_icon_warning.text = "L'image n'est pas carrée — elle sera déformée"
+	_app_icon_warning.add_theme_color_override("font_color", Color(1, 0.3, 0.3))
+	_app_icon_warning.visible = false
+	menu_vbox.add_child(_app_icon_warning)
+
+	# Envelopper l'onglet Menu dans un ScrollContainer
+	var menu_scroll = ScrollContainer.new()
+	menu_scroll.name = "Menu"
+	menu_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	menu_vbox.name = "MenuContent"
+	menu_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tabs.add_child(menu_scroll)
+	menu_scroll.add_child(menu_vbox)
 
 	# ── Onglet Analytics ─────────────────────────────────────────────────────
 	var analytics_vbox = VBoxContainer.new()
@@ -318,6 +381,7 @@ func setup(story, story_base_path: String = "") -> void:
 	_to_be_continued_bg_edit.text = story.to_be_continued_background if story.get("to_be_continued_background") != null else ""
 	_to_be_continued_title_edit.text = story.to_be_continued_title if story.get("to_be_continued_title") != null else ""
 	_to_be_continued_subtitle_edit.text = story.to_be_continued_subtitle if story.get("to_be_continued_subtitle") != null else ""
+	_app_icon_edit.text = story.app_icon if story.get("app_icon") != null else ""
 	_story = story
 	_story_base_path = story_base_path
 	_current_menu_music = story.menu_music if story.get("menu_music") != null else ""
@@ -325,6 +389,7 @@ func setup(story, story_base_path: String = "") -> void:
 	_update_preview()
 	_update_game_over_preview()
 	_update_tbc_preview()
+	_update_icon_preview()
 
 
 func get_menu_title() -> String:
@@ -368,6 +433,9 @@ func get_to_be_continued_subtitle() -> String:
 
 func get_to_be_continued_background() -> String:
 	return _to_be_continued_bg_edit.text
+
+func get_app_icon() -> String:
+	return _app_icon_edit.text
 
 
 # ── Handlers Menu ────────────────────────────────────────────────────────────
@@ -483,6 +551,39 @@ func _update_tbc_preview() -> void:
 		_to_be_continued_bg_preview.texture = null
 
 
+# ── Handlers Icône ───────────────────────────────────────────────────────────
+
+func _on_icon_browse_pressed() -> void:
+	var picker = Window.new()
+	picker.set_script(ImagePickerDialogScript)
+	add_child(picker)
+	picker.setup(ImagePickerDialogScript.Mode.BACKGROUND, _story_base_path, _story)
+	picker.image_selected.connect(_on_icon_selected)
+	picker.popup_centered()
+
+func _on_icon_selected(path: String) -> void:
+	_app_icon_edit.text = path
+	_update_icon_preview()
+
+func _on_icon_clear_pressed() -> void:
+	_app_icon_edit.text = ""
+	_app_icon_preview.texture = null
+	_app_icon_warning.visible = false
+
+func _update_icon_preview() -> void:
+	if _app_icon_edit.text == "":
+		_app_icon_preview.texture = null
+		_app_icon_warning.visible = false
+		return
+	var img = Image.new()
+	if img.load(_app_icon_edit.text) == OK:
+		_app_icon_preview.texture = ImageTexture.create_from_image(img)
+		_app_icon_warning.visible = img.get_width() != img.get_height()
+	else:
+		_app_icon_preview.texture = null
+		_app_icon_warning.visible = false
+
+
 # ── Confirmation ─────────────────────────────────────────────────────────────
 
 static func _validate_url(url: String) -> String:
@@ -499,5 +600,6 @@ func _on_confirmed() -> void:
 		_current_menu_music, _playfab_title_id_edit.text, _playfab_enabled_check.button_pressed,
 		_validate_url(_patreon_url_edit.text), _validate_url(_itchio_url_edit.text),
 		_game_over_title_edit.text, _game_over_subtitle_edit.text, _game_over_bg_edit.text,
-		_to_be_continued_title_edit.text, _to_be_continued_subtitle_edit.text, _to_be_continued_bg_edit.text
+		_to_be_continued_title_edit.text, _to_be_continued_subtitle_edit.text, _to_be_continued_bg_edit.text,
+		_app_icon_edit.text
 	)

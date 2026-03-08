@@ -84,6 +84,16 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 			DirAccess.copy_absolute(bg_abs_src, bg_abs_dst)
 			boot_splash_res_path = "res://boot_splash.png"
 
+	# 3d. Générer les icônes d'application à partir de app_icon
+	if story.get("app_icon") != null and story.app_icon != "":
+		var icon_src = story.app_icon
+		if not FileAccess.file_exists(icon_src):
+			icon_src = abs_story_dir + "/" + story.app_icon
+		if FileAccess.file_exists(icon_src):
+			_generate_app_icons(icon_src, abs_temp_project, log_path)
+		else:
+			_append_log(log_path, "⚠ Icône introuvable : " + story.app_icon)
+
 	# 4. Réécrire les chemins images (via le script existant, mais appelé localement si possible)
 	# Comme on est dans Godot, on peut utiliser StoryPathRewriter directement
 	# mais il faut le faire sur les fichiers copiés dans le dossier temporaire.
@@ -106,6 +116,19 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 	# Boot splash : utiliser le menu_background de la story
 	if boot_splash_res_path != "":
 		project_content = project_content.replace("[application]", "[application]\nboot_splash/image=\"" + boot_splash_res_path + "\"\nboot_splash/bg_color=Color(0, 0, 0, 1)\nboot_splash/fullsize=true\nboot_splash/show_image=true")
+
+	# Icône du projet : utiliser l'app_icon générée si disponible
+	if FileAccess.file_exists(abs_temp_project + "/app_icon.png"):
+		var icon_lines = project_content.split("\n")
+		var icon_new_lines = []
+		for line in icon_lines:
+			if line.strip_edges().begins_with("config/icon="):
+				icon_new_lines.append('config/icon="res://app_icon.png"')
+			else:
+				icon_new_lines.append(line)
+		project_content = "\n".join(icon_new_lines)
+		if project_content.find("config/icon=") == -1:
+			project_content = project_content.replace("[application]", '[application]\nconfig/icon="res://app_icon.png"')
 
 	# Désactiver les plugins
 	if project_content.find("[editor_plugins]") != -1:
@@ -170,7 +193,6 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 				preset_content = preset_content.replace("include_filter=\"", "include_filter=\"*.json,")
 		else:
 			preset_content = preset_content.replace("[preset.0]", "[preset.0]\ninclude_filter=\"*.yaml, *.json\"")
-
 		var f_preset = FileAccess.open(preset_dst, FileAccess.WRITE)
 		if f_preset:
 			f_preset.store_string(preset_content)
@@ -530,6 +552,35 @@ func _append_log(log_path: String, message: String) -> void:
 		f.store_line(message)
 		f.close()
 	print(message)
+
+
+func _generate_app_icons(icon_src: String, temp_project: String, log_path: String) -> void:
+	var img = Image.new()
+	if img.load(icon_src) != OK:
+		_append_log(log_path, "⚠ Impossible de charger l'icône : " + icon_src)
+		return
+
+	_append_log(log_path, "→ Génération des icônes depuis " + icon_src.get_file() + " (%dx%d)" % [img.get_width(), img.get_height()])
+
+	# Générer les icônes PWA
+	var icons_dir = temp_project + "/assets/icons"
+	if not DirAccess.dir_exists_absolute(icons_dir):
+		DirAccess.make_dir_recursive_absolute(icons_dir)
+
+	var sizes = [144, 180, 512]
+	for s in sizes:
+		var resized = img.duplicate()
+		resized.resize(s, s, Image.INTERPOLATE_LANCZOS)
+		var out_path = icons_dir + "/icon_%dx%d.png" % [s, s]
+		resized.save_png(out_path)
+		_append_log(log_path, "  → icon_%dx%d.png" % [s, s])
+
+	# Générer l'icône projet pour le favicon (config/icon)
+	var project_icon = img.duplicate()
+	project_icon.resize(512, 512, Image.INTERPOLATE_LANCZOS)
+	var project_icon_path = temp_project + "/app_icon.png"
+	project_icon.save_png(project_icon_path)
+	_append_log(log_path, "  → app_icon.png (favicon projet)")
 
 
 func _strip_ansi_codes(text: String) -> String:
