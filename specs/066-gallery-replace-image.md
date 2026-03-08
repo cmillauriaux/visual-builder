@@ -43,15 +43,15 @@ Si l'image à remplacer n'est référencée nulle part dans la story, elle est s
 
 ## Critères d'acceptation
 
-- [ ] Le menu contextuel de la galerie contient un item "Remplacer" (ID 8001) après "Renommer"
-- [ ] L'item "Remplacer" est désactivé si une seule image existe dans le dossier
-- [ ] Le dialog de sélection affiche les images du même type (backgrounds ou foregrounds)
-- [ ] L'image source est exclue du dialog de sélection
-- [ ] Un ConfirmationDialog demande validation avant le remplacement
-- [ ] Le message de confirmation affiche les noms des deux images
-- [ ] Après remplacement, toutes les références story (menu_background, sequence.background, foreground.image, dialogue foreground.image) pointent vers la nouvelle image
-- [ ] L'ancienne image est supprimée du disque après remplacement
-- [ ] Les catégories de l'ancienne image sont transférées à la nouvelle image
-- [ ] La story est marquée comme modifiée et sauvegardée
-- [ ] La galerie est rafraîchie après le remplacement
-- [ ] Si l'image n'est pas référencée, elle est simplement supprimée sans erreur
+- [x] Le menu contextuel de la galerie contient un item "Remplacer" (ID 8001) après "Renommer"
+- [x] L'item "Remplacer" est désactivé si une seule image existe dans le dossier
+- [x] Le dialog de sélection affiche les images du même type (backgrounds ou foregrounds)
+- [x] L'image source est exclue du dialog de sélection
+- [x] Un ConfirmationDialog demande validation avant le remplacement
+- [x] Le message de confirmation affiche les noms des deux images
+- [x] Après remplacement, toutes les références story (menu_background, sequence.background, foreground.image, dialogue foreground.image) pointent vers la nouvelle image
+- [x] L'ancienne image est supprimée du disque après remplacement
+- [x] Les catégories de l'ancienne image sont transférées à la nouvelle image
+- [x] La story est marquée comme modifiée et sauvegardée
+- [x] La galerie est rafraîchie après le remplacement
+- [x] Si l'image n'est pas référencée, elle est simplement supprimée sans erreur

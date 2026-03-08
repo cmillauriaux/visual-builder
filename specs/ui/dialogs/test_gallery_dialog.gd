@@ -299,8 +299,8 @@ func test_context_menu_has_category_items():
 	story.title = "Test"
 	_dialog.setup(story, _test_dir)
 	_dialog._show_context_menu(_test_dir + "/assets/backgrounds/test.png", Vector2(100, 100))
-	# Renommer + sep + 3 categories + separator + "Gérer les catégories..." = 7 items
-	assert_eq(_dialog._context_menu.item_count, 7)
+	# Renommer + Remplacer + sep + 3 categories + separator + "Gérer les catégories..." = 8 items
+	assert_eq(_dialog._context_menu.item_count, 8)
 
 
 func test_context_menu_has_manage_option():
@@ -404,3 +404,275 @@ func test_rename_dialog_line_edit_prefilled_without_extension():
 					line_edit = sub
 	assert_not_null(line_edit)
 	assert_eq(line_edit.text, "forest")
+
+
+# --- Replace context menu item ---
+
+func test_context_menu_replace_is_second_item():
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	_dialog._show_context_menu(_test_dir + "/assets/backgrounds/test.png", Vector2(100, 100))
+	assert_eq(_dialog._context_menu.get_item_text(1), "Remplacer")
+
+
+func test_context_menu_replace_id_is_8001():
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	_dialog._show_context_menu(_test_dir + "/assets/backgrounds/test.png", Vector2(100, 100))
+	assert_eq(_dialog._context_menu.get_item_id(1), 8001)
+
+
+func test_replace_disabled_when_single_background():
+	_create_test_image(_test_dir + "/assets/backgrounds/only.png")
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	_dialog._show_context_menu(_test_dir + "/assets/backgrounds/only.png", Vector2(100, 100))
+	var replace_idx = _dialog._context_menu.get_item_index(8001)
+	assert_true(_dialog._context_menu.is_item_disabled(replace_idx))
+
+
+func test_replace_enabled_when_multiple_backgrounds():
+	_create_test_image(_test_dir + "/assets/backgrounds/bg1.png")
+	_create_test_image(_test_dir + "/assets/backgrounds/bg2.png")
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	_dialog._show_context_menu(_test_dir + "/assets/backgrounds/bg1.png", Vector2(100, 100))
+	var replace_idx = _dialog._context_menu.get_item_index(8001)
+	assert_false(_dialog._context_menu.is_item_disabled(replace_idx))
+
+
+func test_replace_disabled_when_single_foreground():
+	_create_test_image(_test_dir + "/assets/foregrounds/only.png")
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	_dialog._show_context_menu(_test_dir + "/assets/foregrounds/only.png", Vector2(100, 100))
+	var replace_idx = _dialog._context_menu.get_item_index(8001)
+	assert_true(_dialog._context_menu.is_item_disabled(replace_idx))
+
+
+# --- Replace dialog ---
+
+func test_show_replace_dialog_adds_child():
+	_create_test_image(_test_dir + "/assets/backgrounds/bg1.png")
+	_create_test_image(_test_dir + "/assets/backgrounds/bg2.png")
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	_dialog._show_replace_dialog(_test_dir + "/assets/backgrounds/bg1.png")
+	var found := false
+	for child in _dialog.get_children():
+		if child is Window and child != _dialog._image_preview and child.title == "Remplacer l'image":
+			found = true
+			break
+	assert_true(found)
+
+
+func test_replace_dialog_has_correct_title():
+	_create_test_image(_test_dir + "/assets/backgrounds/bg1.png")
+	_create_test_image(_test_dir + "/assets/backgrounds/bg2.png")
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	_dialog._show_replace_dialog(_test_dir + "/assets/backgrounds/bg1.png")
+	var replace_dlg: Window = null
+	for child in _dialog.get_children():
+		if child is Window and child != _dialog._image_preview and child.title == "Remplacer l'image":
+			replace_dlg = child
+			break
+	assert_not_null(replace_dlg)
+
+
+func test_replace_dialog_excludes_source_image():
+	_create_test_image(_test_dir + "/assets/backgrounds/bg1.png")
+	_create_test_image(_test_dir + "/assets/backgrounds/bg2.png")
+	_create_test_image(_test_dir + "/assets/backgrounds/bg3.png")
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	_dialog._show_replace_dialog(_test_dir + "/assets/backgrounds/bg1.png")
+	var replace_dlg: Window = null
+	for child in _dialog.get_children():
+		if child is Window and child != _dialog._image_preview and child.title == "Remplacer l'image":
+			replace_dlg = child
+			break
+	assert_not_null(replace_dlg)
+	# Grid should show 2 images (bg2, bg3), not bg1
+	var grid: GridContainer = replace_dlg.get_meta("grid")
+	assert_eq(grid.get_child_count(), 2)
+
+
+func test_replace_dialog_shows_same_type_images():
+	_create_test_image(_test_dir + "/assets/backgrounds/bg1.png")
+	_create_test_image(_test_dir + "/assets/backgrounds/bg2.png")
+	_create_test_image(_test_dir + "/assets/foregrounds/fg1.png")
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	_dialog._show_replace_dialog(_test_dir + "/assets/backgrounds/bg1.png")
+	var replace_dlg: Window = null
+	for child in _dialog.get_children():
+		if child is Window and child != _dialog._image_preview and child.title == "Remplacer l'image":
+			replace_dlg = child
+			break
+	assert_not_null(replace_dlg)
+	# Only bg2 should be shown (same type, excluding source)
+	assert_eq(replace_dlg.get_meta("grid").get_child_count(), 1)
+
+
+# --- Replace execution ---
+
+func test_replace_updates_story_references():
+	_create_test_image(_test_dir + "/assets/backgrounds/old.png")
+	_create_test_image(_test_dir + "/assets/backgrounds/new.png")
+	var story = StoryScript.new()
+	story.title = "Test"
+	story.menu_background = _test_dir + "/assets/backgrounds/old.png"
+	_dialog.setup(story, _test_dir)
+	_dialog._execute_replace(
+		_test_dir + "/assets/backgrounds/old.png",
+		_test_dir + "/assets/backgrounds/new.png"
+	)
+	assert_eq(story.menu_background, "assets/backgrounds/new.png")
+
+
+func test_replace_updates_sequence_background():
+	_create_test_image(_test_dir + "/assets/backgrounds/old.png")
+	_create_test_image(_test_dir + "/assets/backgrounds/new.png")
+	var seq = SequenceScript.new()
+	seq.background = _test_dir + "/assets/backgrounds/old.png"
+	var scene = SceneDataScript.new()
+	scene.sequences = [seq]
+	var chapter = ChapterScript.new()
+	chapter.scenes = [scene]
+	var story = StoryScript.new()
+	story.title = "Test"
+	story.chapters = [chapter]
+	_dialog.setup(story, _test_dir)
+	_dialog._execute_replace(
+		_test_dir + "/assets/backgrounds/old.png",
+		_test_dir + "/assets/backgrounds/new.png"
+	)
+	assert_eq(seq.background, "assets/backgrounds/new.png")
+
+
+func test_replace_updates_foreground_image():
+	_create_test_image(_test_dir + "/assets/foregrounds/old.png")
+	_create_test_image(_test_dir + "/assets/foregrounds/new.png")
+	var fg = ForegroundScript.new()
+	fg.image = _test_dir + "/assets/foregrounds/old.png"
+	var seq = SequenceScript.new()
+	seq.foregrounds = [fg]
+	var scene = SceneDataScript.new()
+	scene.sequences = [seq]
+	var chapter = ChapterScript.new()
+	chapter.scenes = [scene]
+	var story = StoryScript.new()
+	story.title = "Test"
+	story.chapters = [chapter]
+	_dialog.setup(story, _test_dir)
+	_dialog._execute_replace(
+		_test_dir + "/assets/foregrounds/old.png",
+		_test_dir + "/assets/foregrounds/new.png"
+	)
+	assert_eq(fg.image, "assets/foregrounds/new.png")
+
+
+func test_replace_updates_dialogue_foreground_image():
+	_create_test_image(_test_dir + "/assets/foregrounds/old.png")
+	_create_test_image(_test_dir + "/assets/foregrounds/new.png")
+	var fg = ForegroundScript.new()
+	fg.image = _test_dir + "/assets/foregrounds/old.png"
+	var dlg = DialogueScript.new()
+	dlg.foregrounds = [fg]
+	var seq = SequenceScript.new()
+	seq.dialogues = [dlg]
+	var scene = SceneDataScript.new()
+	scene.sequences = [seq]
+	var chapter = ChapterScript.new()
+	chapter.scenes = [scene]
+	var story = StoryScript.new()
+	story.title = "Test"
+	story.chapters = [chapter]
+	_dialog.setup(story, _test_dir)
+	_dialog._execute_replace(
+		_test_dir + "/assets/foregrounds/old.png",
+		_test_dir + "/assets/foregrounds/new.png"
+	)
+	assert_eq(fg.image, "assets/foregrounds/new.png")
+
+
+func test_replace_deletes_old_image():
+	_create_test_image(_test_dir + "/assets/backgrounds/old.png")
+	_create_test_image(_test_dir + "/assets/backgrounds/new.png")
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	_dialog._execute_replace(
+		_test_dir + "/assets/backgrounds/old.png",
+		_test_dir + "/assets/backgrounds/new.png"
+	)
+	assert_false(FileAccess.file_exists(_test_dir + "/assets/backgrounds/old.png"))
+
+
+func test_replace_transfers_categories():
+	_create_test_image(_test_dir + "/assets/backgrounds/old.png")
+	_create_test_image(_test_dir + "/assets/backgrounds/new.png")
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	_dialog._category_service.assign_image_to_category("backgrounds/old.png", "Base")
+	_dialog._execute_replace(
+		_test_dir + "/assets/backgrounds/old.png",
+		_test_dir + "/assets/backgrounds/new.png"
+	)
+	assert_true(_dialog._category_service.is_image_in_category("backgrounds/new.png", "Base"))
+	assert_false(_dialog._category_service.is_image_in_category("backgrounds/old.png", "Base"))
+
+
+func test_replace_preserves_existing_categories_on_target():
+	_create_test_image(_test_dir + "/assets/backgrounds/old.png")
+	_create_test_image(_test_dir + "/assets/backgrounds/new.png")
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	_dialog._category_service.assign_image_to_category("backgrounds/old.png", "Base")
+	_dialog._category_service.assign_image_to_category("backgrounds/new.png", "NPC")
+	_dialog._execute_replace(
+		_test_dir + "/assets/backgrounds/old.png",
+		_test_dir + "/assets/backgrounds/new.png"
+	)
+	assert_true(_dialog._category_service.is_image_in_category("backgrounds/new.png", "Base"))
+	assert_true(_dialog._category_service.is_image_in_category("backgrounds/new.png", "NPC"))
+
+
+func test_replace_marks_story_as_modified():
+	_create_test_image(_test_dir + "/assets/backgrounds/old.png")
+	_create_test_image(_test_dir + "/assets/backgrounds/new.png")
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	story.updated_at = "2000-01-01T00:00:00Z"
+	_dialog._execute_replace(
+		_test_dir + "/assets/backgrounds/old.png",
+		_test_dir + "/assets/backgrounds/new.png"
+	)
+	assert_ne(story.updated_at, "2000-01-01T00:00:00Z")
+
+
+func test_replace_unused_image_deletes_without_error():
+	_create_test_image(_test_dir + "/assets/backgrounds/unused.png")
+	_create_test_image(_test_dir + "/assets/backgrounds/other.png")
+	var story = StoryScript.new()
+	story.title = "Test"
+	# unused.png is not referenced anywhere
+	_dialog.setup(story, _test_dir)
+	_dialog._execute_replace(
+		_test_dir + "/assets/backgrounds/unused.png",
+		_test_dir + "/assets/backgrounds/other.png"
+	)
+	assert_false(FileAccess.file_exists(_test_dir + "/assets/backgrounds/unused.png"))

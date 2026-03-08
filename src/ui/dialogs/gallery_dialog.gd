@@ -327,7 +327,13 @@ func _show_context_menu(image_path: String, pos: Vector2) -> void:
 	var image_key = ImageCategoryService.path_to_key(image_path)
 
 	var rename_id = 8000
+	var replace_id = 8001
 	_context_menu.add_item("Renommer", rename_id)
+	_context_menu.add_item("Remplacer", replace_id)
+	var dir_path = image_path.get_base_dir()
+	var sibling_count = _list_images(dir_path).size()
+	if sibling_count <= 1:
+		_context_menu.set_item_disabled(_context_menu.get_item_index(replace_id), true)
 	_context_menu.add_separator()
 
 	if _category_service:
@@ -349,6 +355,8 @@ func _show_context_menu(image_path: String, pos: Vector2) -> void:
 	_context_menu.id_pressed.connect(func(id: int):
 		if id == rename_id:
 			_show_rename_dialog(image_path)
+		elif id == replace_id:
+			_show_replace_dialog(image_path)
 		elif id == manage_id:
 			_open_category_manager()
 		elif _category_service:
@@ -431,6 +439,168 @@ func _show_rename_dialog(image_path: String) -> void:
 	dialog.popup_centered()
 	line_edit.select_all()
 	line_edit.grab_focus()
+
+
+func _show_replace_dialog(image_path: String) -> void:
+	var dir_path = image_path.get_base_dir()
+	var all_images = _list_images(dir_path)
+	var selected_cats = _get_selected_categories()
+	if not selected_cats.is_empty() and _category_service:
+		all_images = _category_service.filter_paths_by_categories(all_images, selected_cats)
+	var candidates: Array = []
+	for p in all_images:
+		if p != image_path:
+			candidates.append(p)
+	if candidates.is_empty():
+		return
+
+	var dialog = Window.new()
+	dialog.title = "Remplacer l'image"
+	dialog.size = Vector2i(700, 500)
+	dialog.exclusive = true
+	dialog.close_requested.connect(func(): dialog.queue_free())
+
+	var margin = MarginContainer.new()
+	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+	margin.add_theme_constant_override("margin_left", 12)
+	margin.add_theme_constant_override("margin_right", 12)
+	margin.add_theme_constant_override("margin_top", 12)
+	margin.add_theme_constant_override("margin_bottom", 12)
+	dialog.add_child(margin)
+
+	var vbox = VBoxContainer.new()
+	vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	margin.add_child(vbox)
+
+	var info_label = Label.new()
+	info_label.text = "Sélectionnez l'image de remplacement pour « %s » :" % image_path.get_file()
+	info_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	vbox.add_child(info_label)
+
+	var scroll = ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vbox.add_child(scroll)
+
+	var grid = GridContainer.new()
+	grid.columns = 4
+	scroll.add_child(grid)
+	dialog.set_meta("grid", grid)
+
+	var selected_path := ""
+	var selected_panel: Panel = null
+
+	var validate_btn = Button.new()
+	validate_btn.text = "Valider"
+	validate_btn.disabled = true
+
+	for path in candidates:
+		var container = Panel.new()
+		container.custom_minimum_size = Vector2(140, 160)
+		container.mouse_filter = Control.MOUSE_FILTER_STOP
+
+		var item_vbox = VBoxContainer.new()
+		item_vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+		item_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+		container.add_child(item_vbox)
+
+		var tex_rect = TextureRect.new()
+		tex_rect.custom_minimum_size = Vector2(128, 128)
+		tex_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var img = Image.new()
+		if img.load(path) == OK:
+			tex_rect.texture = ImageTexture.create_from_image(img)
+		item_vbox.add_child(tex_rect)
+
+		var name_label = Label.new()
+		name_label.text = path.get_file()
+		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		name_label.clip_text = true
+		name_label.custom_minimum_size.x = 128
+		name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		item_vbox.add_child(name_label)
+
+		container.gui_input.connect(func(event: InputEvent):
+			if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+				if selected_panel != null:
+					selected_panel.modulate = Color(1, 1, 1, 1)
+				selected_path = path
+				selected_panel = container
+				container.modulate = Color(0.6, 0.8, 1.0, 1.0)
+				validate_btn.disabled = false
+		)
+		grid.add_child(container)
+
+	var sep = HSeparator.new()
+	vbox.add_child(sep)
+
+	var btn_hbox = HBoxContainer.new()
+	btn_hbox.add_theme_constant_override("separation", 8)
+	btn_hbox.alignment = BoxContainer.ALIGNMENT_END
+	vbox.add_child(btn_hbox)
+
+	var cancel_btn = Button.new()
+	cancel_btn.text = "Annuler"
+	cancel_btn.pressed.connect(func(): dialog.queue_free())
+	btn_hbox.add_child(cancel_btn)
+
+	validate_btn.pressed.connect(func():
+		dialog.queue_free()
+		_show_replace_confirmation(image_path, selected_path)
+	)
+	btn_hbox.add_child(validate_btn)
+
+	add_child(dialog)
+	dialog.popup_centered()
+
+
+func _show_replace_confirmation(old_path: String, new_path: String) -> void:
+	var confirm = ConfirmationDialog.new()
+	confirm.dialog_text = "Remplacer « %s » par « %s » ?\nL'image « %s » sera supprimée." % [
+		old_path.get_file(), new_path.get_file(), old_path.get_file()
+	]
+	confirm.confirmed.connect(func():
+		_execute_replace(old_path, new_path)
+	)
+	add_child(confirm)
+	confirm.popup_centered()
+
+
+func _execute_replace(old_path: String, new_path: String) -> void:
+	# 1. Mise à jour des références dans la story
+	if _story != null:
+		ImageRenameService.update_story_references(_story, old_path, new_path)
+
+	# 2. Transfert des catégories (fusion)
+	if _category_service:
+		var old_key = ImageCategoryService.path_to_key(old_path)
+		var new_key = ImageCategoryService.path_to_key(new_path)
+		var old_cats: Array = _category_service.get_image_categories(old_key)
+		for cat in old_cats:
+			if not _category_service.is_image_in_category(new_key, cat):
+				_category_service.assign_image_to_category(new_key, cat)
+		for cat in old_cats:
+			_category_service.unassign_image_from_category(old_key, cat)
+
+	# 3. Suppression de l'ancienne image
+	if FileAccess.file_exists(old_path):
+		DirAccess.remove_absolute(old_path)
+
+	# 4. Marquage de la story comme modifiée
+	if _story != null:
+		_story.touch()
+
+	# 5. Sauvegarde
+	if _story != null and _story_base_path != "":
+		StorySaver.save_story(_story, _story_base_path)
+	if _category_service and _story_base_path != "":
+		_category_service.save_to(_story_base_path)
+
+	# 6. Rafraîchissement
+	var raw = GalleryCleanerService.collect_used_images(_story)
+	_used_images = GalleryCleanerService.normalize_paths(raw, _story_base_path)
+	_refresh()
 
 
 func _open_category_manager() -> void:
