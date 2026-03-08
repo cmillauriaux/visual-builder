@@ -9,14 +9,14 @@ var _current_index: int = -1
 var _cancelled: bool = false
 
 
-func build_queue(expressions: Array, prefix: String, eye_color: String = "") -> void:
+func build_queue(expressions: Array, prefix: String) -> void:
 	_items.clear()
 	_current_index = -1
 	_cancelled = false
 	for expr in expressions:
 		_items.append({
 			"expression": expr,
-			"prompt": _build_prompt(expr, eye_color),
+			"prompt": _build_prompt(expr),
 			"filename": _build_filename(prefix, expr),
 			"status": ItemStatus.PENDING,
 			"image": null,
@@ -98,9 +98,7 @@ func remove_item(index: int) -> void:
 		_current_index = _items.size() - 1
 
 
-static func _build_prompt(expression: String, eye_color: String = "") -> String:
-	if eye_color != "":
-		return "%s, %s eyes" % [expression, eye_color]
+static func _build_prompt(expression: String) -> String:
 	return expression
 
 

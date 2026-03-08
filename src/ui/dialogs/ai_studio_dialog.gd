@@ -60,7 +60,6 @@ var _expr_source_path_label: Label
 var _expr_choose_source_btn: Button
 var _expr_choose_gallery_btn: Button
 var _expr_prefix_input: LineEdit
-var _expr_eye_color_input: LineEdit
 var _expr_cfg_slider: HSlider
 var _expr_cfg_value_label: Label
 var _expr_steps_slider: HSlider
@@ -418,15 +417,6 @@ func _build_expressions_tab() -> void:
 	_expr_prefix_input.placeholder_text = "personnage_nom"
 	_expr_prefix_input.text_changed.connect(func(_t): _update_expr_generate_button())
 	vbox.add_child(_expr_prefix_input)
-
-	# Eye color
-	var eye_color_label = Label.new()
-	eye_color_label.text = "Couleur des yeux :"
-	vbox.add_child(eye_color_label)
-
-	_expr_eye_color_input = LineEdit.new()
-	_expr_eye_color_input.placeholder_text = "blue, green, brown..."
-	vbox.add_child(_expr_eye_color_input)
 
 	# CFG slider
 	var cfg_hbox = HBoxContainer.new()
@@ -895,10 +885,9 @@ func _on_expr_generate_pressed() -> void:
 
 	var expressions = _get_selected_expressions()
 	var prefix = _expr_prefix_input.text.strip_edges()
-	var eye_color = _expr_eye_color_input.text.strip_edges()
 
 	_expr_queue = ExpressionQueueService.new()
-	_expr_queue.build_queue(expressions, prefix, eye_color)
+	_expr_queue.build_queue(expressions, prefix)
 
 	_expr_generating = true
 	_expr_generate_btn.disabled = true
@@ -1019,7 +1008,6 @@ func _expr_set_inputs_enabled(enabled: bool) -> void:
 	else:
 		_expr_choose_gallery_btn.disabled = not enabled
 	_expr_prefix_input.editable = enabled
-	_expr_eye_color_input.editable = enabled
 	_expr_custom_input.editable = enabled
 	_expr_add_custom_btn.disabled = not enabled
 	for cb in _expr_expression_checkboxes:
@@ -1124,7 +1112,11 @@ func _update_grid_cell_status(index: int) -> void:
 			status_lbl.text = "Terminé"
 			status_lbl.add_theme_color_override("font_color", Color(0.4, 0.9, 0.4))
 		ExpressionQueueService.ItemStatus.FAILED:
-			status_lbl.text = "Échoué"
+			var error_msg = item.get("error", "")
+			if error_msg != "":
+				status_lbl.text = error_msg
+			else:
+				status_lbl.text = "Échoué"
 			status_lbl.add_theme_color_override("font_color", Color(1.0, 0.4, 0.4))
 
 

@@ -57,29 +57,19 @@ func test_build_queue_resets_cancelled():
 
 # --- Prompt building ---
 
-func test_build_prompt_without_eye_color():
+func test_build_prompt_format():
 	var prompt = ExpressionQueueService._build_prompt("smile")
 	assert_eq(prompt, "smile")
 
 
-func test_build_prompt_with_eye_color():
-	var prompt = ExpressionQueueService._build_prompt("smile", "blue")
-	assert_eq(prompt, "smile, blue eyes")
-
-
-func test_build_prompt_with_complex_expression_and_eye_color():
-	var prompt = ExpressionQueueService._build_prompt("laughing out loud", "green")
-	assert_eq(prompt, "laughing out loud, green eyes")
+func test_build_prompt_with_complex_expression():
+	var prompt = ExpressionQueueService._build_prompt("laughing out loud")
+	assert_eq(prompt, "laughing out loud")
 
 
 func test_build_queue_items_have_correct_prompt():
 	_service.build_queue(["smile"], "hero")
 	assert_eq(_service.get_items()[0]["prompt"], "smile")
-
-
-func test_build_queue_items_have_correct_prompt_with_eye_color():
-	_service.build_queue(["smile"], "hero", "blue")
-	assert_eq(_service.get_items()[0]["prompt"], "smile, blue eyes")
 
 
 # --- Filename building ---

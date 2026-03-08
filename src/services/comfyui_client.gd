@@ -412,6 +412,22 @@ func _build_expression_workflow(filename: String, prompt_text: String, seed: int
 	wf["75:73"]["inputs"]["noise_seed"] = seed
 	wf["75:63"]["inputs"]["cfg"] = cfg
 	wf["75:62"]["inputs"]["steps"] = steps
+	# img2img : partir de l'image source encodée (pas d'un canvas vierge)
+	# pour préserver les caractéristiques visuelles (couleur des yeux, etc.)
+	wf["75:64"]["inputs"]["latent_image"] = ["75:79:78", 0]
+	# SplitSigmas : ne débruiter que la 2e moitié du schedule (denoise ~50%)
+	# Assez pour changer l'expression, pas assez pour changer les yeux
+	var split_step = max(1, int(steps / 2))
+	wf["split_sigmas"] = {
+		"class_type": "SplitSigmas",
+		"inputs": {
+			"sigmas": ["75:62", 0],
+			"step": split_step
+		}
+	}
+	wf["75:64"]["inputs"]["sigmas"] = ["split_sigmas", 1]
+	# EmptyFlux2LatentImage n'est plus utilisé
+	wf.erase("75:66")
 	if not remove_background:
 		wf["9"]["inputs"]["images"] = ["103", 0]
 		wf.erase("106")
@@ -454,20 +470,30 @@ func parse_history_response(json_str: String, prompt_id: String) -> Dictionary:
 	var json = JSON.new()
 	var err = json.parse(json_str)
 	if err != OK:
-		return {"status": "error"}
+		return {"status": "error", "error": "Réponse JSON invalide"}
 	var data = json.data
 	if not data is Dictionary or not data.has(prompt_id):
 		return {"status": "pending"}
 	var entry = data[prompt_id]
 	if not entry is Dictionary:
-		return {"status": "error"}
+		return {"status": "error", "error": "Entrée invalide dans l'historique"}
 	# Check if still running via status field (when present)
 	if entry.has("status"):
 		var status_info = entry["status"]
-		if status_info is Dictionary and not status_info.get("completed", false):
-			return {"status": "pending"}
+		if status_info is Dictionary:
+			if not status_info.get("completed", false):
+				# Check for node errors in status_messages
+				if status_info.has("messages"):
+					for msg in status_info["messages"]:
+						if msg is Array and msg.size() >= 2 and msg[0] == "execution_error":
+							var error_detail = msg[1]
+							if error_detail is Dictionary:
+								var node_type = error_detail.get("node_type", "unknown")
+								var exception_message = error_detail.get("exception_message", "")
+								return {"status": "error", "error": "%s: %s" % [node_type, exception_message]}
+				return {"status": "pending"}
 	if not entry.has("outputs"):
-		return {"status": "error"}
+		return {"status": "error", "error": "Pas de sorties dans l'historique"}
 	# Find the output node with images
 	var outputs = entry["outputs"]
 	for node_id in outputs:
@@ -476,7 +502,7 @@ func parse_history_response(json_str: String, prompt_id: String) -> Dictionary:
 			var images = node_output["images"]
 			if images is Array and images.size() > 0:
 				return {"status": "completed", "filename": images[0]["filename"]}
-	return {"status": "error"}
+	return {"status": "error", "error": "Aucune image dans les sorties"}
 
 # --- Full generation flow ---
 
@@ -560,7 +586,7 @@ func _do_prompt(filename: String, prompt_text: String) -> void:
 		if result != HTTPRequest.RESULT_SUCCESS or code != 200:
 			_generating = false
 			var response_str = body.get_string_from_utf8()
-			generation_failed.emit("Erreur prompt (code %d) : %s" % [code, response_str.left(200)])
+			generation_failed.emit("Erreur prompt (code %d) : %s" % [code, response_str.left(500)])
 			return
 		var response_str = body.get_string_from_utf8()
 		_prompt_id = parse_prompt_response(response_str)
@@ -612,7 +638,8 @@ func _poll_history() -> void:
 		elif parsed["status"] == "error":
 			_stop_polling()
 			_generating = false
-			generation_failed.emit("Erreur dans le workflow ComfyUI")
+			var error_msg = parsed.get("error", "Erreur inconnue")
+			generation_failed.emit("Erreur workflow : %s" % error_msg)
 	)
 
 	http.request(url, PackedStringArray(headers))

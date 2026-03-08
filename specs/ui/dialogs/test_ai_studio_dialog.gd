@@ -305,11 +305,6 @@ func test_expr_has_prefix_input():
 	assert_is(_dialog._expr_prefix_input, LineEdit)
 
 
-func test_expr_has_eye_color_input():
-	assert_not_null(_dialog._expr_eye_color_input)
-	assert_is(_dialog._expr_eye_color_input, LineEdit)
-
-
 func test_expr_has_cfg_slider():
 	assert_not_null(_dialog._expr_cfg_slider)
 	assert_is(_dialog._expr_cfg_slider, HSlider)

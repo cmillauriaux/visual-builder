@@ -260,6 +260,31 @@ func test_expression_workflow_no_remove_bg_keeps_face_detection():
 	assert_has(wf, "100", "BboxDetector should remain")
 	assert_has(wf, "103", "Composite should remain")
 
+func test_expression_workflow_uses_img2img():
+	var wf = _client.build_workflow("img.png", "smile", 42, true, 1.0, 4, ComfyUIClient.WorkflowType.EXPRESSION)
+	# Latent image should be VAEEncoded source, not empty
+	assert_eq(wf["75:64"]["inputs"]["latent_image"], ["75:79:78", 0])
+	# EmptyFlux2LatentImage should be removed
+	assert_false(wf.has("75:66"), "Empty latent should be removed for img2img")
+
+func test_expression_workflow_has_split_sigmas():
+	var wf = _client.build_workflow("img.png", "smile", 42, true, 1.0, 4, ComfyUIClient.WorkflowType.EXPRESSION)
+	assert_has(wf, "split_sigmas", "SplitSigmas node must exist")
+	assert_eq(wf["split_sigmas"]["class_type"], "SplitSigmas")
+	assert_eq(wf["split_sigmas"]["inputs"]["sigmas"], ["75:62", 0])
+	assert_eq(wf["split_sigmas"]["inputs"]["step"], 2)
+	# Sampler uses split sigmas (second half)
+	assert_eq(wf["75:64"]["inputs"]["sigmas"], ["split_sigmas", 1])
+
+func test_expression_workflow_split_step_scales_with_steps():
+	var wf = _client.build_workflow("img.png", "smile", 42, true, 1.0, 10, ComfyUIClient.WorkflowType.EXPRESSION)
+	assert_eq(wf["split_sigmas"]["inputs"]["step"], 5)
+
+func test_creation_workflow_uses_empty_latent():
+	var wf = _client.build_workflow("img.png", "a cat", 42, true, 1.0, 4, ComfyUIClient.WorkflowType.CREATION)
+	assert_eq(wf["75:64"]["inputs"]["latent_image"], ["75:66", 0])
+	assert_false(wf.has("split_sigmas"), "Creation workflow should not have SplitSigmas")
+
 func test_default_workflow_type_is_creation():
 	var wf = _client.build_workflow("test.png", "a cat", 42)
 	assert_has(wf, "76", "Default should use creation workflow")
