@@ -24,7 +24,7 @@ var music_enabled: bool = true
 var music_volume: int = 80
 var fx_enabled: bool = true
 var fx_volume: int = 80
-var language: String = "fr"
+var language: String = ""  # "" = auto-détection au premier lancement
 var auto_play_enabled: bool = false
 var auto_play_delay: float = 2.0
 var typewriter_speed: float = 0.03
@@ -85,7 +85,7 @@ func load_settings(path: String = SETTINGS_PATH) -> void:
 	music_volume = cfg.get_value("audio", "music_volume", 80)
 	fx_enabled = cfg.get_value("audio", "fx_enabled", true)
 	fx_volume = cfg.get_value("audio", "fx_volume", 80)
-	language = cfg.get_value("general", "language", "fr")
+	language = cfg.get_value("general", "language", "")
 	auto_play_enabled = cfg.get_value("gameplay", "auto_play_enabled", false)
 	auto_play_delay = cfg.get_value("gameplay", "auto_play_delay", 2.0)
 	typewriter_speed = cfg.get_value("gameplay", "typewriter_speed", 0.03)
@@ -121,6 +121,10 @@ func get_ui_scale_factor() -> float:
 	if mode >= 0 and mode < UI_SCALE_FACTORS.size():
 		return UI_SCALE_FACTORS[mode]
 	return 1.0
+
+
+func is_language_auto() -> bool:
+	return language == ""
 
 
 func apply_settings() -> void:

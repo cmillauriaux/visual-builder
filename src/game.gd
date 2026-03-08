@@ -20,6 +20,7 @@ const PlayFabAnalyticsServiceScript = preload("res://src/services/playfab_analyt
 const PckChapterLoaderScript = preload("res://src/services/pck_chapter_loader.gd")
 const UIScale = preload("res://src/ui/themes/ui_scale.gd")
 const PwaInstallPromptScript = preload("res://src/ui/menu/pwa_install_prompt.gd")
+const LocaleDetector = preload("res://src/services/locale_detector.gd")
 
 ## Chemin vers la story à charger automatiquement.
 ## Si vide, affiche le sélecteur. Peut pointer vers res:// ou user://.
@@ -288,6 +289,10 @@ func _load_story_and_show_menu(path: String) -> void:
 	_pck_loader.setup(path, get_tree())
 	_story_play_ctrl.set_pck_loader(_pck_loader)
 
+	# Auto-détecter la langue si aucune préférence n'a été sauvegardée
+	if _settings.is_language_auto():
+		_auto_detect_language()
+
 	_reload_i18n()
 	_load_max_progression()
 	_configure_analytics(story)
@@ -301,13 +306,23 @@ func _reload_i18n() -> void:
 		# et éviter l'écrasement destructif lors des changements de langue successifs.
 		_current_story = StorySaver.load_story(_current_story_path)
 		_i18n_dict = StoryI18nService.load_i18n(_current_story_path, _settings.language)
-		
-		# Appliquer les traductions si ce n'est pas la langue par défaut (fr)
-		if _settings.language != "fr" and not _i18n_dict.is_empty():
+
+		# Appliquer les traductions si ce n'est pas la langue source de la story
+		var lang_config = StoryI18nService.load_languages_config(_current_story_path)
+		var source_lang: String = lang_config.get("default", "fr")
+		if _settings.language != source_lang and not _i18n_dict.is_empty():
 			StoryI18nService.apply_to_story(_current_story, _i18n_dict)
 	else:
 		_i18n_dict = {}
 	_apply_ui_lang()
+
+
+func _auto_detect_language() -> void:
+	var config = StoryI18nService.load_languages_config(_current_story_path)
+	var available: Array = config.get("languages", ["fr"])
+	var default_lang: String = config.get("default", "fr")
+	var detected = LocaleDetector.detect_locale()
+	_settings.language = LocaleDetector.resolve_language(detected, available, default_lang)
 
 
 func _apply_ui_lang() -> void:

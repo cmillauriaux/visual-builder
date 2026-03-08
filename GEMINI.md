@@ -40,6 +40,7 @@ This project provides a professional-grade tool for creating visual novels witho
 Tests use the GUT framework.
 - **Run All Tests:** `godot --headless --path . -s addons/gut/gut_cmdln.gd`
 - **Run Specific Test:** `godot --headless --path . -s addons/gut/gut_cmdln.gd -gtest=res://specs/path_to_test.gd`
+- **Run E2E Tests Only:** `godot --headless --path . -s addons/gut/gut_cmdln.gd -gdir=res://specs/e2e/`
 
 ## Development Conventions
 - **Specifications First:** Every feature must have a corresponding Markdown specification in `specs/` before implementation.

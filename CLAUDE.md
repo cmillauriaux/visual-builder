@@ -53,6 +53,9 @@ timeout 120 $GODOT --headless --path . -s addons/gut/gut_cmdln.gd
 ```
 # Lancer un fichier de test spécifique
 timeout 30 $GODOT --headless --path . -s addons/gut/gut_cmdln.gd -gtest=res://specs/test_example.gd
+
+# Lancer uniquement les tests e2e
+timeout 60 $GODOT --headless --path . -s addons/gut/gut_cmdln.gd -gdir=res://specs/e2e/
 ```
 
 ## Project Structure

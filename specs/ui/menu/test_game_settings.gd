@@ -39,7 +39,7 @@ func test_default_fx_volume():
 	assert_eq(_settings.fx_volume, 80)
 
 func test_default_language():
-	assert_eq(_settings.language, "fr")
+	assert_eq(_settings.language, "")
 
 func test_default_auto_play_enabled():
 	assert_eq(_settings.auto_play_enabled, false)
@@ -173,7 +173,7 @@ func test_load_nonexistent_file_uses_defaults():
 	assert_eq(_settings.music_volume, 80)
 	assert_eq(_settings.fx_enabled, true)
 	assert_eq(_settings.fx_volume, 80)
-	assert_eq(_settings.language, "fr")
+	assert_eq(_settings.language, "")
 
 func test_save_and_load_all_settings():
 	_settings.resolution = Vector2i(1600, 900)
@@ -332,3 +332,20 @@ func test_save_and_load_toolbar_visible_true():
 	var loaded = GameSettings.new()
 	loaded.load_settings(_test_cfg_path)
 	assert_eq(loaded.toolbar_visible, true)
+
+
+# --- is_language_auto ---
+
+func test_is_language_auto_true_by_default():
+	assert_true(_settings.is_language_auto())
+
+func test_is_language_auto_false_after_setting():
+	_settings.language = "fr"
+	assert_false(_settings.is_language_auto())
+
+func test_is_language_auto_false_after_load_with_saved_language():
+	_settings.language = "en"
+	_settings.save_settings(_test_cfg_path)
+	var loaded = GameSettings.new()
+	loaded.load_settings(_test_cfg_path)
+	assert_false(loaded.is_language_auto())
