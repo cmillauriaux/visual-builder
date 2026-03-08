@@ -45,11 +45,12 @@ func _init():
 		for scene in chapter.scenes:
 			for sequence in scene.sequences:
 				_collect_sequence_assets(sequence, assets)
-		# Dédupliquer et exclure les assets menu
+		# Dédupliquer et exclure les assets menu (normaliser pour comparer correctement)
 		var unique := {}
 		for path in assets:
-			if path != "" and path not in menu_assets:
-				unique[path] = true
+			var norm = _normalize_path(path)
+			if norm != "" and norm not in menu_assets:
+				unique[norm] = true
 		chapter_assets[chapter.uuid] = unique.keys()
 
 	# 2. Résoudre tous les fichiers associés (raw + .import + .ctex/.mp3str importés)
@@ -143,7 +144,7 @@ func _init():
 					DirAccess.remove_absolute(abs_path)
 					removed_count += 1
 			# Supprimer aussi le fichier raw source (non inclus dans le PCK mais à retirer du core)
-			var raw_path = abs_story + "/" + group["asset_path"]
+			var raw_path = abs_story + "/" + _normalize_path(group["asset_path"])
 			if FileAccess.file_exists(raw_path):
 				DirAccess.remove_absolute(raw_path)
 				removed_count += 1
@@ -159,8 +160,10 @@ func _init():
 func _resolve_asset_files(asset_path: String, abs_story: String, abs_project: String) -> Array:
 	var files := []  # Array of [res_path, abs_path]
 
-	var abs_raw = abs_story + "/" + asset_path
-	var res_raw = "res://story/" + asset_path
+	# Normaliser le chemin (supprimer res://story/ si présent)
+	var norm_path = _normalize_path(asset_path)
+	var abs_raw = abs_story + "/" + norm_path
+	var res_raw = "res://story/" + norm_path
 
 	# 1. Fichier .import (ex: assets/backgrounds/image.png.import)
 	var abs_import = abs_raw + ".import"
@@ -227,16 +230,25 @@ func _split_groups_into_chunks(groups: Array) -> Array:
 func _collect_menu_assets(story) -> Dictionary:
 	var assets := {}
 	if story.menu_background != "":
-		assets[story.menu_background] = true
+		assets[_normalize_path(story.menu_background)] = true
 	if story.menu_music != "":
-		assets[story.menu_music] = true
+		assets[_normalize_path(story.menu_music)] = true
 	if story.get("game_over_background") and story.game_over_background != "":
-		assets[story.game_over_background] = true
+		assets[_normalize_path(story.game_over_background)] = true
 	if story.get("to_be_continued_background") and story.to_be_continued_background != "":
-		assets[story.to_be_continued_background] = true
+		assets[_normalize_path(story.to_be_continued_background)] = true
 	if story.get("app_icon") and story.app_icon != "":
-		assets[story.app_icon] = true
+		assets[_normalize_path(story.app_icon)] = true
 	return assets
+
+
+## Normalise un chemin d'asset en supprimant le préfixe res://story/ pour obtenir un chemin relatif.
+## Cela garantit que les comparaisons entre chemins menu et chapitres fonctionnent
+## même si certains chemins ont été réécrits en res:// et d'autres sont restés relatifs.
+static func _normalize_path(path: String) -> String:
+	if path.begins_with("res://story/"):
+		return path.substr("res://story/".length())
+	return path
 
 
 func _collect_sequence_assets(sequence, assets: Array) -> void:

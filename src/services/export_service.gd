@@ -94,13 +94,21 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 		else:
 			_append_log(log_path, "⚠ Icône introuvable : " + story.app_icon)
 
-	# 4. Réécrire les chemins images (via le script existant, mais appelé localement si possible)
-	# Comme on est dans Godot, on peut utiliser StoryPathRewriter directement
-	# mais il faut le faire sur les fichiers copiés dans le dossier temporaire.
-	# Le StoryPathRewriter attend des chemins res://, mais il travaille sur le système de fichiers.
-	# En fait, il est plus simple de le lancer en headless sur le projet temporaire pour éviter les conflits res://.
+	# 4. Réécrire les chemins assets (absolu → res://story/assets/...)
+	# Le script headless a besoin que le projet soit importé pour résoudre les preload().
+	_append_log(log_path, "→ Import minimal du projet temporaire...")
+	OS.execute(godot_bin, ["--path", abs_temp_project, "--headless", "--import"], [], true)
+
+	_append_log(log_path, "→ Réécriture des chemins assets...")
 	var rewrite_args = ["--path", abs_temp_project, "--headless", "--script", "res://src/export/rewrite_runner.gd", "--", "--story-folder", "res://story", "--new-base", "res://story"]
-	OS.execute(godot_bin, rewrite_args)
+	var rewrite_output = []
+	var rewrite_exit = OS.execute(godot_bin, rewrite_args, rewrite_output, true)
+	for line in rewrite_output:
+		_append_log(log_path, "  " + line.strip_edges())
+
+	if rewrite_exit != 0:
+		_append_log(log_path, "⚠ Script de réécriture échoué (exit=%d), fallback direct..." % rewrite_exit)
+		_rewrite_paths_direct(abs_temp_story, "res://story", log_path)
 
 	# 5. Configurer project.godot et override.cfg
 	var project_godot_path = abs_temp_project + "/project.godot"
@@ -541,6 +549,109 @@ func _find_audio_files(dir_path: String) -> Array:
 			var ext = file_name.get_extension().to_lower()
 			if ext == "mp3" or ext == "ogg" or ext == "wav":
 				result.append(full_path)
+		file_name = dir.get_next()
+	return result
+
+
+## Réécriture directe des chemins dans les fichiers YAML (fallback si le script headless échoue).
+## Scanne tous les .yaml de la story et remplace les chemins absolus par des chemins res://.
+func _rewrite_paths_direct(story_dir: String, new_base: String, log_path: String) -> void:
+	var yaml_files = _find_yaml_files_recursive(story_dir)
+	var total_rewrites = 0
+
+	# Mapping clé YAML → sous-dossier assets
+	var key_map = {
+		"menu_background": "backgrounds",
+		"menu_music": "music",
+		"app_icon": "icons",
+		"background": "backgrounds",
+		"music": "music",
+		"audio_fx": "fx",
+		"image": "foregrounds",
+	}
+
+	for yaml_path in yaml_files:
+		var content = FileAccess.get_file_as_string(yaml_path)
+		var lines = content.split("\n")
+		var new_lines = []
+		var modified = false
+
+		for line in lines:
+			var rewritten = _rewrite_yaml_path_line(line, key_map, new_base)
+			if rewritten != line:
+				modified = true
+				total_rewrites += 1
+			new_lines.append(rewritten)
+
+		if modified:
+			var f = FileAccess.open(yaml_path, FileAccess.WRITE)
+			if f:
+				f.store_string("\n".join(new_lines))
+				f.close()
+
+	_append_log(log_path, "  Fallback : %d chemins réécrits dans %d fichiers" % [total_rewrites, yaml_files.size()])
+
+
+## Réécrit un chemin absolu dans une ligne YAML si la clé correspond à un champ d'asset.
+func _rewrite_yaml_path_line(line: String, key_map: Dictionary, new_base: String) -> String:
+	var stripped = line.strip_edges()
+	for key in key_map:
+		# Chercher le pattern: key: "value" ou key: value
+		var prefix = key + ": "
+		if not stripped.begins_with(prefix) and not stripped.begins_with("  " + prefix):
+			# Aussi chercher dans les inline dicts: { ..., key: "value", ... }
+			if stripped.find(key + ": \"") == -1:
+				continue
+
+		# Extraire la valeur entre guillemets pour ce champ
+		var key_pos = stripped.find(key + ": ")
+		if key_pos == -1:
+			continue
+		var value_start = key_pos + key.length() + 2
+		var value = ""
+		if value_start < stripped.length() and stripped[value_start] == '"':
+			var end_quote = stripped.find('"', value_start + 1)
+			if end_quote != -1:
+				value = stripped.substr(value_start + 1, end_quote - value_start - 1)
+		else:
+			# Valeur sans guillemets
+			value = stripped.substr(value_start).strip_edges()
+
+		if value == "":
+			continue
+
+		# Vérifier si c'est un chemin absolu qui doit être réécrit
+		var is_absolute = value.begins_with("/") or (value.length() >= 3 and value.unicode_at(1) == 58 and (value[2] == "/" or value[2] == "\\"))
+		var is_user = value.begins_with("user://")
+		if not is_absolute and not is_user:
+			continue
+
+		# Réécrire : extraire le nom de fichier et construire le nouveau chemin
+		var filename = value.get_file()
+		var subfolder = key_map[key]
+		var new_path = new_base + "/assets/" + subfolder + "/" + filename
+		line = line.replace(value, new_path)
+		break
+
+	return line
+
+
+func _find_yaml_files_recursive(dir_path: String) -> Array:
+	var result = []
+	var dir = DirAccess.open(dir_path)
+	if dir == null:
+		return result
+	dir.list_dir_begin()
+	var file_name = dir.get_next()
+	while file_name != "":
+		if file_name == "." or file_name == "..":
+			file_name = dir.get_next()
+			continue
+		var full_path = dir_path + "/" + file_name
+		if dir.current_is_dir():
+			result.append_array(_find_yaml_files_recursive(full_path))
+		elif file_name.get_extension().to_lower() == "yaml":
+			result.append(full_path)
 		file_name = dir.get_next()
 	return result
 
