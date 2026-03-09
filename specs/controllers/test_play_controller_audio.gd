@@ -2,10 +2,10 @@ extends GutTest
 
 ## Tests pour PlayController — integration audio en mode Play editeur.
 
-const MainScript = load("res://src/main.gd")
-const PlayControllerScript = load("res://src/controllers/play_controller.gd")
-const SequenceScript = load("res://src/models/sequence.gd")
-const DialogueScript = load("res://src/models/dialogue.gd")
+const MainScript = preload("res://src/main.gd")
+const PlayControllerScript = preload("res://src/controllers/play_controller.gd")
+const SequenceScript = preload("res://src/models/sequence.gd")
+const DialogueScript = preload("res://src/models/dialogue.gd")
 
 var _main: Control
 

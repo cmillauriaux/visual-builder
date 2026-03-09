@@ -4,19 +4,19 @@ extends GutTest
 ## Vérifie que le signal variables_display_changed est émis aux bons moments
 ## et que le cleanup masque correctement la sidebar et l'overlay.
 
-const StoryPlayController = load("res://src/ui/play/story_play_controller.gd")
-const StoryScript = load("res://src/models/story.gd")
-const ChapterScript = load("res://src/models/chapter.gd")
-const SceneDataScript = load("res://src/models/scene_data.gd")
-const SequenceScript = load("res://src/models/sequence.gd")
-const DialogueScript = load("res://src/models/dialogue.gd")
-const EndingScript = load("res://src/models/ending.gd")
-const ConsequenceScript = load("res://src/models/consequence.gd")
-const ChoiceScript = load("res://src/models/choice.gd")
-const VariableDefinitionScript = load("res://src/models/variable_definition.gd")
-const EffectScript = load("res://src/models/variable_effect.gd")
-const VariableSidebarScript = load("res://src/ui/play/variable_sidebar.gd")
-const VariableDetailsOverlayScript = load("res://src/ui/play/variable_details_overlay.gd")
+const StoryPlayController = preload("res://src/ui/play/story_play_controller.gd")
+const StoryScript = preload("res://src/models/story.gd")
+const ChapterScript = preload("res://src/models/chapter.gd")
+const SceneDataScript = preload("res://src/models/scene_data.gd")
+const SequenceScript = preload("res://src/models/sequence.gd")
+const DialogueScript = preload("res://src/models/dialogue.gd")
+const EndingScript = preload("res://src/models/ending.gd")
+const ConsequenceScript = preload("res://src/models/consequence.gd")
+const ChoiceScript = preload("res://src/models/choice.gd")
+const VariableDefinitionScript = preload("res://src/models/variable_definition.gd")
+const EffectScript = preload("res://src/models/variable_effect.gd")
+const VariableSidebarScript = preload("res://src/ui/play/variable_sidebar.gd")
+const VariableDetailsOverlayScript = preload("res://src/ui/play/variable_details_overlay.gd")
 
 var _ctrl: Node
 var _sidebar: VBoxContainer

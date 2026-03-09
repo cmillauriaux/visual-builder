@@ -151,6 +151,17 @@ func _init():
 				removed_count += 1
 
 	print("PckChapterBuilder: done — %d PCKs created, %d files moved" % [total_pck_count, removed_count])
+
+	# 6. Supprimer les assets orphelins (présents dans story/assets/ mais non référencés
+	#    dans les séquences et non nécessaires pour le menu). Sans cette étape, ces fichiers
+	#    (ex: variantes d'expressions inutilisées) gonflent inutilement le core PCK.
+	var cleanup_subdirs := ["assets/foregrounds", "assets/backgrounds", "assets/music"]
+	var orphan_removed := 0
+	for subdir in cleanup_subdirs:
+		orphan_removed += _remove_orphan_assets(abs_story + "/" + subdir, abs_story, menu_assets)
+	if orphan_removed > 0:
+		print("PckChapterBuilder: %d fichiers orphelins supprimés du core (non référencés en séquence)" % orphan_removed)
+
 	quit(0)
 
 
@@ -249,6 +260,61 @@ static func _normalize_path(path: String) -> String:
 	if path.begins_with("res://story/"):
 		return path.substr("res://story/".length())
 	return path
+
+
+## Supprime les assets orphelins d'un sous-dossier story/assets/ :
+## fichiers .import, .ctex/.mp3str, et sources qui ne sont ni dans un chapter PCK
+## (déjà supprimés en étape 5) ni des assets de menu (menu_assets).
+## Retourne le nombre de fichiers supprimés.
+func _remove_orphan_assets(dir_path: String, abs_story: String, menu_assets: Dictionary) -> int:
+	var dir = DirAccess.open(dir_path)
+	if not dir:
+		return 0
+
+	var removed := 0
+	var import_files := []
+	dir.list_dir_begin()
+	var name = dir.get_next()
+	while name != "":
+		if not dir.current_is_dir() and name.ends_with(".import"):
+			import_files.append(dir_path + "/" + name)
+		name = dir.get_next()
+
+	for abs_import in import_files:
+		var abs_source = abs_import.substr(0, abs_import.length() - 7)
+		# Chemin relatif au dossier story/ pour comparaison avec menu_assets
+		var rel_path = abs_source.substr(abs_story.length() + 1)
+		if menu_assets.has(rel_path):
+			continue  # Menu asset — conserver dans le core PCK
+
+		# Supprimer le fichier importé (.ctex, .mp3str, etc.) référencé dans le .import
+		var f = FileAccess.open(abs_import, FileAccess.READ)
+		if f:
+			var text = f.get_as_text()
+			f.close()
+			for line in text.split("\n"):
+				var stripped = line.strip_edges()
+				if stripped.begins_with("path="):
+					var value = stripped.substr(5).strip_edges()
+					if value.begins_with("\"") and value.ends_with("\""):
+						value = value.substr(1, value.length() - 2)
+					if value.begins_with("res://"):
+						var abs_imported = ProjectSettings.globalize_path(value)
+						if FileAccess.file_exists(abs_imported):
+							DirAccess.remove_absolute(abs_imported)
+							removed += 1
+					break
+
+		# Supprimer le .import
+		DirAccess.remove_absolute(abs_import)
+		removed += 1
+
+		# Supprimer le fichier source (PNG, MP3, etc.)
+		if FileAccess.file_exists(abs_source):
+			DirAccess.remove_absolute(abs_source)
+			removed += 1
+
+	return removed
 
 
 func _collect_sequence_assets(sequence, assets: Array) -> void:
