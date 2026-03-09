@@ -497,6 +497,7 @@ func _add_gallery_item(path: String) -> void:
 	var vbox = VBoxContainer.new()
 	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
 	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.mouse_filter = Control.MOUSE_FILTER_PASS
 	container.add_child(vbox)
 
 	var tex_rect = TextureRect.new()
@@ -876,6 +877,7 @@ func _on_ia_choose_from_gallery() -> void:
 			var item_vbox = VBoxContainer.new()
 			item_vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
 			item_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+			item_vbox.mouse_filter = Control.MOUSE_FILTER_PASS
 			container.add_child(item_vbox)
 			var tex_rect = TextureRect.new()
 			tex_rect.custom_minimum_size = Vector2(100, 100)

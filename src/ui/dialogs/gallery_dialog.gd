@@ -209,6 +209,7 @@ func _add_gallery_item(grid: GridContainer, path: String) -> void:
 	var vbox = VBoxContainer.new()
 	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
 	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.mouse_filter = Control.MOUSE_FILTER_PASS
 	container.add_child(vbox)
 
 	var tex_rect = TextureRect.new()

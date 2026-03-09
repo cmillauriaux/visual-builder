@@ -10,7 +10,6 @@ var _close_btn: Button
 
 func _ready() -> void:
 	visible = false
-	set_anchors_preset(PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 
 	# Overlay sombre
@@ -58,6 +57,15 @@ func show_preview(texture: Texture2D, filename: String) -> void:
 		return
 	_texture_rect.texture = texture
 	_filename_label.text = filename
+	# Godot 4.6 : les anchors FULL_RECT d'un Control enfant direct d'un Window
+	# ne résolvent plus automatiquement la taille. On force le sizing.
+	var parent = get_parent()
+	if parent is Window:
+		position = Vector2.ZERO
+		size = Vector2(parent.size)
+	elif parent is Control:
+		position = Vector2.ZERO
+		size = parent.size
 	visible = true
 
 func _close() -> void:

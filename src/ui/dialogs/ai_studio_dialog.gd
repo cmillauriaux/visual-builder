@@ -1096,6 +1096,7 @@ func _create_grid_cell(index: int, label_text: String) -> Panel:
 	vbox_cell.name = "VBox"
 	vbox_cell.set_anchors_preset(Control.PRESET_FULL_RECT)
 	vbox_cell.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox_cell.mouse_filter = Control.MOUSE_FILTER_PASS
 	panel.add_child(vbox_cell)
 
 	var tex_rect = TextureRect.new()

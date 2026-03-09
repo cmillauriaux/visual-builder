@@ -284,6 +284,7 @@ func _add_selection_item(path: String) -> void:
 
 	var vbox = VBoxContainer.new()
 	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vbox.mouse_filter = Control.MOUSE_FILTER_PASS
 	container.add_child(vbox)
 
 	var cb = CheckBox.new()
@@ -368,6 +369,7 @@ func _add_reference_item(path: String) -> void:
 	var vbox = VBoxContainer.new()
 	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
 	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.mouse_filter = Control.MOUSE_FILTER_PASS
 	container.add_child(vbox)
 
 	var tex_rect = TextureRect.new()
@@ -458,6 +460,7 @@ func _populate_preview_grid() -> void:
 
 		var before_vbox = VBoxContainer.new()
 		before_vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+		before_vbox.mouse_filter = Control.MOUSE_FILTER_PASS
 		before_panel.add_child(before_vbox)
 
 		var before_label = Label.new()
@@ -495,6 +498,7 @@ func _populate_preview_grid() -> void:
 
 		var after_vbox = VBoxContainer.new()
 		after_vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+		after_vbox.mouse_filter = Control.MOUSE_FILTER_PASS
 		after_panel.add_child(after_vbox)
 
 		var after_label = Label.new()
