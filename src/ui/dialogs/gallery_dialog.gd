@@ -81,6 +81,19 @@ func _build_ui() -> void:
 	_category_filter_container.add_theme_constant_override("separation", 4)
 	filter_hbox.add_child(_category_filter_container)
 
+	var spacer_filt = Control.new()
+	spacer_filt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	filter_hbox.add_child(spacer_filt)
+
+	var refresh_btn = Button.new()
+	refresh_btn.text = "Rafraîchir"
+	refresh_btn.pressed.connect(func():
+		GalleryCacheService.clear_dir(_story_base_path + "/assets/backgrounds")
+		GalleryCacheService.clear_dir(_story_base_path + "/assets/foregrounds")
+		_refresh()
+	)
+	filter_hbox.add_child(refresh_btn)
+
 	# Scroll pour le contenu
 	var scroll = ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -204,9 +217,7 @@ func _add_gallery_item(grid: GridContainer, path: String) -> void:
 	tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-	var img = Image.new()
-	if img.load(path) == OK:
-		tex_rect.texture = ImageTexture.create_from_image(img)
+	tex_rect.texture = GalleryCacheService.get_texture(path)
 	vbox.add_child(tex_rect)
 
 	var name_label = Label.new()
@@ -228,20 +239,7 @@ func _add_gallery_item(grid: GridContainer, path: String) -> void:
 
 
 func _list_images(dir_path: String) -> Array:
-	var result := []
-	var dir = DirAccess.open(dir_path)
-	if dir == null:
-		return result
-	dir.list_dir_begin()
-	var fname = dir.get_next()
-	while fname != "":
-		if not dir.current_is_dir():
-			var ext = fname.get_extension().to_lower()
-			if ext in ["png", "jpg", "jpeg", "webp"]:
-				result.append(dir_path + "/" + fname)
-		fname = dir.get_next()
-	dir.list_dir_end()
-	return result
+	return GalleryCacheService.get_file_list(dir_path, ["png", "jpg", "jpeg", "webp"])
 
 
 func _update_clean_button_state() -> void:
@@ -271,6 +269,10 @@ func _on_clean_pressed() -> void:
 	confirm.dialog_text = "%d fichier(s) — %s" % [all_unused.size(), size_text]
 	confirm.confirmed.connect(func():
 		GalleryCleanerService.delete_files(all_unused)
+		for path in all_unused:
+			GalleryCacheService.clear_path(path)
+		GalleryCacheService.clear_dir(_story_base_path + "/assets/backgrounds")
+		GalleryCacheService.clear_dir(_story_base_path + "/assets/foregrounds")
 		var raw = GalleryCleanerService.collect_used_images(_story)
 		_used_images = GalleryCleanerService.normalize_paths(raw, _story_base_path)
 		_refresh()
@@ -431,6 +433,8 @@ func _show_rename_dialog(image_path: String) -> void:
 					StorySaver.save_story(_story, _story_base_path)
 			if _story_base_path != "":
 				_category_service.save_to(_story_base_path)
+			GalleryCacheService.clear_path(image_path)
+			GalleryCacheService.clear_dir(image_path.get_base_dir())
 			image_renamed.emit(image_path, result["new_path"])
 			_refresh()
 	)
@@ -587,6 +591,8 @@ func _execute_replace(old_path: String, new_path: String) -> void:
 	# 3. Suppression de l'ancienne image
 	if FileAccess.file_exists(old_path):
 		DirAccess.remove_absolute(old_path)
+		GalleryCacheService.clear_path(old_path)
+		GalleryCacheService.clear_dir(old_path.get_base_dir())
 
 	# 4. Marquage de la story comme modifiée
 	if _story != null:
@@ -624,6 +630,8 @@ func _on_normalize_pressed() -> void:
 	add_child(normalizer)
 	normalizer.setup(_story_base_path)
 	normalizer.normalization_applied.connect(func():
+		GalleryCacheService.clear_dir(_story_base_path + "/assets/backgrounds")
+		GalleryCacheService.clear_dir(_story_base_path + "/assets/foregrounds")
 		_refresh()
 	)
 	normalizer.popup_centered()

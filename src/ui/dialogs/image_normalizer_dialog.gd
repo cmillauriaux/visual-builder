@@ -55,6 +55,7 @@ func setup(story_base_path: String) -> void:
 	_all_image_paths.clear()
 	_collect_images(story_base_path + "/assets/backgrounds", "bg")
 	_collect_images(story_base_path + "/assets/foregrounds", "fg")
+	_all_image_paths.sort_custom(func(a, b): return a["path"].get_file().to_lower() < b["path"].get_file().to_lower())
 	_populate_selection_grid()
 	_show_phase(1)
 

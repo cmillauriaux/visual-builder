@@ -741,6 +741,7 @@ func _on_decl_save_pressed() -> void:
 		file_path = _resolve_unique_path(dir_path, img_name + ".png")
 
 	_decl_generated_image.save_png(file_path)
+	GalleryCacheService.clear_dir(dir_path)
 	_decl_show_success("Image sauvegardée : " + file_path.get_file())
 
 	# Reset for next generation
@@ -1221,6 +1222,8 @@ func _on_expr_save_all_pressed() -> void:
 		var file_path = _resolve_unique_path(dir_path, filename)
 		item["image"].save_png(file_path)
 		saved_count += 1
+	
+	GalleryCacheService.clear_dir(dir_path)
 
 	_expr_status_label.text = "%d images sauvegardées dans assets/foregrounds/" % saved_count
 	_expr_status_label.add_theme_color_override("font_color", Color(0.4, 0.9, 0.4))
@@ -1287,6 +1290,20 @@ func _open_gallery_source_picker(on_selected: Callable) -> void:
 			filter_hbox.add_child(cb)
 			source_checkboxes.append(cb)
 
+	var spacer_filt = Control.new()
+	spacer_filt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	filter_hbox.add_child(spacer_filt)
+
+	var refresh_btn = Button.new()
+	refresh_btn.text = "Rafraîchir"
+	var rebuild_grid_ref = {"rebuild": func(): pass}
+	refresh_btn.pressed.connect(func():
+		GalleryCacheService.clear_dir(_story_base_path + "/assets/backgrounds")
+		GalleryCacheService.clear_dir(_story_base_path + "/assets/foregrounds")
+		rebuild_grid_ref.rebuild.call()
+	)
+	filter_hbox.add_child(refresh_btn)
+
 	var scroll = ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	vbox.add_child(scroll)
@@ -1324,9 +1341,8 @@ func _open_gallery_source_picker(on_selected: Callable) -> void:
 			tex_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 			tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			var img = Image.new()
-			if img.load(path) == OK:
-				tex_rect.texture = ImageTexture.create_from_image(img)
+			
+			tex_rect.texture = GalleryCacheService.get_texture(path)
 			cv.add_child(tex_rect)
 
 			var lbl = Label.new()
@@ -1346,6 +1362,7 @@ func _open_gallery_source_picker(on_selected: Callable) -> void:
 	for cb in source_checkboxes:
 		cb.toggled.connect(func(_p): rebuild_grid.call())
 
+	rebuild_grid_ref.rebuild = rebuild_grid
 	rebuild_grid.call()
 
 	var cancel_btn = Button.new()
@@ -1360,23 +1377,9 @@ func _open_gallery_source_picker(on_selected: Callable) -> void:
 
 func _list_gallery_images() -> Array:
 	var result = []
-	var dirs = [
-		_story_base_path + "/assets/foregrounds",
-		_story_base_path + "/assets/backgrounds",
-	]
-	for dir_path in dirs:
-		var dir = DirAccess.open(dir_path)
-		if dir == null:
-			continue
-		dir.list_dir_begin()
-		var file = dir.get_next()
-		while file != "":
-			if not dir.current_is_dir():
-				var ext = file.get_extension().to_lower()
-				if ext in ["png", "jpg", "jpeg", "webp"]:
-					result.append(dir_path + "/" + file)
-			file = dir.get_next()
-		dir.list_dir_end()
+	result.append_array(GalleryCacheService.get_file_list(_story_base_path + "/assets/foregrounds", ["png", "jpg", "jpeg", "webp"]))
+	result.append_array(GalleryCacheService.get_file_list(_story_base_path + "/assets/backgrounds", ["png", "jpg", "jpeg", "webp"]))
+	result.sort()
 	return result
 
 

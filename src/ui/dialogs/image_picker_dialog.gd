@@ -231,6 +231,18 @@ func _build_gallery_tab() -> void:
 	_gallery_category_filter_container.add_theme_constant_override("separation", 4)
 	filter_hbox.add_child(_gallery_category_filter_container)
 
+	var spacer = Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	filter_hbox.add_child(spacer)
+
+	var refresh_btn = Button.new()
+	refresh_btn.text = "Rafraîchir"
+	refresh_btn.pressed.connect(func():
+		GalleryCacheService.clear_dir(_get_assets_dir())
+		_refresh_gallery()
+	)
+	filter_hbox.add_child(refresh_btn)
+
 	var scroll = ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	gallery_tab.add_child(scroll)
@@ -493,9 +505,7 @@ func _add_gallery_item(path: String) -> void:
 	tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-	var img = Image.new()
-	if img.load(path) == OK:
-		tex_rect.texture = ImageTexture.create_from_image(img)
+	tex_rect.texture = GalleryCacheService.get_texture(path)
 	vbox.add_child(tex_rect)
 
 	var name_label = Label.new()
@@ -552,6 +562,7 @@ func _copy_to_assets(source_path: String) -> String:
 	var err = DirAccess.copy_absolute(source_path, dest_path)
 	if err != OK:
 		return ""
+	GalleryCacheService.clear_dir(dest_dir)
 	return dest_path
 
 func _on_validate() -> void:
@@ -571,21 +582,7 @@ func _get_assets_dir() -> String:
 	return _story_base_path + "/assets/foregrounds"
 
 func _list_gallery_images() -> Array:
-	var result = []
-	var assets_dir = _get_assets_dir()
-	var dir = DirAccess.open(assets_dir)
-	if dir == null:
-		return result
-	dir.list_dir_begin()
-	var fname = dir.get_next()
-	while fname != "":
-		if not dir.current_is_dir():
-			var ext = fname.get_extension().to_lower()
-			if ext in ["png", "jpg", "jpeg", "webp"]:
-				result.append(assets_dir + "/" + fname)
-		fname = dir.get_next()
-	dir.list_dir_end()
-	return result
+	return GalleryCacheService.get_file_list(_get_assets_dir(), ["png", "jpg", "jpeg", "webp"])
 
 static func _resolve_unique_path(dir_path: String, filename: String) -> String:
 	var name = filename.get_basename()
@@ -728,6 +725,8 @@ func _show_rename_dialog(image_path: String) -> void:
 					StorySaver.save_story(_story, _story_base_path)
 			if _story_base_path != "":
 				_category_service.save_to(_story_base_path)
+			GalleryCacheService.clear_path(image_path)
+			GalleryCacheService.clear_dir(image_path.get_base_dir())
 			image_renamed.emit(image_path, result["new_path"])
 			_refresh_gallery()
 	)
@@ -1008,6 +1007,7 @@ func _on_ia_accept_pressed() -> void:
 		file_path = _resolve_unique_path(dir_path, name + ".png")
 
 	_ia_generated_image.save_png(file_path)
+	GalleryCacheService.clear_dir(dir_path)
 
 	image_selected.emit(file_path)
 	hide()

@@ -156,6 +156,22 @@ func _build_gallery_tab() -> void:
 	gallery_tab.name = "Galerie"
 	_tab_container.add_child(gallery_tab)
 
+	var toolbar = HBoxContainer.new()
+	toolbar.add_theme_constant_override("separation", 8)
+	gallery_tab.add_child(toolbar)
+
+	var spacer = Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	toolbar.add_child(spacer)
+
+	var refresh_btn = Button.new()
+	refresh_btn.text = "Rafraîchir"
+	refresh_btn.pressed.connect(func():
+		GalleryCacheService.clear_dir(_get_assets_dir())
+		_refresh_gallery()
+	)
+	toolbar.add_child(refresh_btn)
+
 	var scroll = ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	gallery_tab.add_child(scroll)
@@ -252,6 +268,7 @@ func _copy_to_assets(source_path: String) -> String:
 	var err = DirAccess.copy_absolute(source_path, dest_path)
 	if err != OK:
 		return ""
+	GalleryCacheService.clear_dir(dest_dir)
 	return dest_path
 
 
@@ -272,21 +289,7 @@ func _get_assets_dir() -> String:
 
 
 func _list_gallery_audio() -> Array:
-	var result = []
-	var assets_dir = _get_assets_dir()
-	var dir = DirAccess.open(assets_dir)
-	if dir == null:
-		return result
-	dir.list_dir_begin()
-	var fname = dir.get_next()
-	while fname != "":
-		if not dir.current_is_dir():
-			var ext = fname.get_extension().to_lower()
-			if ext in ["ogg", "mp3", "wav"]:
-				result.append(assets_dir + "/" + fname)
-		fname = dir.get_next()
-	dir.list_dir_end()
-	return result
+	return GalleryCacheService.get_file_list(_get_assets_dir(), ["ogg", "mp3", "wav"])
 
 
 static func _resolve_unique_path(dir_path: String, filename: String) -> String:
