@@ -658,7 +658,7 @@ func _collect_game_state() -> Dictionary:
 
 func _on_save_slot(slot_index: int) -> void:
 	var state := _collect_game_state()
-	GameSaveManager.save_game(slot_index, state, _pending_screenshot)
+	GameSaveManager.save_game_state(slot_index, state, _pending_screenshot)
 	_update_cached_progression(state)
 	_analytics.track_event("story_saved", {
 		"story_title": _current_story.title if _current_story else "",
@@ -675,7 +675,10 @@ func _on_autosave_triggered() -> void:
 	if _current_story == null:
 		return
 	# Capture le screenshot immédiatement (rapide, copie mémoire)
-	var screenshot := get_viewport().get_texture().get_image()
+	# En mode headless, get_texture().get_image() plante — on passe null
+	var screenshot: Image = null
+	if DisplayServer.get_name() != "headless":
+		screenshot = get_viewport().get_texture().get_image()
 	var state := _collect_game_state()
 	_update_cached_progression(state)
 	# Écriture JSON + encodage PNG en tâche de fond pour ne pas bloquer le gameplay

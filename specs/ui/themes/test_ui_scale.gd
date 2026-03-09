@@ -16,14 +16,14 @@ func after_each() -> void:
 func test_scale_returns_one_for_fullhd_at_96dpi() -> void:
 	# On ne peut pas contrôler DisplayServer dans les tests headless,
 	# mais on peut tester que get_scale() retourne une valeur dans la plage valide.
-	var s := UIScale.get_scale()
+	var s: float = UIScale.get_scale()
 	assert_true(s >= UIScale.SCALE_MIN, "scale >= SCALE_MIN")
 	assert_true(s <= UIScale.SCALE_MAX, "scale <= SCALE_MAX")
 
 
 func test_scale_is_cached_after_first_call() -> void:
-	var s1 := UIScale.get_scale()
-	var s2 := UIScale.get_scale()
+	var s1: float = UIScale.get_scale()
+	var s2: float = UIScale.get_scale()
 	assert_eq(s1, s2, "scale est mis en cache")
 
 

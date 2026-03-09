@@ -3,18 +3,17 @@ extends GutTest
 var SequenceUIControllerScript
 
 class MockMain extends Control:
-	var _visual_editor = Node.new()
-	var _sequence_editor_ctrl = Node.new()
-	var _undo_redo = Node.new()
+	var _visual_editor = Control.new()
+	var _sequence_editor_ctrl = Control.new()
+	var _undo_redo = RefCounted.new()
 	var _editor_main = Node.new()
-	
+
 	func _init():
-		_visual_editor.set_script(load("res://src/views/sequence_visual_editor.gd"))
+		_visual_editor.set_script(load("res://src/ui/sequence/sequence_visual_editor.gd"))
 		_sequence_editor_ctrl.set_script(load("res://src/ui/sequence/sequence_editor.gd"))
 		_undo_redo.set_script(load("res://src/services/undo_redo_service.gd"))
 		add_child(_visual_editor)
 		add_child(_sequence_editor_ctrl)
-		add_child(_undo_redo)
 		add_child(_editor_main)
 	
 	func _get_story_base_path():
@@ -51,10 +50,6 @@ func test_snap_toggled():
 	assert_false(_main._visual_editor.is_snap_enabled())
 
 func test_on_bg_file_selected():
-	# Stub methods
-	_main._sequence_editor_ctrl.set_background = func(p): pass
-	_main._visual_editor.set_background = func(p): pass
-	
 	_ctrl._on_bg_file_selected("assets/bg.png")
-	# Verification would require real objects or better stubs, but this covers the call
+	# set_background délègue aux objets réels — pas de crash = succès
 	assert_true(true)

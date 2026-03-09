@@ -114,7 +114,7 @@ static func _get_user_agent() -> String:
 	var expr := Expression.new()
 	if expr.parse("JavaScriptBridge.eval('navigator.userAgent || \"\"')") != OK:
 		return ""
-	var result = expr.execute()
+	var result = expr.execute([], null, false)
 	if expr.has_execute_failed() or result == null:
 		return ""
 	return str(result).to_lower()
@@ -128,7 +128,7 @@ static func _is_standalone() -> bool:
 	var js_code := "JavaScriptBridge.eval('window.navigator.standalone === true || window.matchMedia(\"(display-mode: standalone)\").matches')"
 	if expr.parse(js_code) != OK:
 		return false
-	var result = expr.execute()
+	var result = expr.execute([], null, false)
 	if expr.has_execute_failed() or result == null:
 		return false
 	return result == true

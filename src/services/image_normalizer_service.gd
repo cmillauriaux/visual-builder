@@ -7,6 +7,8 @@ extends RefCounted
 
 
 static func analyze_image(path: String) -> Dictionary:
+	if not FileAccess.file_exists(path):
+		return {}
 	var img = Image.new()
 	if img.load(path) != OK:
 		return {}

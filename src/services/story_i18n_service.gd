@@ -52,6 +52,33 @@ const UI_STRINGS: Array[String] = [
 ]
 
 
+## Codes de langue disponibles (liste fixe des locales standard).
+const AVAILABLE_LOCALES: Array[String] = ["fr", "en", "es", "de", "it", "pt", "ja", "zh", "ko", "ru"]
+
+var _current_locale: String = "fr"
+var _i18n_dict: Dictionary = {}
+
+
+## Retourne la liste des locales disponibles.
+func get_locales_list() -> Array:
+	return AVAILABLE_LOCALES
+
+
+## Définit la locale courante.
+func set_current_locale(locale: String) -> void:
+	_current_locale = locale
+
+
+## Retourne la locale courante.
+func get_current_locale() -> String:
+	return _current_locale
+
+
+## Traduit une clé. Retourne la clé si absente du dictionnaire.
+func translate(key: String) -> String:
+	return _tr(key, _i18n_dict)
+
+
 ## Retourne la traduction d'une chaîne depuis un dictionnaire i18n.
 ## Fallback : retourne la chaîne source si la clé est absente ou la traduction vide.
 static func get_ui_string(source: String, i18n_dict: Dictionary) -> String:

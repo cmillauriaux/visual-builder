@@ -92,7 +92,8 @@ func set_highlighted(value: bool) -> void:
 func _get_drag_data(_at_position: Vector2):
 	var preview = Label.new()
 	preview.text = _dialogue.character if _dialogue else "?"
-	set_drag_preview(preview)
+	if get_viewport() and get_viewport().gui_is_dragging():
+		set_drag_preview(preview)
 	return {"type": "dialogue_reorder", "index": _index}
 
 func _can_drop_data(_at_position: Vector2, data) -> bool:

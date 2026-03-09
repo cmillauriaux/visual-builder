@@ -132,7 +132,7 @@ static func slot_exists(slot_index: int) -> bool:
 ## Sauvegarde l'état du jeu dans le slot donné.
 ## state doit contenir : version, timestamp, story_path, chapter_uuid, chapter_name,
 ## scene_uuid, scene_name, sequence_uuid, sequence_name, dialogue_index, variables.
-static func save_game(slot_index: int, state: Dictionary, screenshot: Image) -> bool:
+static func save_game_state(slot_index: int, state: Dictionary, screenshot: Image) -> bool:
 	var dir_path := get_slot_dir(slot_index)
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(dir_path))
 
@@ -256,3 +256,33 @@ static func _story_path_valid(story_path: String) -> bool:
 	# La story peut être stockée comme répertoire (story.yaml à l'intérieur) ou comme fichier direct.
 	var yaml_path := story_path.path_join("story.yaml") if not story_path.ends_with(".yaml") else story_path
 	return FileAccess.file_exists(yaml_path)
+
+
+# ── Instance API (pour les tests et usages en objet) ─────────────────────────
+
+var _autosave_enabled: bool = true
+
+const AUTOSAVE_INTERVAL_SECONDS: float = 300.0
+
+
+func get_saves_list() -> Array:
+	return list_saves()
+
+
+## Sauvegarde depuis un objet story. Retourne false si story est null.
+func save_game(story, slot_index: int) -> bool:
+	if story == null:
+		return false
+	return save_game_state(slot_index, {}, null)
+
+
+func is_autosave_enabled() -> bool:
+	return _autosave_enabled
+
+
+func set_autosave_enabled(enabled: bool) -> void:
+	_autosave_enabled = enabled
+
+
+func get_autosave_interval() -> float:
+	return AUTOSAVE_INTERVAL_SECONDS

@@ -166,13 +166,18 @@ func _load_pck_web(pck_filename: String, chapter_name: String, progress_base: fl
 
 	# Écrire dans user:// pour que load_resource_pack puisse y accéder
 	var local_path = "user://" + pck_filename
+	var t0 := Time.get_ticks_msec()
 	var f = FileAccess.open(local_path, FileAccess.WRITE)
 	if f == null:
 		push_error("PckChapterLoader: failed to write %s" % local_path)
 		return false
 	f.store_buffer(body)
 	f.close()
+	print("PCK TIMING [%s] store_buffer+close: %d ms" % [pck_filename, Time.get_ticks_msec() - t0])
 
+	var t1 := Time.get_ticks_msec()
 	chapter_load_progress.emit(chapter_name, progress_base + progress_scale)
 
-	return ProjectSettings.load_resource_pack(local_path)
+	var success := ProjectSettings.load_resource_pack(local_path)
+	print("PCK TIMING [%s] load_resource_pack: %d ms" % [pck_filename, Time.get_ticks_msec() - t1])
+	return success

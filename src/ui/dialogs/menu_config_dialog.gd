@@ -516,8 +516,12 @@ func _update_preview() -> void:
 	if _menu_bg_edit.text == "":
 		_bg_preview.texture = null
 		return
+	var resolved := _resolve_path(_menu_bg_edit.text)
+	if not FileAccess.file_exists(resolved):
+		_bg_preview.texture = null
+		return
 	var img = Image.new()
-	if img.load(_resolve_path(_menu_bg_edit.text)) == OK:
+	if img.load(resolved) == OK:
 		_bg_preview.texture = ImageTexture.create_from_image(img)
 	else:
 		_bg_preview.texture = null
@@ -545,8 +549,12 @@ func _update_game_over_preview() -> void:
 	if _game_over_bg_edit.text == "":
 		_game_over_bg_preview.texture = null
 		return
+	var resolved := _resolve_path(_game_over_bg_edit.text)
+	if not FileAccess.file_exists(resolved):
+		_game_over_bg_preview.texture = null
+		return
 	var img = Image.new()
-	if img.load(_resolve_path(_game_over_bg_edit.text)) == OK:
+	if img.load(resolved) == OK:
 		_game_over_bg_preview.texture = ImageTexture.create_from_image(img)
 	else:
 		_game_over_bg_preview.texture = null
@@ -574,8 +582,12 @@ func _update_tbc_preview() -> void:
 	if _to_be_continued_bg_edit.text == "":
 		_to_be_continued_bg_preview.texture = null
 		return
+	var resolved := _resolve_path(_to_be_continued_bg_edit.text)
+	if not FileAccess.file_exists(resolved):
+		_to_be_continued_bg_preview.texture = null
+		return
 	var img = Image.new()
-	if img.load(_resolve_path(_to_be_continued_bg_edit.text)) == OK:
+	if img.load(resolved) == OK:
 		_to_be_continued_bg_preview.texture = ImageTexture.create_from_image(img)
 	else:
 		_to_be_continued_bg_preview.texture = null
@@ -605,8 +617,13 @@ func _update_icon_preview() -> void:
 		_app_icon_preview.texture = null
 		_app_icon_warning.visible = false
 		return
+	var resolved := _resolve_path(_app_icon_edit.text)
+	if not FileAccess.file_exists(resolved):
+		_app_icon_preview.texture = null
+		_app_icon_warning.visible = false
+		return
 	var img = Image.new()
-	if img.load(_resolve_path(_app_icon_edit.text)) == OK:
+	if img.load(resolved) == OK:
 		_app_icon_preview.texture = ImageTexture.create_from_image(img)
 		_app_icon_warning.visible = img.get_width() != img.get_height()
 	else:

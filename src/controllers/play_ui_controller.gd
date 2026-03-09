@@ -63,7 +63,8 @@ func _on_play_finished(reason: String) -> void:
 	dialog.dialog_text = messages.get(reason, "Fin de la lecture")
 	dialog.confirmed.connect(dialog.queue_free)
 	_main.add_child(dialog)
-	dialog.popup_centered()
+	if dialog.is_inside_tree():
+		dialog.popup_centered()
 
 
 func _hide_choice_overlay() -> void:

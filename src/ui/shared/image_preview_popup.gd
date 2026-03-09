@@ -58,11 +58,6 @@ func show_preview(texture: Texture2D, filename: String) -> void:
 		return
 	_texture_rect.texture = texture
 	_filename_label.text = filename
-	# Force size to match parent Window's content area
-	var win = get_window()
-	if win:
-		position = Vector2.ZERO
-		size = win.size
 	visible = true
 
 func _close() -> void:

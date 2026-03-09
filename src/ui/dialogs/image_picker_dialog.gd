@@ -921,6 +921,9 @@ func _ia_load_source_preview(path: String) -> void:
 	if path == "":
 		_ia_source_preview.texture = null
 		return
+	if not FileAccess.file_exists(path):
+		_ia_source_preview.texture = null
+		return
 	var img = Image.new()
 	if img.load(path) == OK:
 		_ia_source_preview.texture = ImageTexture.create_from_image(img)

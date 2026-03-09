@@ -225,7 +225,8 @@ func _start_sequence_actually() -> void:
 		if _play_buttons_bar:
 			_play_buttons_bar.visible = _toolbar_visible
 			_game.move_child(_play_buttons_bar, -1)
-		_game.add_child(_play_overlay)
+		if not _play_overlay.get_parent():
+			_game.add_child(_play_overlay)
 		_game.move_child(_play_overlay, _game.get_child_count() - 1)
 		if _typewriter_speed == 0.0:
 			_sequence_editor_ctrl.skip_typewriter()
@@ -685,6 +686,8 @@ func _show_history_panel() -> void:
 	close_btn.pressed.connect(close_history)
 	vbox.add_child(close_btn)
 
+	if _game == null:
+		return
 	_game.add_child(overlay)
 
 

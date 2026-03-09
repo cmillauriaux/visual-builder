@@ -174,6 +174,26 @@ func add_story_connection(from_uuid: String, to_uuid: String) -> void:
 	_connect_nodes(from_uuid, to_uuid)
 	_update_node_colors()
 
+func remove_story_connection(from_uuid: String, to_uuid: String) -> void:
+	_story.connections = _story.connections.filter(
+		func(c): return not (c["from"] == from_uuid and c["to"] == to_uuid)
+	)
+	var key = from_uuid + "→" + to_uuid
+	_connection_type_map.erase(key)
+	disconnect_node(from_uuid, 0, to_uuid, 0)
+	_update_node_colors()
+
+func clear_graph() -> void:
+	_clear_nodes()
+
+func get_chapter_by_uuid(uuid: String):
+	if _story == null:
+		return null
+	for chapter in _story.chapters:
+		if chapter.uuid == uuid:
+			return chapter
+	return null
+
 func sync_positions_to_model() -> void:
 	for ch in _story.chapters:
 		if _node_map.has(ch.uuid):

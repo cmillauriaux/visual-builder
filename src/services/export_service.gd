@@ -691,6 +691,9 @@ func _append_log(log_path: String, message: String) -> void:
 
 
 func _generate_app_icons(icon_src: String, temp_project: String, log_path: String) -> void:
+	if not FileAccess.file_exists(icon_src):
+		_append_log(log_path, "⚠ Impossible de charger l'icône : " + icon_src)
+		return
 	var img = Image.new()
 	if img.load(icon_src) != OK:
 		_append_log(log_path, "⚠ Impossible de charger l'icône : " + icon_src)

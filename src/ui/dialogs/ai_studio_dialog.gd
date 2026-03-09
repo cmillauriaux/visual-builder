@@ -12,12 +12,12 @@ const ImageCategoryService = preload("res://src/services/image_category_service.
 const ExpressionQueueService = preload("res://src/services/expression_queue_service.gd")
 
 const DEFAULT_EXPRESSIONS := [
-	"idle", "speaking", "thinking", "listening", "happy",
-	"cheerful", "confident", "playful", "curious", "calm",
-	"warm", "friendly", "joyful", "serene", "enthusiastic",
 	"smile", "sad", "shy", "grumpy", "laughing out loud",
 	"angry", "surprised", "worried", "neutral", "scared",
 	"disgusted", "confused", "proud", "embarrassed", "bored",
+	"idle", "speaking", "thinking", "listening", "happy",
+	"cheerful", "confident", "playful", "curious", "calm",
+	"warm", "friendly", "joyful", "serene", "enthusiastic",
 	"excited", "crying", "hopeful", "determined", "jealous",
 	"dreamy", "mischievous", "exhausted", "relieved", "suspicious",
 	"tender", "annoyed", "desperate", "nostalgic", "seductive",

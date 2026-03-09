@@ -539,6 +539,9 @@ func set_grid_visible(visible: bool) -> void:
 	_grid_visible = visible
 	_update_grid_overlay()
 
+func is_grid_visible() -> bool:
+	return _grid_visible
+
 func _update_grid_overlay() -> void:
 	if _grid_overlay == null:
 		return
@@ -565,6 +568,9 @@ func _on_grid_draw() -> void:
 
 func set_snap_enabled(enabled: bool) -> void:
 	_snap_enabled = enabled
+
+func is_snap_enabled() -> bool:
+	return _snap_enabled
 
 func _apply_snap_to_foreground(uuid: String) -> void:
 	if not _snap_enabled:
