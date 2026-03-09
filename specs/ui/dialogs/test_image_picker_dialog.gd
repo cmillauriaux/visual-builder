@@ -826,7 +826,7 @@ func test_ia_accept_shows_error_on_invalid_name():
 	_dialog._on_ia_accept_pressed()
 	assert_ne(_dialog._ia_status_label.text, "")
 
-func test_ia_accept_handles_name_conflict():
+func test_ia_accept_shows_overwrite_confirmation():
 	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
 	var dir = _test_dir + "/assets/foregrounds"
 	DirAccess.make_dir_recursive_absolute(dir)
@@ -836,9 +836,35 @@ func test_ia_accept_handles_name_conflict():
 	_dialog._ia_name_input.text = "existing"
 	watch_signals(_dialog)
 	_dialog._on_ia_accept_pressed()
+	# Should NOT emit yet — confirmation dialog shown
+	assert_signal_not_emitted(_dialog, "image_selected")
+	var confirm_dialog: ConfirmationDialog = null
+	for child in _dialog.get_children():
+		if child is ConfirmationDialog:
+			confirm_dialog = child
+			break
+	assert_not_null(confirm_dialog, "A confirmation dialog should appear")
+
+
+func test_ia_accept_overwrites_on_confirm():
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
+	var dir = _test_dir + "/assets/foregrounds"
+	DirAccess.make_dir_recursive_absolute(dir)
+	_create_minimal_png(dir + "/existing.png")
+	var img = Image.create(2, 2, false, Image.FORMAT_RGB8)
+	_dialog._ia_generated_image = img
+	_dialog._ia_name_input.text = "existing"
+	watch_signals(_dialog)
+	_dialog._on_ia_accept_pressed()
+	# Confirm overwrite
+	for child in _dialog.get_children():
+		if child is ConfirmationDialog:
+			child.confirmed.emit()
+			break
 	assert_signal_emitted(_dialog, "image_selected")
 	var args = get_signal_parameters(_dialog, "image_selected")
-	assert_string_contains(args[0], "existing_1.png")
+	assert_string_contains(args[0], "existing.png")
+	assert_false(FileAccess.file_exists(dir + "/existing_1.png"))
 
 # --- Popup "Choisir une image source" : filtre catégories ---
 

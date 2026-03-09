@@ -760,8 +760,22 @@ func _on_decl_save_pressed() -> void:
 	var file_path = dir_path + "/" + img_name + ".png"
 
 	if FileAccess.file_exists(file_path):
-		file_path = _resolve_unique_path(dir_path, img_name + ".png")
+		var dialog = ConfirmationDialog.new()
+		dialog.dialog_text = "L'image « %s » existe déjà.\nVoulez-vous l'écraser ?" % file_path.get_file()
+		dialog.ok_button_text = "Écraser"
+		add_child(dialog)
+		dialog.confirmed.connect(func():
+			_decl_do_save(file_path, dir_path)
+			dialog.queue_free()
+		)
+		dialog.canceled.connect(dialog.queue_free)
+		dialog.popup_centered()
+		return
 
+	_decl_do_save(file_path, dir_path)
+
+
+func _decl_do_save(file_path: String, dir_path: String) -> void:
 	_decl_generated_image.save_png(file_path)
 	GalleryCacheService.clear_dir(dir_path)
 	_decl_show_success("Image sauvegardée : " + file_path.get_file())
@@ -1239,13 +1253,39 @@ func _on_expr_save_all_pressed() -> void:
 	var dir_path = _story_base_path + "/assets/foregrounds"
 	DirAccess.make_dir_recursive_absolute(dir_path)
 
+	var existing: Array[String] = []
+	for item in completed:
+		var file_path = dir_path + "/" + item["filename"] + ".png"
+		if FileAccess.file_exists(file_path):
+			existing.append(item["filename"] + ".png")
+
+	if not existing.is_empty():
+		var dialog = ConfirmationDialog.new()
+		var names = ", ".join(existing)
+		dialog.dialog_text = "Ces images existent déjà :\n%s\nVoulez-vous les écraser ?" % names
+		dialog.ok_button_text = "Écraser"
+		add_child(dialog)
+		dialog.confirmed.connect(func():
+			_expr_do_save_all(completed, dir_path, true)
+			dialog.queue_free()
+		)
+		dialog.canceled.connect(dialog.queue_free)
+		dialog.popup_centered()
+		return
+
+	_expr_do_save_all(completed, dir_path, false)
+
+
+func _expr_do_save_all(completed: Array, dir_path: String, overwrite: bool) -> void:
 	var saved_count := 0
 	for item in completed:
 		var filename = item["filename"] + ".png"
-		var file_path = _resolve_unique_path(dir_path, filename)
+		var file_path = dir_path + "/" + filename
+		if not overwrite and FileAccess.file_exists(file_path):
+			file_path = _resolve_unique_path(dir_path, filename)
 		item["image"].save_png(file_path)
 		saved_count += 1
-	
+
 	GalleryCacheService.clear_dir(dir_path)
 
 	_expr_status_label.text = "%d images sauvegardées dans assets/foregrounds/" % saved_count

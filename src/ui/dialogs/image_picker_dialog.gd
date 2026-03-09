@@ -1009,8 +1009,22 @@ func _on_ia_accept_pressed() -> void:
 	var file_path = dir_path + "/" + name + ".png"
 
 	if FileAccess.file_exists(file_path):
-		file_path = _resolve_unique_path(dir_path, name + ".png")
+		var dialog = ConfirmationDialog.new()
+		dialog.dialog_text = "L'image « %s » existe déjà.\nVoulez-vous l'écraser ?" % file_path.get_file()
+		dialog.ok_button_text = "Écraser"
+		add_child(dialog)
+		dialog.confirmed.connect(func():
+			_ia_do_save(file_path, dir_path)
+			dialog.queue_free()
+		)
+		dialog.canceled.connect(dialog.queue_free)
+		dialog.popup_centered()
+		return
 
+	_ia_do_save(file_path, dir_path)
+
+
+func _ia_do_save(file_path: String, dir_path: String) -> void:
 	_ia_generated_image.save_png(file_path)
 	GalleryCacheService.clear_dir(dir_path)
 

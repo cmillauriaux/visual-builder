@@ -264,7 +264,7 @@ func test_decl_save_resets_state():
 	assert_true(_dialog._decl_save_btn.disabled)
 
 
-func test_decl_save_unique_path():
+func test_decl_save_shows_overwrite_confirmation():
 	DirAccess.make_dir_recursive_absolute(_test_dir + "/assets/foregrounds")
 	# Create existing file
 	var img = Image.create(10, 10, false, Image.FORMAT_RGBA8)
@@ -273,7 +273,31 @@ func test_decl_save_unique_path():
 	_dialog._decl_generated_image = Image.create(10, 10, false, Image.FORMAT_RGBA8)
 	_dialog._decl_name_input.text = "test_dup"
 	_dialog._on_decl_save_pressed()
-	assert_true(FileAccess.file_exists(_test_dir + "/assets/foregrounds/test_dup_1.png"))
+	# Should show a confirmation dialog, not save immediately
+	var confirm_dialog: ConfirmationDialog = null
+	for child in _dialog.get_children():
+		if child is ConfirmationDialog:
+			confirm_dialog = child
+			break
+	assert_not_null(confirm_dialog, "A confirmation dialog should appear")
+	assert_string_contains(confirm_dialog.dialog_text, "test_dup.png")
+
+
+func test_decl_save_overwrites_on_confirm():
+	DirAccess.make_dir_recursive_absolute(_test_dir + "/assets/foregrounds")
+	var img = Image.create(10, 10, false, Image.FORMAT_RGBA8)
+	img.save_png(_test_dir + "/assets/foregrounds/test_dup.png")
+	_dialog._story_base_path = _test_dir
+	_dialog._decl_generated_image = Image.create(10, 10, false, Image.FORMAT_RGBA8)
+	_dialog._decl_name_input.text = "test_dup"
+	_dialog._on_decl_save_pressed()
+	# Confirm overwrite
+	for child in _dialog.get_children():
+		if child is ConfirmationDialog:
+			child.confirmed.emit()
+			break
+	assert_true(FileAccess.file_exists(_test_dir + "/assets/foregrounds/test_dup.png"))
+	assert_false(FileAccess.file_exists(_test_dir + "/assets/foregrounds/test_dup_1.png"))
 
 
 # ========================================================
