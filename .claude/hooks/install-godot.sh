@@ -1,9 +1,9 @@
 #!/bin/bash
 set -e
 
-GODOT_VERSION="4.4"
-GODOT_RELEASE="4.4-stable"
-GODOT_BINARY_NAME="Godot_v${GODOT_VERSION}-stable_linux.x86_64"
+GODOT_VERSION="4.6"              # major.minor pour la comparaison (cut -d. -f1-2)
+GODOT_RELEASE="4.6.1-stable"    # version complète pour l'URL et le binaire
+GODOT_BINARY_NAME="Godot_v${GODOT_RELEASE}_linux.x86_64"
 GODOT_ZIP="${GODOT_BINARY_NAME}.zip"
 GODOT_URL="https://github.com/godotengine/godot/releases/download/${GODOT_RELEASE}/${GODOT_ZIP}"
 INSTALL_PATH="/usr/local/bin/godot"

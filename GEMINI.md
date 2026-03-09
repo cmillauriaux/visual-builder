@@ -1,11 +1,11 @@
 # Visual Builder - Godot Visual Novel Editor
 
-A comprehensive visual novel editor and standalone player built with Godot 4.4.
+A comprehensive visual novel editor and standalone player built with Godot 4.6.1.
 
 ## Project Overview
 This project provides a professional-grade tool for creating visual novels without coding. It features a graph-based editor for story structure (chapters, scenes, sequences) and a visual editor for composing dialogue and foreground elements.
 
-- **Main Technologies:** Godot 4.4 (GDScript), GL Compatibility renderer (for web/HTML5 support).
+- **Main Technologies:** Godot 4.6.1 (GDScript), GL Compatibility renderer (for web/HTML5 support).
 - **Architecture:** MVC-inspired structure with dedicated controllers for UI building, navigation, and playback.
 - **Key Features:**
     - Graph-based story flow management.
@@ -32,7 +32,7 @@ This project provides a professional-grade tool for creating visual novels witho
 
 ## Building and Running
 ### Running the Project
-- **Editor:** Open `project.godot` in Godot 4.4.
+- **Editor:** Open `project.godot` in Godot 4.6.1.
 - **Run Editor:** `godot --path .` (or use the absolute path to Godot binary as defined in `CLAUDE.md`).
 - **Run Game Mode:** The project can be run with `res://src/game.tscn` as the main scene for standalone play.
 

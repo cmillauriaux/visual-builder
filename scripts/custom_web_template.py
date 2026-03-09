@@ -2,10 +2,10 @@
 # Usage: scons platform=web profile=custom_web_template.py
 #
 # Ce profil désactive tous les modules inutilisés par le visual novel 2D
-# pour réduire la taille du .wasm (~42 Mo → ~17-20 Mo).
+# pour réduire la taille du .wasm (~42 Mo → ~15-18 Mo).
 
 target = "template_release"
-optimize = "size"
+optimize = "size_extra"
 lto = "full"
 
 # Désactiver la 3D (le jeu est 100% 2D)

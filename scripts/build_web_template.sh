@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Compile un export template Web personnalisé (WASM léger) pour Godot 4.4
+# Compile un export template Web personnalisé (WASM léger) pour Godot 4.6.1
 # Usage: ./scripts/build_web_template.sh <godot_source_dir> [options]
 #
 # Prérequis :
-#   - Emscripten SDK (emsdk) installé et dans le PATH
+#   - Emscripten SDK (emsdk) installé et dans le PATH (version ≥ 3.1.39)
 #   - Python 3 + SCons
-#   - Code source Godot 4.4 (git clone https://github.com/godotengine/godot.git -b 4.4)
+#   - Code source Godot 4.6.1 (git clone https://github.com/godotengine/godot.git -b 4.6.1-stable)
 #   - wasm-opt (optionnel, pour optimisation supplémentaire)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -25,7 +25,7 @@ Usage: ./scripts/build_web_template.sh <godot_source_dir> [options]
 Compile un export template Web personnalisé avec les modules minimaux.
 
 Arguments:
-  godot_source_dir        Chemin vers le code source Godot 4.4
+  godot_source_dir        Chemin vers le code source Godot 4.6.1
 
 Options:
   -j, --jobs N            Nombre de jobs parallèles (défaut: auto)
@@ -39,7 +39,7 @@ Prérequis:
 
 Exemple:
   source ~/emsdk/emsdk_env.sh
-  ./scripts/build_web_template.sh ~/godot-4.4
+  ./scripts/build_web_template.sh ~/godot-4.6.1
 EOF
     exit 0
 }
@@ -104,7 +104,7 @@ fi
 info "Code source Godot : $GODOT_SRC"
 info "Profil SCons : $PROFILE"
 
-SCONS_ARGS="platform=web profile=$PROFILE"
+SCONS_ARGS="platform=web target=template_release profile=$PROFILE"
 if [[ -n "$JOBS" ]]; then
     SCONS_ARGS="$SCONS_ARGS -j$JOBS"
 fi

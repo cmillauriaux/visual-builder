@@ -57,13 +57,12 @@ func _init():
 
 	# 2. Résoudre tous les fichiers associés (raw + .import + .ctex/.mp3str importés)
 	var abs_story := ProjectSettings.globalize_path(story_folder)
-	var abs_project := ProjectSettings.globalize_path("res://")
 	var chapter_file_groups := {}  # uuid -> Array of { files: [[res_path, abs_path]], total_size: int }
 
 	for uuid in chapter_assets:
 		var groups := []
 		for asset_path in chapter_assets[uuid]:
-			var file_entries := _resolve_asset_files(asset_path, abs_story, abs_project)
+			var file_entries := _resolve_asset_files(asset_path, abs_story)
 			var total := 0
 			for entry in file_entries:
 				var fa = FileAccess.open(entry[1], FileAccess.READ)
@@ -159,7 +158,7 @@ func _init():
 ## Les fichiers bruts (.png, .mp3) ne sont PAS inclus car Godot utilise uniquement
 ## les versions importées au runtime.
 ## Retourne un Array de [res_path, abs_path].
-func _resolve_asset_files(asset_path: String, abs_story: String, abs_project: String) -> Array:
+func _resolve_asset_files(asset_path: String, abs_story: String) -> Array:
 	var files := []  # Array of [res_path, abs_path]
 
 	# Normaliser le chemin (supprimer res://story/ si présent)
@@ -186,8 +185,7 @@ func _resolve_asset_files(asset_path: String, abs_story: String, abs_project: St
 					if value.begins_with("\"") and value.ends_with("\""):
 						value = value.substr(1, value.length() - 2)
 					if value.begins_with("res://"):
-						var rel_from_project = value.substr(6)  # Enlever "res://"
-						var abs_imported = abs_project + rel_from_project
+						var abs_imported = ProjectSettings.globalize_path(value)
 						if FileAccess.file_exists(abs_imported):
 							files.append([value, abs_imported])
 						else:
