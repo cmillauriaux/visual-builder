@@ -277,6 +277,13 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 
 
 func _find_godot() -> String:
+	# 0. En contexte éditeur, utiliser le binaire Godot qui tourne déjà.
+	# Garantit la même version pour l'export → bytecode GDScript compatible.
+	if OS.has_feature("editor"):
+		var exe = OS.get_executable_path()
+		if exe != "" and FileAccess.file_exists(exe):
+			return exe
+
 	# 1. Vérifier .env (lecture manuelle simple)
 	var env_path = ProjectSettings.globalize_path("res://.env")
 	if FileAccess.file_exists(env_path):
@@ -288,30 +295,30 @@ func _find_godot() -> String:
 				if FileAccess.file_exists(path):
 					return path
 		f.close()
-	
+
 	# 2. Variable d'environnement
 	var env_godot = OS.get_environment("GODOT_PATH")
 	if env_godot != "" and FileAccess.file_exists(env_godot):
 		return env_godot
-		
+
 	# 3. PATH (essai direct)
 	var test_output = []
 	var test_exit = OS.execute("godot", ["--version"], test_output)
 	if test_exit == 0:
 		return "godot"
-		
+
 	# 4. Chemins par défaut
 	var defaults = []
 	if OS.get_name() == "macOS":
+		defaults.append("/Applications/Godot-4.6.1.app/Contents/MacOS/Godot")
 		defaults.append("/Applications/Godot.app/Contents/MacOS/Godot")
 	elif OS.get_name() == "Windows":
-		# On pourrait en ajouter d'autres ici
 		pass
-		
+
 	for d in defaults:
 		if FileAccess.file_exists(d):
 			return d
-			
+
 	return ""
 
 
