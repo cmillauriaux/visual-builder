@@ -264,6 +264,8 @@ func _connect_signals() -> void:
 	_sequence_editor_ctrl.dialogue_selected.connect(_on_dialogue_selected)
 	_visual_editor.foreground_selected.connect(_on_foreground_selected)
 	_visual_editor.foreground_deselected.connect(_on_foreground_deselected)
+	_visual_editor.foreground_replace_requested.connect(_seq_ui_ctrl.on_foreground_replace_requested)
+	_visual_editor.foreground_replace_with_new_requested.connect(_seq_ui_ctrl.on_foreground_replace_with_new_requested)
 	_fx_panel.fx_changed.connect(_on_fx_changed)
 	_audio_panel.audio_changed.connect(_on_audio_changed)
 

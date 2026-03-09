@@ -113,7 +113,8 @@ func _simulate_run(story: RefCounted, global_coverage: Dictionary, fallback_coun
 		})
 
 		# Detection de boucle
-		var state_key := node_uuid + "|" + _serialize_variables(variables)
+		var history_str = _serialize_full_history(local_history)
+		var state_key = node_uuid + "|" + _serialize_variables(variables) + "|" + history_str
 		if visited_in_run.has(state_key):
 			return _make_run_result(run_index, path, "loop_detected")
 		visited_in_run[state_key] = true
@@ -313,6 +314,20 @@ func _serialize_variables(variables: Dictionary) -> String:
 	for key in keys:
 		parts.append(str(key) + "=" + str(variables[key]))
 	return "|".join(parts)
+
+
+func _serialize_full_history(local_history: Dictionary) -> String:
+	var keys = local_history.keys()
+	keys.sort()
+	var parts = []
+	for key in keys:
+		var tried = local_history[key].keys()
+		tried.sort()
+		var tried_str_arr = []
+		for t in tried:
+			tried_str_arr.append(str(t))
+		parts.append(key + ":" + ",".join(tried_str_arr))
+	return ";".join(parts)
 
 
 func _pick_choice(sequence_uuid: String, num_choices: int, local_history: Dictionary, global_coverage: Dictionary, fallback_counters: Dictionary) -> int:

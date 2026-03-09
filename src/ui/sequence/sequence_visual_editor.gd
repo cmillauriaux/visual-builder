@@ -57,6 +57,8 @@ var _context_menu_uuid: String = ""
 
 signal foreground_selected(uuid: String)
 signal foreground_deselected()
+signal foreground_replace_requested(uuid: String)
+signal foreground_replace_with_new_requested(uuid: String)
 
 func _ready() -> void:
 	clip_contents = true
@@ -115,6 +117,9 @@ func _ready() -> void:
 	_context_menu.add_item("Supprimer", 0)
 	_context_menu.add_item("Copier les paramètres", 1)
 	_context_menu.add_item("Coller les paramètres", 2)
+	_context_menu.add_separator()
+	_context_menu.add_item("Remplacer", 5)
+	_context_menu.add_item("Remplacer par un nouveau foreground", 6)
 	_context_menu.add_separator()
 	_context_menu.add_item("Copier le foreground", 3)
 	_context_menu.add_item("Coller le foreground", 4)
@@ -521,6 +526,12 @@ func _on_context_menu_id_pressed(id: int) -> void:
 		_copy_selected_foregrounds()
 	elif id == 4:  # Coller le foreground
 		_paste_foreground()
+	elif id == 5:  # Remplacer
+		if _context_menu_uuid != "":
+			foreground_replace_requested.emit(_context_menu_uuid)
+	elif id == 6:  # Remplacer par un nouveau foreground
+		if _context_menu_uuid != "":
+			foreground_replace_with_new_requested.emit(_context_menu_uuid)
 
 # --- Grid ---
 

@@ -210,13 +210,16 @@ func test_on_play_started_deselects_foreground():
 
 func test_context_menu_created():
 	assert_not_null(_editor._context_menu)
-	assert_eq(_editor._context_menu.item_count, 6)
+	assert_eq(_editor._context_menu.item_count, 9)
 	assert_eq(_editor._context_menu.get_item_text(0), "Supprimer")
 	assert_eq(_editor._context_menu.get_item_text(1), "Copier les paramètres")
 	assert_eq(_editor._context_menu.get_item_text(2), "Coller les paramètres")
 	# index 3 = séparateur
-	assert_eq(_editor._context_menu.get_item_text(4), "Copier le foreground")
-	assert_eq(_editor._context_menu.get_item_text(5), "Coller le foreground")
+	assert_eq(_editor._context_menu.get_item_text(4), "Remplacer")
+	assert_eq(_editor._context_menu.get_item_text(5), "Remplacer par un nouveau foreground")
+	# index 6 = séparateur
+	assert_eq(_editor._context_menu.get_item_text(7), "Copier le foreground")
+	assert_eq(_editor._context_menu.get_item_text(8), "Coller le foreground")
 
 func test_show_context_menu_sets_uuid():
 	_editor.load_sequence(_sequence)

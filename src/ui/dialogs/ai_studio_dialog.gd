@@ -12,6 +12,9 @@ const ImageCategoryService = preload("res://src/services/image_category_service.
 const ExpressionQueueService = preload("res://src/services/expression_queue_service.gd")
 
 const DEFAULT_EXPRESSIONS := [
+	"idle", "speaking", "thinking", "listening", "happy",
+	"cheerful", "confident", "playful", "curious", "calm",
+	"warm", "friendly", "joyful", "serene", "enthusiastic",
 	"smile", "sad", "shy", "grumpy", "laughing out loud",
 	"angry", "surprised", "worried", "neutral", "scared",
 	"disgusted", "confused", "proud", "embarrassed", "bored",
@@ -492,10 +495,25 @@ func _build_expressions_tab() -> void:
 	vbox.add_child(HSeparator.new())
 
 	# Expressions
+	var expr_header = HBoxContainer.new()
+	vbox.add_child(expr_header)
+
 	var expr_label = Label.new()
 	expr_label.text = "Expressions :"
 	expr_label.add_theme_font_size_override("font_size", 16)
-	vbox.add_child(expr_label)
+	expr_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	expr_header.add_child(expr_label)
+
+	var toggle_all_btn = Button.new()
+	toggle_all_btn.text = "Décocher tout"
+	toggle_all_btn.pressed.connect(func():
+		var all_checked = _expr_expression_checkboxes.all(func(c): return c.button_pressed)
+		for c in _expr_expression_checkboxes:
+			c.button_pressed = not all_checked
+		toggle_all_btn.text = "Cocher tout" if all_checked else "Décocher tout"
+		_update_expr_generate_button()
+	)
+	expr_header.add_child(toggle_all_btn)
 
 	var expr_flow = HFlowContainer.new()
 	expr_flow.add_theme_constant_override("h_separation", 8)
@@ -506,7 +524,11 @@ func _build_expressions_tab() -> void:
 		var cb = CheckBox.new()
 		cb.text = DEFAULT_EXPRESSIONS[i]
 		cb.button_pressed = (i == 0)
-		cb.toggled.connect(func(_p): _update_expr_generate_button())
+		cb.toggled.connect(func(_p):
+			var all_checked = _expr_expression_checkboxes.all(func(c): return c.button_pressed)
+			toggle_all_btn.text = "Décocher tout" if all_checked else "Cocher tout"
+			_update_expr_generate_button()
+		)
 		expr_flow.add_child(cb)
 		_expr_expression_checkboxes.append(cb)
 

@@ -7,6 +7,9 @@ const ImagePickerDialogScript = preload("res://src/ui/dialogs/image_picker_dialo
 const AddDialogueCommand = preload("res://src/commands/add_dialogue_command.gd")
 const RemoveDialogueCommand = preload("res://src/commands/remove_dialogue_command.gd")
 
+const ReplaceForegroundImageCommand = preload("res://src/commands/replace_foreground_image_command.gd")
+const ReplaceWithNewForegroundCommand = preload("res://src/commands/replace_with_new_foreground_command.gd")
+
 var _main: Control
 
 
@@ -47,6 +50,34 @@ func _on_fg_file_selected(path: String) -> void:
 		return
 	_main._sequence_editor_ctrl.add_foreground_to_current("", path)
 	_main.update_preview_for_dialogue(idx)
+
+
+func on_foreground_replace_requested(uuid: String) -> void:
+	_open_image_picker(ImagePickerDialogScript.Mode.FOREGROUND, _on_replace_fg_selected.bind(uuid))
+
+
+func _on_replace_fg_selected(path: String, uuid: String) -> void:
+	var fg = _main._visual_editor.find_foreground(uuid)
+	if fg:
+		var cmd = ReplaceForegroundImageCommand.new(fg, path)
+		_main._undo_redo.push_and_execute(cmd)
+		_main._visual_editor._update_foreground_visuals()
+
+
+func on_foreground_replace_with_new_requested(uuid: String) -> void:
+	_open_image_picker(ImagePickerDialogScript.Mode.FOREGROUND, _on_replace_with_new_fg_selected.bind(uuid))
+
+
+func _on_replace_with_new_fg_selected(path: String, uuid: String) -> void:
+	var template_fg = _main._visual_editor.find_foreground(uuid)
+	var idx = _main._sequence_editor_ctrl.get_selected_dialogue_index()
+	var seq = _main._sequence_editor_ctrl.get_sequence()
+	if template_fg and idx >= 0 and seq:
+		var dialogue = seq.dialogues[idx]
+		var inherited = _main._sequence_editor_ctrl.get_effective_foregrounds(idx)
+		var cmd = ReplaceWithNewForegroundCommand.new(dialogue, template_fg, path, inherited)
+		_main._undo_redo.push_and_execute(cmd)
+		_main.update_preview_for_dialogue(idx)
 
 
 func _open_image_picker(mode: int, on_selected: Callable) -> void:
