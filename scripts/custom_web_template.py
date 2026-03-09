@@ -7,6 +7,7 @@
 target = "template_release"
 optimize = "size_extra"
 lto = "full"
+threads = "no"
 
 # Désactiver la 3D (le jeu est 100% 2D)
 disable_3d = "yes"
