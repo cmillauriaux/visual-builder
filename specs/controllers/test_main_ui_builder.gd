@@ -2,7 +2,7 @@ extends GutTest
 
 ## Tests pour MainUIBuilder — construction de l'UI de l'éditeur principal.
 
-const MainScript = preload("res://src/main.gd")
+const MainScript = load("res://src/main.gd")
 
 var _main: Control
 

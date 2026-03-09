@@ -2,7 +2,7 @@ extends GutTest
 
 ## Tests pour I18nDialog — affichage des résultats i18n.
 
-const I18nDialogScript = preload("res://src/ui/dialogs/i18n_dialog.gd")
+var I18nDialogScript = load("res://src/ui/dialogs/i18n_dialog.gd")
 
 var _dialog: AcceptDialog
 

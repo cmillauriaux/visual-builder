@@ -2,8 +2,8 @@ extends GutTest
 
 ## Tests pour le mini-panel de propriétés de transition d'un foreground
 
-const TransitionPanel = preload("res://src/ui/sequence/transition_panel.gd")
-const Foreground = preload("res://src/models/foreground.gd")
+var TransitionPanel = load("res://src/ui/sequence/transition_panel.gd")
+var Foreground = load("res://src/models/foreground.gd")
 
 var _panel: Control = null
 

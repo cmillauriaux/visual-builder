@@ -1,8 +1,8 @@
 extends GutTest
 
-const VariableDetailsOverlayScript = preload("res://src/ui/play/variable_details_overlay.gd")
-const StoryScript = preload("res://src/models/story.gd")
-const VariableDefinitionScript = preload("res://src/models/variable_definition.gd")
+var VariableDetailsOverlayScript = load("res://src/ui/play/variable_details_overlay.gd")
+var StoryScript = load("res://src/models/story.gd")
+var VariableDefinitionScript = load("res://src/models/variable_definition.gd")
 
 var _overlay: CenterContainer
 

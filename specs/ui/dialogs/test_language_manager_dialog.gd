@@ -2,7 +2,7 @@ extends GutTest
 
 ## Tests pour LanguageManagerDialog — gestion des langues.
 
-const LanguageManagerDialogScript = preload("res://src/ui/dialogs/language_manager_dialog.gd")
+var LanguageManagerDialogScript = load("res://src/ui/dialogs/language_manager_dialog.gd")
 
 var _dialog: AcceptDialog
 

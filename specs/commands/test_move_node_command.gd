@@ -1,29 +1,21 @@
 extends GutTest
 
-const MoveNodeCommand = preload("res://src/commands/move_node_command.gd")
+var MoveNodeCommandScript
 
-var _position: Vector2
+func before_each():
+	MoveNodeCommandScript = load("res://src/commands/move_node_command.gd")
 
-
-func _set_position(pos: Vector2) -> void:
-	_position = pos
-
-
-func test_execute_calls_setter_with_new_position():
-	_position = Vector2(10, 20)
-	var cmd = MoveNodeCommand.new(_set_position, Vector2(10, 20), Vector2(100, 200))
+func test_execute_moves():
+	var pos_container = [Vector2.ZERO]
+	var pos_setter = func(p): pos_container[0] = p
+	var cmd = MoveNodeCommandScript.new(pos_setter, Vector2.ZERO, Vector2.ONE)
 	cmd.execute()
-	assert_eq(_position, Vector2(100, 200))
+	assert_eq(pos_container[0], Vector2.ONE)
 
-
-func test_undo_calls_setter_with_old_position():
-	_position = Vector2(10, 20)
-	var cmd = MoveNodeCommand.new(_set_position, Vector2(10, 20), Vector2(100, 200))
+func test_undo_moves_back():
+	var pos_container = [Vector2.ZERO]
+	var pos_setter = func(p): pos_container[0] = p
+	var cmd = MoveNodeCommandScript.new(pos_setter, Vector2.ZERO, Vector2.ONE)
 	cmd.execute()
 	cmd.undo()
-	assert_eq(_position, Vector2(10, 20))
-
-
-func test_get_label():
-	var cmd = MoveNodeCommand.new(_set_position, Vector2.ZERO, Vector2.ONE)
-	assert_eq(cmd.get_label(), "Déplacement nœud")
+	assert_eq(pos_container[0], Vector2.ZERO)

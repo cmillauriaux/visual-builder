@@ -2,7 +2,7 @@ extends GutTest
 
 ## Tests pour PlayContext — objet d'injection de dépendances pour PlayController.
 
-const PlayContextScript = preload("res://src/controllers/play_context.gd")
+const PlayContextScript = load("res://src/controllers/play_context.gd")
 
 
 func test_instantiation() -> void:

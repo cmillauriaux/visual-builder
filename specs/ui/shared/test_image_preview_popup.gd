@@ -2,7 +2,7 @@ extends GutTest
 
 ## Tests pour ImagePreviewPopup — overlay plein écran de prévisualisation d'image
 
-const ImagePreviewPopup = preload("res://src/ui/shared/image_preview_popup.gd")
+var ImagePreviewPopup = load("res://src/ui/shared/image_preview_popup.gd")
 
 var _popup: Control
 

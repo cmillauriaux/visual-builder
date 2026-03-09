@@ -2,7 +2,7 @@ extends GutTest
 
 ## Tests pour AudioPickerDialog — sélection de fichiers audio.
 
-const AudioPickerDialogScript = preload("res://src/ui/dialogs/audio_picker_dialog.gd")
+var AudioPickerDialogScript = load("res://src/ui/dialogs/audio_picker_dialog.gd")
 
 var _dialog: Window
 

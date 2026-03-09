@@ -1,6 +1,6 @@
 extends GutTest
 
-const EditorStateScript = preload("res://src/controllers/editor_state.gd")
+const EditorStateScript = load("res://src/controllers/editor_state.gd")
 
 
 func test_mode_none_exists():

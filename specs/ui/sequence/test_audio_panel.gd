@@ -2,8 +2,8 @@ extends GutTest
 
 ## Tests pour AudioPanel — panel de configuration audio d'une séquence.
 
-const AudioPanelScript = preload("res://src/ui/sequence/audio_panel.gd")
-const SequenceScript = preload("res://src/models/sequence.gd")
+var AudioPanelScript = load("res://src/ui/sequence/audio_panel.gd")
+var SequenceScript = load("res://src/models/sequence.gd")
 
 var _panel: VBoxContainer
 

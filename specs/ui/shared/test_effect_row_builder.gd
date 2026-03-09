@@ -1,7 +1,7 @@
 extends GutTest
 
-const EffectRowBuilderScript = preload("res://src/ui/shared/effect_row_builder.gd")
-const VariableEffectScript = preload("res://src/models/variable_effect.gd")
+var EffectRowBuilderScript = load("res://src/ui/shared/effect_row_builder.gd")
+var VariableEffectScript = load("res://src/models/variable_effect.gd")
 
 var _last_var_changed: String = ""
 var _last_op_changed: String = ""

@@ -2,7 +2,7 @@ extends GutTest
 
 # Tests pour le panel de rapport de verification
 
-const VerifierReportPanelScript = preload("res://src/ui/editors/verifier_report_panel.gd")
+var VerifierReportPanelScript = load("res://src/ui/editors/verifier_report_panel.gd")
 
 var _panel: VBoxContainer
 

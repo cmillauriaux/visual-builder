@@ -2,10 +2,10 @@ extends GutTest
 
 ## Tests pour PlayController — contrôleur de lecture dans l'éditeur.
 
-const MainScript = preload("res://src/main.gd")
-const PlayControllerScript = preload("res://src/controllers/play_controller.gd")
-const SequenceScript = preload("res://src/models/sequence.gd")
-const DialogueScript = preload("res://src/models/dialogue.gd")
+const MainScript = load("res://src/main.gd")
+const PlayControllerScript = load("res://src/controllers/play_controller.gd")
+const SequenceScript = load("res://src/models/sequence.gd")
+const DialogueScript = load("res://src/models/dialogue.gd")
 
 var _main: Control
 
@@ -103,10 +103,10 @@ func test_story_play_sequence_with_title_no_dialogues_shows_title_screen() -> vo
 	# No dialogues
 	
 	# Setup story/chapter/scene to avoid errors during navigation in PlayController
-	var story = load("res://src/models/story.gd").new()
+	var story = preload("res://src/models/story.gd").new()
 	story.title = "Test Story"
-	var chapter = load("res://src/models/chapter.gd").new()
-	var scene = load("res://src/models/scene_data.gd").new()
+	var chapter = preload("res://src/models/chapter.gd").new()
+	var scene = preload("res://src/models/scene_data.gd").new()
 	_main._editor_main._story = story
 	_main._editor_main._current_chapter = chapter
 	_main._editor_main._current_scene = scene
@@ -130,10 +130,10 @@ func test_story_play_sequence_no_title_no_dialogues_skips_immediately() -> void:
 	var seq = SequenceScript.new()
 	# No title, no dialogues
 	
-	var story = load("res://src/models/story.gd").new()
+	var story = preload("res://src/models/story.gd").new()
 	story.title = "Test Story"
-	var chapter = load("res://src/models/chapter.gd").new()
-	var scene = load("res://src/models/scene_data.gd").new()
+	var chapter = preload("res://src/models/chapter.gd").new()
+	var scene = preload("res://src/models/scene_data.gd").new()
 	_main._editor_main._story = story
 	_main._editor_main._current_chapter = chapter
 	_main._editor_main._current_scene = scene
@@ -152,7 +152,7 @@ func test_story_play_sequence_no_title_no_dialogues_skips_immediately() -> void:
 
 
 func _create_foreground(name: String, transition: String = "none"):
-	var ForegroundScript = load("res://src/models/foreground.gd")
+	var ForegroundScript = preload("res://src/models/foreground.gd")
 	var fg = ForegroundScript.new()
 	fg.fg_name = name
 	fg.transition_type = transition

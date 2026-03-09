@@ -74,7 +74,7 @@ func test_show_story_selector_hides_menu_button() -> void:
 
 
 func test_show_main_menu_hides_selector() -> void:
-	var Story = preload("res://src/models/story.gd")
+	const Story = preload("res://src/models/story.gd")
 	_game._current_story = Story.new()
 	_game._current_story.title = "Test"
 	_game._show_main_menu(_game._current_story)
@@ -88,7 +88,7 @@ func test_load_invalid_story_shows_error() -> void:
 
 
 func test_on_play_finished_return_shows_menu() -> void:
-	var Story = preload("res://src/models/story.gd")
+	const Story = preload("res://src/models/story.gd")
 	_game._current_story = Story.new()
 	_game._current_story.title = "Test"
 	_game._main_menu.visible = false

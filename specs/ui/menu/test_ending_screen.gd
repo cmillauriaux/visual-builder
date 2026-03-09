@@ -2,7 +2,7 @@ extends GutTest
 
 # Tests pour le composant EndingScreen
 
-const EndingScreenScript = preload("res://src/ui/menu/ending_screen.gd")
+var EndingScreenScript = load("res://src/ui/menu/ending_screen.gd")
 
 var _screen: Control = null
 

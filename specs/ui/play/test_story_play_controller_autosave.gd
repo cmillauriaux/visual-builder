@@ -2,15 +2,15 @@ extends GutTest
 
 ## Tests autosave du StoryPlayController.
 
-const StoryPlayController = preload("res://src/ui/play/story_play_controller.gd")
-const StoryScript = preload("res://src/models/story.gd")
-const ChapterScript = preload("res://src/models/chapter.gd")
-const SceneDataScript = preload("res://src/models/scene_data.gd")
-const SequenceScript = preload("res://src/models/sequence.gd")
-const EndingScript = preload("res://src/models/ending.gd")
-const ConsequenceScript = preload("res://src/models/consequence.gd")
-const ChoiceScript = preload("res://src/models/choice.gd")
-const DialogueScript = preload("res://src/models/dialogue.gd")
+var StoryPlayController = load("res://src/ui/play/story_play_controller.gd")
+var StoryScript = load("res://src/models/story.gd")
+var ChapterScript = load("res://src/models/chapter.gd")
+var SceneDataScript = load("res://src/models/scene_data.gd")
+var SequenceScript = load("res://src/models/sequence.gd")
+var EndingScript = load("res://src/models/ending.gd")
+var ConsequenceScript = load("res://src/models/consequence.gd")
+var ChoiceScript = load("res://src/models/choice.gd")
+var DialogueScript = load("res://src/models/dialogue.gd")
 
 var _ctrl: Node = null
 

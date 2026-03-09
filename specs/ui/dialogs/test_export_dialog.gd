@@ -2,8 +2,8 @@ extends GutTest
 
 # Tests pour ExportDialog (dialogue d'export en jeu standalone)
 
-const ExportDialogScript = preload("res://src/ui/dialogs/export_dialog.gd")
-const Story = preload("res://src/models/story.gd")
+var ExportDialogScript = load("res://src/ui/dialogs/export_dialog.gd")
+var Story = load("res://src/models/story.gd")
 
 var _dialog: ConfirmationDialog
 

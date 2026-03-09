@@ -2,7 +2,7 @@ extends GutTest
 
 # Tests pour le dialogue de renommage
 
-const RenameDialogScript = preload("res://src/ui/dialogs/rename_dialog.gd")
+var RenameDialogScript = load("res://src/ui/dialogs/rename_dialog.gd")
 
 var _dialog: ConfirmationDialog = null
 

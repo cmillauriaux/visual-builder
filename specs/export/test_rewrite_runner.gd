@@ -10,7 +10,7 @@ func test_story_path_rewriter_exists() -> void:
 
 
 func test_rewrite_runner_script_loads() -> void:
-	var script = load("res://src/export/rewrite_runner.gd")
+	const script = preload("res://src/export/rewrite_runner.gd")
 	assert_not_null(script, "rewrite_runner.gd should be loadable")
 
 

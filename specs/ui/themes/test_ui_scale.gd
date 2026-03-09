@@ -2,7 +2,7 @@ extends GutTest
 
 ## Tests pour UIScale (spec 059 — DPI-aware UI scaling)
 
-const UIScale = preload("res://src/ui/themes/ui_scale.gd")
+var UIScale = load("res://src/ui/themes/ui_scale.gd")
 
 
 func before_each() -> void:

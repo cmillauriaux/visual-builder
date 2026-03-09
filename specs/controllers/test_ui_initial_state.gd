@@ -1,7 +1,7 @@
 extends "res://addons/gut/test.gd"
 
-const MainUI = preload("res://src/main.gd")
-const EditorState = preload("res://src/controllers/editor_state.gd")
+const MainUI = load("res://src/main.gd")
+const EditorState = load("res://src/controllers/editor_state.gd")
 
 func test_initial_ui_state_hides_top_bar():
 	var main = MainUI.new()

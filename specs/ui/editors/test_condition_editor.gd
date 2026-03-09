@@ -1,9 +1,9 @@
 extends GutTest
 
-const ConditionEditorScene = preload("res://src/ui/editors/condition_editor.tscn")
-const ConditionScript = preload("res://src/models/condition.gd")
-const ConditionRuleScript = preload("res://src/models/condition_rule.gd")
-const ConsequenceScript = preload("res://src/models/consequence.gd")
+var ConditionEditorScene = load("res://src/ui/editors/condition_editor.tscn")
+var ConditionScript = load("res://src/models/condition.gd")
+var ConditionRuleScript = load("res://src/models/condition_rule.gd")
+var ConsequenceScript = load("res://src/models/consequence.gd")
 
 var _editor = null
 var _condition: Object

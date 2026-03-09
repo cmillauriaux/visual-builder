@@ -1,9 +1,9 @@
 extends GutTest
 
-const SequenceEditor = preload("res://src/ui/sequence/sequence_editor.gd")
-const Sequence = preload("res://src/models/sequence.gd")
-const Dialogue = preload("res://src/models/dialogue.gd")
-const Foreground = preload("res://src/models/foreground.gd")
+var SequenceEditor = load("res://src/ui/sequence/sequence_editor.gd")
+var Sequence = load("res://src/models/sequence.gd")
+var Dialogue = load("res://src/models/dialogue.gd")
+var Foreground = load("res://src/models/foreground.gd")
 
 var _editor: Control = null
 var _sequence = null

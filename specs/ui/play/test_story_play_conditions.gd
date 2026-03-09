@@ -1,14 +1,14 @@
 extends GutTest
 
-const StoryPlayControllerScript = preload("res://src/ui/play/story_play_controller.gd")
-const StoryScript = preload("res://src/models/story.gd")
-const ChapterScript = preload("res://src/models/chapter.gd")
-const SceneDataScript = preload("res://src/models/scene_data.gd")
-const SequenceScript = preload("res://src/models/sequence.gd")
-const ConditionScript = preload("res://src/models/condition.gd")
-const ConditionRuleScript = preload("res://src/models/condition_rule.gd")
-const ConsequenceScript = preload("res://src/models/consequence.gd")
-const VariableDefinitionScript = preload("res://src/models/variable_definition.gd")
+var StoryPlayControllerScript = load("res://src/ui/play/story_play_controller.gd")
+var StoryScript = load("res://src/models/story.gd")
+var ChapterScript = load("res://src/models/chapter.gd")
+var SceneDataScript = load("res://src/models/scene_data.gd")
+var SequenceScript = load("res://src/models/sequence.gd")
+var ConditionScript = load("res://src/models/condition.gd")
+var ConditionRuleScript = load("res://src/models/condition_rule.gd")
+var ConsequenceScript = load("res://src/models/consequence.gd")
+var VariableDefinitionScript = load("res://src/models/variable_definition.gd")
 
 var _ctrl: Node
 var _story: Object

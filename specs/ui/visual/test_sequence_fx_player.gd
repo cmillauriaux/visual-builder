@@ -1,7 +1,7 @@
 extends GutTest
 
-const SequenceFxPlayerScript = preload("res://src/ui/visual/sequence_fx_player.gd")
-const SequenceFx = preload("res://src/models/sequence_fx.gd")
+var SequenceFxPlayerScript = load("res://src/ui/visual/sequence_fx_player.gd")
+var SequenceFx = load("res://src/models/sequence_fx.gd")
 
 var _player: Node
 var _target: Control

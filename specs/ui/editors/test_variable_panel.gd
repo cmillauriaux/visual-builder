@@ -1,8 +1,8 @@
 extends GutTest
 
-const VariablePanelScript = preload("res://src/ui/editors/variable_panel.gd")
-const StoryScript = preload("res://src/models/story.gd")
-const VariableDefinitionScript = preload("res://src/models/variable_definition.gd")
+var VariablePanelScript = load("res://src/ui/editors/variable_panel.gd")
+var StoryScript = load("res://src/models/story.gd")
+var VariableDefinitionScript = load("res://src/models/variable_definition.gd")
 
 var _panel: VBoxContainer
 

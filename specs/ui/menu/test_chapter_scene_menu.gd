@@ -2,10 +2,10 @@ extends GutTest
 
 ## Tests pour ChapterSceneMenu — menu de sélection chapitres/scènes.
 
-const ChapterSceneMenuScript = preload("res://src/ui/menu/chapter_scene_menu.gd")
-const ChapterScript = preload("res://src/models/chapter.gd")
-const SceneScript = preload("res://src/models/scene_data.gd")
-const StoryScript = preload("res://src/models/story.gd")
+var ChapterSceneMenuScript = load("res://src/ui/menu/chapter_scene_menu.gd")
+var ChapterScript = load("res://src/models/chapter.gd")
+var SceneScript = load("res://src/models/scene_data.gd")
+var StoryScript = load("res://src/models/story.gd")
 
 var _menu: Control
 

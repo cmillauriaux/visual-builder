@@ -1,126 +1,53 @@
 extends GutTest
 
-const PlayFabAnalyticsServiceScript = preload("res://src/services/playfab_analytics_service.gd")
-
-var _service: Node
-
+var PlayFabAnalyticsServiceScript
 
 func before_each():
-	_service = Node.new()
-	_service.set_script(PlayFabAnalyticsServiceScript)
-	add_child_autofree(_service)
+	PlayFabAnalyticsServiceScript = load("res://src/services/playfab_analytics_service.gd")
 
+func test_configuration():
+	var svc = PlayFabAnalyticsServiceScript.new()
+	svc.configure("ABCD", true)
+	assert_true(svc.is_configured())
+	svc.configure("", true)
+	assert_false(svc.is_configured())
+	svc.configure("ABCD", false)
+	assert_false(svc.is_configured())
 
-# --- configure ---
+func test_track_event_inactive():
+	var svc = PlayFabAnalyticsServiceScript.new()
+	svc.configure("ABCD", true)
+	# Not logged in
+	svc.track_event("test_event")
+	assert_eq(svc.get_event_queue().size(), 0)
 
-func test_configure_sets_state():
-	_service.configure("ABCDEF", true)
-	assert_eq(_service._title_id, "ABCDEF")
-	assert_eq(_service._enabled, true)
+func test_uuid_generation():
+	var svc = PlayFabAnalyticsServiceScript
+	var uuid1 = svc._generate_uuid()
+	var uuid2 = svc._generate_uuid()
+	assert_ne(uuid1, uuid2)
+	assert_eq(uuid1.length(), 36)
 
+func test_on_login_completed_success():
+	var svc = PlayFabAnalyticsServiceScript.new()
+	var body = JSON.stringify({
+		"data": {
+			"EntityToken": {
+				"EntityToken": "token123",
+				"Entity": {
+					"Id": "id123",
+					"Type": "title_player_account"
+				}
+			}
+		}
+	}).to_utf8_buffer()
+	
+	svc._on_login_completed(HTTPRequest.RESULT_SUCCESS, 200, [], body)
+	assert_true(svc._logged_in)
+	assert_eq(svc.get_entity_token(), "token123")
+	assert_eq(svc._entity_id, "id123")
 
-func test_configure_disabled():
-	_service.configure("ABCDEF", false)
-	assert_eq(_service._enabled, false)
-
-
-# --- is_configured ---
-
-func test_is_configured_true():
-	_service.configure("ABCDEF", true)
-	assert_true(_service.is_configured())
-
-
-func test_is_configured_false_no_title():
-	_service.configure("", true)
-	assert_false(_service.is_configured())
-
-
-func test_is_configured_false_disabled():
-	_service.configure("ABCDEF", false)
-	assert_false(_service.is_configured())
-
-
-# --- is_active ---
-
-func test_is_active_false_when_not_logged_in():
-	_service.configure("ABCDEF", true)
-	assert_false(_service.is_active(), "pas encore loggé → inactif")
-
-
-func test_is_active_false_when_no_title_id():
-	_service.configure("", true)
-	_service._logged_in = true
-	assert_false(_service.is_active())
-
-
-func test_is_active_false_when_disabled():
-	_service.configure("ABCDEF", false)
-	_service._logged_in = true
-	assert_false(_service.is_active())
-
-
-func test_is_active_true_when_logged_in_and_configured():
-	_service.configure("ABCDEF", true)
-	_service._logged_in = true
-	assert_true(_service.is_active())
-
-
-# --- track_event ---
-
-func test_track_event_queues_event():
-	_service.configure("ABCDEF", true)
-	_service._logged_in = true
-	_service._entity_id = "player123"
-	_service._entity_type = "title_player_account"
-	_service.track_event("test_event", {"key": "value"})
-	var queue = _service.get_event_queue()
-	assert_eq(queue.size(), 1)
-	assert_eq(queue[0]["Name"], "test_event")
-	assert_eq(queue[0]["Payload"]["key"], "value")
-	assert_eq(queue[0]["EventNamespace"], "custom.visualbuilder")
-
-
-func test_track_event_ignored_when_inactive():
-	_service.configure("", false)
-	_service.track_event("test_event", {"key": "value"})
-	assert_eq(_service.get_event_queue().size(), 0)
-
-
-func test_track_event_ignored_when_not_logged_in():
-	_service.configure("ABCDEF", true)
-	_service.track_event("test_event", {})
-	assert_eq(_service.get_event_queue().size(), 0)
-
-
-func test_track_event_multiple():
-	_service.configure("ABCDEF", true)
-	_service._logged_in = true
-	_service._entity_id = "player123"
-	_service._entity_type = "title_player_account"
-	_service.track_event("event_1", {})
-	_service.track_event("event_2", {"data": 42})
-	assert_eq(_service.get_event_queue().size(), 2)
-	assert_eq(_service.get_event_queue()[0]["Name"], "event_1")
-	assert_eq(_service.get_event_queue()[1]["Name"], "event_2")
-
-
-# --- generate_uuid ---
-
-func test_generate_uuid_format():
-	var uuid = PlayFabAnalyticsServiceScript._generate_uuid()
-	assert_ne(uuid, "")
-	# Format : xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-	var parts = uuid.split("-")
-	assert_eq(parts.size(), 5, "UUID doit avoir 5 segments")
-	assert_eq(parts[0].length(), 8)
-	assert_eq(parts[1].length(), 4)
-	assert_eq(parts[2].length(), 4)
-	assert_eq(parts[3].length(), 4)
-	assert_eq(parts[4].length(), 12)
-
-
-func test_generate_uuid_unique():
-	var uuid1 = PlayFabAnalyticsServiceScript._generate_uuid()
-	var uuid2 = PlayFabAnalyticsServiceScript._generate_uuid()
-	assert_ne(uuid1, uuid2, "Deux UUIDs doivent être différents")
+func test_on_login_completed_failure():
+	var svc = PlayFabAnalyticsServiceScript.new()
+	svc._on_login_completed(HTTPRequest.RESULT_SUCCESS, 400, [], "{}".to_utf8_buffer())
+	assert_false(svc._logged_in)

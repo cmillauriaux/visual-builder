@@ -2,9 +2,9 @@ extends GutTest
 
 ## Tests pour NotificationDialog — gestion des notifications de l'histoire.
 
-const NotificationDialogScript = preload("res://src/ui/dialogs/notification_dialog.gd")
-const StoryScript = preload("res://src/models/story.gd")
-const StoryNotificationScript = preload("res://src/models/story_notification.gd")
+var NotificationDialogScript = load("res://src/ui/dialogs/notification_dialog.gd")
+var StoryScript = load("res://src/models/story.gd")
+var StoryNotificationScript = load("res://src/models/story_notification.gd")
 
 var _dialog: AcceptDialog
 

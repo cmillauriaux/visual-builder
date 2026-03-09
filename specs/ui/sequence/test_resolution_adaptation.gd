@@ -2,9 +2,9 @@ extends GutTest
 
 # Tests pour l'adaptation résolution et letterboxing 16:9
 
-const SequenceVisualEditor = preload("res://src/ui/sequence/sequence_visual_editor.gd")
-const Sequence = preload("res://src/models/sequence.gd")
-const MainScript = preload("res://src/main.gd")
+var SequenceVisualEditor = load("res://src/ui/sequence/sequence_visual_editor.gd")
+var Sequence = load("res://src/models/sequence.gd")
+var MainScript = load("res://src/main.gd")
 
 var _editor: Control = null
 var _sequence = null

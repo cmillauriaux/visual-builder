@@ -2,16 +2,16 @@ extends GutTest
 
 # Tests pour l'éditeur de terminaison (UI + API)
 
-const EndingEditorScene = preload("res://src/ui/editors/ending_editor.tscn")
-const Sequence = preload("res://src/models/sequence.gd")
-const Ending = preload("res://src/models/ending.gd")
-const Consequence = preload("res://src/models/consequence.gd")
-const SequenceGraphView = preload("res://src/views/sequence_graph_view.gd")
-const SceneGraphView = preload("res://src/views/scene_graph_view.gd")
-const ChapterGraphView = preload("res://src/views/chapter_graph_view.gd")
-const SceneDataScript = preload("res://src/models/scene_data.gd")
-const ChapterScript = preload("res://src/models/chapter.gd")
-const StoryScript = preload("res://src/models/story.gd")
+var EndingEditorScene = load("res://src/ui/editors/ending_editor.tscn")
+var Sequence = load("res://src/models/sequence.gd")
+var Ending = load("res://src/models/ending.gd")
+var Consequence = load("res://src/models/consequence.gd")
+var SequenceGraphView = load("res://src/views/sequence_graph_view.gd")
+var SceneGraphView = load("res://src/views/scene_graph_view.gd")
+var ChapterGraphView = load("res://src/views/chapter_graph_view.gd")
+var SceneDataScript = load("res://src/models/scene_data.gd")
+var ChapterScript = load("res://src/models/chapter.gd")
+var StoryScript = load("res://src/models/story.gd")
 
 var _editor = null
 var _sequence = null

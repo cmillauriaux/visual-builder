@@ -1,11 +1,11 @@
 extends GutTest
 
-const EditorMainScript = preload("res://src/ui/editors/editor_main.gd")
-const StoryScript = preload("res://src/models/story.gd")
-const ChapterScript = preload("res://src/models/chapter.gd")
-const SceneDataScript = preload("res://src/models/scene_data.gd")
-const SequenceScript = preload("res://src/models/sequence.gd")
-const ConditionScript = preload("res://src/models/condition.gd")
+var EditorMainScript = load("res://src/ui/editors/editor_main.gd")
+var StoryScript = load("res://src/models/story.gd")
+var ChapterScript = load("res://src/models/chapter.gd")
+var SceneDataScript = load("res://src/models/scene_data.gd")
+var SequenceScript = load("res://src/models/sequence.gd")
+var ConditionScript = load("res://src/models/condition.gd")
 
 var _editor: Control
 var _story: Object

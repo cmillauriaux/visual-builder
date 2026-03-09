@@ -1,8 +1,8 @@
 extends GutTest
 
-const ConditionEditorScene = preload("res://src/ui/editors/condition_editor.tscn")
-const ConditionEditorScript = preload("res://src/ui/editors/condition_editor.gd")
-const ConditionScript = preload("res://src/models/condition.gd")
+var ConditionEditorScene = load("res://src/ui/editors/condition_editor.tscn")
+var ConditionEditorScript = load("res://src/ui/editors/condition_editor.gd")
+var ConditionScript = load("res://src/models/condition.gd")
 
 var _editor: VBoxContainer
 var _condition: Object

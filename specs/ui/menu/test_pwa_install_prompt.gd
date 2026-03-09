@@ -1,7 +1,7 @@
 extends GutTest
 
-const PwaInstallPromptScript = preload("res://src/ui/menu/pwa_install_prompt.gd")
-const GameSettings = preload("res://src/ui/menu/game_settings.gd")
+var PwaInstallPromptScript = load("res://src/ui/menu/pwa_install_prompt.gd")
+var GameSettings = load("res://src/ui/menu/game_settings.gd")
 
 var _prompt: Control
 var _test_cfg_path := "user://test_pwa_settings.cfg"

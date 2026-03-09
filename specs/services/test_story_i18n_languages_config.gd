@@ -96,7 +96,7 @@ func test_save_and_load_roundtrip() -> void:
 # ── check_translations avec config ───────────────────────────────────────────
 
 func _make_simple_story():
-	var StoryScript = load("res://src/models/story.gd")
+	const StoryScript = preload("res://src/models/story.gd")
 	var story = StoryScript.new()
 	story.title = "Titre"
 	story.menu_title = "Menu"

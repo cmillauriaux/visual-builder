@@ -1,6 +1,6 @@
 extends GutTest
 
-const ImageNormalizerDialogScript = preload("res://src/ui/dialogs/image_normalizer_dialog.gd")
+var ImageNormalizerDialogScript = load("res://src/ui/dialogs/image_normalizer_dialog.gd")
 
 var _dialog: Window
 var _test_dir: String = ""

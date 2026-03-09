@@ -1,6 +1,6 @@
 extends "res://addons/gut/test.gd"
 
-const SequenceFxPlayerScript = preload("res://src/ui/visual/sequence_fx_player.gd")
+var SequenceFxPlayerScript = load("res://src/ui/visual/sequence_fx_player.gd")
 
 var _player: Node
 var _target: Control

@@ -2,7 +2,7 @@ extends GutTest
 
 ## Tests pour main.gd — scène principale de l'éditeur.
 
-const MainScript = preload("res://src/main.gd")
+const MainScript = load("res://src/main.gd")
 
 var _main: Control
 

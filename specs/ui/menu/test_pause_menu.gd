@@ -2,7 +2,7 @@ extends GutTest
 
 ## Tests pour PauseMenu — menu pause in-game.
 
-const PauseMenuScript = preload("res://src/ui/menu/pause_menu.gd")
+var PauseMenuScript = load("res://src/ui/menu/pause_menu.gd")
 
 var _menu: Control
 

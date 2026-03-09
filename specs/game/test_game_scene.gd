@@ -78,7 +78,7 @@ func test_load_story_with_invalid_path_shows_error() -> void:
 
 func test_on_play_finished_return_shows_menu_when_story_loaded() -> void:
 	# Simuler une story chargée
-	var Story = preload("res://src/models/story.gd")
+	const Story = preload("res://src/models/story.gd")
 	_game._current_story = Story.new()
 	_game._current_story.title = "Test"
 	_game._main_menu.visible = false

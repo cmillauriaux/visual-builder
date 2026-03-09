@@ -1,7 +1,7 @@
 extends GutTest
 
-const ConsequenceTargetHelperScript = preload("res://src/ui/shared/consequence_target_helper.gd")
-const ConsequenceScript = preload("res://src/models/consequence.gd")
+var ConsequenceTargetHelperScript = load("res://src/ui/shared/consequence_target_helper.gd")
+var ConsequenceScript = load("res://src/models/consequence.gd")
 
 var _helper: RefCounted
 

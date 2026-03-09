@@ -1,13 +1,13 @@
 extends GutTest
 
-const GalleryDialogScript = preload("res://src/ui/dialogs/gallery_dialog.gd")
-const StoryScript = preload("res://src/models/story.gd")
-const ChapterScript = preload("res://src/models/chapter.gd")
-const SceneDataScript = preload("res://src/models/scene_data.gd")
-const SequenceScript = preload("res://src/models/sequence.gd")
-const ForegroundScript = preload("res://src/models/foreground.gd")
-const DialogueScript = preload("res://src/models/dialogue.gd")
-const ImageCategoryService = preload("res://src/services/image_category_service.gd")
+var GalleryDialogScript = load("res://src/ui/dialogs/gallery_dialog.gd")
+var StoryScript = load("res://src/models/story.gd")
+var ChapterScript = load("res://src/models/chapter.gd")
+var SceneDataScript = load("res://src/models/scene_data.gd")
+var SequenceScript = load("res://src/models/sequence.gd")
+var ForegroundScript = load("res://src/models/foreground.gd")
+var DialogueScript = load("res://src/models/dialogue.gd")
+var ImageCategoryService = load("res://src/services/image_category_service.gd")
 
 var _dialog: Window
 var _test_dir: String = ""

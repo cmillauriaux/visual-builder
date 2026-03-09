@@ -2,8 +2,8 @@ extends GutTest
 
 ## Tests pour les transitions visuelles de foregrounds
 
-const ForegroundTransition = preload("res://src/ui/visual/foreground_transition.gd")
-const Foreground = preload("res://src/models/foreground.gd")
+var ForegroundTransition = load("res://src/ui/visual/foreground_transition.gd")
+var Foreground = load("res://src/models/foreground.gd")
 
 var _transition: Node = null
 

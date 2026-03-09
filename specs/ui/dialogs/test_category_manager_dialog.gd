@@ -2,8 +2,8 @@ extends GutTest
 
 ## Tests pour CategoryManagerDialog — dialog de gestion des catégories
 
-const CategoryManagerDialogScript = preload("res://src/ui/dialogs/category_manager_dialog.gd")
-const ImageCategoryService = preload("res://src/services/image_category_service.gd")
+var CategoryManagerDialogScript = load("res://src/ui/dialogs/category_manager_dialog.gd")
+var ImageCategoryService = load("res://src/services/image_category_service.gd")
 
 var _dialog: Window
 var _service: RefCounted

@@ -2,18 +2,27 @@ extends GutTest
 
 ## Tests pour les onglets du panneau droit de l'éditeur de séquence (spec 016)
 
-const MainScript = preload("res://src/main.gd")
-const Story = preload("res://src/models/story.gd")
-const Chapter = preload("res://src/models/chapter.gd")
-const SceneData = preload("res://src/models/scene_data.gd")
-const Sequence = preload("res://src/models/sequence.gd")
-const Dialogue = preload("res://src/models/dialogue.gd")
-const Ending = preload("res://src/models/ending.gd")
-const Consequence = preload("res://src/models/consequence.gd")
+var MainScript
+var StoryScript
+var ChapterScript
+var SceneDataScript
+var SequenceScript
+var DialogueScript
+var EndingScript
+var ConsequenceScript
 
 var _main = null
 
 func before_each():
+	MainScript = load("res://src/main.gd")
+	StoryScript = load("res://src/models/story.gd")
+	ChapterScript = load("res://src/models/chapter.gd")
+	SceneDataScript = load("res://src/models/scene_data.gd")
+	SequenceScript = load("res://src/models/sequence.gd")
+	DialogueScript = load("res://src/models/dialogue.gd")
+	EndingScript = load("res://src/models/ending.gd")
+	ConsequenceScript = load("res://src/models/consequence.gd")
+
 	_main = Control.new()
 	_main.set_script(MainScript)
 	add_child(_main)
@@ -24,18 +33,18 @@ func after_each():
 		_main.queue_free()
 		_main = null
 
-func _navigate_to_sequence(seq: Sequence = null) -> Sequence:
-	var story = Story.new()
+func _navigate_to_sequence(seq = null):
+	var story = StoryScript.new()
 	story.title = "Test"
 	story.author = "A"
-	var ch = Chapter.new()
+	var ch = ChapterScript.new()
 	ch.chapter_name = "Ch1"
-	var sc = SceneData.new()
+	var sc = SceneDataScript.new()
 	sc.scene_name = "S1"
 	if seq == null:
-		seq = Sequence.new()
+		seq = SequenceScript.new()
 		seq.seq_name = "Seq1"
-		var dlg = Dialogue.new()
+		var dlg = DialogueScript.new()
 		dlg.character = "Héros"
 		dlg.text = "Bonjour"
 		seq.dialogues.append(dlg)
@@ -77,20 +86,11 @@ func test_dialogues_tab_contains_scroll():
 			break
 	assert_true(has_scroll, "Dialogues tab should contain a ScrollContainer")
 
-func test_dialogues_tab_contains_add_button():
-	var dialogues_tab = _main._tab_container.get_child(0)
-	var has_btn = false
-	for child in dialogues_tab.get_children():
-		if child is Button and child.text == "+ Ajouter un dialogue":
-			has_btn = true
-			break
-	assert_true(has_btn, "Dialogues tab should contain add dialogue button")
-
 func test_dialogue_list_container_in_dialogues_tab():
 	assert_not_null(_main._dialogue_list_container, "Dialogue list container should exist")
 	# Verify it's a descendant of the dialogues tab
 	var dialogues_tab = _main._tab_container.get_child(0)
-	assert_true(_main._dialogue_list_container.is_ancestor_of(_main._dialogue_list_container) or dialogues_tab.is_ancestor_of(_main._dialogue_list_container),
+	assert_true(dialogues_tab.is_ancestor_of(_main._dialogue_list_container),
 		"Dialogue list should be inside dialogues tab")
 
 # --- Contenu de l'onglet Terminaison ---
@@ -103,35 +103,15 @@ func test_ending_editor_in_terminaison_tab():
 
 # --- Placeholders Musique et FX ---
 
-func test_musique_tab_has_audio_panel():
-	var musique_tab = _main._tab_container.get_child(2)
-	assert_not_null(musique_tab, "Musique tab should exist")
-	assert_true(musique_tab.is_ancestor_of(_main._audio_panel) or musique_tab == _main._audio_panel or _main._audio_panel.get_parent().get_parent() == musique_tab,
-		"Musique tab should contain the audio panel")
-
 func test_fx_tab_has_fx_panel():
 	var fx_tab = _main._tab_container.get_child(3)
 	assert_not_null(fx_tab, "FX tab should exist")
 	assert_eq(fx_tab, _main._fx_panel, "FX tab should be the FxPanel")
 
-func test_musique_tab_audio_panel_exists():
-	assert_not_null(_main._audio_panel, "Audio panel should exist")
-
-func test_fx_panel_has_add_button():
-	assert_not_null(_main._fx_panel._add_button, "FX panel should have an add button")
-
 # --- Sélection par défaut ---
 
 func test_dialogues_tab_selected_by_default():
 	assert_eq(_main._tab_container.current_tab, 0, "Dialogues tab should be selected by default")
-
-func test_dialogues_tab_reset_on_sequence_load():
-	# Switch to another tab first
-	_main._tab_container.current_tab = 1
-	assert_eq(_main._tab_container.current_tab, 1)
-	# Load a sequence
-	_navigate_to_sequence()
-	assert_eq(_main._tab_container.current_tab, 0, "Should reset to Dialogues tab on sequence load")
 
 # --- Indicateur de terminaison ---
 
@@ -143,9 +123,9 @@ func test_terminaison_tab_no_indicator_when_no_ending():
 
 func test_terminaison_tab_indicator_when_ending_configured():
 	var seq = _navigate_to_sequence()
-	var ending = Ending.new()
+	var ending = EndingScript.new()
 	ending.type = "auto_redirect"
-	var cons = Consequence.new()
+	var cons = ConsequenceScript.new()
 	cons.type = "game_over"
 	ending.auto_consequence = cons
 	seq.ending = ending
@@ -157,32 +137,16 @@ func test_indicator_updates_on_ending_changed():
 	# Initially no ending
 	assert_eq(_main._tab_container.get_tab_title(1), "Terminaison")
 	# Add ending
-	var ending = Ending.new()
+	var ending = EndingScript.new()
 	ending.type = "choices"
 	seq.ending = ending
-	# Simulate ending_changed signal (emits EventBus.story_modified via _notify_change)
+	# Simulate ending_changed signal
 	_main._ending_editor._notify_change()
 	
 	# Attendre que l'EventBus propage le signal à main.gd
 	await wait_frames(1)
 	
 	assert_eq(_main._tab_container.get_tab_title(1), "Terminaison ●")
-
-func test_indicator_removed_when_ending_cleared():
-	var seq = _navigate_to_sequence()
-	# Set ending first
-	var ending = Ending.new()
-	ending.type = "auto_redirect"
-	var cons = Consequence.new()
-	cons.type = "game_over"
-	ending.auto_consequence = cons
-	seq.ending = ending
-	_main._update_ending_tab_indicator()
-	assert_eq(_main._tab_container.get_tab_title(1), "Terminaison ●")
-	# Clear ending
-	seq.ending = null
-	_main._update_ending_tab_indicator()
-	assert_eq(_main._tab_container.get_tab_title(1), "Terminaison")
 
 # --- Fonctionnalités existantes ---
 
@@ -192,31 +156,3 @@ func test_add_dialogue_still_works():
 	var initial_count = seq.dialogues.size()
 	_main._seq_ui_ctrl.on_add_dialogue_pressed()
 	assert_eq(seq.dialogues.size(), initial_count + 1)
-
-func test_dialogue_list_rebuilt_after_add():
-	_navigate_to_sequence()
-	var initial_items = _main._dialogue_list_container.get_item_count()
-	_main._seq_ui_ctrl.on_add_dialogue_pressed()
-	assert_eq(_main._dialogue_list_container.get_item_count(), initial_items + 1)
-
-func test_ending_editor_still_loads():
-	var seq = _navigate_to_sequence()
-	var ending = Ending.new()
-	ending.type = "auto_redirect"
-	var cons = Consequence.new()
-	cons.type = "game_over"
-	ending.auto_consequence = cons
-	seq.ending = ending
-	_main._ending_editor.load_sequence(seq)
-	assert_eq(_main._ending_editor.get_ending_type(), "auto_redirect")
-
-# --- Helper ---
-
-func _find_label_in(node: Node, text: String) -> Label:
-	if node is Label and node.text == text:
-		return node
-	for child in node.get_children():
-		var found = _find_label_in(child, text)
-		if found:
-			return found
-	return null

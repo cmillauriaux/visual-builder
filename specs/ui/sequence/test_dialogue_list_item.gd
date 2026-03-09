@@ -2,8 +2,8 @@ extends GutTest
 
 ## Tests pour DialogueListItem — item de dialogue avec édition et drag & drop.
 
-const DialogueListItemScript = preload("res://src/ui/sequence/dialogue_list_item.gd")
-const DialogueScript = preload("res://src/models/dialogue.gd")
+var DialogueListItemScript = load("res://src/ui/sequence/dialogue_list_item.gd")
+var DialogueScript = load("res://src/models/dialogue.gd")
 
 var _item: PanelContainer
 var _dialogue

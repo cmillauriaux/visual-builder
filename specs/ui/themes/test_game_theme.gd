@@ -2,7 +2,7 @@ extends GutTest
 
 ## Tests pour GameTheme — construction du thème Kenney Adventure.
 
-const GameTheme = preload("res://src/ui/themes/game_theme.gd")
+var GameTheme = load("res://src/ui/themes/game_theme.gd")
 
 var _theme: Theme
 

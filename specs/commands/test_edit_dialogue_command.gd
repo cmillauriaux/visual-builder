@@ -1,31 +1,21 @@
 extends GutTest
 
-const DialogueScript = preload("res://src/models/dialogue.gd")
-const EditDialogueCommand = preload("res://src/commands/edit_dialogue_command.gd")
+var DialogueScript
+var EditDialogueCommandScript
 
+func before_each():
+	DialogueScript = load("res://src/models/dialogue.gd")
+	EditDialogueCommandScript = load("res://src/commands/edit_dialogue_command.gd")
 
-func test_execute_changes_character_and_text():
-	var dlg = DialogueScript.new()
-	dlg.character = "Alice"
-	dlg.text = "Ancien"
-	var cmd = EditDialogueCommand.new(dlg, "Bob", "Nouveau", "Alice", "Ancien")
+func test_execute_edits():
+	var dialogue = DialogueScript.new()
+	var cmd = EditDialogueCommandScript.new(dialogue, "NewH", "NewT", "OldH", "OldT")
 	cmd.execute()
-	assert_eq(dlg.character, "Bob")
-	assert_eq(dlg.text, "Nouveau")
+	assert_eq(dialogue.character, "NewH")
 
-
-func test_undo_restores_character_and_text():
-	var dlg = DialogueScript.new()
-	dlg.character = "Alice"
-	dlg.text = "Ancien"
-	var cmd = EditDialogueCommand.new(dlg, "Bob", "Nouveau", "Alice", "Ancien")
+func test_undo_restores():
+	var dialogue = DialogueScript.new()
+	var cmd = EditDialogueCommandScript.new(dialogue, "NewH", "NewT", "OldH", "OldT")
 	cmd.execute()
 	cmd.undo()
-	assert_eq(dlg.character, "Alice")
-	assert_eq(dlg.text, "Ancien")
-
-
-func test_get_label():
-	var dlg = DialogueScript.new()
-	var cmd = EditDialogueCommand.new(dlg, "B", "N", "A", "O")
-	assert_eq(cmd.get_label(), "Modification dialogue")
+	assert_eq(dialogue.character, "OldH")

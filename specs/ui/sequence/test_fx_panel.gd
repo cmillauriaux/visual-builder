@@ -1,8 +1,8 @@
 extends GutTest
 
-const FxPanelScript = preload("res://src/ui/sequence/fx_panel.gd")
-const SequenceScript = preload("res://src/models/sequence.gd")
-const SequenceFx = preload("res://src/models/sequence_fx.gd")
+var FxPanelScript = load("res://src/ui/sequence/fx_panel.gd")
+var SequenceScript = load("res://src/models/sequence.gd")
+var SequenceFx = load("res://src/models/sequence_fx.gd")
 
 var _panel: VBoxContainer
 

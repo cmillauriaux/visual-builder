@@ -2,9 +2,9 @@ extends GutTest
 
 # Tests pour l'éditeur de dialogues
 
-const DialogueEditor = preload("res://src/ui/editors/dialogue_editor.gd")
-const Sequence = preload("res://src/models/sequence.gd")
-const Dialogue = preload("res://src/models/dialogue.gd")
+var DialogueEditor = load("res://src/ui/editors/dialogue_editor.gd")
+var Sequence = load("res://src/models/sequence.gd")
+var Dialogue = load("res://src/models/dialogue.gd")
 
 var _editor: Control = null
 var _sequence = null

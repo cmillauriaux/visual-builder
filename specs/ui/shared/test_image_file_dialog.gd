@@ -1,6 +1,6 @@
 extends "res://addons/gut/test.gd"
 
-const ImageFileDialog = preload("res://src/ui/shared/image_file_dialog.gd")
+var ImageFileDialog = load("res://src/ui/shared/image_file_dialog.gd")
 
 func test_initial_values():
 	var dialog = ImageFileDialog.new()

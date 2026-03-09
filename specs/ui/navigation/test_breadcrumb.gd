@@ -2,7 +2,7 @@ extends GutTest
 
 # Tests pour le fil d'Ariane (Breadcrumb)
 
-const Breadcrumb = preload("res://src/ui/navigation/breadcrumb.gd")
+var Breadcrumb = load("res://src/ui/navigation/breadcrumb.gd")
 
 var _breadcrumb: HBoxContainer = null
 

@@ -1,7 +1,7 @@
 extends GutTest
 
-const MainMenuScript = preload("res://src/ui/menu/main_menu.gd")
-const Story = preload("res://src/models/story.gd")
+var MainMenuScript = load("res://src/ui/menu/main_menu.gd")
+var Story = load("res://src/models/story.gd")
 
 var _menu: Control
 

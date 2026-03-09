@@ -1,6 +1,6 @@
 extends GutTest
 
-const UIControllerScript = preload("res://src/controllers/ui_controller.gd")
+const UIControllerScript = load("res://src/controllers/ui_controller.gd")
 
 
 func test_script_loads():

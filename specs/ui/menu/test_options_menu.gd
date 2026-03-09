@@ -1,7 +1,7 @@
 extends GutTest
 
-const OptionsMenuScript = preload("res://src/ui/menu/options_menu.gd")
-const GameSettings = preload("res://src/ui/menu/game_settings.gd")
+var OptionsMenuScript = load("res://src/ui/menu/options_menu.gd")
+var GameSettings = load("res://src/ui/menu/game_settings.gd")
 
 var _menu: PanelContainer
 var _settings: RefCounted

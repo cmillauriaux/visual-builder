@@ -2,8 +2,8 @@ extends GutTest
 
 # Tests pour le dialogue de configuration du jeu
 
-const MenuConfigDialogScript = preload("res://src/ui/dialogs/menu_config_dialog.gd")
-const StoryScript = preload("res://src/models/story.gd")
+var MenuConfigDialogScript = load("res://src/ui/dialogs/menu_config_dialog.gd")
+var StoryScript = load("res://src/models/story.gd")
 
 var _dialog: ConfirmationDialog = null
 

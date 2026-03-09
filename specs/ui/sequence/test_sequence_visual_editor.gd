@@ -2,9 +2,9 @@ extends GutTest
 
 # Tests pour l'éditeur visuel de séquence
 
-const SequenceVisualEditor = preload("res://src/ui/sequence/sequence_visual_editor.gd")
-const Sequence = preload("res://src/models/sequence.gd")
-const Foreground = preload("res://src/models/foreground.gd")
+var SequenceVisualEditor = load("res://src/ui/sequence/sequence_visual_editor.gd")
+var Sequence = load("res://src/models/sequence.gd")
+var Foreground = load("res://src/models/foreground.gd")
 
 var _editor: Control = null
 var _sequence = null

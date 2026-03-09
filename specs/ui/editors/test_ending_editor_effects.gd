@@ -1,11 +1,11 @@
 extends GutTest
 
-const EndingEditorScene = preload("res://src/ui/editors/ending_editor.tscn")
-const SequenceScript = preload("res://src/models/sequence.gd")
-const EndingScript = preload("res://src/models/ending.gd")
-const ConsequenceScript = preload("res://src/models/consequence.gd")
-const ChoiceScript = preload("res://src/models/choice.gd")
-const VariableEffectScript = preload("res://src/models/variable_effect.gd")
+var EndingEditorScene = load("res://src/ui/editors/ending_editor.tscn")
+var SequenceScript = load("res://src/models/sequence.gd")
+var EndingScript = load("res://src/models/ending.gd")
+var ConsequenceScript = load("res://src/models/consequence.gd")
+var ChoiceScript = load("res://src/models/choice.gd")
+var VariableEffectScript = load("res://src/models/variable_effect.gd")
 
 var _editor = null
 

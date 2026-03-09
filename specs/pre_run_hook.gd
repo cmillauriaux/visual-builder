@@ -11,4 +11,20 @@ func run():
 		"res://src/export/rewrite_runner.gd"
 	]
 	var coverage = Coverage.new(gut.get_tree(), exclude_paths)
-	coverage.instrument_scripts("res://src/")
+	
+	# Instrumenter explicitement les scripts critiques en premier
+	var critical_dirs = [
+		"res://src/commands/",
+		"res://src/services/",
+		"res://src/models/",
+		"res://src/persistence/",
+		"res://src/controllers/",
+		"res://src/views/",
+		"res://src/ui/"
+	]
+	
+	for dir in critical_dirs:
+		coverage.instrument_scripts(dir)
+	
+	# Forcer l'instrumentation des autoloads
+	coverage.instrument_autoloads()

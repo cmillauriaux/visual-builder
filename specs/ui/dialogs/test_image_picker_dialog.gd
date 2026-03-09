@@ -3,8 +3,8 @@ extends GutTest
 ## Tests pour ImagePickerDialog — dialog unifié de sélection d'images
 ## (onglet Fichier + onglet Galerie + onglet IA)
 
-const ImagePickerDialog = preload("res://src/ui/dialogs/image_picker_dialog.gd")
-const ImageCategoryService = preload("res://src/services/image_category_service.gd")
+var ImagePickerDialog = load("res://src/ui/dialogs/image_picker_dialog.gd")
+var ImageCategoryService = load("res://src/services/image_category_service.gd")
 
 var _dialog: Window
 var _test_dir: String = ""
