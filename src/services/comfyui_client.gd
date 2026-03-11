@@ -119,7 +119,7 @@ const WORKFLOW_TEMPLATE: Dictionary = {
 	"75:80": {
 		"class_type": "ImageScaleToTotalPixels",
 		"inputs": {
-			"upscale_method": "nearest-exact",
+			"upscale_method": "lanczos",
 			"megapixels": 1,
 			"resolution_steps": 1,
 			"image": ["76", 0]
@@ -214,7 +214,7 @@ const EXPRESSION_WORKFLOW_TEMPLATE: Dictionary = {
 		"class_type": "BboxDetectorCombined_v2",
 		"inputs": {
 			"threshold": 0.4,
-			"dilation": 40,
+			"dilation": 80,
 			"bbox_detector": ["99", 0],
 			"image": ["76", 0]
 		}
@@ -222,7 +222,7 @@ const EXPRESSION_WORKFLOW_TEMPLATE: Dictionary = {
 	"101": {
 		"class_type": "GrowMask",
 		"inputs": {
-			"expand": 40,
+			"expand": 80,
 			"tapered_corners": true,
 			"mask": ["100", 0]
 		}
@@ -230,8 +230,8 @@ const EXPRESSION_WORKFLOW_TEMPLATE: Dictionary = {
 	"102": {
 		"class_type": "ImpactGaussianBlurMask",
 		"inputs": {
-			"kernel_size": 20,
-			"sigma": 10,
+			"kernel_size": 51,
+			"sigma": 25,
 			"mask": ["101", 0]
 		}
 	},
@@ -240,7 +240,7 @@ const EXPRESSION_WORKFLOW_TEMPLATE: Dictionary = {
 		"inputs": {
 			"x": 0,
 			"y": 0,
-			"resize_source": false,
+			"resize_source": true,
 			"destination": ["76", 0],
 			"source": ["75:65", 0],
 			"mask": ["102", 0]
@@ -320,7 +320,7 @@ const EXPRESSION_WORKFLOW_TEMPLATE: Dictionary = {
 	"75:80": {
 		"class_type": "ImageScaleToTotalPixels",
 		"inputs": {
-			"upscale_method": "nearest-exact",
+			"upscale_method": "lanczos",
 			"megapixels": 1,
 			"resolution_steps": 1,
 			"image": ["76", 0]
