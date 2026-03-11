@@ -446,6 +446,10 @@ func build_multipart_body(filename: String, file_bytes: PackedByteArray) -> Arra
 	body.append_array(file_bytes)
 	body.append_array("\r\n".to_utf8_buffer())
 
+	# Overwrite: force ComfyUI to replace existing image with same name
+	var overwrite_part = "--%s\r\nContent-Disposition: form-data; name=\"overwrite\"\r\n\r\ntrue\r\n" % boundary
+	body.append_array(overwrite_part.to_utf8_buffer())
+
 	# Closing boundary
 	var closing = "--%s--\r\n" % boundary
 	body.append_array(closing.to_utf8_buffer())
