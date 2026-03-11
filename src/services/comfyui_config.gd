@@ -4,10 +4,12 @@ extends RefCounted
 
 const DEFAULT_URL := "http://localhost:8188"
 const DEFAULT_TOKEN := ""
+const DEFAULT_NEGATIVE_PROMPT := ""
 const DEFAULT_PATH := "user://comfyui_config.cfg"
 
 var _url: String = DEFAULT_URL
 var _token: String = ""
+var _negative_prompt: String = DEFAULT_NEGATIVE_PROMPT
 var _custom_expressions: PackedStringArray = PackedStringArray([])
 
 func get_url() -> String:
@@ -21,6 +23,12 @@ func get_token() -> String:
 
 func set_token(token: String) -> void:
 	_token = token
+
+func get_negative_prompt() -> String:
+	return _negative_prompt
+
+func set_negative_prompt(prompt: String) -> void:
+	_negative_prompt = prompt
 
 func get_custom_expressions() -> PackedStringArray:
 	return _custom_expressions
@@ -41,6 +49,7 @@ func save_to(path: String = DEFAULT_PATH) -> void:
 	var cfg = ConfigFile.new()
 	cfg.set_value("comfyui", "url", _url)
 	cfg.set_value("comfyui", "token", _token)
+	cfg.set_value("comfyui", "negative_prompt", _negative_prompt)
 	if _custom_expressions.size() > 0:
 		cfg.set_value("expressions", "custom", ",".join(_custom_expressions))
 	cfg.save(path)
@@ -52,6 +61,7 @@ func load_from(path: String = DEFAULT_PATH) -> void:
 		return
 	_url = cfg.get_value("comfyui", "url", DEFAULT_URL)
 	_token = cfg.get_value("comfyui", "token", DEFAULT_TOKEN)
+	_negative_prompt = cfg.get_value("comfyui", "negative_prompt", DEFAULT_NEGATIVE_PROMPT)
 	var raw = cfg.get_value("expressions", "custom", "")
 	if raw != "":
 		_custom_expressions = PackedStringArray(raw.split(","))

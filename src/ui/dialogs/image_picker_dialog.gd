@@ -933,8 +933,10 @@ func _ia_load_source_preview(path: String) -> void:
 		_ia_source_preview.texture = null
 
 func _on_ia_generate_pressed() -> void:
-	# Save config
+	# Load existing config (preserves negative_prompt, custom expressions)
+	# then override url/token from UI inputs
 	var config = ComfyUIConfig.new()
+	config.load_from()
 	config.set_url(_ia_url_input.text.strip_edges())
 	config.set_token(_ia_token_input.text.strip_edges())
 	config.save_to()
@@ -966,7 +968,8 @@ func _on_ia_generate_pressed() -> void:
 	var cfg_value = _ia_cfg_slider.value
 	var steps_value = int(_ia_steps_slider.value)
 	var workflow_type = _ia_workflow_option.get_selected_id()
-	_ia_client.generate(config, _ia_source_image_path, _ia_prompt_input.text, remove_bg, cfg_value, steps_value, workflow_type)
+	var neg_prompt = config.get_negative_prompt()
+	_ia_client.generate(config, _ia_source_image_path, _ia_prompt_input.text, remove_bg, cfg_value, steps_value, workflow_type, 0.5, neg_prompt)
 
 func _on_ia_generation_completed(image: Image) -> void:
 	_ia_generated_image = image

@@ -31,6 +31,7 @@ var _category_service: RefCounted = null
 var _tab_container: TabContainer
 var _url_input: LineEdit
 var _token_input: LineEdit
+var _negative_prompt_input: TextEdit
 var _image_preview: Control
 
 # --- Décliner tab ---
@@ -42,6 +43,7 @@ var _decl_choose_gallery_btn: Button
 var _decl_prompt_input: TextEdit
 var _decl_cfg_slider: HSlider
 var _decl_cfg_value_label: Label
+var _decl_cfg_hint: Label
 var _decl_steps_slider: HSlider
 var _decl_steps_value_label: Label
 var _decl_generate_btn: Button
@@ -65,6 +67,7 @@ var _expr_choose_gallery_btn: Button
 var _expr_prefix_input: LineEdit
 var _expr_cfg_slider: HSlider
 var _expr_cfg_value_label: Label
+var _expr_cfg_hint: Label
 var _expr_steps_slider: HSlider
 var _expr_steps_value_label: Label
 var _expr_denoise_slider: HSlider
@@ -151,6 +154,17 @@ func _build_ui() -> void:
 	_token_input.secret = true
 	_token_input.placeholder_text = "Laisser vide si pas d'auth"
 	vbox.add_child(_token_input)
+
+	var neg_label = Label.new()
+	neg_label.text = "Negative prompt (global) :"
+	vbox.add_child(neg_label)
+
+	_negative_prompt_input = TextEdit.new()
+	_negative_prompt_input.placeholder_text = "Ex: blurry, low quality, deformed..."
+	_negative_prompt_input.custom_minimum_size = Vector2(0, 60)
+	_negative_prompt_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_negative_prompt_input.text_changed.connect(_update_cfg_hints)
+	vbox.add_child(_negative_prompt_input)
 
 	vbox.add_child(HSeparator.new())
 
@@ -270,13 +284,23 @@ func _build_decliner_tab() -> void:
 	_decl_cfg_slider.step = 0.5
 	_decl_cfg_slider.value = 1.0
 	_decl_cfg_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_decl_cfg_slider.value_changed.connect(func(val: float): _decl_cfg_value_label.text = str(val))
+	_decl_cfg_slider.value_changed.connect(func(val: float):
+		_decl_cfg_value_label.text = str(val)
+		_update_cfg_hints()
+	)
 	cfg_hbox.add_child(_decl_cfg_slider)
 
 	_decl_cfg_value_label = Label.new()
 	_decl_cfg_value_label.text = "1.0"
 	_decl_cfg_value_label.custom_minimum_size.x = 32
 	cfg_hbox.add_child(_decl_cfg_value_label)
+
+	_decl_cfg_hint = Label.new()
+	_decl_cfg_hint.text = "CFG >= 3 requis pour le negative prompt"
+	_decl_cfg_hint.add_theme_font_size_override("font_size", 11)
+	_decl_cfg_hint.add_theme_color_override("font_color", Color(1.0, 0.8, 0.3))
+	_decl_cfg_hint.visible = false
+	vbox.add_child(_decl_cfg_hint)
 
 	# Steps slider
 	var steps_hbox = HBoxContainer.new()
@@ -438,13 +462,23 @@ func _build_expressions_tab() -> void:
 	_expr_cfg_slider.step = 0.5
 	_expr_cfg_slider.value = 1.0
 	_expr_cfg_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_expr_cfg_slider.value_changed.connect(func(val: float): _expr_cfg_value_label.text = str(val))
+	_expr_cfg_slider.value_changed.connect(func(val: float):
+		_expr_cfg_value_label.text = str(val)
+		_update_cfg_hints()
+	)
 	cfg_hbox.add_child(_expr_cfg_slider)
 
 	_expr_cfg_value_label = Label.new()
 	_expr_cfg_value_label.text = "1.0"
 	_expr_cfg_value_label.custom_minimum_size.x = 32
 	cfg_hbox.add_child(_expr_cfg_value_label)
+
+	_expr_cfg_hint = Label.new()
+	_expr_cfg_hint.text = "CFG >= 3 requis pour le negative prompt"
+	_expr_cfg_hint.add_theme_font_size_override("font_size", 11)
+	_expr_cfg_hint.add_theme_color_override("font_color", Color(1.0, 0.8, 0.3))
+	_expr_cfg_hint.visible = false
+	vbox.add_child(_expr_cfg_hint)
 
 	# Steps slider
 	var steps_hbox = HBoxContainer.new()
@@ -628,13 +662,16 @@ func _load_config() -> void:
 	config.load_from()
 	_url_input.text = config.get_url()
 	_token_input.text = config.get_token()
+	_negative_prompt_input.text = config.get_negative_prompt()
 	_update_all_generate_buttons()
+	_update_cfg_hints()
 
 
 func _save_config() -> void:
 	var config = ComfyUIConfig.new()
 	config.set_url(_url_input.text.strip_edges())
 	config.set_token(_token_input.text.strip_edges())
+	config.set_negative_prompt(_negative_prompt_input.text.strip_edges())
 	# Preserve custom expressions
 	var existing = ComfyUIConfig.new()
 	existing.load_from()
@@ -645,6 +682,14 @@ func _save_config() -> void:
 func _update_all_generate_buttons() -> void:
 	_update_decl_generate_button()
 	_update_expr_generate_button()
+
+
+func _update_cfg_hints() -> void:
+	var has_negative = _negative_prompt_input.text.strip_edges() != ""
+	if _decl_cfg_hint:
+		_decl_cfg_hint.visible = has_negative and _decl_cfg_slider.value < 3.0
+	if _expr_cfg_hint:
+		_expr_cfg_hint.visible = has_negative and _expr_cfg_slider.value < 3.0
 
 
 # ========================================================
@@ -713,7 +758,8 @@ func _on_decl_generate_pressed() -> void:
 	var cfg_value = _decl_cfg_slider.value
 	var steps_value = int(_decl_steps_slider.value)
 	var workflow_type = _decl_workflow_option.get_selected_id()
-	_decl_client.generate(config, _decl_source_image_path, _decl_prompt_input.text, true, cfg_value, steps_value, workflow_type)
+	var neg_prompt = _negative_prompt_input.text.strip_edges()
+	_decl_client.generate(config, _decl_source_image_path, _decl_prompt_input.text, true, cfg_value, steps_value, workflow_type, 0.5, neg_prompt)
 
 
 func _on_decl_generation_completed(image: Image) -> void:
@@ -809,6 +855,7 @@ func _decl_show_error(message: String) -> void:
 func _decl_set_inputs_enabled(enabled: bool) -> void:
 	_url_input.editable = enabled
 	_token_input.editable = enabled
+	_negative_prompt_input.editable = enabled
 	_decl_prompt_input.editable = enabled
 	_decl_choose_source_btn.disabled = not enabled
 	_decl_choose_gallery_btn.disabled = not enabled
@@ -999,7 +1046,8 @@ func _process_next_expression() -> void:
 	var cfg_value = _expr_cfg_slider.value
 	var steps_value = int(_expr_steps_slider.value)
 	var denoise_value = _expr_denoise_slider.value
-	_expr_client.generate(config, _expr_source_image_path, item["prompt"], true, cfg_value, steps_value, ComfyUIClient.WorkflowType.EXPRESSION, denoise_value)
+	var neg_prompt = _negative_prompt_input.text.strip_edges()
+	_expr_client.generate(config, _expr_source_image_path, item["prompt"], true, cfg_value, steps_value, ComfyUIClient.WorkflowType.EXPRESSION, denoise_value, neg_prompt)
 
 
 func _on_expr_item_completed(image: Image) -> void:
@@ -1065,6 +1113,7 @@ func _expr_update_status() -> void:
 func _expr_set_inputs_enabled(enabled: bool) -> void:
 	_url_input.editable = enabled
 	_token_input.editable = enabled
+	_negative_prompt_input.editable = enabled
 	_expr_choose_source_btn.disabled = not enabled
 	if _story_base_path == "":
 		_expr_choose_gallery_btn.disabled = true
