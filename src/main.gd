@@ -63,6 +63,7 @@ var _import_bg_button: Button
 var _add_fg_button: Button
 var _grid_toggle: Button
 var _snap_toggle: Button
+var _normalize_fg_button: Button
 var _play_button: Button
 var _stop_button: Button
 var _sequence_content: HSplitContainer
@@ -234,6 +235,7 @@ func _connect_signals() -> void:
 	_add_fg_button.pressed.connect(_seq_ui_ctrl.on_add_foreground_pressed)
 	_grid_toggle.toggled.connect(_seq_ui_ctrl.on_grid_toggled)
 	_snap_toggle.toggled.connect(_seq_ui_ctrl.on_snap_toggled)
+	_normalize_fg_button.pressed.connect(_seq_ui_ctrl.on_normalize_foregrounds_pressed)
 	_add_dialogue_btn.pressed.connect(_seq_ui_ctrl.on_add_dialogue_pressed)
 	_dialogue_list_container.dialogue_delete_requested.connect(_seq_ui_ctrl.on_delete_dialogue)
 	_play_button.pressed.connect(_play_ctrl.on_play_pressed)
@@ -266,6 +268,7 @@ func _connect_signals() -> void:
 	_visual_editor.foreground_deselected.connect(_on_foreground_deselected)
 	_visual_editor.foreground_replace_requested.connect(_seq_ui_ctrl.on_foreground_replace_requested)
 	_visual_editor.foreground_replace_with_new_requested.connect(_seq_ui_ctrl.on_foreground_replace_with_new_requested)
+	_transition_panel.transition_changed.connect(_on_foreground_transition_changed)
 	_fx_panel.fx_changed.connect(_on_fx_changed)
 	_audio_panel.audio_changed.connect(_on_audio_changed)
 
@@ -290,7 +293,7 @@ func update_preview_for_dialogue(index: int) -> void:
 	var seq = _sequence_editor_ctrl.get_sequence()
 	if seq:
 		seq.foregrounds = fgs
-		_visual_editor.load_sequence(seq)
+		_visual_editor.update_foregrounds()
 
 
 func highlight_dialogue_in_list(index: int) -> void:
@@ -334,6 +337,11 @@ func _on_foreground_deselected() -> void:
 	_transition_panel.hide_panel()
 
 
+func _on_foreground_transition_changed() -> void:
+	_visual_editor.refresh_foreground_z_order()
+	EventBus.story_modified.emit()
+
+
 func _on_fx_changed() -> void:
 	EventBus.story_modified.emit()
 
@@ -343,6 +351,8 @@ func _on_audio_changed() -> void:
 
 
 func _on_sequence_transition_changed(_value = null) -> void:
+	if _loading_sequence:
+		return
 	var seq = _sequence_editor_ctrl.get_sequence()
 	if seq == null: return
 	
@@ -370,7 +380,11 @@ func _on_sequence_transition_changed(_value = null) -> void:
 
 # --- View management ---
 
+var _loading_sequence: bool = false
+
 func load_sequence_editors(seq) -> void:
+	_loading_sequence = true
+	_sequence_fx_player.stop_fx()
 	_visual_editor.load_sequence(seq)
 	_dialogue_editor.load_sequence(seq)
 	_nav_ctrl.notify_targets_changed()
@@ -379,7 +393,7 @@ func load_sequence_editors(seq) -> void:
 	_audio_panel.load_sequence(seq)
 	_audio_panel.setup_story_path(_get_story_base_path(), self)
 
-	# Load params
+	# Load params (signals are blocked by _loading_sequence flag)
 	_seq_title_edit.text = seq.title
 	_seq_subtitle_edit.text = seq.subtitle
 	if seq.background_color != "":
@@ -392,13 +406,14 @@ func load_sequence_editors(seq) -> void:
 	var in_idx = in_types.find(seq.transition_in_type)
 	_seq_trans_in_type.selected = in_idx if in_idx >= 0 else 0
 	_seq_trans_in_dur.value = seq.transition_in_duration
-	
+
 	var out_types = ["none", "fade", "pixelate"]
 	var out_idx = out_types.find(seq.transition_out_type)
 	_seq_trans_out_type.selected = out_idx if out_idx >= 0 else 0
 	_seq_trans_out_dur.value = seq.transition_out_duration
 
 	_sequence_editor_ctrl.load_sequence(seq)
+	_loading_sequence = false
 	_update_ending_tab_indicator()
 	_rebuild_dialogue_list()
 	_tab_container.current_tab = 0

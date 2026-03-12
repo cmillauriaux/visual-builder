@@ -8,6 +8,8 @@ var _playing: bool = false
 var _current_tween: Tween = null
 var _fx_nodes: Array = []
 var _target: Control = null
+var _transform_target: Control = null
+var _transform_active: bool = false
 var _original_position: Vector2 = Vector2.ZERO
 var _original_scale: Vector2 = Vector2.ONE
 var _original_pivot: Vector2 = Vector2.ZERO
@@ -57,7 +59,76 @@ void fragment() {
 }
 """
 
-func play_fx_list(fx_list: Array, target: Control) -> void:
+## Applique immédiatement les FX persistants (vignette, désaturation) à pleine intensité.
+## Gère la transition entre séquences : garde les FX existants si le type correspond,
+## supprime ceux qui ne sont plus nécessaires, et crée les nouveaux.
+func apply_persistent_fx(fx_list: Array, target: Control) -> void:
+	var needed: Dictionary = {}
+	for fx in fx_list:
+		if fx.fx_type in PERSISTENT_FX_TYPES:
+			needed[fx.fx_type] = fx
+
+	# Supprimer les FX persistants qui ne sont plus dans la nouvelle liste
+	var to_remove: Array = []
+	for fx_type in _persistent_fx:
+		if fx_type not in needed:
+			to_remove.append(fx_type)
+	for fx_type in to_remove:
+		var overlay = _persistent_fx[fx_type]
+		if is_instance_valid(overlay):
+			overlay.queue_free()
+		_persistent_fx.erase(fx_type)
+
+	# Créer ou mettre à jour les FX persistants
+	for fx_type in needed:
+		if _persistent_fx.has(fx_type) and is_instance_valid(_persistent_fx[fx_type]):
+			# Déjà actif — mettre à jour l'intensité
+			var mat = _persistent_fx[fx_type].material as ShaderMaterial
+			if mat:
+				match fx_type:
+					"vignette":
+						mat.set_shader_parameter("strength", needed[fx_type].intensity)
+					"desaturation":
+						mat.set_shader_parameter("amount", minf(needed[fx_type].intensity, 1.0))
+			continue
+		match fx_type:
+			"vignette":
+				_create_vignette_immediate(needed[fx_type], target)
+			"desaturation":
+				_create_desaturation_immediate(needed[fx_type], target)
+
+
+func _create_vignette_immediate(fx, target: Control) -> void:
+	var overlay = ColorRect.new()
+	overlay.name = "FxVignetteOverlay"
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	target.add_child(overlay)
+	_persistent_fx["vignette"] = overlay
+	var mat = ShaderMaterial.new()
+	var shader = Shader.new()
+	shader.code = VIGNETTE_SHADER
+	mat.shader = shader
+	overlay.material = mat
+	mat.set_shader_parameter("strength", fx.intensity)
+
+
+func _create_desaturation_immediate(fx, target: Control) -> void:
+	var overlay = ColorRect.new()
+	overlay.name = "FxDesaturationOverlay"
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	target.add_child(overlay)
+	_persistent_fx["desaturation"] = overlay
+	var mat = ShaderMaterial.new()
+	var shader = Shader.new()
+	shader.code = DESATURATION_SHADER
+	mat.shader = shader
+	overlay.material = mat
+	mat.set_shader_parameter("amount", minf(fx.intensity, 1.0))
+
+
+func play_fx_list(fx_list: Array, target: Control, transform_target: Control = null) -> void:
 	# Déterminer quels FX persistants la nouvelle liste contient
 	var new_persistent_types: Array = []
 	for fx in fx_list:
@@ -89,12 +160,13 @@ func play_fx_list(fx_list: Array, target: Control) -> void:
 		fx_finished.emit()
 		return
 	_target = target
+	_transform_target = transform_target if transform_target else target
 	_playing = true
 	_play_next(filtered_fx_list.duplicate(), target)
 
 
 func play_transition(type: String, duration: float, is_in: bool, target: Control) -> void:
-	stop_fx()
+	_stop_transient_fx()
 	if type == "none" or duration <= 0:
 		fx_finished.emit()
 		return
@@ -217,10 +289,13 @@ func _stop_transient_fx() -> void:
 		_current_tween.kill()
 		_current_tween = null
 	_cleanup_fx_nodes()
-	if _target and is_instance_valid(_target):
-		_target.position = _original_position
-		_target.scale = _original_scale
-		_target.pivot_offset = _original_pivot
+	if _transform_active:
+		var t = _transform_target if _transform_target and is_instance_valid(_transform_target) else _target
+		if t and is_instance_valid(t):
+			t.position = _original_position
+			t.scale = _original_scale
+			t.pivot_offset = _original_pivot
+		_transform_active = false
 	_playing = false
 
 
@@ -258,7 +333,9 @@ func _play_single_fx(fx, target: Control, on_done: Callable) -> void:
 
 
 func _play_screen_shake(fx, target: Control, on_done: Callable) -> void:
-	_original_position = target.position
+	var t = _transform_target if _transform_target else target
+	_transform_active = true
+	_original_position = t.position
 	var amplitude = fx.intensity * 10.0
 	var oscillations = 6
 	var step_duration = fx.duration / float(oscillations * 2)
@@ -266,11 +343,12 @@ func _play_screen_shake(fx, target: Control, on_done: Callable) -> void:
 	_current_tween = create_tween()
 	for i in range(oscillations):
 		var offset = amplitude if (i % 2 == 0) else -amplitude
-		_current_tween.tween_property(target, "position:x", _original_position.x + offset, step_duration)
-		_current_tween.tween_property(target, "position:x", _original_position.x - offset, step_duration)
-	_current_tween.tween_property(target, "position:x", _original_position.x, step_duration)
+		_current_tween.tween_property(t, "position:x", _original_position.x + offset, step_duration)
+		_current_tween.tween_property(t, "position:x", _original_position.x - offset, step_duration)
+	_current_tween.tween_property(t, "position:x", _original_position.x, step_duration)
 	_current_tween.finished.connect(func():
-		target.position = _original_position
+		t.position = _original_position
+		_transform_active = false
 		on_done.call()
 	)
 
@@ -363,9 +441,11 @@ func _play_flash(fx, target: Control, on_done: Callable) -> void:
 
 
 func _play_zoom(fx, target: Control, on_done: Callable) -> void:
-	_original_scale = target.scale
-	_original_pivot = target.pivot_offset
-	target.pivot_offset = target.size / 2.0
+	var t = _transform_target if _transform_target else target
+	_transform_active = true
+	_original_scale = t.scale
+	_original_pivot = t.pivot_offset
+	t.pivot_offset = t.size / 2.0
 
 	var zoom_level = 1.0 + fx.intensity * 0.15
 	var zoom_in_dur = fx.duration * 0.4
@@ -373,12 +453,13 @@ func _play_zoom(fx, target: Control, on_done: Callable) -> void:
 	var zoom_out_dur = fx.duration * 0.4
 
 	_current_tween = create_tween()
-	_current_tween.tween_property(target, "scale", Vector2(zoom_level, zoom_level), zoom_in_dur).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	_current_tween.tween_property(t, "scale", Vector2(zoom_level, zoom_level), zoom_in_dur).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	_current_tween.tween_interval(hold_dur)
-	_current_tween.tween_property(target, "scale", Vector2.ONE, zoom_out_dur).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	_current_tween.tween_property(t, "scale", Vector2.ONE, zoom_out_dur).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	_current_tween.finished.connect(func():
-		target.scale = _original_scale
-		target.pivot_offset = _original_pivot
+		t.scale = _original_scale
+		t.pivot_offset = _original_pivot
+		_transform_active = false
 		on_done.call()
 	)
 

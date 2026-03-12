@@ -72,6 +72,8 @@ var _expr_steps_slider: HSlider
 var _expr_steps_value_label: Label
 var _expr_denoise_slider: HSlider
 var _expr_denoise_value_label: Label
+var _expr_face_box_slider: HSlider
+var _expr_face_box_value_label: Label
 var _expr_expression_checkboxes: Array = []
 var _expr_custom_container: VBoxContainer
 var _expr_custom_input: LineEdit
@@ -525,6 +527,29 @@ func _build_expressions_tab() -> void:
 	_expr_denoise_value_label.text = "0.5"
 	_expr_denoise_value_label.custom_minimum_size.x = 32
 	denoise_hbox.add_child(_expr_denoise_value_label)
+
+	# Face box size slider
+	var face_box_hbox = HBoxContainer.new()
+	face_box_hbox.add_theme_constant_override("separation", 8)
+	vbox.add_child(face_box_hbox)
+
+	var face_box_label = Label.new()
+	face_box_label.text = "Zone visage :"
+	face_box_hbox.add_child(face_box_label)
+
+	_expr_face_box_slider = HSlider.new()
+	_expr_face_box_slider.min_value = 10
+	_expr_face_box_slider.max_value = 200
+	_expr_face_box_slider.step = 5
+	_expr_face_box_slider.value = 80
+	_expr_face_box_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_expr_face_box_slider.value_changed.connect(func(val: float): _expr_face_box_value_label.text = str(int(val)))
+	face_box_hbox.add_child(_expr_face_box_slider)
+
+	_expr_face_box_value_label = Label.new()
+	_expr_face_box_value_label.text = "80"
+	_expr_face_box_value_label.custom_minimum_size.x = 32
+	face_box_hbox.add_child(_expr_face_box_value_label)
 
 	vbox.add_child(HSeparator.new())
 
@@ -1046,8 +1071,9 @@ func _process_next_expression() -> void:
 	var cfg_value = _expr_cfg_slider.value
 	var steps_value = int(_expr_steps_slider.value)
 	var denoise_value = _expr_denoise_slider.value
+	var face_box_value = int(_expr_face_box_slider.value)
 	var neg_prompt = _negative_prompt_input.text.strip_edges()
-	_expr_client.generate(config, _expr_source_image_path, item["prompt"], true, cfg_value, steps_value, ComfyUIClient.WorkflowType.EXPRESSION, denoise_value, neg_prompt)
+	_expr_client.generate(config, _expr_source_image_path, item["prompt"], true, cfg_value, steps_value, ComfyUIClient.WorkflowType.EXPRESSION, denoise_value, neg_prompt, face_box_value)
 
 
 func _on_expr_item_completed(image: Image) -> void:
@@ -1121,6 +1147,7 @@ func _expr_set_inputs_enabled(enabled: bool) -> void:
 		_expr_choose_gallery_btn.disabled = not enabled
 	_expr_prefix_input.editable = enabled
 	_expr_denoise_slider.editable = enabled
+	_expr_face_box_slider.editable = enabled
 	_expr_custom_input.editable = enabled
 	_expr_add_custom_btn.disabled = not enabled
 	for cb in _expr_expression_checkboxes:
@@ -1310,9 +1337,11 @@ func _on_expr_save_all_pressed() -> void:
 
 	if not existing.is_empty():
 		var dialog = ConfirmationDialog.new()
-		var names = ", ".join(existing)
+		var names = "\n".join(existing)
 		dialog.dialog_text = "Ces images existent déjà :\n%s\nVoulez-vous les écraser ?" % names
 		dialog.ok_button_text = "Écraser"
+		dialog.wrap_controls = true
+		dialog.max_size = Vector2i(500, 400)
 		add_child(dialog)
 		dialog.confirmed.connect(func():
 			_expr_do_save_all(completed, dir_path, true)

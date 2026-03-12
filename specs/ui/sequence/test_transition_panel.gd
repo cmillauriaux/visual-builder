@@ -44,11 +44,18 @@ func test_displays_transition_duration():
 	_panel.show_for_foreground(fg)
 	assert_almost_eq(_panel.get_displayed_duration(), 2.0, 0.01)
 
+func test_displays_z_order():
+	var fg = Foreground.new()
+	fg.z_order = 5
+	_panel.show_for_foreground(fg)
+	assert_eq(_panel.get_displayed_z_order(), 5)
+
 func test_default_values_displayed():
 	var fg = Foreground.new()
 	_panel.show_for_foreground(fg)
 	assert_eq(_panel.get_selected_type(), "none")
 	assert_almost_eq(_panel.get_displayed_duration(), 0.5, 0.01)
+	assert_eq(_panel.get_displayed_z_order(), 0)
 
 # --- Modification ---
 
@@ -78,11 +85,23 @@ func test_change_type_to_none():
 	_panel.set_type("none")
 	assert_eq(fg.transition_type, "none")
 
+func test_change_z_order_updates_foreground():
+	var fg = Foreground.new()
+	_panel.show_for_foreground(fg)
+	_panel.set_z_order(3)
+	assert_eq(fg.z_order, 3)
+
 func test_duration_clamped_on_set():
 	var fg = Foreground.new()
 	_panel.show_for_foreground(fg)
 	_panel.set_duration(10.0)
 	assert_eq(fg.transition_duration, 5.0)
+
+func test_z_order_clamped_on_set():
+	var fg = Foreground.new()
+	_panel.show_for_foreground(fg)
+	_panel.set_z_order(200)
+	assert_eq(fg.z_order, 100)
 
 # --- Signal ---
 
@@ -98,6 +117,13 @@ func test_emits_changed_on_duration():
 	_panel.show_for_foreground(fg)
 	watch_signals(_panel)
 	_panel.set_duration(2.0)
+	assert_signal_emitted(_panel, "transition_changed")
+
+func test_emits_changed_on_z_order():
+	var fg = Foreground.new()
+	_panel.show_for_foreground(fg)
+	watch_signals(_panel)
+	_panel.set_z_order(2)
 	assert_signal_emitted(_panel, "transition_changed")
 
 # --- Show pour null ---

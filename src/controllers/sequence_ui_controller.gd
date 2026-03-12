@@ -34,6 +34,15 @@ func _on_bg_file_selected(path: String) -> void:
 	_main._visual_editor.set_background(path)
 
 
+func on_normalize_foregrounds_pressed() -> void:
+	var cleared = _main._sequence_editor_ctrl.normalize_dialogue_foregrounds()
+	if cleared > 0:
+		var idx = _main._sequence_editor_ctrl.get_selected_dialogue_index()
+		if idx >= 0:
+			_main.update_preview_for_dialogue(idx)
+		EventBus.story_modified.emit()
+
+
 func on_add_foreground_pressed() -> void:
 	if _main._sequence_editor_ctrl.get_selected_dialogue_index() < 0:
 		var seq = _main._sequence_editor_ctrl.get_sequence()

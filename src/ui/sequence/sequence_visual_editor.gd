@@ -19,6 +19,7 @@ var _bg_color_rect: ColorRect
 var _bg_rect: TextureRect
 var _grid_overlay: Control
 var _fg_container: Control
+var _fx_container: Control
 var _overlay_container: Control
 var _zoom: float = 1.0
 var _pan_offset: Vector2 = Vector2.ZERO
@@ -36,6 +37,7 @@ var _fg_clipboard = ForegroundClipboardScript.new()
 # --- Foreground interaction ---
 var _fg_visual_map: Dictionary = {}   # uuid → Control wrapper
 var _selected_fg_uuids: Array = []
+var _hidden_fg_uuids: Array = []      # UUIDs temporairement cachés (reset au changement de dialogue)
 var _dragging_fg: bool = false
 var _resizing_fg: bool = false
 var _drag_start_pos: Vector2 = Vector2.ZERO
@@ -106,7 +108,13 @@ func _ready() -> void:
 	_fg_container.size = DESIGN_RESOLUTION
 	_canvas.add_child(_fg_container)
 
-	# Overlay container — positioned/sized to match the canvas screen rect
+	# FX container — between Canvas and UI overlay, so FX affect only bg/fg, not UI
+	_fx_container = Control.new()
+	_fx_container.name = "FxContainer"
+	_fx_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_fx_container)
+
+	# Overlay container — positioned/sized to match the canvas screen rect (UI goes here)
 	_overlay_container = Control.new()
 	_overlay_container.name = "OverlayContainer"
 	_overlay_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -123,6 +131,8 @@ func _ready() -> void:
 	_context_menu.add_separator()
 	_context_menu.add_item("Copier le foreground", 3)
 	_context_menu.add_item("Coller le foreground", 4)
+	_context_menu.add_separator()
+	_context_menu.add_item("Cacher", 7)
 	_context_menu.id_pressed.connect(_on_context_menu_id_pressed)
 	_update_context_menu_state()
 	add_child(_context_menu)
@@ -216,9 +226,12 @@ func _apply_transform() -> void:
 		return
 	_canvas.position = _pan_offset
 	_canvas.scale = Vector2(_zoom, _zoom)
-	# Update overlay container to match canvas screen rect
+	# Update FX and overlay containers to match canvas screen rect
+	var rect = get_canvas_rect()
+	if _fx_container != null:
+		_fx_container.position = rect.position
+		_fx_container.size = rect.size
 	if _overlay_container != null:
-		var rect = get_canvas_rect()
 		_overlay_container.position = rect.position
 		_overlay_container.size = rect.size
 
@@ -278,7 +291,6 @@ func _update_foreground_visuals() -> void:
 		return
 
 	if _sequence == null:
-		# Clear all visuals
 		for key in _fg_visual_map.keys():
 			if is_instance_valid(_fg_visual_map[key]):
 				_fg_visual_map[key].queue_free()
@@ -290,18 +302,43 @@ func _update_foreground_visuals() -> void:
 	for fg in _sequence.foregrounds:
 		current_uuids[fg.uuid] = fg
 
-	# Remove orphan wrappers
+	# Identify orphan wrappers (old UUIDs absent du nouveau set)
+	var orphan_uuids: Array = []
 	for uuid in _fg_visual_map.keys():
 		if not current_uuids.has(uuid):
-			if is_instance_valid(_fg_visual_map[uuid]):
-				_fg_visual_map[uuid].queue_free()
-			_fg_visual_map.erase(uuid)
+			orphan_uuids.append(uuid)
+
+	# Identify new FGs (not in existing map)
+	var new_fgs: Array = []
+	for fg in _sequence.foregrounds:
+		if not _fg_visual_map.has(fg.uuid):
+			new_fgs.append(fg)
+
+	# Réutiliser les wrappers orphelins pour les nouveaux FGs visuellement identiques
+	for fg in new_fgs:
+		for i in range(orphan_uuids.size()):
+			var old_uuid = orphan_uuids[i]
+			var wrapper = _fg_visual_map.get(old_uuid)
+			if wrapper and is_instance_valid(wrapper) and _wrapper_matches_fg(wrapper, fg):
+				_fg_visual_map.erase(old_uuid)
+				_reassign_wrapper(wrapper, fg)
+				orphan_uuids.remove_at(i)
+				break
+
+	# Supprimer les orphelins restants (non réutilisés)
+	for old_uuid in orphan_uuids:
+		if _fg_visual_map.has(old_uuid) and is_instance_valid(_fg_visual_map[old_uuid]):
+			_fg_visual_map[old_uuid].queue_free()
+		_fg_visual_map.erase(old_uuid)
 
 	# Create or update wrappers
 	for fg in _sequence.foregrounds:
 		if not _fg_visual_map.has(fg.uuid):
 			_create_fg_visual(fg)
 		_update_single_fg_visual(fg)
+
+	# Reorder children in _fg_container by z_order
+	_reorder_fg_children()
 
 func _create_fg_visual(fg) -> void:
 	var wrapper = Control.new()
@@ -337,6 +374,40 @@ func _create_fg_visual(fg) -> void:
 	_fg_container.add_child(wrapper)
 	_fg_visual_map[fg.uuid] = wrapper
 
+## Compare un wrapper existant avec un nouveau FG pour déterminer s'ils sont visuellement identiques.
+func _wrapper_matches_fg(wrapper: Control, fg) -> bool:
+	if not wrapper.has_meta("fg_image"):
+		return false
+	if wrapper.get_meta("fg_image") != fg.image:
+		return false
+	var threshold = 0.01
+	var old_abg = wrapper.get_meta("fg_anchor_bg", Vector2.ZERO)
+	if absf(old_abg.x - fg.anchor_bg.x) > threshold or absf(old_abg.y - fg.anchor_bg.y) > threshold:
+		return false
+	var old_afg = wrapper.get_meta("fg_anchor_fg", Vector2.ZERO)
+	if absf(old_afg.x - fg.anchor_fg.x) > threshold or absf(old_afg.y - fg.anchor_fg.y) > threshold:
+		return false
+	if absf(wrapper.get_meta("fg_scale", 1.0) - fg.scale) > threshold:
+		return false
+	if wrapper.get_meta("fg_flip_h", false) != fg.flip_h or wrapper.get_meta("fg_flip_v", false) != fg.flip_v:
+		return false
+	return true
+
+## Réutilise un wrapper existant pour un nouveau foreground (UUID différent mais visuellement identique).
+func _reassign_wrapper(wrapper: Control, fg) -> void:
+	# Reconnecter les signaux gui_input avec le nouveau UUID
+	for conn in wrapper.gui_input.get_connections():
+		wrapper.gui_input.disconnect(conn["callable"])
+	wrapper.gui_input.connect(_on_fg_gui_input.bind(fg.uuid))
+	# Reconnecter le ResizeHandle
+	var handle = wrapper.get_node_or_null("ResizeHandle")
+	if handle:
+		for conn in handle.gui_input.get_connections():
+			handle.gui_input.disconnect(conn["callable"])
+		handle.gui_input.connect(_on_resize_handle_input.bind(fg.uuid))
+	wrapper.name = "FG_" + fg.uuid.left(8)
+	_fg_visual_map[fg.uuid] = wrapper
+
 func _update_single_fg_visual(fg) -> void:
 	if not _fg_visual_map.has(fg.uuid):
 		return
@@ -344,7 +415,12 @@ func _update_single_fg_visual(fg) -> void:
 	if not is_instance_valid(wrapper):
 		return
 
-	# Load texture
+	# Skip si le wrapper affiche déjà exactement ce foreground (évite le rechargement texture GPU)
+	if _wrapper_matches_fg(wrapper, fg):
+		_update_fg_non_visual_props(wrapper, fg)
+		return
+
+	# Load texture — seulement si l'image a changé
 	var tex_rect: TextureRect = wrapper.get_node("Texture")
 	var tex = _load_texture(fg.image)
 	if tex:
@@ -366,6 +442,25 @@ func _update_single_fg_visual(fg) -> void:
 		bg_size = _bg_rect.texture.get_size()
 	var fg_size = wrapper.size
 	wrapper.position = fg.anchor_bg * bg_size - fg.anchor_fg * fg_size
+
+	# Z-index for correct visual layering (especially during transitions with clones)
+	wrapper.z_index = fg.z_order
+
+	# Stocker les propriétés visuelles pour le matching (réutilisation des wrappers)
+	wrapper.set_meta("fg_image", fg.image)
+	wrapper.set_meta("fg_anchor_bg", fg.anchor_bg)
+	wrapper.set_meta("fg_anchor_fg", fg.anchor_fg)
+	wrapper.set_meta("fg_scale", fg.scale)
+	wrapper.set_meta("fg_flip_h", fg.flip_h)
+	wrapper.set_meta("fg_flip_v", fg.flip_v)
+
+	_update_fg_non_visual_props(wrapper, fg)
+
+
+func _update_fg_non_visual_props(wrapper: Control, fg) -> void:
+
+	# Hidden foregrounds
+	wrapper.visible = fg.uuid not in _hidden_fg_uuids
 
 	# Opacity — ne pas écraser si une transition gère l'alpha
 	if fg.uuid not in _transitioning_uuids:
@@ -532,6 +627,9 @@ func _on_context_menu_id_pressed(id: int) -> void:
 	elif id == 6:  # Remplacer par un nouveau foreground
 		if _context_menu_uuid != "":
 			foreground_replace_with_new_requested.emit(_context_menu_uuid)
+	elif id == 7:  # Cacher
+		if _context_menu_uuid != "":
+			hide_foreground(_context_menu_uuid)
 
 # --- Grid ---
 
@@ -632,9 +730,19 @@ func _paste_foreground() -> void:
 func load_sequence(sequence) -> void:
 	_sequence = sequence
 	_auto_fit_enabled = true
+	_selected_fg_uuids.clear()
+	_hidden_fg_uuids.clear()
+	_transitioning_uuids.clear()
+	_dragging_fg = false
+	_resizing_fg = false
 	_update_visual()
 	_update_foreground_visuals()
 	call_deferred("apply_auto_fit")
+
+## Met à jour uniquement les foregrounds sans toucher au background, aux transitions en cours,
+## ni à l'état de sélection. Utilisé lors du changement de dialogue pendant le play.
+func update_foregrounds() -> void:
+	_update_foreground_visuals()
 
 func get_sequence():
 	return _sequence
@@ -671,6 +779,18 @@ func remove_foreground(uuid: String) -> void:
 		if is_instance_valid(_fg_visual_map[uuid]):
 			_fg_visual_map[uuid].queue_free()
 		_fg_visual_map.erase(uuid)
+
+func hide_foreground(uuid: String) -> void:
+	if uuid not in _hidden_fg_uuids:
+		_hidden_fg_uuids.append(uuid)
+	# Deselect if selected
+	if uuid in _selected_fg_uuids:
+		_selected_fg_uuids.erase(uuid)
+		foreground_deselected.emit()
+	_update_foreground_visuals()
+
+func is_foreground_hidden(uuid: String) -> bool:
+	return uuid in _hidden_fg_uuids
 
 func get_foreground_count() -> int:
 	if _sequence == null:
@@ -714,9 +834,75 @@ func get_foreground_node(uuid: String):
 		return _fg_visual_map[uuid]
 	return null
 
+func normalize_foregrounds() -> int:
+	if _sequence == null:
+		return 0
+	var to_remove: Array = []
+	var fgs = _sequence.foregrounds
+	for i in range(fgs.size()):
+		if i in to_remove:
+			continue
+		for j in range(i + 1, fgs.size()):
+			if j in to_remove:
+				continue
+			if _are_duplicate_foregrounds(fgs[i], fgs[j]):
+				to_remove.append(j)
+	to_remove.sort()
+	to_remove.reverse()
+	for idx in to_remove:
+		var uuid = fgs[idx].uuid
+		fgs.remove_at(idx)
+		if _fg_visual_map.has(uuid):
+			if is_instance_valid(_fg_visual_map[uuid]):
+				_fg_visual_map[uuid].queue_free()
+			_fg_visual_map.erase(uuid)
+	if to_remove.size() > 0:
+		_selected_fg_uuids.clear()
+		_update_foreground_visuals()
+	return to_remove.size()
+
+func _are_duplicate_foregrounds(a, b) -> bool:
+	if a.image != b.image:
+		return false
+	var threshold = 0.05
+	if absf(a.anchor_bg.x - b.anchor_bg.x) > threshold:
+		return false
+	if absf(a.anchor_bg.y - b.anchor_bg.y) > threshold:
+		return false
+	if absf(a.anchor_fg.x - b.anchor_fg.x) > threshold:
+		return false
+	if absf(a.anchor_fg.y - b.anchor_fg.y) > threshold:
+		return false
+	return true
+
 func get_foregrounds_sorted() -> Array:
 	if _sequence == null:
 		return []
 	var sorted = _sequence.foregrounds.duplicate()
 	sorted.sort_custom(func(a, b): return a.z_order < b.z_order)
 	return sorted
+
+func _reorder_fg_children() -> void:
+	if _sequence == null or _fg_container == null:
+		return
+	var sorted = get_foregrounds_sorted()
+	# Collecter les wrappers mappés dans l'ordre trié
+	var sorted_wrappers: Array = []
+	for fg in sorted:
+		if _fg_visual_map.has(fg.uuid) and is_instance_valid(_fg_visual_map[fg.uuid]):
+			sorted_wrappers.append(_fg_visual_map[fg.uuid])
+	# Vérifier si l'ordre relatif des wrappers est déjà correct
+	# (ignorer les enfants non-mappés : clones, zombies queue_free)
+	var current_order: Array = []
+	for child_idx in range(_fg_container.get_child_count()):
+		var child = _fg_container.get_child(child_idx)
+		if child in sorted_wrappers:
+			current_order.append(child)
+	if current_order == sorted_wrappers:
+		return
+	# L'ordre relatif est différent : replacer les wrappers dans l'ordre trié
+	for wrapper in sorted_wrappers:
+		_fg_container.move_child(wrapper, -1)
+
+func refresh_foreground_z_order() -> void:
+	_reorder_fg_children()

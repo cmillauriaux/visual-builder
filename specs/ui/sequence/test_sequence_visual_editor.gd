@@ -151,7 +151,31 @@ func test_ready_creates_visual_nodes():
 	assert_not_null(_editor._canvas)
 	assert_not_null(_editor._bg_rect)
 	assert_not_null(_editor._fg_container)
+	assert_not_null(_editor._fx_container)
 	assert_true(_editor._canvas.is_inside_tree())
+
+
+func test_fx_container_between_canvas_and_overlay():
+	var fx_idx = _editor._fx_container.get_index()
+	var canvas_idx = _editor._canvas.get_index()
+	var overlay_idx = _editor._overlay_container.get_index()
+	assert_true(fx_idx > canvas_idx, "FxContainer should be after Canvas")
+	assert_true(fx_idx < overlay_idx, "FxContainer should be before OverlayContainer")
+
+
+func test_load_sequence_preserves_fx_container_children():
+	# Regression: load_sequence must NOT destroy FX overlays managed by sequence_fx_player
+	var fx_child = ColorRect.new()
+	fx_child.name = "FxVignetteOverlay"
+	_editor._fx_container.add_child(fx_child)
+	assert_eq(_editor._fx_container.get_child_count(), 1)
+
+	_editor.load_sequence(_sequence)
+
+	assert_eq(_editor._fx_container.get_child_count(), 1, "load_sequence should not clear _fx_container children")
+	assert_true(is_instance_valid(fx_child), "FX overlay should still be valid after load_sequence")
+	fx_child.queue_free()
+
 
 func test_initial_zoom():
 	assert_almost_eq(_editor._zoom, 1.0, 0.001)
@@ -210,7 +234,7 @@ func test_on_play_started_deselects_foreground():
 
 func test_context_menu_created():
 	assert_not_null(_editor._context_menu)
-	assert_eq(_editor._context_menu.item_count, 9)
+	assert_eq(_editor._context_menu.item_count, 11)
 	assert_eq(_editor._context_menu.get_item_text(0), "Supprimer")
 	assert_eq(_editor._context_menu.get_item_text(1), "Copier les paramètres")
 	assert_eq(_editor._context_menu.get_item_text(2), "Coller les paramètres")
@@ -220,6 +244,8 @@ func test_context_menu_created():
 	# index 6 = séparateur
 	assert_eq(_editor._context_menu.get_item_text(7), "Copier le foreground")
 	assert_eq(_editor._context_menu.get_item_text(8), "Coller le foreground")
+	# index 9 = séparateur
+	assert_eq(_editor._context_menu.get_item_text(10), "Cacher")
 
 func test_show_context_menu_sets_uuid():
 	_editor.load_sequence(_sequence)
@@ -248,3 +274,187 @@ func test_context_menu_delete_correct_foreground():
 	_editor._on_context_menu_id_pressed(0)
 	assert_eq(_sequence.foregrounds.size(), 1)
 	assert_eq(_sequence.foregrounds[0].fg_name, "B")
+
+# --- Cacher un foreground ---
+
+func test_hide_foreground_hides_visual():
+	_editor.load_sequence(_sequence)
+	_editor.add_foreground("Hero", "hero.png")
+	var uuid = _sequence.foregrounds[0].uuid
+	_editor.hide_foreground(uuid)
+	assert_true(_editor.is_foreground_hidden(uuid))
+	var wrapper = _editor.get_foreground_node(uuid)
+	assert_false(wrapper.visible)
+
+func test_hide_foreground_deselects():
+	_editor.load_sequence(_sequence)
+	_editor.add_foreground("Hero", "hero.png")
+	var uuid = _sequence.foregrounds[0].uuid
+	_editor._select_foreground(uuid)
+	_editor.hide_foreground(uuid)
+	assert_eq(_editor._selected_fg_uuid, "")
+
+func test_hidden_foreground_reappears_on_load_sequence():
+	_editor.load_sequence(_sequence)
+	_editor.add_foreground("Hero", "hero.png")
+	var uuid = _sequence.foregrounds[0].uuid
+	_editor.hide_foreground(uuid)
+	_editor.load_sequence(_sequence)
+	assert_false(_editor.is_foreground_hidden(uuid))
+	var wrapper = _editor.get_foreground_node(uuid)
+	assert_true(wrapper.visible)
+
+# --- Normaliser les foregrounds ---
+
+func test_normalize_removes_duplicate_foregrounds():
+	_editor.load_sequence(_sequence)
+	var fg1 = Foreground.new()
+	fg1.image = "hero.png"
+	fg1.anchor_bg = Vector2(0.5, 0.5)
+	fg1.anchor_fg = Vector2(0.5, 1.0)
+	var fg2 = Foreground.new()
+	fg2.image = "hero.png"
+	fg2.anchor_bg = Vector2(0.5, 0.5)
+	fg2.anchor_fg = Vector2(0.5, 1.0)
+	_sequence.foregrounds.append(fg1)
+	_sequence.foregrounds.append(fg2)
+	_editor._update_foreground_visuals()
+	var removed = _editor.normalize_foregrounds()
+	assert_eq(removed, 1)
+	assert_eq(_sequence.foregrounds.size(), 1)
+
+func test_normalize_keeps_different_images():
+	_editor.load_sequence(_sequence)
+	var fg1 = Foreground.new()
+	fg1.image = "hero.png"
+	fg1.anchor_bg = Vector2(0.5, 0.5)
+	var fg2 = Foreground.new()
+	fg2.image = "villain.png"
+	fg2.anchor_bg = Vector2(0.5, 0.5)
+	_sequence.foregrounds.append(fg1)
+	_sequence.foregrounds.append(fg2)
+	_editor._update_foreground_visuals()
+	var removed = _editor.normalize_foregrounds()
+	assert_eq(removed, 0)
+	assert_eq(_sequence.foregrounds.size(), 2)
+
+func test_normalize_keeps_different_positions():
+	_editor.load_sequence(_sequence)
+	var fg1 = Foreground.new()
+	fg1.image = "hero.png"
+	fg1.anchor_bg = Vector2(0.1, 0.1)
+	var fg2 = Foreground.new()
+	fg2.image = "hero.png"
+	fg2.anchor_bg = Vector2(0.9, 0.9)
+	_sequence.foregrounds.append(fg1)
+	_sequence.foregrounds.append(fg2)
+	_editor._update_foreground_visuals()
+	var removed = _editor.normalize_foregrounds()
+	assert_eq(removed, 0)
+	assert_eq(_sequence.foregrounds.size(), 2)
+
+func test_normalize_within_threshold():
+	_editor.load_sequence(_sequence)
+	var fg1 = Foreground.new()
+	fg1.image = "hero.png"
+	fg1.anchor_bg = Vector2(0.500, 0.500)
+	fg1.anchor_fg = Vector2(0.5, 1.0)
+	var fg2 = Foreground.new()
+	fg2.image = "hero.png"
+	fg2.anchor_bg = Vector2(0.505, 0.503)
+	fg2.anchor_fg = Vector2(0.5, 1.0)
+	_sequence.foregrounds.append(fg1)
+	_sequence.foregrounds.append(fg2)
+	_editor._update_foreground_visuals()
+	var removed = _editor.normalize_foregrounds()
+	assert_eq(removed, 1)
+
+func test_normalize_returns_zero_when_no_duplicates():
+	_editor.load_sequence(_sequence)
+	_editor.add_foreground("A", "a.png")
+	var removed = _editor.normalize_foregrounds()
+	assert_eq(removed, 0)
+
+func test_normalize_empty_sequence():
+	_editor.load_sequence(_sequence)
+	var removed = _editor.normalize_foregrounds()
+	assert_eq(removed, 0)
+
+# --- Réutilisation de wrappers (pas de clignotement) ---
+
+func test_wrapper_reused_when_uuid_changes_but_visual_identical():
+	# Simule le scénario : même image/position, UUID différent entre 2 dialogues
+	# → le wrapper doit être RÉUTILISÉ (pas détruit/recréé)
+	_editor.load_sequence(_sequence)
+	_editor.add_foreground("Grille", "prison_bars.png")
+	var old_uuid = _sequence.foregrounds[0].uuid
+	var old_wrapper = _editor._fg_visual_map[old_uuid]
+
+	# Simuler un changement de dialogue : nouveau foreground, UUID différent, même visuel
+	var new_fg = Foreground.new()
+	new_fg.image = "prison_bars.png"
+	new_fg.anchor_bg = _sequence.foregrounds[0].anchor_bg
+	new_fg.anchor_fg = _sequence.foregrounds[0].anchor_fg
+	new_fg.scale = _sequence.foregrounds[0].scale
+	new_fg.flip_h = _sequence.foregrounds[0].flip_h
+	new_fg.flip_v = _sequence.foregrounds[0].flip_v
+	# UUID différent (auto-généré par Foreground.new())
+
+	_sequence.foregrounds = [new_fg]
+	_editor.load_sequence(_sequence)
+
+	# Le wrapper doit être le MÊME objet (réutilisé, pas recréé)
+	var new_wrapper = _editor._fg_visual_map[new_fg.uuid]
+	assert_eq(old_wrapper.get_instance_id(), new_wrapper.get_instance_id(),
+		"Le wrapper doit être réutilisé quand le visuel est identique")
+
+func test_wrapper_not_reused_when_image_changes():
+	_editor.load_sequence(_sequence)
+	_editor.add_foreground("Perso", "jessy_sad.png")
+	var old_uuid = _sequence.foregrounds[0].uuid
+	var old_wrapper = _editor._fg_visual_map[old_uuid]
+
+	# Nouveau foreground avec une image différente
+	var new_fg = Foreground.new()
+	new_fg.image = "jessy_happy.png"
+	new_fg.anchor_bg = _sequence.foregrounds[0].anchor_bg
+	new_fg.anchor_fg = _sequence.foregrounds[0].anchor_fg
+	new_fg.scale = _sequence.foregrounds[0].scale
+
+	_sequence.foregrounds = [new_fg]
+	_editor.load_sequence(_sequence)
+
+	var new_wrapper = _editor._fg_visual_map[new_fg.uuid]
+	assert_ne(old_wrapper.get_instance_id(), new_wrapper.get_instance_id(),
+		"Le wrapper ne doit PAS être réutilisé quand l'image change")
+
+func test_wrapper_reused_for_unchanged_fg_among_changed_ones():
+	# Scénario "Lucy" : 3 FGs, seul le personnage change, la grille reste
+	_editor.load_sequence(_sequence)
+	_editor.add_foreground("Grille", "prison_bars.png")
+	_editor.add_foreground("Jessy", "jessy_sad.png")
+	var grille_uuid = _sequence.foregrounds[0].uuid
+	var grille_wrapper = _editor._fg_visual_map[grille_uuid]
+
+	# Nouveau dialogue : grille identique (UUID différent), Jessy change d'image
+	var new_grille = Foreground.new()
+	new_grille.image = "prison_bars.png"
+	new_grille.anchor_bg = _sequence.foregrounds[0].anchor_bg
+	new_grille.anchor_fg = _sequence.foregrounds[0].anchor_fg
+	new_grille.scale = _sequence.foregrounds[0].scale
+	new_grille.flip_h = _sequence.foregrounds[0].flip_h
+	new_grille.flip_v = _sequence.foregrounds[0].flip_v
+
+	var new_jessy = Foreground.new()
+	new_jessy.image = "jessy_happy.png"  # Image différente
+
+	_sequence.foregrounds = [new_grille, new_jessy]
+	_editor.load_sequence(_sequence)
+
+	# La grille doit être réutilisée
+	assert_eq(grille_wrapper.get_instance_id(),
+		_editor._fg_visual_map[new_grille.uuid].get_instance_id(),
+		"La grille (inchangée) doit garder son wrapper")
+	# Jessy doit avoir un nouveau wrapper
+	assert_true(_editor._fg_visual_map.has(new_jessy.uuid),
+		"Jessy (changée) doit avoir un nouveau wrapper")

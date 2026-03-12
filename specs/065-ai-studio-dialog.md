@@ -64,6 +64,20 @@ Réplique l'onglet IA de `ImagePickerDialog` :
 #### CFG / Steps
 - Mêmes sliders que l'onglet Décliner
 
+#### Denoise
+- HSlider (0.1–1.0, step 0.05, défaut 0.5)
+- Contrôle la fidélité à l'image source (0.1 = peu de changement, 1.0 = régénération totale)
+
+#### Zone visage (Face Box Size)
+- HSlider (10–200, step 5, défaut 80)
+- Contrôle la taille de la zone de détection du visage en pixels
+- Affecte deux paramètres du workflow Expression :
+  - `dilation` (noeud 100 / BboxDetectorCombined_v2) : expansion de la bounding box de détection
+  - `expand` (noeud 101 / GrowMask) : expansion supplémentaire du masque
+- Une valeur basse (ex: 20-40) limite la zone modifiée au visage seul, évitant de modifier les vêtements
+- Une valeur haute (ex: 120-200) étend la zone modifiée au-delà du visage (cheveux, cou, épaules)
+- Le paramètre `face_box_size` est passé via `comfyui_client.generate()` et `build_workflow()`
+
 #### Expressions (cases à cocher, minimum 1)
 - 30 expressions par défaut : smile, sad, shy, grumpy, laughing out loud, angry, surprised, worried, neutral, scared, disgusted, confused, proud, embarrassed, bored, excited, crying, hopeful, determined, jealous, dreamy, mischievous, exhausted, relieved, suspicious, tender, annoyed, desperate, nostalgic, seductive
 - Expressions personnalisées : ajoutées dynamiquement via LineEdit + bouton "+ Ajouter"

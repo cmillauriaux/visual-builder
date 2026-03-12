@@ -161,6 +161,119 @@ func test_seen_does_not_affect_type_none():
 	var result = _transition.compute_transitions([], [fg], {})
 	assert_eq(result.size(), 0, "transition_type=none → jamais de fade_in")
 
+# --- z_order dans les transitions ---
+
+func test_fade_in_includes_z_order():
+	var fg = _make_fg("a", "img.png", "fade", 0.5, 5)
+	var result = _transition.compute_transitions([], [fg])
+	assert_eq(result[0]["z_order"], 5)
+
+func test_fade_out_includes_z_order():
+	var fg = _make_fg("a", "img.png", "none", 0.5, -3)
+	var result = _transition.compute_transitions([fg], [])
+	assert_eq(result[0]["z_order"], -3)
+
+func test_replace_fade_includes_z_order():
+	var fg_old = _make_fg("a", "old.png", "fade", 0.5, 7)
+	var fg_new = _make_fg("a", "new.png", "fade", 0.5, 7)
+	var result = _transition.compute_transitions([fg_old], [fg_new])
+	assert_eq(result[0]["z_order"], 7)
+
+func test_replace_instant_includes_z_order():
+	var fg_old = _make_fg("a", "old.png", "none", 0.5, 2)
+	var fg_new = _make_fg("a", "new.png", "none", 0.5, 2)
+	var result = _transition.compute_transitions([fg_old], [fg_new])
+	assert_eq(result[0]["z_order"], 2)
+
+func test_mixed_transitions_preserve_z_order():
+	var fg_removed = _make_fg("removed", "old.png", "none", 0.5, -1)
+	var fg_stay = _make_fg("stay", "stay.png", "none", 0.5, 0)
+	var fg_new = _make_fg("new", "new.png", "fade", 0.5, 10)
+	var result = _transition.compute_transitions(
+		[fg_stay, fg_removed],
+		[fg_stay, fg_new]
+	)
+	for r in result:
+		if r["uuid"] == "removed":
+			assert_eq(r["z_order"], -1, "fade_out garde le z_order de l'ancien FG")
+		elif r["uuid"] == "new":
+			assert_eq(r["z_order"], 10, "fade_in a le z_order du nouveau FG")
+
+# --- Matching visuel (UUIDs différents mais même image/position) ---
+
+func test_no_transition_when_visually_equivalent_different_uuid():
+	# Même image, même position, UUID différent → pas de transition
+	var fg_old = _make_fg("a", "img.png", "fade", 0.5)
+	var fg_new = _make_fg("b", "img.png", "fade", 0.5)
+	var result = _transition.compute_transitions([fg_old], [fg_new])
+	assert_eq(result.size(), 0, "Visuellement identique → pas de transition")
+
+func test_transition_when_different_image_different_uuid():
+	# Image différente, UUID différent → fade_out + fade_in
+	var fg_old = _make_fg("a", "old.png", "fade", 0.5)
+	var fg_new = _make_fg("b", "new.png", "fade", 0.5)
+	var result = _transition.compute_transitions([fg_old], [fg_new])
+	assert_true(result.size() >= 1, "Image différente → transition nécessaire")
+
+func test_transition_when_position_changed_different_uuid():
+	# Même image mais position différente → transition
+	var fg_old = _make_fg("a", "img.png", "fade", 0.5)
+	fg_old.anchor_bg = Vector2(0.2, 0.5)
+	var fg_new = _make_fg("b", "img.png", "fade", 0.5)
+	fg_new.anchor_bg = Vector2(0.8, 0.5)
+	var result = _transition.compute_transitions([fg_old], [fg_new])
+	assert_true(result.size() >= 1, "Position différente → transition nécessaire")
+
+func test_transition_when_scale_changed_different_uuid():
+	# Même image mais scale différent → transition
+	var fg_old = _make_fg("a", "img.png", "fade", 0.5)
+	fg_old.scale = 1.0
+	var fg_new = _make_fg("b", "img.png", "fade", 0.5)
+	fg_new.scale = 2.0
+	var result = _transition.compute_transitions([fg_old], [fg_new])
+	assert_true(result.size() >= 1, "Scale différent → transition nécessaire")
+
+func test_transition_when_flip_changed_different_uuid():
+	# Même image mais flip différent → transition
+	var fg_old = _make_fg("a", "img.png", "fade", 0.5)
+	fg_old.flip_h = false
+	var fg_new = _make_fg("b", "img.png", "fade", 0.5)
+	fg_new.flip_h = true
+	var result = _transition.compute_transitions([fg_old], [fg_new])
+	assert_true(result.size() >= 1, "Flip différent → transition nécessaire")
+
+func test_visual_matching_multiple_foregrounds():
+	# 3 FGs : décor (inchangé), personnage A → B (image change)
+	var decor_old = _make_fg("d1", "decor.png", "fade", 0.5)
+	var char_old = _make_fg("c1", "charA.png", "fade", 0.5)
+	var decor_new = _make_fg("d2", "decor.png", "fade", 0.5)
+	var char_new = _make_fg("c2", "charB.png", "fade", 0.5)
+	var result = _transition.compute_transitions(
+		[decor_old, char_old],
+		[decor_new, char_new]
+	)
+	# Le décor ne doit PAS avoir de transition (visuellement identique)
+	# Le personnage doit avoir fade_out (charA) + fade_in (charB)
+	for r in result:
+		assert_ne(r["uuid"], "d1", "Décor ancien ne doit pas avoir de transition")
+		assert_ne(r["uuid"], "d2", "Décor nouveau ne doit pas avoir de transition")
+	var actions = {}
+	for r in result:
+		actions[r["uuid"]] = r["action"]
+	assert_true(actions.has("c1"), "Ancien personnage doit avoir une transition")
+	assert_eq(actions["c1"], "fade_out")
+	assert_true(actions.has("c2"), "Nouveau personnage doit avoir une transition")
+	assert_eq(actions["c2"], "fade_in")
+
+func test_visual_matching_does_not_match_same_image_different_position():
+	# Deux FGs avec même image mais positions différentes ne doivent pas se matcher
+	var fg_old = _make_fg("a", "char.png", "fade", 0.5)
+	fg_old.anchor_bg = Vector2(0.2, 0.5)
+	var fg_new = _make_fg("b", "char.png", "fade", 0.5)
+	fg_new.anchor_bg = Vector2(0.8, 0.5)
+	var result = _transition.compute_transitions([fg_old], [fg_new])
+	assert_eq(result.size(), 2, "Même image mais position différente → fade_out + fade_in")
+
 # --- Application de transition sur un Control ---
 
 func test_apply_fade_in():
@@ -180,10 +293,11 @@ func test_apply_fade_out():
 
 # --- Helper ---
 
-func _make_fg(uuid: String, image: String, trans_type: String, trans_dur: float):
+func _make_fg(uuid: String, image: String, trans_type: String, trans_dur: float, z: int = 0):
 	var fg = Foreground.new()
 	fg.uuid = uuid
 	fg.image = image
 	fg.transition_type = trans_type
 	fg.transition_duration = trans_dur
+	fg.z_order = z
 	return fg

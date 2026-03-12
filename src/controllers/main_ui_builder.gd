@@ -197,6 +197,10 @@ static func _build_sequence_editor(main: Control) -> void:
 	main._snap_toggle.toggle_mode = true
 	main._sequence_toolbar.add_child(main._snap_toggle)
 
+	main._normalize_fg_button = Button.new()
+	main._normalize_fg_button.text = "Normaliser"
+	main._sequence_toolbar.add_child(main._normalize_fg_button)
+
 	var toolbar_spacer = Control.new()
 	toolbar_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	main._sequence_toolbar.add_child(toolbar_spacer)

@@ -19,6 +19,18 @@ func test_build_workflow_no_bg_removal():
 	assert_false(wf.has("100")) # BiRefNet removed
 	assert_eq(wf["9"]["inputs"]["images"][0], "75:65") # Direct output
 
+func test_build_expression_workflow_default_face_box():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("test.png", "smile", 123, true, 1.0, 4, 1, 0.5, "", 80)
+	assert_eq(wf["100"]["inputs"]["dilation"], 80)
+	assert_eq(wf["101"]["inputs"]["expand"], 80)
+
+func test_build_expression_workflow_custom_face_box():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("test.png", "smile", 123, true, 1.0, 4, 1, 0.5, "", 30)
+	assert_eq(wf["100"]["inputs"]["dilation"], 30)
+	assert_eq(wf["101"]["inputs"]["expand"], 30)
+
 func test_build_multipart_body():
 	var client = ComfyUIClientScript.new()
 	var data = PackedByteArray([1, 2, 3])

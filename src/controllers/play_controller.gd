@@ -53,18 +53,23 @@ func on_play_pressed() -> void:
 	# Préparer l'affichage du premier dialogue avant l'animation d'ouverture
 	_prepare_opening_visuals()
 
+	# Appliquer les FX persistants immédiatement (visibles dès le début, y compris pendant la transition)
+	if seq:
+		_sequence_fx_player.apply_persistent_fx(seq.fx, _visual_editor._fx_container)
+
 	if seq and seq.transition_in_type != "none":
 		_sequence_fx_player.fx_finished.connect(_on_trans_in_finished_play_fx, CONNECT_ONE_SHOT)
-		_sequence_fx_player.play_transition(seq.transition_in_type, seq.transition_in_duration, true, _visual_editor)
+		_sequence_fx_player.play_transition(seq.transition_in_type, seq.transition_in_duration, true, _visual_editor._fx_container)
 	else:
 		_on_trans_in_finished_play_fx()
 
 
 func _on_trans_in_finished_play_fx() -> void:
 	var seq = _current_playing_sequence
+	# play_fx_list filtre automatiquement les FX persistants déjà appliqués
 	if seq and seq.fx.size() > 0:
 		_sequence_fx_player.fx_finished.connect(_on_play_fx_finished, CONNECT_ONE_SHOT)
-		_sequence_fx_player.play_fx_list(seq.fx, _visual_editor)
+		_sequence_fx_player.play_fx_list(seq.fx, _visual_editor._fx_container, _visual_editor._canvas)
 	else:
 		_apply_sequence_audio()
 		_start_play_after_fx()
@@ -126,7 +131,7 @@ func _handle_play_stopped() -> void:
 	var seq = _current_playing_sequence
 	if seq and seq.transition_out_type != "none":
 		_sequence_fx_player.fx_finished.connect(_on_trans_out_finished, CONNECT_ONE_SHOT)
-		_sequence_fx_player.play_transition(seq.transition_out_type, seq.transition_out_duration, false, _visual_editor)
+		_sequence_fx_player.play_transition(seq.transition_out_type, seq.transition_out_duration, false, _visual_editor._fx_container)
 	else:
 		_on_trans_out_finished()
 
@@ -144,10 +149,10 @@ func on_play_dialogue_changed(index: int) -> void:
 	var seq = _sequence_editor_ctrl.get_sequence()
 	if seq == null or index < 0 or index >= seq.dialogues.size():
 		return
-	
+
 	var dlg = seq.dialogues[index]
 	EventBus.play_dialogue_changed.emit(dlg.character, dlg.text, index)
-	
+
 	# Foreground transitions logic
 	var new_fgs = _sequence_editor_ctrl.get_effective_foregrounds(index)
 	var transitions = _foreground_transition.compute_transitions(_previous_play_foregrounds, new_fgs, _seen_fg_uuids)
@@ -155,9 +160,6 @@ func on_play_dialogue_changed(index: int) -> void:
 		_seen_fg_uuids[fg.uuid] = true
 	_previous_play_foregrounds = new_fgs
 
-	# On notifie le visuel pour qu'il gère ses tweens/clones
-	# Note: On pourrait aussi émettre un signal "play_transitions_requested"
-	# Mais pour l'instant on garde l'appel direct au visual_editor car c'est de l'UI pure
 	_apply_visual_transitions(index, transitions)
 
 
@@ -169,7 +171,7 @@ func _apply_visual_transitions(index: int, transitions: Array) -> void:
 		if action in ["fade_out", "replace_fade", "replace_instant"]:
 			var old_node = _visual_editor.get_foreground_node(t["uuid"])
 			if old_node and is_instance_valid(old_node):
-				var clone = _create_fade_out_clone(old_node)
+				var clone = _create_fade_out_clone(old_node, t.get("z_order", 0))
 				if clone:
 					clones.append({
 						"clone": clone,
@@ -190,13 +192,9 @@ func _apply_visual_transitions(index: int, transitions: Array) -> void:
 		var target = _visual_editor.get_foreground_node(uuid)
 
 		if action == "fade_out":
-			# Disparition pure : clone en haut, fade out
-			if clone.get_parent():
-				clone.get_parent().move_child(clone, clone.get_parent().get_child_count() - 1)
 			_foreground_transition.apply_tween_fade_out(clone, duration, true)
 
 		elif action == "replace_fade":
-			# Nouveau par-dessus : clone sous le target, nouveau fade in
 			if target and is_instance_valid(target):
 				var parent = clone.get_parent()
 				if parent:
@@ -208,12 +206,8 @@ func _apply_visual_transitions(index: int, transitions: Array) -> void:
 			_foreground_transition.apply_tween_fade_out(clone, duration, true)
 
 		elif action == "replace_instant":
-			# Ancien par-dessus : clone au-dessus du target, nouveau instantané
 			if target and is_instance_valid(target):
 				target.modulate.a = 1.0
-				var parent = clone.get_parent()
-				if parent:
-					parent.move_child(clone, parent.get_child_count() - 1)
 			_foreground_transition.apply_tween_fade_out(clone, duration, true)
 
 	# Phase 4 : fade_in pur (nouveau FG sans prédécesseur)
@@ -231,12 +225,12 @@ func _apply_visual_transitions(index: int, transitions: Array) -> void:
 	_main.highlight_dialogue_in_list(index)
 
 
-func _create_fade_out_clone(source: Control) -> TextureRect:
+func _create_fade_out_clone(source: Control, z_order: int = 0) -> TextureRect:
 	var fg_container = _visual_editor.get_node_or_null("Canvas/ForegroundContainer")
 	if fg_container == null: return null
 	var tex_node = source.get_node_or_null("Texture")
 	if not tex_node is TextureRect: return null
-	
+
 	var clone = TextureRect.new()
 	clone.name = "FadeOutClone"
 	clone.texture = tex_node.texture
@@ -246,6 +240,7 @@ func _create_fade_out_clone(source: Control) -> TextureRect:
 	clone.position = source.position
 	clone.size = source.size
 	clone.modulate = source.modulate
+	clone.z_index = z_order
 	fg_container.add_child(clone)
 	return clone
 
@@ -335,9 +330,12 @@ func on_story_play_sequence_requested(seq) -> void:
 	# Préparer l'affichage du premier dialogue avant l'animation d'ouverture
 	_prepare_opening_visuals()
 
+	# Appliquer les FX persistants immédiatement
+	_sequence_fx_player.apply_persistent_fx(seq.fx, _visual_editor._fx_container)
+
 	if seq.transition_in_type != "none":
 		_sequence_fx_player.fx_finished.connect(_on_trans_in_finished_play_fx, CONNECT_ONE_SHOT)
-		_sequence_fx_player.play_transition(seq.transition_in_type, seq.transition_in_duration, true, _visual_editor)
+		_sequence_fx_player.play_transition(seq.transition_in_type, seq.transition_in_duration, true, _visual_editor._fx_container)
 	else:
 		_on_trans_in_finished_play_fx()
 

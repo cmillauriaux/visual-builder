@@ -549,3 +549,201 @@ func test_play_fx_list_stops_previous() -> void:
 	fx2.duration = 5.0
 	_player.play_fx_list([fx2], _target)
 	assert_true(_player.is_playing())
+
+
+## --- Separate overlay / transform targets ---
+
+
+func test_screen_shake_uses_transform_target() -> void:
+	var overlay_target = Control.new()
+	overlay_target.size = Vector2(800, 600)
+	add_child(overlay_target)
+	var transform_target = Control.new()
+	transform_target.size = Vector2(1920, 1080)
+	transform_target.position = Vector2(50, 60)
+	add_child(transform_target)
+
+	var fx = SequenceFx.new()
+	fx.fx_type = "screen_shake"
+	fx.duration = 5.0
+	fx.intensity = 2.0
+	_player.play_fx_list([fx], overlay_target, transform_target)
+
+	# The shake should modify transform_target, not overlay_target
+	assert_eq(_player._transform_target, transform_target)
+	_player.stop_fx()
+	assert_eq(transform_target.position, Vector2(50, 60), "transform_target position should be restored")
+
+	remove_child(overlay_target)
+	overlay_target.queue_free()
+	remove_child(transform_target)
+	transform_target.queue_free()
+
+
+func test_overlay_fx_goes_to_target_not_transform_target() -> void:
+	var overlay_target = Control.new()
+	overlay_target.size = Vector2(800, 600)
+	add_child(overlay_target)
+	var transform_target = Control.new()
+	transform_target.size = Vector2(1920, 1080)
+	add_child(transform_target)
+
+	var fx = SequenceFx.new()
+	fx.fx_type = "vignette"
+	fx.duration = 5.0
+	_player.play_fx_list([fx], overlay_target, transform_target)
+
+	# Vignette overlay should be in overlay_target, not transform_target
+	assert_not_null(overlay_target.get_node_or_null("FxVignetteOverlay"), "vignette should be child of overlay_target")
+	assert_null(transform_target.get_node_or_null("FxVignetteOverlay"), "vignette should NOT be child of transform_target")
+
+	_player.stop_fx()
+	remove_child(overlay_target)
+	overlay_target.queue_free()
+	remove_child(transform_target)
+	transform_target.queue_free()
+
+
+func test_stop_does_not_reset_transform_target_without_transform_fx() -> void:
+	var overlay_target = Control.new()
+	overlay_target.size = Vector2(800, 600)
+	add_child(overlay_target)
+	var transform_target = Control.new()
+	transform_target.size = Vector2(1920, 1080)
+	transform_target.position = Vector2(100, 200)
+	add_child(transform_target)
+
+	var fx = SequenceFx.new()
+	fx.fx_type = "vignette"
+	fx.duration = 5.0
+	_player.play_fx_list([fx], overlay_target, transform_target)
+	_player.stop_fx()
+
+	# Position should NOT be reset to Vector2.ZERO since no transform FX was played
+	assert_eq(transform_target.position, Vector2(100, 200), "transform_target position should be untouched when no transform FX played")
+
+	remove_child(overlay_target)
+	overlay_target.queue_free()
+	remove_child(transform_target)
+	transform_target.queue_free()
+
+
+## --- apply_persistent_fx (immediate, full-intensity) ---
+
+
+func test_apply_persistent_fx_creates_vignette_immediately() -> void:
+	var fx = SequenceFx.new()
+	fx.fx_type = "vignette"
+	fx.intensity = 0.8
+	_player.apply_persistent_fx([fx], _target)
+	assert_true(_player._persistent_fx.has("vignette"), "vignette should be in persistent_fx")
+	var overlay = _player._persistent_fx.get("vignette")
+	var mat = overlay.material as ShaderMaterial
+	assert_eq(mat.get_shader_parameter("strength"), 0.8, "vignette should be at full intensity immediately")
+
+
+func test_apply_persistent_fx_creates_desaturation_immediately() -> void:
+	var fx = SequenceFx.new()
+	fx.fx_type = "desaturation"
+	fx.intensity = 0.6
+	_player.apply_persistent_fx([fx], _target)
+	assert_true(_player._persistent_fx.has("desaturation"), "desaturation should be in persistent_fx")
+	var overlay = _player._persistent_fx.get("desaturation")
+	var mat = overlay.material as ShaderMaterial
+	assert_almost_eq(mat.get_shader_parameter("amount"), 0.6, 0.01, "desaturation should be at full intensity immediately")
+
+
+func test_apply_persistent_fx_ignores_transient_types() -> void:
+	var fx1 = SequenceFx.new()
+	fx1.fx_type = "fade_in"
+	fx1.duration = 1.0
+	var fx2 = SequenceFx.new()
+	fx2.fx_type = "screen_shake"
+	fx2.duration = 1.0
+	_player.apply_persistent_fx([fx1, fx2], _target)
+	assert_eq(_player._persistent_fx.size(), 0, "transient FX should not be created by apply_persistent_fx")
+
+
+func test_apply_persistent_fx_updates_existing_intensity() -> void:
+	var fx1 = SequenceFx.new()
+	fx1.fx_type = "vignette"
+	fx1.intensity = 0.5
+	_player.apply_persistent_fx([fx1], _target)
+	var overlay1 = _player._persistent_fx.get("vignette")
+
+	var fx2 = SequenceFx.new()
+	fx2.fx_type = "vignette"
+	fx2.intensity = 1.0
+	_player.apply_persistent_fx([fx2], _target)
+	var overlay2 = _player._persistent_fx.get("vignette")
+
+	assert_eq(overlay1, overlay2, "should reuse same overlay node")
+	var mat = overlay2.material as ShaderMaterial
+	assert_eq(mat.get_shader_parameter("strength"), 1.0, "intensity should be updated to new value")
+
+
+func test_apply_persistent_fx_removes_absent_types() -> void:
+	var fx1 = SequenceFx.new()
+	fx1.fx_type = "vignette"
+	fx1.intensity = 0.5
+	var fx2 = SequenceFx.new()
+	fx2.fx_type = "desaturation"
+	fx2.intensity = 0.5
+	_player.apply_persistent_fx([fx1, fx2], _target)
+	assert_eq(_player._persistent_fx.size(), 2)
+
+	# Second call with only vignette — desaturation should be removed
+	var fx3 = SequenceFx.new()
+	fx3.fx_type = "vignette"
+	fx3.intensity = 0.5
+	_player.apply_persistent_fx([fx3], _target)
+	assert_true(_player._persistent_fx.has("vignette"))
+	assert_false(_player._persistent_fx.has("desaturation"), "desaturation should be removed when not in new list")
+
+
+func test_apply_persistent_fx_empty_list_clears_all() -> void:
+	var fx = SequenceFx.new()
+	fx.fx_type = "vignette"
+	fx.intensity = 0.5
+	_player.apply_persistent_fx([fx], _target)
+	assert_eq(_player._persistent_fx.size(), 1)
+
+	_player.apply_persistent_fx([], _target)
+	assert_eq(_player._persistent_fx.size(), 0, "empty list should clear all persistent fx")
+
+
+func test_apply_persistent_fx_desaturation_clamped_to_one() -> void:
+	var fx = SequenceFx.new()
+	fx.fx_type = "desaturation"
+	fx.intensity = 5.0
+	_player.apply_persistent_fx([fx], _target)
+	var overlay = _player._persistent_fx.get("desaturation")
+	var mat = overlay.material as ShaderMaterial
+	assert_almost_eq(mat.get_shader_parameter("amount"), 1.0, 0.01, "desaturation should be clamped to 1.0")
+
+
+func test_zoom_uses_transform_target() -> void:
+	var overlay_target = Control.new()
+	overlay_target.size = Vector2(800, 600)
+	add_child(overlay_target)
+	var transform_target = Control.new()
+	transform_target.size = Vector2(1920, 1080)
+	transform_target.scale = Vector2(0.5, 0.5)
+	add_child(transform_target)
+
+	var fx = SequenceFx.new()
+	fx.fx_type = "zoom"
+	fx.duration = 5.0
+	fx.intensity = 1.0
+	_player.play_fx_list([fx], overlay_target, transform_target)
+
+	# Zoom should modify transform_target
+	assert_eq(transform_target.pivot_offset, transform_target.size / 2.0, "pivot should be set on transform_target")
+
+	_player.stop_fx()
+	assert_eq(transform_target.scale, Vector2(0.5, 0.5), "transform_target scale should be restored")
+
+	remove_child(overlay_target)
+	overlay_target.queue_free()
+	remove_child(transform_target)
+	transform_target.queue_free()

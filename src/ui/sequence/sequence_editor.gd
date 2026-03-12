@@ -94,6 +94,85 @@ func _copy_foreground(fg):
 	copy.transition_duration = fg.transition_duration
 	return copy
 
+# --- Normalisation foregrounds ---
+
+func normalize_dialogue_foregrounds() -> int:
+	if _sequence == null:
+		return 0
+	# Passe 1 : aligner les positions proches sur la référence héritée
+	for i in range(_sequence.dialogues.size()):
+		var dlg = _sequence.dialogues[i]
+		if dlg.foregrounds.size() == 0:
+			continue
+		var inherited = _get_inherited_foregrounds(i)
+		if inherited.size() > 0:
+			_align_foreground_positions(dlg.foregrounds, inherited)
+	# Passe 2 : supprimer les dialogues dont les foregrounds sont identiques à l'héritage
+	var cleared_count := 0
+	for i in range(_sequence.dialogues.size()):
+		var dlg = _sequence.dialogues[i]
+		if dlg.foregrounds.size() == 0:
+			continue
+		var inherited = _get_inherited_foregrounds(i)
+		if _are_foregrounds_equivalent(dlg.foregrounds, inherited):
+			dlg.foregrounds.clear()
+			cleared_count += 1
+	return cleared_count
+
+func _get_inherited_foregrounds(dialogue_index: int) -> Array:
+	# Le dialogue 0 hérite des foregrounds de la séquence
+	if dialogue_index == 0:
+		return _sequence.foregrounds
+	# Les autres héritent du dialogue précédent le plus proche avec des foregrounds
+	for i in range(dialogue_index - 1, -1, -1):
+		if _sequence.dialogues[i].foregrounds.size() > 0:
+			return _sequence.dialogues[i].foregrounds
+	# Aucun dialogue précédent → hérite de la séquence
+	return _sequence.foregrounds
+
+func _are_foregrounds_equivalent(a: Array, b: Array) -> bool:
+	if a.size() != b.size():
+		return false
+	# Pour chaque fg de a, chercher un match dans b
+	var matched := []
+	for fg_a in a:
+		var found := false
+		for j in range(b.size()):
+			if j in matched:
+				continue
+			if _fg_match(fg_a, b[j]):
+				matched.append(j)
+				found = true
+				break
+		if not found:
+			return false
+	return true
+
+func _fg_match(a, b) -> bool:
+	if a.image != b.image:
+		return false
+	return _positions_close(a, b)
+
+func _positions_close(a, b) -> bool:
+	var threshold = 0.05
+	if absf(a.anchor_bg.x - b.anchor_bg.x) > threshold:
+		return false
+	if absf(a.anchor_bg.y - b.anchor_bg.y) > threshold:
+		return false
+	if absf(a.anchor_fg.x - b.anchor_fg.x) > threshold:
+		return false
+	if absf(a.anchor_fg.y - b.anchor_fg.y) > threshold:
+		return false
+	return true
+
+func _align_foreground_positions(foregrounds: Array, reference: Array) -> void:
+	for fg in foregrounds:
+		for ref in reference:
+			if _positions_close(fg, ref):
+				fg.anchor_bg = ref.anchor_bg
+				fg.anchor_fg = ref.anchor_fg
+				break
+
 # --- CRUD Dialogues ---
 
 func add_dialogue(character: String, text: String) -> void:

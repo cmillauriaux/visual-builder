@@ -379,6 +379,201 @@ func test_start_play_at_zero_behaves_like_start_play():
 	assert_true(_editor.is_playing())
 	assert_eq(_editor.get_play_dialogue_index(), 0)
 
+# --- Normalisation dialogue foregrounds ---
+
+func test_normalize_clears_dialogue_matching_sequence():
+	# Dialogue 0 a les mêmes foregrounds que la séquence → doit être vidé
+	var seq_fg = Foreground.new()
+	seq_fg.image = "hero.png"
+	seq_fg.anchor_bg = Vector2(0.5, 0.5)
+	_sequence.foregrounds.append(seq_fg)
+	var dlg = _add_dialogue("A", "Texte")
+	var dlg_fg = Foreground.new()
+	dlg_fg.image = "hero.png"
+	dlg_fg.anchor_bg = Vector2(0.5, 0.5)
+	dlg.foregrounds.append(dlg_fg)
+	_editor.load_sequence(_sequence)
+	var cleared = _editor.normalize_dialogue_foregrounds()
+	assert_eq(cleared, 1)
+	assert_eq(dlg.foregrounds.size(), 0)
+
+func test_normalize_keeps_dialogue_with_different_image():
+	var seq_fg = Foreground.new()
+	seq_fg.image = "hero.png"
+	seq_fg.anchor_bg = Vector2(0.5, 0.5)
+	_sequence.foregrounds.append(seq_fg)
+	var dlg = _add_dialogue("A", "Texte")
+	var dlg_fg = Foreground.new()
+	dlg_fg.image = "villain.png"
+	dlg_fg.anchor_bg = Vector2(0.5, 0.5)
+	dlg.foregrounds.append(dlg_fg)
+	_editor.load_sequence(_sequence)
+	var cleared = _editor.normalize_dialogue_foregrounds()
+	assert_eq(cleared, 0)
+	assert_eq(dlg.foregrounds.size(), 1)
+
+func test_normalize_clears_dialogue_matching_previous():
+	# Dialogue 1 a les mêmes foregrounds que dialogue 0 → doit être vidé
+	var dlg0 = _add_dialogue("A", "Premier")
+	var fg0 = Foreground.new()
+	fg0.image = "hero.png"
+	fg0.anchor_bg = Vector2(0.5, 0.5)
+	dlg0.foregrounds.append(fg0)
+	var dlg1 = _add_dialogue("B", "Deuxième")
+	var fg1 = Foreground.new()
+	fg1.image = "hero.png"
+	fg1.anchor_bg = Vector2(0.52, 0.48)  # dans le seuil de 5%
+	dlg1.foregrounds.append(fg1)
+	_editor.load_sequence(_sequence)
+	var cleared = _editor.normalize_dialogue_foregrounds()
+	assert_eq(cleared, 1)
+	assert_eq(dlg1.foregrounds.size(), 0)
+
+func test_normalize_keeps_dialogue_with_different_count():
+	var dlg0 = _add_dialogue("A", "Premier")
+	var fg0 = Foreground.new()
+	fg0.image = "hero.png"
+	dlg0.foregrounds.append(fg0)
+	var dlg1 = _add_dialogue("B", "Deuxième")
+	var fg1a = Foreground.new()
+	fg1a.image = "hero.png"
+	var fg1b = Foreground.new()
+	fg1b.image = "bg.png"
+	dlg1.foregrounds.append(fg1a)
+	dlg1.foregrounds.append(fg1b)
+	_editor.load_sequence(_sequence)
+	var cleared = _editor.normalize_dialogue_foregrounds()
+	assert_eq(cleared, 0)
+	assert_eq(dlg1.foregrounds.size(), 2)
+
+func test_normalize_multiple_dialogues():
+	# 3 dialogues identiques → les 2 derniers sont vidés
+	var seq_fg = Foreground.new()
+	seq_fg.image = "hero.png"
+	seq_fg.anchor_bg = Vector2(0.5, 0.5)
+	_sequence.foregrounds.append(seq_fg)
+	for i in range(3):
+		var dlg = _add_dialogue("D%d" % i, "Texte")
+		var fg = Foreground.new()
+		fg.image = "hero.png"
+		fg.anchor_bg = Vector2(0.5, 0.5)
+		dlg.foregrounds.append(fg)
+	_editor.load_sequence(_sequence)
+	var cleared = _editor.normalize_dialogue_foregrounds()
+	# Dialogue 0 match la séquence → vidé
+	# Dialogue 1 hérite maintenant de la séquence (dlg 0 vidé) → match → vidé
+	# Dialogue 2 hérite aussi → match → vidé
+	assert_eq(cleared, 3)
+
+func test_normalize_returns_zero_no_dialogues():
+	_editor.load_sequence(_sequence)
+	var cleared = _editor.normalize_dialogue_foregrounds()
+	assert_eq(cleared, 0)
+
+func test_normalize_skips_empty_dialogues():
+	_add_dialogue("A", "Vide")
+	_add_dialogue("B", "Vide aussi")
+	_editor.load_sequence(_sequence)
+	var cleared = _editor.normalize_dialogue_foregrounds()
+	assert_eq(cleared, 0)
+
+func test_normalize_within_threshold():
+	var seq_fg = Foreground.new()
+	seq_fg.image = "hero.png"
+	seq_fg.anchor_bg = Vector2(0.500, 0.500)
+	seq_fg.anchor_fg = Vector2(0.5, 1.0)
+	_sequence.foregrounds.append(seq_fg)
+	var dlg = _add_dialogue("A", "Texte")
+	var dlg_fg = Foreground.new()
+	dlg_fg.image = "hero.png"
+	dlg_fg.anchor_bg = Vector2(0.540, 0.530)  # dans 5%
+	dlg_fg.anchor_fg = Vector2(0.5, 1.0)
+	dlg.foregrounds.append(dlg_fg)
+	_editor.load_sequence(_sequence)
+	var cleared = _editor.normalize_dialogue_foregrounds()
+	assert_eq(cleared, 1)
+
+func test_normalize_outside_threshold():
+	var seq_fg = Foreground.new()
+	seq_fg.image = "hero.png"
+	seq_fg.anchor_bg = Vector2(0.500, 0.500)
+	_sequence.foregrounds.append(seq_fg)
+	var dlg = _add_dialogue("A", "Texte")
+	var dlg_fg = Foreground.new()
+	dlg_fg.image = "hero.png"
+	dlg_fg.anchor_bg = Vector2(0.600, 0.600)  # hors seuil
+	dlg.foregrounds.append(dlg_fg)
+	_editor.load_sequence(_sequence)
+	var cleared = _editor.normalize_dialogue_foregrounds()
+	assert_eq(cleared, 0)
+
+# --- Alignement des positions ---
+
+func test_normalize_aligns_same_image_positions():
+	# Dialogue a la même image que la séquence mais position légèrement décalée
+	var seq_fg = Foreground.new()
+	seq_fg.image = "hero.png"
+	seq_fg.anchor_bg = Vector2(0.500, 0.500)
+	seq_fg.anchor_fg = Vector2(0.5, 1.0)
+	_sequence.foregrounds.append(seq_fg)
+	var dlg = _add_dialogue("A", "Texte")
+	var dlg_fg = Foreground.new()
+	dlg_fg.image = "hero_angry.png"  # image différente
+	dlg_fg.anchor_bg = Vector2(0.520, 0.510)  # position proche
+	dlg_fg.anchor_fg = Vector2(0.5, 1.0)
+	dlg.foregrounds.append(dlg_fg)
+	_editor.load_sequence(_sequence)
+	_editor.normalize_dialogue_foregrounds()
+	# La position doit être alignée sur la référence
+	assert_almost_eq(dlg_fg.anchor_bg.x, 0.500, 0.001)
+	assert_almost_eq(dlg_fg.anchor_bg.y, 0.500, 0.001)
+
+func test_normalize_aligns_different_images_close_positions():
+	# Deux personnages différents, positions proches → alignés
+	var seq_fg1 = Foreground.new()
+	seq_fg1.image = "lucy.png"
+	seq_fg1.anchor_bg = Vector2(0.200, 0.800)
+	seq_fg1.anchor_fg = Vector2(0.5, 1.0)
+	var seq_fg2 = Foreground.new()
+	seq_fg2.image = "jessy_tender.png"
+	seq_fg2.anchor_bg = Vector2(0.700, 0.800)
+	seq_fg2.anchor_fg = Vector2(0.5, 1.0)
+	_sequence.foregrounds.append(seq_fg1)
+	_sequence.foregrounds.append(seq_fg2)
+	var dlg = _add_dialogue("A", "Texte")
+	var dlg_fg1 = Foreground.new()
+	dlg_fg1.image = "lucy_happy.png"
+	dlg_fg1.anchor_bg = Vector2(0.210, 0.805)  # proche de lucy
+	dlg_fg1.anchor_fg = Vector2(0.5, 1.0)
+	var dlg_fg2 = Foreground.new()
+	dlg_fg2.image = "jessy_sad.png"
+	dlg_fg2.anchor_bg = Vector2(0.710, 0.795)  # proche de jessy
+	dlg_fg2.anchor_fg = Vector2(0.5, 1.0)
+	dlg.foregrounds.append(dlg_fg1)
+	dlg.foregrounds.append(dlg_fg2)
+	_editor.load_sequence(_sequence)
+	_editor.normalize_dialogue_foregrounds()
+	assert_almost_eq(dlg_fg1.anchor_bg.x, 0.200, 0.001)
+	assert_almost_eq(dlg_fg1.anchor_bg.y, 0.800, 0.001)
+	assert_almost_eq(dlg_fg2.anchor_bg.x, 0.700, 0.001)
+	assert_almost_eq(dlg_fg2.anchor_bg.y, 0.800, 0.001)
+
+func test_normalize_does_not_align_distant_positions():
+	var seq_fg = Foreground.new()
+	seq_fg.image = "hero.png"
+	seq_fg.anchor_bg = Vector2(0.200, 0.200)
+	_sequence.foregrounds.append(seq_fg)
+	var dlg = _add_dialogue("A", "Texte")
+	var dlg_fg = Foreground.new()
+	dlg_fg.image = "villain.png"
+	dlg_fg.anchor_bg = Vector2(0.800, 0.800)  # très loin
+	dlg.foregrounds.append(dlg_fg)
+	_editor.load_sequence(_sequence)
+	_editor.normalize_dialogue_foregrounds()
+	# Position inchangée
+	assert_almost_eq(dlg_fg.anchor_bg.x, 0.800, 0.001)
+	assert_almost_eq(dlg_fg.anchor_bg.y, 0.800, 0.001)
+
 # --- Helper ---
 
 func _add_dialogue(character: String, text: String):
