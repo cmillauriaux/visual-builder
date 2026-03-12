@@ -98,6 +98,20 @@ Réplique l'onglet IA de `ImagePickerDialog` :
 - **Double-clic** : ouvre ImagePreviewPopup (zoom plein écran)
 - **Clic droit** : PopupMenu avec "Régénérer" et "Supprimer"
 
+#### Prévisualisation séquentielle
+- Bouton **"Prévisualiser"** au-dessus de la grille de résultats (à côté du label "Résultats")
+- Désactivé tant qu'aucune image n'est générée (completed count == 0)
+- Ouvre ImagePreviewPopup en mode collection sur la première image complétée
+- **Navigation** :
+  - Boutons "◀ Précédent" et "Suivant ▶" dans la barre inférieure du popup
+  - Touches clavier : Flèche gauche = précédent, Flèche droite = suivant
+  - Compteur "N / Total" affiché entre les boutons de navigation
+  - Les boutons Précédent/Suivant sont désactivés aux extrémités (premier/dernier)
+- **Actions** :
+  - Bouton "Regénérer" : relance la génération pour l'image courante, ferme le popup
+  - Bouton "Supprimer" : supprime l'image courante de la queue, affiche l'image suivante ou ferme si plus d'images
+- **Signaux** : `regenerate_requested(index)` et `delete_requested(index)` émis par ImagePreviewPopup
+
 #### Validation
 - Bouton **"Tout sauvegarder"** : enregistre toutes les images générées dans `assets/foregrounds/`
 - Gestion des conflits de noms via `_resolve_unique_path`
@@ -159,6 +173,9 @@ Extension de `ComfyUIConfig` :
 - [ ] La grille de résultats affiche l'état de chaque génération
 - [ ] Double-clic sur un résultat ouvre la preview plein écran
 - [ ] Clic droit permet de régénérer ou supprimer un résultat
+- [ ] Le bouton "Prévisualiser" ouvre la navigation séquentielle des images
+- [ ] La navigation par boutons et touches clavier fonctionne dans le popup
+- [ ] Les boutons "Regénérer" et "Supprimer" dans le popup fonctionnent correctement
 - [ ] "Tout sauvegarder" enregistre les images dans assets/foregrounds/
 - [ ] Le bouton "Annuler" interrompt la génération en cours
 - [ ] Tous les tests passent

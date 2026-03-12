@@ -1,12 +1,29 @@
 extends Control
 
 ## Overlay plein écran pour prévisualiser une image.
-## Usage : appeler show_preview(texture, filename) pour afficher.
+## Usage simple : appeler show_preview(texture, filename) pour afficher.
+## Usage collection : appeler show_collection(items, start_index) pour naviguer.
+
+signal regenerate_requested(index: int)
+signal delete_requested(index: int)
 
 var _overlay: ColorRect
 var _texture_rect: TextureRect
 var _filename_label: Label
 var _close_btn: Button
+
+# Navigation bar
+var _nav_bar: HBoxContainer
+var _prev_btn: Button
+var _next_btn: Button
+var _counter_label: Label
+var _regenerate_btn: Button
+var _delete_btn: Button
+
+# Collection mode state
+var _collection_items: Array = []  # [{texture, filename, index}]
+var _current_collection_index: int = -1
+var _collection_mode: bool = false
 
 func _ready() -> void:
 	visible = false
@@ -26,18 +43,18 @@ func _ready() -> void:
 	_texture_rect.set_anchor_and_offset(SIDE_LEFT, 0, 40)
 	_texture_rect.set_anchor_and_offset(SIDE_RIGHT, 1, -40)
 	_texture_rect.set_anchor_and_offset(SIDE_TOP, 0, 40)
-	_texture_rect.set_anchor_and_offset(SIDE_BOTTOM, 1, -60)
+	_texture_rect.set_anchor_and_offset(SIDE_BOTTOM, 1, -100)
 	_texture_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_texture_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_texture_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_texture_rect)
 
-	# Label nom de fichier en bas
+	# Label nom de fichier
 	_filename_label = Label.new()
 	_filename_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_filename_label.set_anchors_preset(PRESET_BOTTOM_WIDE)
-	_filename_label.set_anchor_and_offset(SIDE_TOP, 1, -40)
-	_filename_label.set_anchor_and_offset(SIDE_BOTTOM, 1, -10)
+	_filename_label.set_anchor_and_offset(SIDE_TOP, 1, -95)
+	_filename_label.set_anchor_and_offset(SIDE_BOTTOM, 1, -70)
 	_filename_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_filename_label)
 
@@ -52,13 +69,87 @@ func _ready() -> void:
 	_close_btn.pressed.connect(_close)
 	add_child(_close_btn)
 
+	# Navigation bar (hidden by default)
+	_nav_bar = HBoxContainer.new()
+	_nav_bar.name = "NavBar"
+	_nav_bar.set_anchors_preset(PRESET_BOTTOM_WIDE)
+	_nav_bar.set_anchor_and_offset(SIDE_TOP, 1, -60)
+	_nav_bar.set_anchor_and_offset(SIDE_BOTTOM, 1, -10)
+	_nav_bar.set_anchor_and_offset(SIDE_LEFT, 0, 40)
+	_nav_bar.set_anchor_and_offset(SIDE_RIGHT, 1, -40)
+	_nav_bar.alignment = BoxContainer.ALIGNMENT_CENTER
+	_nav_bar.add_theme_constant_override("separation", 12)
+	_nav_bar.visible = false
+	add_child(_nav_bar)
+
+	_prev_btn = Button.new()
+	_prev_btn.name = "PrevBtn"
+	_prev_btn.text = "◀ Précédent"
+	_prev_btn.pressed.connect(_on_prev_pressed)
+	_nav_bar.add_child(_prev_btn)
+
+	_counter_label = Label.new()
+	_counter_label.name = "Counter"
+	_counter_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_counter_label.custom_minimum_size.x = 80
+	_nav_bar.add_child(_counter_label)
+
+	_next_btn = Button.new()
+	_next_btn.name = "NextBtn"
+	_next_btn.text = "Suivant ▶"
+	_next_btn.pressed.connect(_on_next_pressed)
+	_nav_bar.add_child(_next_btn)
+
+	# Spacer
+	var spacer = Control.new()
+	spacer.custom_minimum_size.x = 40
+	_nav_bar.add_child(spacer)
+
+	_regenerate_btn = Button.new()
+	_regenerate_btn.name = "RegenerateBtn"
+	_regenerate_btn.text = "Regénérer"
+	_regenerate_btn.pressed.connect(_on_regenerate_pressed)
+	_nav_bar.add_child(_regenerate_btn)
+
+	_delete_btn = Button.new()
+	_delete_btn.name = "DeleteBtn"
+	_delete_btn.text = "Supprimer"
+	_delete_btn.pressed.connect(_on_delete_pressed)
+	_nav_bar.add_child(_delete_btn)
+
+
 func show_preview(texture: Texture2D, filename: String) -> void:
 	if texture == null:
 		return
+	_collection_mode = false
+	_collection_items = []
+	_current_collection_index = -1
+	_nav_bar.visible = false
+	_texture_rect.set_anchor_and_offset(SIDE_BOTTOM, 1, -60)
+	_filename_label.set_anchor_and_offset(SIDE_TOP, 1, -40)
+	_filename_label.set_anchor_and_offset(SIDE_BOTTOM, 1, -10)
 	_texture_rect.texture = texture
 	_filename_label.text = filename
-	# Godot 4.6 : les anchors FULL_RECT d'un Control enfant direct d'un Window
-	# ne résolvent plus automatiquement la taille. On force le sizing.
+	_apply_size()
+	visible = true
+
+
+func show_collection(items: Array, start_index: int = 0) -> void:
+	if items.is_empty():
+		return
+	_collection_mode = true
+	_collection_items = items
+	_current_collection_index = clampi(start_index, 0, items.size() - 1)
+	_nav_bar.visible = true
+	_texture_rect.set_anchor_and_offset(SIDE_BOTTOM, 1, -100)
+	_filename_label.set_anchor_and_offset(SIDE_TOP, 1, -95)
+	_filename_label.set_anchor_and_offset(SIDE_BOTTOM, 1, -70)
+	_display_current_item()
+	_apply_size()
+	visible = true
+
+
+func _apply_size() -> void:
 	var parent = get_parent()
 	if parent is Window:
 		position = Vector2.ZERO
@@ -66,19 +157,90 @@ func show_preview(texture: Texture2D, filename: String) -> void:
 	elif parent is Control:
 		position = Vector2.ZERO
 		size = parent.size
-	visible = true
+
+
+func _display_current_item() -> void:
+	if _current_collection_index < 0 or _current_collection_index >= _collection_items.size():
+		return
+	var item = _collection_items[_current_collection_index]
+	_texture_rect.texture = item["texture"]
+	_filename_label.text = item["filename"]
+	_update_nav_buttons()
+
+
+func _update_nav_buttons() -> void:
+	var total = _collection_items.size()
+	_counter_label.text = "%d / %d" % [_current_collection_index + 1, total]
+	_prev_btn.disabled = (_current_collection_index <= 0)
+	_next_btn.disabled = (_current_collection_index >= total - 1)
+
+
+func _on_prev_pressed() -> void:
+	if _current_collection_index > 0:
+		_current_collection_index -= 1
+		_display_current_item()
+
+
+func _on_next_pressed() -> void:
+	if _current_collection_index < _collection_items.size() - 1:
+		_current_collection_index += 1
+		_display_current_item()
+
+
+func _on_regenerate_pressed() -> void:
+	if _current_collection_index < 0 or _current_collection_index >= _collection_items.size():
+		return
+	var item = _collection_items[_current_collection_index]
+	var original_index = item["index"]
+	_close()
+	regenerate_requested.emit(original_index)
+
+
+func _on_delete_pressed() -> void:
+	if _current_collection_index < 0 or _current_collection_index >= _collection_items.size():
+		return
+	var item = _collection_items[_current_collection_index]
+	var original_index = item["index"]
+	_collection_items.remove_at(_current_collection_index)
+
+	if _collection_items.is_empty():
+		_close()
+		delete_requested.emit(original_index)
+		return
+
+	# Adjust current index if needed
+	if _current_collection_index >= _collection_items.size():
+		_current_collection_index = _collection_items.size() - 1
+	_display_current_item()
+	delete_requested.emit(original_index)
+
 
 func _close() -> void:
 	visible = false
 	_texture_rect.texture = null
+	_collection_mode = false
+	_collection_items = []
+	_current_collection_index = -1
+
 
 func _on_overlay_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		_close()
 
+
 func _unhandled_key_input(event: InputEvent) -> void:
 	if not visible:
 		return
-	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
-		_close()
-		get_viewport().set_input_as_handled()
+	if event is InputEventKey and event.pressed:
+		match event.keycode:
+			KEY_ESCAPE:
+				_close()
+				get_viewport().set_input_as_handled()
+			KEY_LEFT:
+				if _collection_mode and _current_collection_index > 0:
+					_on_prev_pressed()
+					get_viewport().set_input_as_handled()
+			KEY_RIGHT:
+				if _collection_mode and _current_collection_index < _collection_items.size() - 1:
+					_on_next_pressed()
+					get_viewport().set_input_as_handled()

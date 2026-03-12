@@ -84,6 +84,7 @@ var _expr_status_label: Label
 var _expr_progress_bar: ProgressBar
 var _expr_results_grid: GridContainer
 var _expr_save_all_btn: Button
+var _expr_preview_btn: Button
 var _expr_context_menu: PopupMenu
 
 # Expressions state
@@ -196,6 +197,8 @@ func _build_ui() -> void:
 	# Image preview overlay
 	_image_preview = Control.new()
 	_image_preview.set_script(ImagePreviewPopup)
+	_image_preview.regenerate_requested.connect(_on_preview_regenerate)
+	_image_preview.delete_requested.connect(_on_preview_delete)
 	add_child(_image_preview)
 
 
@@ -649,11 +652,22 @@ func _build_expressions_tab() -> void:
 
 	vbox.add_child(HSeparator.new())
 
-	# Results grid
+	# Results header with preview button
+	var results_hbox = HBoxContainer.new()
+	results_hbox.add_theme_constant_override("separation", 8)
+	vbox.add_child(results_hbox)
+
 	var results_label = Label.new()
 	results_label.text = "Résultats :"
 	results_label.add_theme_font_size_override("font_size", 16)
-	vbox.add_child(results_label)
+	results_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	results_hbox.add_child(results_label)
+
+	_expr_preview_btn = Button.new()
+	_expr_preview_btn.text = "Prévisualiser"
+	_expr_preview_btn.disabled = true
+	_expr_preview_btn.pressed.connect(_on_expr_preview_pressed)
+	results_hbox.add_child(_expr_preview_btn)
 
 	_expr_results_grid = GridContainer.new()
 	_expr_results_grid.columns = 4
@@ -910,6 +924,13 @@ func _update_expr_generate_button() -> void:
 	_expr_generate_btn.disabled = not (has_url and has_source and has_prefix and has_expr)
 
 
+func _update_expr_preview_button() -> void:
+	if _expr_preview_btn == null:
+		return
+	var has_completed = _expr_queue != null and _expr_queue.get_completed_count() > 0
+	_expr_preview_btn.disabled = not has_completed
+
+
 func _get_selected_expressions() -> Array:
 	var expressions: Array = []
 	for cb in _expr_expression_checkboxes:
@@ -1082,6 +1103,7 @@ func _on_expr_item_completed(image: Image) -> void:
 	_update_grid_cell_image(idx, image)
 	_update_grid_cell_status(idx)
 	_expr_update_status()
+	_update_expr_preview_button()
 	_process_next_expression()
 
 
@@ -1113,6 +1135,7 @@ func _on_expr_batch_finished() -> void:
 	_expr_progress_bar.visible = false
 	_expr_set_inputs_enabled(true)
 	_update_expr_generate_button()
+	_update_expr_preview_button()
 	if _expr_queue and _expr_queue.get_completed_count() > 0:
 		_expr_save_all_btn.disabled = false
 		_expr_status_label.text = "%d/%d terminés" % [_expr_queue.get_completed_count(), _expr_queue.get_total()]
@@ -1314,6 +1337,7 @@ func _on_expr_delete_item(index: int) -> void:
 		_expr_save_all_btn.disabled = false
 	else:
 		_expr_save_all_btn.disabled = true
+	_update_expr_preview_button()
 
 
 # --- Save all ---
@@ -1389,6 +1413,37 @@ func _load_preview(tex_rect: TextureRect, path: String) -> void:
 func _show_image_preview(texture: Texture2D, filename: String) -> void:
 	if _image_preview:
 		_image_preview.show_preview(texture, filename)
+
+
+func _on_expr_preview_pressed() -> void:
+	if _expr_queue == null or _image_preview == null:
+		return
+	var items = _build_preview_collection()
+	if items.is_empty():
+		return
+	_image_preview.show_collection(items, 0)
+
+
+func _build_preview_collection() -> Array:
+	var items: Array = []
+	if _expr_queue == null:
+		return items
+	var queue_items = _expr_queue.get_items()
+	for i in range(queue_items.size()):
+		var item = queue_items[i]
+		if item["status"] == ExpressionQueueService.ItemStatus.COMPLETED and item["image"] != null:
+			var tex = ImageTexture.create_from_image(item["image"])
+			items.append({"texture": tex, "filename": item["filename"], "index": i})
+	return items
+
+
+func _on_preview_regenerate(index: int) -> void:
+	_on_expr_regenerate_item(index)
+
+
+func _on_preview_delete(index: int) -> void:
+	_on_expr_delete_item(index)
+	_update_expr_preview_button()
 
 
 func _open_gallery_source_picker(on_selected: Callable) -> void:

@@ -410,6 +410,16 @@ func test_expr_has_save_all_btn():
 	assert_is(_dialog._expr_save_all_btn, Button)
 
 
+func test_expr_has_preview_btn():
+	assert_not_null(_dialog._expr_preview_btn)
+	assert_is(_dialog._expr_preview_btn, Button)
+	assert_eq(_dialog._expr_preview_btn.text, "Prévisualiser")
+
+
+func test_expr_preview_btn_initially_disabled():
+	assert_true(_dialog._expr_preview_btn.disabled)
+
+
 func test_expr_has_context_menu():
 	assert_not_null(_dialog._expr_context_menu)
 	assert_is(_dialog._expr_context_menu, PopupMenu)
@@ -662,6 +672,50 @@ func test_context_menu_has_regenerate():
 
 func test_context_menu_has_delete():
 	assert_eq(_dialog._expr_context_menu.get_item_text(1), "Supprimer")
+
+
+# ========================================================
+# Expressions Tab — Preview button
+# ========================================================
+
+func test_preview_btn_enabled_with_completed_items():
+	_dialog._expr_queue = ExpressionQueueService.new()
+	_dialog._expr_queue.build_queue(["smile"], "hero")
+	_dialog._expr_queue.mark_generating(0)
+	_dialog._expr_queue.mark_completed(0, Image.create(10, 10, false, Image.FORMAT_RGBA8))
+	_dialog._update_expr_preview_button()
+	assert_false(_dialog._expr_preview_btn.disabled)
+
+
+func test_preview_btn_disabled_without_completed_items():
+	_dialog._expr_queue = ExpressionQueueService.new()
+	_dialog._expr_queue.build_queue(["smile"], "hero")
+	_dialog._update_expr_preview_button()
+	assert_true(_dialog._expr_preview_btn.disabled)
+
+
+func test_preview_btn_disabled_without_queue():
+	_dialog._update_expr_preview_button()
+	assert_true(_dialog._expr_preview_btn.disabled)
+
+
+func test_build_preview_collection_returns_completed_only():
+	_dialog._expr_queue = ExpressionQueueService.new()
+	_dialog._expr_queue.build_queue(["smile", "sad", "shy"], "hero")
+	_dialog._expr_queue.mark_generating(0)
+	_dialog._expr_queue.mark_completed(0, Image.create(10, 10, false, Image.FORMAT_RGBA8))
+	_dialog._expr_queue.mark_generating(1)
+	_dialog._expr_queue.mark_failed(1, "error")
+	# index 2 still pending
+	var items = _dialog._build_preview_collection()
+	assert_eq(items.size(), 1)
+	assert_eq(items[0]["filename"], "hero_smile")
+	assert_eq(items[0]["index"], 0)
+
+
+func test_build_preview_collection_empty_without_queue():
+	var items = _dialog._build_preview_collection()
+	assert_eq(items.size(), 0)
 
 
 # ========================================================
