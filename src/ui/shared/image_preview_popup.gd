@@ -24,6 +24,7 @@ var _delete_btn: Button
 var _collection_items: Array = []  # [{texture, filename, index}]
 var _current_collection_index: int = -1
 var _collection_mode: bool = false
+var _regenerating: bool = false
 
 func _ready() -> void:
 	visible = false
@@ -165,6 +166,9 @@ func _display_current_item() -> void:
 	var item = _collection_items[_current_collection_index]
 	_texture_rect.texture = item["texture"]
 	_filename_label.text = item["filename"]
+	_regenerating = false
+	_regenerate_btn.disabled = false
+	_delete_btn.disabled = false
 	_update_nav_buttons()
 
 
@@ -192,8 +196,25 @@ func _on_regenerate_pressed() -> void:
 		return
 	var item = _collection_items[_current_collection_index]
 	var original_index = item["index"]
-	_close()
+	_regenerating = true
+	_texture_rect.texture = null
+	_filename_label.text = item["filename"] + " — En cours..."
+	_regenerate_btn.disabled = true
+	_delete_btn.disabled = true
 	regenerate_requested.emit(original_index)
+
+
+func update_current_image(texture: Texture2D) -> void:
+	if not visible or not _collection_mode or _current_collection_index < 0:
+		return
+	if _current_collection_index >= _collection_items.size():
+		return
+	_collection_items[_current_collection_index]["texture"] = texture
+	_texture_rect.texture = texture
+	_filename_label.text = _collection_items[_current_collection_index]["filename"]
+	_regenerating = false
+	_regenerate_btn.disabled = false
+	_delete_btn.disabled = false
 
 
 func _on_delete_pressed() -> void:
@@ -215,12 +236,25 @@ func _on_delete_pressed() -> void:
 	delete_requested.emit(original_index)
 
 
+func get_current_queue_index() -> int:
+	if not _collection_mode or _current_collection_index < 0 or _current_collection_index >= _collection_items.size():
+		return -1
+	return _collection_items[_current_collection_index]["index"]
+
+
+func is_regenerating() -> bool:
+	return _regenerating
+
+
 func _close() -> void:
 	visible = false
 	_texture_rect.texture = null
 	_collection_mode = false
 	_collection_items = []
 	_current_collection_index = -1
+	_regenerating = false
+	_regenerate_btn.disabled = false
+	_delete_btn.disabled = false
 
 
 func _on_overlay_input(event: InputEvent) -> void:

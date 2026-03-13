@@ -1104,6 +1104,10 @@ func _on_expr_item_completed(image: Image) -> void:
 	_update_grid_cell_status(idx)
 	_expr_update_status()
 	_update_expr_preview_button()
+	# Update the preview popup if it's showing this item
+	if _image_preview and _image_preview.visible and _image_preview.get_current_queue_index() == idx:
+		var tex = ImageTexture.create_from_image(image)
+		_image_preview.update_current_image(tex)
 	_process_next_expression()
 
 
@@ -1112,6 +1116,12 @@ func _on_expr_item_failed(error: String) -> void:
 	_expr_queue.mark_failed(idx, error)
 	_update_grid_cell_status(idx)
 	_expr_update_status()
+	# If preview is showing this item, show error and re-enable buttons
+	if _image_preview and _image_preview.visible and _image_preview.get_current_queue_index() == idx:
+		_image_preview._filename_label.text = _expr_queue.get_items()[idx]["filename"] + " — Échoué"
+		_image_preview._regenerating = false
+		_image_preview._regenerate_btn.disabled = false
+		_image_preview._delete_btn.disabled = false
 	_process_next_expression()
 
 

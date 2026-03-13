@@ -108,7 +108,7 @@ Réplique l'onglet IA de `ImagePickerDialog` :
   - Compteur "N / Total" affiché entre les boutons de navigation
   - Les boutons Précédent/Suivant sont désactivés aux extrémités (premier/dernier)
 - **Actions** :
-  - Bouton "Regénérer" : relance la génération pour l'image courante, ferme le popup
+  - Bouton "Regénérer" : relance la génération pour l'image courante, reste ouvert avec état "En cours..." et met à jour l'image en temps réel quand la génération termine
   - Bouton "Supprimer" : supprime l'image courante de la queue, affiche l'image suivante ou ferme si plus d'images
 - **Signaux** : `regenerate_requested(index)` et `delete_requested(index)` émis par ImagePreviewPopup
 

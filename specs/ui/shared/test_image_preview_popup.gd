@@ -209,6 +209,18 @@ func test_next_does_not_exceed_max():
 	_popup._on_next_pressed()
 	assert_eq(_popup._current_collection_index, 2)
 
+func test_navigation_re_enables_buttons_after_regenerate():
+	var items = _make_collection()
+	_popup.show_collection(items, 0)
+	_popup._on_regenerate_pressed()
+	assert_true(_popup._regenerate_btn.disabled)
+	assert_true(_popup._delete_btn.disabled)
+	# Navigate to next item should re-enable buttons
+	_popup._on_next_pressed()
+	assert_false(_popup._regenerate_btn.disabled)
+	assert_false(_popup._delete_btn.disabled)
+	assert_false(_popup._regenerating)
+
 # --- Regenerate signal ---
 
 func test_regenerate_emits_signal():
@@ -218,10 +230,80 @@ func test_regenerate_emits_signal():
 	_popup._on_regenerate_pressed()
 	assert_signal_emitted_with_parameters(_popup, "regenerate_requested", [1])
 
-func test_regenerate_closes_popup():
+func test_regenerate_stays_open():
 	_popup.show_collection(_make_collection(), 0)
 	_popup._on_regenerate_pressed()
-	assert_false(_popup.visible)
+	assert_true(_popup.visible)
+
+func test_regenerate_shows_loading_state():
+	_popup.show_collection(_make_collection(), 0)
+	_popup._on_regenerate_pressed()
+	assert_null(_popup._texture_rect.texture)
+	assert_true(_popup._regenerating)
+	assert_true(_popup._regenerate_btn.disabled)
+	assert_true(_popup._delete_btn.disabled)
+	assert_string_contains(_popup._filename_label.text, "En cours...")
+
+func test_update_current_image():
+	var items = _make_collection()
+	_popup.show_collection(items, 0)
+	_popup._on_regenerate_pressed()
+	var new_img = Image.create(4, 4, false, Image.FORMAT_RGB8)
+	var new_tex = ImageTexture.create_from_image(new_img)
+	_popup.update_current_image(new_tex)
+	assert_eq(_popup._texture_rect.texture, new_tex)
+	assert_false(_popup._regenerating)
+	assert_false(_popup._regenerate_btn.disabled)
+	assert_false(_popup._delete_btn.disabled)
+	assert_eq(_popup._filename_label.text, "image_0.png")
+
+func test_update_current_image_updates_collection():
+	var items = _make_collection()
+	_popup.show_collection(items, 1)
+	_popup._on_regenerate_pressed()
+	var new_img = Image.create(4, 4, false, Image.FORMAT_RGB8)
+	var new_tex = ImageTexture.create_from_image(new_img)
+	_popup.update_current_image(new_tex)
+	assert_eq(_popup._collection_items[1]["texture"], new_tex)
+
+func test_get_current_queue_index():
+	var items = _make_collection()
+	_popup.show_collection(items, 1)
+	assert_eq(_popup.get_current_queue_index(), 1)
+
+func test_get_current_queue_index_not_in_collection():
+	assert_eq(_popup.get_current_queue_index(), -1)
+
+func test_is_regenerating_default_false():
+	assert_false(_popup.is_regenerating())
+
+func test_is_regenerating_true_after_regenerate():
+	_popup.show_collection(_make_collection(), 0)
+	_popup._on_regenerate_pressed()
+	assert_true(_popup.is_regenerating())
+
+func test_close_resets_regenerating():
+	_popup.show_collection(_make_collection(), 0)
+	_popup._on_regenerate_pressed()
+	_popup._close()
+	assert_false(_popup.is_regenerating())
+
+func test_close_re_enables_buttons():
+	_popup.show_collection(_make_collection(), 0)
+	_popup._on_regenerate_pressed()
+	assert_true(_popup._regenerate_btn.disabled)
+	assert_true(_popup._delete_btn.disabled)
+	_popup._close()
+	assert_false(_popup._regenerate_btn.disabled)
+	assert_false(_popup._delete_btn.disabled)
+
+func test_reopen_after_regenerate_buttons_enabled():
+	_popup.show_collection(_make_collection(), 0)
+	_popup._on_regenerate_pressed()
+	_popup._close()
+	_popup.show_collection(_make_collection(), 0)
+	assert_false(_popup._regenerate_btn.disabled)
+	assert_false(_popup._delete_btn.disabled)
 
 # --- Delete signal ---
 
