@@ -87,6 +87,7 @@ func on_create_pressed() -> void:
 		_main._undo_redo.push_and_execute(cmd)
 		_main._sequence_graph_view.load_scene(_main._editor_main._current_scene)
 		notify_targets_changed()
+	_main._refresh_undo_redo_buttons()
 
 
 func on_create_condition_pressed() -> void:

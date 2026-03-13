@@ -46,6 +46,8 @@ GUT est configuré avec `"should_exit": true` dans `.gutconfig.json`, ce qui fai
 
 Les tests incluent désormais un rapport de **couverture de code** via l'addon `godot-code-coverage` et des hooks dans `specs/`.
 
+### Tests unitaires (headless)
+
 ```bash
 # Détection du binaire Godot
 GODOT=${GODOT_PATH:-$(command -v godot || echo "/Applications/Godot-4.6.1.app/Contents/MacOS/Godot")}
@@ -55,6 +57,23 @@ timeout 120 $GODOT --headless --path . -s addons/gut/gut_cmdln.gd
 
 # Lancer un fichier de test spécifique (la couverture sera aussi affichée pour ce fichier)
 timeout 30 $GODOT --headless --path . -s addons/gut/gut_cmdln.gd -gtest=res://specs/models/test_story.gd
+```
+
+### Tests e2e (non-headless)
+
+Les tests e2e (`specs/e2e/`) simulent de vraies interactions utilisateur (clics souris aux coordonnées réelles) et nécessitent une **fenêtre visible** pour que les contrôles aient un layout réel. Ils ne doivent **pas** être lancés avec `--headless`.
+
+```bash
+GODOT=${GODOT_PATH:-$(command -v godot || echo "/Applications/Godot-4.6.1.app/Contents/MacOS/Godot")}
+
+# Lancer tous les tests e2e (non-headless, fenêtre visible requise)
+timeout 120 $GODOT --path . -s addons/gut/gut_cmdln.gd -gdir=res://specs/e2e/
+
+# Lancer un fichier e2e spécifique
+timeout 60 $GODOT --path . -s addons/gut/gut_cmdln.gd -gtest=res://specs/e2e/test_e2e_editor_ui_clicks.gd
+
+# CI Linux (framebuffer virtuel pour simuler une fenêtre)
+xvfb-run -a $GODOT --path . -s addons/gut/gut_cmdln.gd -gdir=res://specs/e2e/
 ```
 
 ### Configuration de la couverture

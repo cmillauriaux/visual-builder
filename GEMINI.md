@@ -37,9 +37,19 @@ This project provides a professional-grade tool for creating visual novels witho
 - **Run Game Mode:** The project can be run with `res://src/game.tscn` as the main scene for standalone play.
 
 ### Running Tests
-Tests use the GUT framework.
+Tests use the GUT framework. There are two categories of tests that run differently:
+
+**Unit tests (headless):**
 - **Run All Tests:** `godot --headless --path . -s addons/gut/gut_cmdln.gd`
 - **Run Specific Test:** `godot --headless --path . -s addons/gut/gut_cmdln.gd -gtest=res://specs/path_to_test.gd`
+
+**E2E tests (non-headless, requires a visible window):**
+
+E2E tests (`specs/e2e/`) simulate real user interactions (mouse clicks at actual control coordinates) and require a visible window so that controls have a real layout. They must **not** be run with `--headless`.
+
+- **Run All E2E Tests:** `godot --path . -s addons/gut/gut_cmdln.gd -gdir=res://specs/e2e/`
+- **Run Specific E2E Test:** `godot --path . -s addons/gut/gut_cmdln.gd -gtest=res://specs/e2e/test_e2e_editor_ui_clicks.gd`
+- **CI Linux (virtual framebuffer):** `xvfb-run -a godot --path . -s addons/gut/gut_cmdln.gd -gdir=res://specs/e2e/`
 
 **Code Coverage:**
 The project uses the `godot-code-coverage` plugin integrated via GUT hooks (`pre_run_hook.gd` and `post_run_hook.gd` in `specs/`). It automatically reports coverage for all scripts in `res://src/` after each test run.
