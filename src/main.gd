@@ -417,6 +417,8 @@ func load_sequence_editors(seq) -> void:
 	_loading_sequence = false
 	_update_ending_tab_indicator()
 	_rebuild_dialogue_list()
+	if seq.dialogues.size() > 0:
+		_sequence_editor_ctrl.select_dialogue(0)
 	_tab_container.current_tab = 0
 	
 	var is_playing = _play_ctrl.is_story_play_mode()

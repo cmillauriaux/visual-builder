@@ -122,3 +122,29 @@ func test_add_foreground_button_exists():
 	_navigate_to_sequence_edit()
 	assert_not_null(_main._add_fg_button)
 	assert_true(_main._add_fg_button is Button)
+
+# --- Test auto-select first dialogue ---
+
+func test_first_dialogue_selected_on_load():
+	_navigate_to_sequence_edit()
+	assert_eq(_main._sequence_editor_ctrl.get_selected_dialogue_index(), 0)
+
+func test_no_dialogue_selected_when_sequence_empty():
+	var story = Story.new()
+	story.title = "Test"
+	story.author = "A"
+	var ch = Chapter.new()
+	ch.chapter_name = "Ch1"
+	var sc = SceneData.new()
+	sc.scene_name = "S1"
+	var seq = Sequence.new()
+	seq.seq_name = "Empty"
+	sc.sequences.append(seq)
+	ch.scenes.append(sc)
+	story.chapters.append(ch)
+	_main._editor_main.open_story(story)
+	_main._editor_main.navigate_to_chapter(ch.uuid)
+	_main._editor_main.navigate_to_scene(sc.uuid)
+	_main._editor_main.navigate_to_sequence(seq.uuid)
+	_main.load_sequence_editors(seq)
+	assert_eq(_main._sequence_editor_ctrl.get_selected_dialogue_index(), -1)
