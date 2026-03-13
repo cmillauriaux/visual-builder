@@ -131,3 +131,66 @@ func test_emits_changed_on_z_order():
 func test_show_for_null_hides():
 	_panel.show_for_foreground(null)
 	assert_false(_panel.visible)
+
+# --- Flip ---
+
+func test_displays_flip_none_by_default():
+	var fg = Foreground.new()
+	_panel.show_for_foreground(fg)
+	assert_eq(_panel.get_displayed_flip(), 0)
+
+func test_displays_flip_horizontal():
+	var fg = Foreground.new()
+	fg.flip_h = true
+	_panel.show_for_foreground(fg)
+	assert_eq(_panel.get_displayed_flip(), 1)
+
+func test_displays_flip_vertical():
+	var fg = Foreground.new()
+	fg.flip_v = true
+	_panel.show_for_foreground(fg)
+	assert_eq(_panel.get_displayed_flip(), 2)
+
+func test_displays_flip_both():
+	var fg = Foreground.new()
+	fg.flip_h = true
+	fg.flip_v = true
+	_panel.show_for_foreground(fg)
+	assert_eq(_panel.get_displayed_flip(), 3)
+
+func test_set_flip_horizontal_updates_foreground():
+	var fg = Foreground.new()
+	_panel.show_for_foreground(fg)
+	_panel.set_flip(1)
+	assert_true(fg.flip_h)
+	assert_false(fg.flip_v)
+
+func test_set_flip_vertical_updates_foreground():
+	var fg = Foreground.new()
+	_panel.show_for_foreground(fg)
+	_panel.set_flip(2)
+	assert_false(fg.flip_h)
+	assert_true(fg.flip_v)
+
+func test_set_flip_both_updates_foreground():
+	var fg = Foreground.new()
+	_panel.show_for_foreground(fg)
+	_panel.set_flip(3)
+	assert_true(fg.flip_h)
+	assert_true(fg.flip_v)
+
+func test_set_flip_none_clears_foreground():
+	var fg = Foreground.new()
+	fg.flip_h = true
+	fg.flip_v = true
+	_panel.show_for_foreground(fg)
+	_panel.set_flip(0)
+	assert_false(fg.flip_h)
+	assert_false(fg.flip_v)
+
+func test_emits_changed_on_flip():
+	var fg = Foreground.new()
+	_panel.show_for_foreground(fg)
+	watch_signals(_panel)
+	_panel.set_flip(1)
+	assert_signal_emitted(_panel, "transition_changed")

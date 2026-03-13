@@ -906,3 +906,17 @@ func _reorder_fg_children() -> void:
 
 func refresh_foreground_z_order() -> void:
 	_reorder_fg_children()
+
+func refresh_foreground_flip() -> void:
+	for uuid in _fg_visual_map.keys():
+		var wrapper = _fg_visual_map[uuid]
+		if not is_instance_valid(wrapper):
+			continue
+		var fg = find_foreground(uuid)
+		if fg == null:
+			continue
+		var tex_rect: TextureRect = wrapper.get_node("Texture")
+		tex_rect.flip_h = fg.flip_h
+		tex_rect.flip_v = fg.flip_v
+		wrapper.set_meta("fg_flip_h", fg.flip_h)
+		wrapper.set_meta("fg_flip_v", fg.flip_v)

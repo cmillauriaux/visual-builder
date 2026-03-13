@@ -339,6 +339,7 @@ func _on_foreground_deselected() -> void:
 
 func _on_foreground_transition_changed() -> void:
 	_visual_editor.refresh_foreground_z_order()
+	_visual_editor.refresh_foreground_flip()
 	EventBus.story_modified.emit()
 
 

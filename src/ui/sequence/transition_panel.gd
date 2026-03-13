@@ -6,9 +6,11 @@ var _foreground = null
 var _type_option: OptionButton = null
 var _duration_spin: SpinBox = null
 var _z_order_spin: SpinBox = null
+var _flip_option: OptionButton = null
 
 const TYPE_OPTIONS = ["none", "fade"]
 const TYPE_LABELS = ["Aucune", "Fondu"]
+const FLIP_LABELS = ["Aucun", "Horizontal", "Vertical", "Les deux"]
 
 signal transition_changed()
 
@@ -54,6 +56,16 @@ func _ready() -> void:
 	_z_order_spin.value_changed.connect(_on_z_order_changed)
 	row.add_child(_z_order_spin)
 
+	# Flip
+	var flip_label = Label.new()
+	flip_label.text = "Flip :"
+	row.add_child(flip_label)
+	_flip_option = OptionButton.new()
+	for i in range(FLIP_LABELS.size()):
+		_flip_option.add_item(FLIP_LABELS[i], i)
+	_flip_option.item_selected.connect(_on_flip_selected)
+	row.add_child(_flip_option)
+
 func show_for_foreground(fg) -> void:
 	_foreground = fg
 	if fg == null:
@@ -69,6 +81,8 @@ func show_for_foreground(fg) -> void:
 	_duration_spin.value = fg.transition_duration
 	# Set z-order
 	_z_order_spin.value = fg.z_order
+	# Set flip
+	_flip_option.selected = _flip_index_from_fg(fg)
 
 func hide_panel() -> void:
 	visible = false
@@ -126,3 +140,30 @@ func _on_z_order_changed(value: float) -> void:
 	if _foreground:
 		_foreground.z_order = int(value)
 		transition_changed.emit()
+
+func get_displayed_flip() -> int:
+	if _flip_option == null:
+		return 0
+	return _flip_option.selected
+
+func set_flip(flip_index: int) -> void:
+	flip_index = clampi(flip_index, 0, 3)
+	_flip_option.selected = flip_index
+	if _foreground:
+		_foreground.flip_h = (flip_index == 1 or flip_index == 3)
+		_foreground.flip_v = (flip_index == 2 or flip_index == 3)
+		transition_changed.emit()
+
+func _on_flip_selected(idx: int) -> void:
+	if _foreground and idx >= 0 and idx < FLIP_LABELS.size():
+		_foreground.flip_h = (idx == 1 or idx == 3)
+		_foreground.flip_v = (idx == 2 or idx == 3)
+		transition_changed.emit()
+
+static func _flip_index_from_fg(fg) -> int:
+	var idx = 0
+	if fg.flip_h:
+		idx += 1
+	if fg.flip_v:
+		idx += 2
+	return idx
