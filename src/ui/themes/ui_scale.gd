@@ -1,19 +1,12 @@
 extends RefCounted
 
-## Calcule le facteur d'échelle UI pour maintenir une taille physique constante
-## sur tous les écrans (petits écrans, mobile, haute densité de pixels).
+## Facteur d'échelle UI appliqué à toutes les tailles (fonts, marges, etc.).
 ##
-## Principe : sur un écran 1920×1080 à 96 DPI (référence), scale = 1.0.
-## Sur un petit écran ou un écran haute densité, scale > 1.0 pour que les
-## éléments UI gardent la même taille physique en millimètres.
-##
-## Formule : ui_scale = (logical_dpi / 96) / godot_canvas_scale
-## où logical_dpi = screen_dpi / screen_scale (pour compenser le HiDPI/Retina)
-## où godot_canvas_scale = min(phys_w / 1920, phys_h / 1080)
+## Avec le stretch mode canvas_items, Godot gère déjà le mapping de la
+## résolution de design (1920×1080) vers la taille réelle de la fenêtre.
+## Ce module applique uniquement le multiplicateur choisi par l'utilisateur
+## (Petit / Moyen / Gros) sans compensation DPI ni ratio d'écran.
 
-const DESIGN_WIDTH := 1920.0
-const DESIGN_HEIGHT := 1080.0
-const REFERENCE_DPI := 96.0
 const SCALE_MIN := 0.5
 const SCALE_MAX := 5.0
 
@@ -53,25 +46,7 @@ static func reset() -> void:
 
 
 static func _compute_scale() -> float:
-	var win_size: Vector2i = DisplayServer.window_get_size()
-	# window_get_size() returns logical pixels; screen_get_dpi() returns physical DPI.
-	# Divide by screen_get_scale() to get the effective DPI in logical coordinates
-	# (avoids double-counting HiDPI/Retina scaling that Godot handles transparently).
-	var screen_scale: float = maxf(DisplayServer.screen_get_scale(), 1.0)
-	var dpi: float = max(float(DisplayServer.screen_get_dpi()) / screen_scale, REFERENCE_DPI)
-
-	# Si la fenêtre n'a pas encore de taille valide, retourner 1.0
-	if win_size.x <= 0 or win_size.y <= 0:
-		return 1.0
-
-	# Facteur de scaling interne de Godot (canvas_items + expand) :
-	# nombre de pixels physiques par pixel virtuel
-	var godot_scale := minf(
-		float(win_size.x) / DESIGN_WIDTH,
-		float(win_size.y) / DESIGN_HEIGHT
-	)
-	godot_scale = maxf(godot_scale, 0.01)
-
-	# Pour maintenir la même taille physique qu'à 96 DPI / 1920x1080 :
-	var raw_scale := (dpi / REFERENCE_DPI) / godot_scale * _user_multiplier
-	return clampf(raw_scale, SCALE_MIN, SCALE_MAX)
+	# With canvas_items stretch mode, Godot already maps the design resolution
+	# (1920×1080) to the actual window size. No need to compensate for DPI or
+	# window size — just apply the user's preferred multiplier.
+	return clampf(_user_multiplier, SCALE_MIN, SCALE_MAX)
