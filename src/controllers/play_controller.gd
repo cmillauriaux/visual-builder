@@ -19,6 +19,7 @@ var _is_story_play_mode: bool = false
 var _story_play_return_level: String = ""
 var _current_playing_sequence = null
 var _is_showing_title: bool = false
+var _original_seq_foregrounds: Array = []
 
 # Plein écran
 var _fullscreen_layer: ColorRect = null
@@ -46,6 +47,7 @@ func on_play_pressed() -> void:
 
 	var seq = _sequence_editor_ctrl.get_sequence()
 	_current_playing_sequence = seq
+	_original_seq_foregrounds = seq.foregrounds.duplicate() if seq else []
 
 	# Nettoyer les transitions précédentes (ex: reste de pixelisation ou fondu)
 	_sequence_fx_player.stop_fx()
@@ -142,6 +144,8 @@ func _on_trans_out_finished() -> void:
 		return
 	if _music_player:
 		_music_player.stop_music()
+	_sequence_fx_player.stop_fx()
+	_restore_sequence_foregrounds()
 	EventBus.play_stopped.emit()
 
 
@@ -261,6 +265,16 @@ func _prepare_opening_visuals() -> void:
 	_previous_play_foregrounds = static_fgs
 
 
+func _restore_sequence_foregrounds() -> void:
+	var seq = _current_playing_sequence
+	if seq:
+		seq.foregrounds = _original_seq_foregrounds
+		_visual_editor.load_sequence(seq)
+		var idx = _sequence_editor_ctrl.get_selected_dialogue_index()
+		if idx >= 0:
+			_main.update_preview_for_dialogue(idx)
+
+
 func _apply_sequence_audio() -> void:
 	if _music_player == null or _current_playing_sequence == null:
 		return
@@ -301,6 +315,7 @@ func _stop_story_play() -> void:
 		_sequence_editor_ctrl.stop_play()
 	else:
 		_story_play_ctrl.stop_play()
+	_restore_sequence_foregrounds()
 	EventBus.play_stopped.emit()
 	_restore_after_story_play()
 
@@ -323,6 +338,7 @@ func on_story_play_sequence_requested(seq) -> void:
 	_previous_play_foregrounds = []
 	_seen_fg_uuids = {}
 	_current_playing_sequence = seq
+	_original_seq_foregrounds = seq.foregrounds.duplicate() if seq else []
 
 	# Nettoyer les transitions précédentes (ex: reste de pixelisation ou fondu)
 	_sequence_fx_player.stop_fx()
