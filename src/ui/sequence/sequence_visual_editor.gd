@@ -993,6 +993,8 @@ func _show_inherit_confirmation() -> void:
 	var source_text = ""
 	if _inherited_from_index >= 0:
 		source_text = " du dialogue #%d" % (_inherited_from_index + 1)
+	else:
+		source_text = " de la séquence"
 	_inherit_confirm_dialog.dialog_text = "Ce foreground est hérité%s.\nLe modifier créera une copie locale pour ce dialogue." % source_text
 	_inherit_confirm_dialog.popup_centered()
 

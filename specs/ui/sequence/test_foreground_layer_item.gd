@@ -60,6 +60,12 @@ func test_inherited_item_shows_label() -> void:
 	assert_string_contains(_item._inherited_label.text, "3")  # inherited_from_index + 1
 
 
+func test_inherited_from_sequence_shows_sequence_label() -> void:
+	_item = _create_item(true, -1)
+	assert_true(_item._inherited_label.visible)
+	assert_eq(_item._inherited_label.text, "hérité de la séquence")
+
+
 func test_inherited_item_label_color_is_orange() -> void:
 	_item = _create_item(true, 0)
 	var color = _item._inherited_label.get_theme_color("font_color")
