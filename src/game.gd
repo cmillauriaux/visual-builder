@@ -87,7 +87,7 @@ var _game_over_screen: Control
 var _to_be_continued_screen: Control
 
 # UI — Options menu (pause context)
-var _pause_options_center: CenterContainer
+var _pause_options_center: MarginContainer
 var _pause_options_menu: PanelContainer
 
 # UI — Toast
@@ -121,6 +121,8 @@ var _settings: RefCounted
 var _i18n_dict: Dictionary = {}
 var _cached_max_progression: Dictionary = {"chapter": -1, "scene": -1}
 var _play_ui_state_before_menu: Dictionary = {}
+
+const _PENDING_RESTORE_PATH := "user://_pending_options_restore.json"
 
 
 func _ready() -> void:
@@ -219,9 +221,14 @@ func _ready() -> void:
 	_chapter_scene_menu.scene_selected.connect(_on_chapter_scene_selected)
 	_chapter_scene_menu.close_pressed.connect(_on_chapter_scene_close)
 
-	# Options menu (pause context)
-	_pause_options_center = CenterContainer.new()
+	# Options menu (pause context, plein écran avec marge)
+	_pause_options_center = MarginContainer.new()
 	_pause_options_center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var pause_margin = UIScale.scale(40)
+	_pause_options_center.add_theme_constant_override("margin_top", pause_margin)
+	_pause_options_center.add_theme_constant_override("margin_bottom", pause_margin)
+	_pause_options_center.add_theme_constant_override("margin_left", pause_margin)
+	_pause_options_center.add_theme_constant_override("margin_right", pause_margin)
 	_pause_options_center.visible = false
 	_pause_options_center.process_mode = Node.PROCESS_MODE_ALWAYS
 	add_child(_pause_options_center)
@@ -261,6 +268,10 @@ func _ready() -> void:
 		_load_story_and_show_menu(story_path)
 	else:
 		_show_story_selector()
+
+	# Restaurer l'état du jeu après un rechargement de scène (changement d'échelle UI)
+	if FileAccess.file_exists(_PENDING_RESTORE_PATH):
+		_handle_pending_restore()
 
 
 func _load_story_and_show_menu(path: String) -> void:
@@ -465,6 +476,20 @@ func _on_pause_options() -> void:
 
 func _on_pause_options_applied() -> void:
 	_pause_options_center.visible = false
+
+	# Si l'échelle UI a changé, sauvegarder l'état du jeu avant le rechargement
+	var new_multiplier: float = _settings.get_ui_scale_factor()
+	if not is_equal_approx(new_multiplier, UIScale.get_user_multiplier()):
+		var state := _collect_game_state()
+		var f := FileAccess.open(_PENDING_RESTORE_PATH, FileAccess.WRITE)
+		if f:
+			f.store_string(JSON.stringify(state))
+			f.close()
+		UIScale.set_user_multiplier(new_multiplier)
+		get_tree().paused = false
+		get_tree().reload_current_scene()
+		return
+
 	_on_options_applied()
 	_pause_menu.show_menu()
 
@@ -472,6 +497,27 @@ func _on_pause_options_applied() -> void:
 func _on_pause_options_closed() -> void:
 	_pause_options_center.visible = false
 	_pause_menu.show_menu()
+
+
+func _handle_pending_restore() -> void:
+	var f := FileAccess.open(_PENDING_RESTORE_PATH, FileAccess.READ)
+	if f == null:
+		return
+	var json_str := f.get_as_text()
+	f.close()
+	DirAccess.remove_absolute(_PENDING_RESTORE_PATH)
+	var save_data = JSON.parse_string(json_str)
+	if not save_data is Dictionary or save_data.is_empty():
+		return
+	# Charger la story si pas encore chargée
+	var target_path: String = save_data.get("story_path", "")
+	if _current_story == null and target_path != "":
+		_load_story_and_show_menu(target_path)
+	if _current_story == null:
+		return
+	_main_menu.hide_menu()
+	_story_selector.visible = false
+	_play_ctrl.start_from_save(_current_story, save_data, _current_story_path)
 
 
 func _on_pause_resume() -> void:

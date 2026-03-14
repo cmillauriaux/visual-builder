@@ -28,7 +28,7 @@ var _patreon_button: Button
 var _itchio_button: Button
 var _quit_button: Button
 var _options_menu: PanelContainer
-var _options_center: CenterContainer
+var _options_center: MarginContainer
 var _menu_content: CenterContainer
 var _loading_overlay: CenterContainer
 var _loading_label: Label
@@ -164,10 +164,15 @@ func build_ui() -> void:
 	_loading_label.add_theme_color_override("font_color", Color.WHITE)
 	_loading_overlay.add_child(_loading_label)
 
-	# Sous-menu Options (centré via CenterContainer)
-	_options_center = CenterContainer.new()
+	# Sous-menu Options (plein écran avec marge)
+	_options_center = MarginContainer.new()
 	var options_center = _options_center
 	options_center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var margin_value = UIScale.scale(40)
+	options_center.add_theme_constant_override("margin_top", margin_value)
+	options_center.add_theme_constant_override("margin_bottom", margin_value)
+	options_center.add_theme_constant_override("margin_left", margin_value)
+	options_center.add_theme_constant_override("margin_right", margin_value)
 	options_center.visible = false
 	add_child(options_center)
 

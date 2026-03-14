@@ -45,7 +45,8 @@ var _ui_label_pairs: Array = []
 
 func build_ui() -> void:
 	visible = false
-	custom_minimum_size = Vector2(UIScale.scale(600), UIScale.scale(500))
+	size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	size_flags_vertical = Control.SIZE_EXPAND_FILL
 
 	var root_vbox = VBoxContainer.new()
 	add_child(root_vbox)
