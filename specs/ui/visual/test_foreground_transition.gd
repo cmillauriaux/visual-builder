@@ -99,9 +99,12 @@ func test_multiple_foregrounds_mixed():
 
 func test_multiple_mixed_with_removal():
 	# Un qui reste, un supprimé (type none), un nouveau (type fade)
+	# Positions éloignées pour éviter le matching par position (morph)
 	var fg_stay = _make_fg("stay", "stay.png", "none", 0.5)
 	var fg_removed = _make_fg("removed", "old.png", "none", 0.5)
+	fg_removed.anchor_bg = Vector2(0.90, 0.90)
 	var fg_new = _make_fg("new", "new.png", "fade", 0.5)
+	fg_new.anchor_bg = Vector2(0.10, 0.10)
 	var result = _transition.compute_transitions(
 		[fg_stay, fg_removed],
 		[fg_stay, fg_new]
@@ -115,9 +118,11 @@ func test_multiple_mixed_with_removal():
 	assert_eq(actions["new"], "fade_in")
 
 func test_replaced_fg_different_uuids():
-	# Ancien et nouveau avec des UUIDs différents → fade_out + fade_in
+	# Ancien et nouveau avec des UUIDs différents, positions éloignées → fade_out + fade_in
 	var fg_old = _make_fg("a", "old.png", "none", 0.5)
+	fg_old.anchor_bg = Vector2(0.10, 0.50)
 	var fg_new = _make_fg("b", "new.png", "fade", 1.5)
+	fg_new.anchor_bg = Vector2(0.90, 0.50)
 	var result = _transition.compute_transitions([fg_old], [fg_new])
 	assert_true(result.size() >= 1)
 	var has_fade_out = false
@@ -243,27 +248,27 @@ func test_transition_when_flip_changed_different_uuid():
 	assert_true(result.size() >= 1, "Flip différent → transition nécessaire")
 
 func test_visual_matching_multiple_foregrounds():
-	# 3 FGs : décor (inchangé), personnage A → B (image change)
+	# 3 FGs : décor (inchangé), personnage A → B (image change, position similaire)
 	var decor_old = _make_fg("d1", "decor.png", "fade", 0.5)
+	decor_old.anchor_bg = Vector2(0.50, 0.50)
 	var char_old = _make_fg("c1", "charA.png", "fade", 0.5)
+	char_old.anchor_bg = Vector2(0.30, 0.70)
 	var decor_new = _make_fg("d2", "decor.png", "fade", 0.5)
+	decor_new.anchor_bg = Vector2(0.50, 0.50)
 	var char_new = _make_fg("c2", "charB.png", "fade", 0.5)
+	char_new.anchor_bg = Vector2(0.30, 0.70)
 	var result = _transition.compute_transitions(
 		[decor_old, char_old],
 		[decor_new, char_new]
 	)
 	# Le décor ne doit PAS avoir de transition (visuellement identique)
-	# Le personnage doit avoir fade_out (charA) + fade_in (charB)
+	# Le personnage → morph (position similaire, image différente)
 	for r in result:
 		assert_ne(r["uuid"], "d1", "Décor ancien ne doit pas avoir de transition")
 		assert_ne(r["uuid"], "d2", "Décor nouveau ne doit pas avoir de transition")
-	var actions = {}
-	for r in result:
-		actions[r["uuid"]] = r["action"]
-	assert_true(actions.has("c1"), "Ancien personnage doit avoir une transition")
-	assert_eq(actions["c1"], "fade_out")
-	assert_true(actions.has("c2"), "Nouveau personnage doit avoir une transition")
-	assert_eq(actions["c2"], "fade_in")
+	assert_eq(result.size(), 1)
+	assert_eq(result[0]["uuid"], "c2")
+	assert_eq(result[0]["action"], "morph")
 
 func test_visual_matching_does_not_match_same_image_different_position():
 	# Deux FGs avec même image mais positions différentes ne doivent pas se matcher
@@ -290,6 +295,209 @@ func test_apply_fade_out():
 	target.modulate.a = 1.0
 	_transition.apply_instant_fade_out(target)
 	assert_eq(target.modulate.a, 0.0)
+
+# --- Matching par position (morph) ---
+
+func test_morph_generated_when_position_similar_different_uuid():
+	# Deux FGs avec UUIDs différents, images différentes, position similaire → morph
+	var fg_old = _make_fg("a", "smile.png", "none", 0.5)
+	fg_old.anchor_bg = Vector2(0.50, 0.60)
+	var fg_new = _make_fg("b", "sad.png", "fade", 0.8)
+	fg_new.anchor_bg = Vector2(0.55, 0.65)
+	var result = _transition.compute_transitions([fg_old], [fg_new])
+	assert_eq(result.size(), 1)
+	assert_eq(result[0]["action"], "morph")
+	assert_eq(result[0]["uuid"], "b")
+	assert_eq(result[0]["old_uuid"], "a")
+
+
+func test_morph_uses_new_fg_duration():
+	var fg_old = _make_fg("a", "smile.png", "none", 1.0)
+	fg_old.anchor_bg = Vector2(0.50, 0.60)
+	var fg_new = _make_fg("b", "sad.png", "fade", 0.8)
+	fg_new.anchor_bg = Vector2(0.50, 0.60)
+	var result = _transition.compute_transitions([fg_old], [fg_new])
+	assert_eq(result[0]["duration"], 0.8, "morph utilise la durée du nouveau fg")
+
+
+func test_morph_independent_of_image():
+	# Même image, position similaire → morph (pas d'équivalence visuelle car scale différent)
+	var fg_old = _make_fg("a", "char.png", "none", 0.5)
+	fg_old.anchor_bg = Vector2(0.50, 0.60)
+	fg_old.scale = 1.0
+	var fg_new = _make_fg("b", "char.png", "none", 0.5)
+	fg_new.anchor_bg = Vector2(0.55, 0.60)
+	fg_new.scale = 2.0
+	var result = _transition.compute_transitions([fg_old], [fg_new])
+	assert_eq(result.size(), 1)
+	assert_eq(result[0]["action"], "morph")
+
+
+func test_morph_independent_of_transition_type():
+	# transition_type=none sur les deux → morph quand même
+	var fg_old = _make_fg("a", "a.png", "none", 0.5)
+	fg_old.anchor_bg = Vector2(0.50, 0.60)
+	var fg_new = _make_fg("b", "b.png", "none", 0.5)
+	fg_new.anchor_bg = Vector2(0.50, 0.60)
+	var result = _transition.compute_transitions([fg_old], [fg_new])
+	assert_eq(result.size(), 1)
+	assert_eq(result[0]["action"], "morph")
+
+
+func test_no_morph_when_position_beyond_threshold():
+	# Position trop éloignée (> 0.15 sur un axe) → fade_out + fade_in, pas de morph
+	var fg_old = _make_fg("a", "a.png", "fade", 0.5)
+	fg_old.anchor_bg = Vector2(0.20, 0.50)
+	var fg_new = _make_fg("b", "b.png", "fade", 0.5)
+	fg_new.anchor_bg = Vector2(0.50, 0.50)  # delta x = 0.30 > 0.15
+	var result = _transition.compute_transitions([fg_old], [fg_new])
+	var actions = {}
+	for r in result:
+		actions[r["uuid"]] = r["action"]
+	assert_false(actions.values().has("morph"), "Position trop éloignée → pas de morph")
+	assert_eq(actions.get("a"), "fade_out")
+	assert_eq(actions.get("b"), "fade_in")
+
+
+func test_morph_at_threshold_boundary():
+	# Distance exactement 0.15 → morph (seuil inclusif)
+	var fg_old = _make_fg("a", "a.png", "none", 0.5)
+	fg_old.anchor_bg = Vector2(0.50, 0.50)
+	var fg_new = _make_fg("b", "b.png", "none", 0.5)
+	fg_new.anchor_bg = Vector2(0.65, 0.50)  # delta x = 0.15, delta y = 0.0
+	var result = _transition.compute_transitions([fg_old], [fg_new])
+	assert_eq(result.size(), 1)
+	assert_eq(result[0]["action"], "morph")
+
+
+func test_morph_matching_is_1_to_1():
+	# 2 old, 2 new → chaque ancien matche au plus un nouveau
+	var old_a = _make_fg("a", "a.png", "none", 0.5)
+	old_a.anchor_bg = Vector2(0.30, 0.50)
+	var old_b = _make_fg("b", "b.png", "none", 0.5)
+	old_b.anchor_bg = Vector2(0.70, 0.50)
+	var new_c = _make_fg("c", "c.png", "none", 0.5)
+	new_c.anchor_bg = Vector2(0.32, 0.50)  # proche de old_a
+	var new_d = _make_fg("d", "d.png", "none", 0.5)
+	new_d.anchor_bg = Vector2(0.72, 0.50)  # proche de old_b
+	var result = _transition.compute_transitions([old_a, old_b], [new_c, new_d])
+	assert_eq(result.size(), 2)
+	var morphs = result.filter(func(r): return r["action"] == "morph")
+	assert_eq(morphs.size(), 2, "Deux morphs 1:1")
+	# Vérifier que chaque ancien a matché un seul nouveau
+	var old_uuids = morphs.map(func(m): return m["old_uuid"])
+	assert_true(old_uuids.has("a"))
+	assert_true(old_uuids.has("b"))
+
+
+func test_morph_1_to_1_no_double_match():
+	# Un old qui est proche de deux new → seul le premier new matche
+	var old_a = _make_fg("a", "a.png", "none", 0.5)
+	old_a.anchor_bg = Vector2(0.50, 0.50)
+	var new_b = _make_fg("b", "b.png", "none", 0.5)
+	new_b.anchor_bg = Vector2(0.50, 0.50)
+	var new_c = _make_fg("c", "c.png", "fade", 0.5)
+	new_c.anchor_bg = Vector2(0.50, 0.50)
+	var result = _transition.compute_transitions([old_a], [new_b, new_c])
+	var morphs = result.filter(func(r): return r["action"] == "morph")
+	assert_eq(morphs.size(), 1, "Un seul morph pour un seul old")
+
+
+func test_morph_after_uuid_matching():
+	# UUID match a priority : même UUID → replace_fade, pas morph
+	var fg_old = _make_fg("a", "old.png", "fade", 0.5)
+	fg_old.anchor_bg = Vector2(0.50, 0.50)
+	var fg_new = _make_fg("a", "new.png", "fade", 0.5)
+	fg_new.anchor_bg = Vector2(0.50, 0.50)
+	var result = _transition.compute_transitions([fg_old], [fg_new])
+	assert_eq(result.size(), 1)
+	assert_eq(result[0]["action"], "replace_fade", "UUID match → replace_fade, pas morph")
+
+
+func test_morph_after_visual_equivalence():
+	# Visuellement identique → pas de transition, pas de morph
+	var fg_old = _make_fg("a", "img.png", "fade", 0.5)
+	fg_old.anchor_bg = Vector2(0.50, 0.50)
+	var fg_new = _make_fg("b", "img.png", "fade", 0.5)
+	fg_new.anchor_bg = Vector2(0.50, 0.50)
+	var result = _transition.compute_transitions([fg_old], [fg_new])
+	assert_eq(result.size(), 0, "Visuellement identique → pas de transition")
+
+
+func test_morph_includes_image_changed_flag():
+	# Quand l'image change, le morph doit le signaler
+	var fg_old = _make_fg("a", "smile.png", "none", 0.5)
+	fg_old.anchor_bg = Vector2(0.50, 0.50)
+	var fg_new = _make_fg("b", "sad.png", "none", 0.5)
+	fg_new.anchor_bg = Vector2(0.50, 0.50)
+	var result = _transition.compute_transitions([fg_old], [fg_new])
+	assert_eq(result[0]["action"], "morph")
+	assert_true(result[0]["image_changed"])
+
+
+func test_morph_image_changed_false_when_same():
+	var fg_old = _make_fg("a", "char.png", "none", 0.5)
+	fg_old.anchor_bg = Vector2(0.50, 0.50)
+	fg_old.scale = 1.0
+	var fg_new = _make_fg("b", "char.png", "none", 0.5)
+	fg_new.anchor_bg = Vector2(0.55, 0.50)
+	fg_new.scale = 2.0
+	var result = _transition.compute_transitions([fg_old], [fg_new])
+	assert_eq(result[0]["action"], "morph")
+	assert_false(result[0]["image_changed"])
+
+
+func test_morph_includes_old_properties():
+	var fg_old = _make_fg("a", "a.png", "none", 0.5, 3)
+	fg_old.anchor_bg = Vector2(0.30, 0.40)
+	fg_old.scale = 1.5
+	fg_old.opacity = 0.8
+	fg_old.flip_h = true
+	fg_old.flip_v = false
+	var fg_new = _make_fg("b", "b.png", "none", 0.7, 5)
+	fg_new.anchor_bg = Vector2(0.35, 0.45)
+	fg_new.scale = 2.0
+	fg_new.flip_h = false
+	fg_new.flip_v = true
+	var result = _transition.compute_transitions([fg_old], [fg_new])
+	var m = result[0]
+	assert_eq(m["old_anchor_bg"], Vector2(0.30, 0.40))
+	assert_almost_eq(m["old_scale"], 1.5, 0.001)
+	assert_almost_eq(m["old_opacity"], 0.8, 0.001)
+	assert_true(m["old_flip_h"])
+	assert_false(m["old_flip_v"])
+	assert_eq(m["old_z_order"], 3)
+	assert_eq(m["z_order"], 5)
+
+
+func test_morph_no_regression_existing_transitions():
+	# Cas mixte : UUID match + visuel identique + morph + fade_out + fade_in
+	var fg_uuid_old = _make_fg("uuid1", "old.png", "fade", 0.5)
+	var fg_uuid_new = _make_fg("uuid1", "new.png", "fade", 0.5)
+	var fg_visual_old = _make_fg("v1", "decor.png", "fade", 0.5)
+	var fg_visual_new = _make_fg("v2", "decor.png", "fade", 0.5)
+	var fg_morph_old = _make_fg("m1", "smile.png", "none", 0.5)
+	fg_morph_old.anchor_bg = Vector2(0.40, 0.50)
+	var fg_morph_new = _make_fg("m2", "sad.png", "none", 0.5)
+	fg_morph_new.anchor_bg = Vector2(0.42, 0.52)
+	var fg_removed = _make_fg("r1", "gone.png", "none", 0.5)
+	fg_removed.anchor_bg = Vector2(0.90, 0.90)
+	var fg_added = _make_fg("a1", "appear.png", "fade", 0.5)
+	fg_added.anchor_bg = Vector2(0.10, 0.10)
+	var result = _transition.compute_transitions(
+		[fg_uuid_old, fg_visual_old, fg_morph_old, fg_removed],
+		[fg_uuid_new, fg_visual_new, fg_morph_new, fg_added]
+	)
+	var actions = {}
+	for r in result:
+		actions[r["uuid"]] = r["action"]
+	assert_eq(actions["uuid1"], "replace_fade", "UUID match → replace_fade")
+	assert_false(actions.has("v1"), "Visuel identique → pas de transition")
+	assert_false(actions.has("v2"), "Visuel identique → pas de transition")
+	assert_eq(actions["m2"], "morph", "Position similaire → morph")
+	assert_eq(actions["r1"], "fade_out", "Pas de match → fade_out")
+	assert_eq(actions["a1"], "fade_in", "Pas de match → fade_in")
+
 
 # --- Helper ---
 

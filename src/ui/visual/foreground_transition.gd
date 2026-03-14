@@ -34,9 +34,37 @@ func compute_transitions(old_fgs: Array, new_fgs: Array, seen_uuids: Dictionary 
 				visually_matched_new[new_fg.uuid] = true
 				break
 
-	# Foregrounds supprimés → fade_out (seulement si pas de match visuel)
+	# Matcher par proximité de position (morph) — après UUID et équivalence visuelle
+	var position_matched_old: Dictionary = {}
+	var position_matched_new: Dictionary = {}
+	for old_fg in unmatched_old:
+		if visually_matched_old.has(old_fg.uuid):
+			continue
+		for new_fg in unmatched_new:
+			if visually_matched_new.has(new_fg.uuid) or position_matched_new.has(new_fg.uuid):
+				continue
+			if _are_position_similar(old_fg, new_fg):
+				position_matched_old[old_fg.uuid] = true
+				position_matched_new[new_fg.uuid] = true
+				transitions.append({
+					"uuid": new_fg.uuid,
+					"old_uuid": old_fg.uuid,
+					"action": "morph",
+					"duration": new_fg.transition_duration,
+					"z_order": new_fg.z_order,
+					"old_anchor_bg": old_fg.anchor_bg,
+					"old_scale": old_fg.scale,
+					"old_opacity": old_fg.opacity,
+					"old_flip_h": old_fg.flip_h,
+					"old_flip_v": old_fg.flip_v,
+					"old_z_order": old_fg.z_order,
+					"image_changed": old_fg.image != new_fg.image,
+				})
+				break
+
+	# Foregrounds supprimés → fade_out (seulement si pas de match visuel ou position)
 	for fg in unmatched_old:
-		if not visually_matched_old.has(fg.uuid):
+		if not visually_matched_old.has(fg.uuid) and not position_matched_old.has(fg.uuid):
 			transitions.append({
 				"uuid": fg.uuid,
 				"action": "fade_out",
@@ -47,8 +75,8 @@ func compute_transitions(old_fgs: Array, new_fgs: Array, seen_uuids: Dictionary 
 	# Foregrounds ajoutés ou remplacés
 	for fg in new_fgs:
 		if not old_map.has(fg.uuid):
-			# Skip si visuellement identique à un ancien FG
-			if visually_matched_new.has(fg.uuid):
+			# Skip si visuellement identique ou position-matché (morph)
+			if visually_matched_new.has(fg.uuid) or position_matched_new.has(fg.uuid):
 				continue
 			# Nouveau FG sans prédécesseur — fondu uniquement à la première apparition
 			if fg.transition_type != "none" and not seen_uuids.has(fg.uuid):
@@ -79,6 +107,16 @@ func compute_transitions(old_fgs: Array, new_fgs: Array, seen_uuids: Dictionary 
 					})
 
 	return transitions
+
+const MORPH_THRESHOLD := 0.15
+
+## Compare deux foregrounds par proximité de position (anchor_bg).
+func _are_position_similar(a, b) -> bool:
+	if absf(a.anchor_bg.x - b.anchor_bg.x) > MORPH_THRESHOLD:
+		return false
+	if absf(a.anchor_bg.y - b.anchor_bg.y) > MORPH_THRESHOLD:
+		return false
+	return true
 
 ## Compare deux foregrounds pour déterminer s'ils sont visuellement identiques.
 func _are_visually_equivalent(a, b) -> bool:
@@ -117,4 +155,56 @@ func apply_tween_fade_out(target: Control, duration: float, free_on_complete: bo
 	tween.tween_property(target, "modulate:a", 0.0, duration)
 	if free_on_complete:
 		tween.tween_callback(target.queue_free)
+	return tween
+
+
+## Applique une transition morph : interpole position/size/opacity et crossfade d'image.
+## old_state = {position, size, modulate_a, flip_h, flip_v}
+## clone = TextureRect du vieux nœud (seulement si image_changed)
+func apply_morph(target: Control, old_state: Dictionary, duration: float, clone = null) -> Tween:
+	var target_pos = target.position
+	var target_size = target.size
+	var target_alpha = target.modulate.a
+
+	# Remettre le nœud à l'ancien état
+	target.position = old_state["position"]
+	target.size = old_state["size"]
+
+	var tween = target.create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(target, "position", target_pos, duration)
+	tween.tween_property(target, "size", target_size, duration)
+
+	# Interpolation d'opacité
+	if clone:
+		# Image change : ancien visible à 100%, nouveau fade in par-dessus
+		target.modulate.a = 0.0
+		tween.tween_property(target, "modulate:a", target_alpha, duration)
+		# Le clone suit le mouvement
+		clone.position = old_state["position"]
+		clone.size = old_state["size"]
+		tween.tween_property(clone, "position", target_pos, duration)
+		tween.tween_property(clone, "size", target_size, duration)
+		# Retirer le clone à la fin
+		tween.chain().tween_callback(clone.queue_free)
+	else:
+		# Même image : interpolation linéaire d'opacité
+		target.modulate.a = old_state["modulate_a"]
+		tween.tween_property(target, "modulate:a", target_alpha, duration)
+
+	# Flip à mi-parcours
+	var tex = target.get_node_or_null("Texture")
+	if tex:
+		var old_flip_h = old_state.get("flip_h", tex.flip_h)
+		var old_flip_v = old_state.get("flip_v", tex.flip_v)
+		var new_flip_h = tex.flip_h
+		var new_flip_v = tex.flip_v
+		if old_flip_h != new_flip_h or old_flip_v != new_flip_v:
+			tex.flip_h = old_flip_h
+			tex.flip_v = old_flip_v
+			tween.tween_callback(func():
+				tex.flip_h = new_flip_h
+				tex.flip_v = new_flip_v
+			).set_delay(duration / 2.0)
+
 	return tween

@@ -170,6 +170,7 @@ func on_play_dialogue_changed(index: int) -> void:
 func _apply_visual_transitions(index: int, transitions: Array) -> void:
 	# Phase 1 : Cloner les anciens nœuds AVANT la mise à jour visuelle
 	var clones: Array = []  # {clone, action, duration, uuid}
+	var morph_data: Array = []  # {old_state, clone_or_null, uuid, duration}
 	for t in transitions:
 		var action = t["action"]
 		if action in ["fade_out", "replace_fade", "replace_instant"]:
@@ -183,6 +184,26 @@ func _apply_visual_transitions(index: int, transitions: Array) -> void:
 						"duration": t["duration"],
 						"uuid": t["uuid"]
 					})
+		elif action == "morph":
+			var old_node = _visual_editor.get_foreground_node(t["old_uuid"])
+			if old_node and is_instance_valid(old_node):
+				var old_state = {
+					"position": old_node.position,
+					"size": old_node.size,
+					"modulate_a": old_node.modulate.a,
+					"flip_h": t.get("old_flip_h", false),
+					"flip_v": t.get("old_flip_v", false),
+				}
+				var clone = null
+				if t.get("image_changed", false):
+					clone = _create_fade_out_clone(old_node, t.get("old_z_order", 0))
+				morph_data.append({
+					"old_state": old_state,
+					"clone": clone,
+					"uuid": t["uuid"],
+					"duration": t["duration"],
+					"z_order": t["z_order"],
+				})
 
 	# Phase 2 : Mettre à jour les visuels (nouvel état)
 	_main.update_preview_for_dialogue(index)
@@ -213,6 +234,20 @@ func _apply_visual_transitions(index: int, transitions: Array) -> void:
 			if target and is_instance_valid(target):
 				target.modulate.a = 1.0
 			_foreground_transition.apply_tween_fade_out(clone, duration, true)
+
+	# Phase 3b : Appliquer les morphs
+	for entry in morph_data:
+		var target = _visual_editor.get_foreground_node(entry["uuid"])
+		if target == null or not is_instance_valid(target):
+			if entry["clone"]:
+				entry["clone"].queue_free()
+			continue
+		target.z_index = entry["z_order"]
+		var tween = _foreground_transition.apply_morph(target, entry["old_state"], entry["duration"], entry["clone"])
+		if tween:
+			var uuid = entry["uuid"]
+			_visual_editor._transitioning_uuids.append(uuid)
+			tween.finished.connect(func(): _visual_editor._transitioning_uuids.erase(uuid))
 
 	# Phase 4 : fade_in pur (nouveau FG sans prédécesseur)
 	for t in transitions:
