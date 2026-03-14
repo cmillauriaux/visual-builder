@@ -11,6 +11,14 @@ const ReplaceForegroundImageCommand = preload("res://src/commands/replace_foregr
 const ReplaceWithNewForegroundCommand = preload("res://src/commands/replace_with_new_foreground_command.gd")
 
 var _main: Control
+var _fg_initial_snapshot: Dictionary = {}
+var _fg_snapshot_uuid: String = ""
+
+const TRACKED_FG_PROPERTIES := [
+	"anchor_bg", "scale", "z_order",
+	"flip_h", "flip_v", "opacity",
+	"transition_type", "transition_duration",
+]
 
 
 func setup(main: Control) -> void:
@@ -160,5 +168,93 @@ func on_delete_dialogue(index: int) -> void:
 		confirm.queue_free()
 	)
 	confirm.canceled.connect(func(): confirm.queue_free())
+	_main.add_child(confirm)
+	confirm.popup_centered()
+
+
+# --- Propagation foregrounds ---
+
+func _capture_fg_snapshot(fg) -> Dictionary:
+	var snapshot := {}
+	for prop in TRACKED_FG_PROPERTIES:
+		snapshot[prop] = fg.get(prop)
+	return snapshot
+
+
+func _compute_fg_changes(fg, snapshot: Dictionary) -> Dictionary:
+	var changes := {}
+	for key in snapshot.keys():
+		if fg.get(key) != snapshot[key]:
+			changes[key] = fg.get(key)
+	return changes
+
+
+func on_foreground_selected(uuid: String) -> void:
+	# Note: for inherited foregrounds, this snapshot may reference a shared object.
+	# main.gd re-captures after ensure_own_foregrounds() creates local copies.
+	_fg_snapshot_uuid = uuid
+	var fg = _main._visual_editor.find_foreground(uuid)
+	if fg:
+		_fg_initial_snapshot = _capture_fg_snapshot(fg)
+	else:
+		_fg_initial_snapshot = {}
+
+
+func on_foreground_deselected() -> void:
+	_fg_initial_snapshot = {}
+	_fg_snapshot_uuid = ""
+
+
+func on_foreground_modified(uuid: String = "") -> void:
+	var target_uuid = uuid if uuid != "" else _fg_snapshot_uuid
+	if target_uuid == "" or _fg_initial_snapshot.is_empty():
+		return
+
+	var fg = _main._visual_editor.find_foreground(target_uuid)
+	if fg == null:
+		return
+
+	var changes = _compute_fg_changes(fg, _fg_initial_snapshot)
+	if changes.is_empty():
+		_fg_initial_snapshot = _capture_fg_snapshot(fg)
+		return
+
+	var idx = _main._sequence_editor_ctrl.get_selected_dialogue_index()
+	if idx < 0:
+		_fg_initial_snapshot = _capture_fg_snapshot(fg)
+		return
+
+	var initial_anchor_bg: Vector2 = _fg_initial_snapshot.get("anchor_bg", fg.anchor_bg)
+	var matches = _main._sequence_editor_ctrl.find_similar_foregrounds(initial_anchor_bg, idx)
+
+	if matches.is_empty():
+		_fg_initial_snapshot = _capture_fg_snapshot(fg)
+		return
+
+	# Count distinct dialogues
+	var dialogue_indices := {}
+	for m in matches:
+		dialogue_indices[m["dialogue_index"]] = true
+
+	var confirm = ConfirmationDialog.new()
+	confirm.dialog_text = "%d foreground(s) dans %d dialogue(s) suivant(s) ont une position similaire.\nAppliquer la modification à tous ?" % [matches.size(), dialogue_indices.size()]
+	confirm.ok_button_text = "Oui"
+	confirm.cancel_button_text = "Non"
+
+	var captured_changes = changes.duplicate()
+	var captured_matches = matches.duplicate()
+	var captured_initial = initial_anchor_bg
+
+	confirm.confirmed.connect(func():
+		_main._sequence_editor_ctrl.propagate_fg_changes(captured_matches, captured_changes, captured_initial)
+		EventBus.story_modified.emit()
+		confirm.queue_free()
+	)
+	confirm.canceled.connect(func():
+		confirm.queue_free()
+	)
+
+	_fg_initial_snapshot = _capture_fg_snapshot(fg)
+
 	_main.add_child(confirm)
 	confirm.popup_centered()
