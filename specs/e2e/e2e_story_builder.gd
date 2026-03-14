@@ -13,6 +13,7 @@ const VariableDefinitionScript = preload("res://src/models/variable_definition.g
 const VariableEffectScript = preload("res://src/models/variable_effect.gd")
 const ConditionScript = preload("res://src/models/condition.gd")
 const ConditionRuleScript = preload("res://src/models/condition_rule.gd")
+const ForegroundScript = preload("res://src/models/foreground.gd")
 
 
 ## Crée une story minimale : 1 chapitre, 1 scène, 1 séquence, 1 dialogue.
@@ -125,6 +126,143 @@ static func make_branching_story() -> RefCounted:
 	# Finale → to_be_continued
 	seq_finale.ending = make_ending_auto("to_be_continued", "")
 
+	return story
+
+
+## Story avec foregrounds : 1 ch, 1 sc, 1 seq, 1 dialogue, 2 foregrounds (z_order 0 et 5).
+static func make_story_with_foregrounds() -> RefCounted:
+	var story = make_minimal_story()
+	var seq = story.chapters[0].scenes[0].sequences[0]
+	var dlg = seq.dialogues[0]
+
+	var fg1 = ForegroundScript.new()
+	fg1.fg_name = "fg_front"
+	fg1.image = ""
+	fg1.z_order = 0
+	fg1.scale = 1.0
+	fg1.anchor_bg = Vector2(0.3, 0.5)
+	fg1.anchor_fg = Vector2(0.5, 1.0)
+	dlg.foregrounds.append(fg1)
+
+	var fg2 = ForegroundScript.new()
+	fg2.fg_name = "fg_back"
+	fg2.image = ""
+	fg2.z_order = 5
+	fg2.scale = 0.8
+	fg2.anchor_bg = Vector2(0.7, 0.5)
+	fg2.anchor_fg = Vector2(0.5, 1.0)
+	dlg.foregrounds.append(fg2)
+
+	return story
+
+
+## Story avec 2 séquences + 1 variable : pour tester l'ending editor avec targets.
+static func make_story_with_two_sequences() -> RefCounted:
+	var story = make_minimal_story()
+	var scene = story.chapters[0].scenes[0]
+
+	var seq2 = SequenceScript.new()
+	seq2.seq_name = "Séquence 2"
+	seq2.position = Vector2(400, 100)
+	var dlg2 = DialogueModel.new()
+	dlg2.character = "Bob"
+	dlg2.text = "Deuxième séquence."
+	seq2.dialogues.append(dlg2)
+	scene.sequences.append(seq2)
+
+	# Ending redirect de seq2 vers seq1
+	var seq1 = scene.sequences[0]
+	seq2.ending = make_ending_auto("redirect_sequence", seq1.uuid)
+
+	# Variable
+	var var_def = VariableDefinitionScript.new()
+	var_def.var_name = "score"
+	var_def.initial_value = "0"
+	story.variables.append(var_def)
+
+	return story
+
+
+## Story avec 3 séquences, seq1 a 2 foregrounds : pour tester graph operations et copy/paste FGs.
+static func make_story_with_multiple_sequences() -> RefCounted:
+	var story = make_minimal_story()
+	var scene = story.chapters[0].scenes[0]
+
+	# Ajouter 2 foregrounds à seq1
+	var dlg1 = scene.sequences[0].dialogues[0]
+	var fg1 = ForegroundScript.new()
+	fg1.fg_name = "fg1"
+	fg1.image = ""
+	fg1.z_order = 0
+	dlg1.foregrounds.append(fg1)
+	var fg2 = ForegroundScript.new()
+	fg2.fg_name = "fg2"
+	fg2.image = ""
+	fg2.z_order = 3
+	dlg1.foregrounds.append(fg2)
+
+	# Séquence 2
+	var seq2 = SequenceScript.new()
+	seq2.seq_name = "Séquence 2"
+	seq2.position = Vector2(400, 100)
+	var dlg2 = DialogueModel.new()
+	dlg2.character = "Bob"
+	dlg2.text = "Texte 2."
+	seq2.dialogues.append(dlg2)
+	scene.sequences.append(seq2)
+
+	# Séquence 3
+	var seq3 = SequenceScript.new()
+	seq3.seq_name = "Séquence 3"
+	seq3.position = Vector2(700, 100)
+	var dlg3 = DialogueModel.new()
+	dlg3.character = "Charlie"
+	dlg3.text = "Texte 3."
+	seq3.dialogues.append(dlg3)
+	scene.sequences.append(seq3)
+
+	return story
+
+
+## Story avec 3 dialogues distincts : pour tester l'édition de dialogues.
+static func make_story_with_multiple_dialogues() -> RefCounted:
+	var story = make_minimal_story()
+	var seq = story.chapters[0].scenes[0].sequences[0]
+
+	# Remplacer le dialogue par défaut par 3 dialogues
+	seq.dialogues.clear()
+
+	var dlg1 = DialogueModel.new()
+	dlg1.character = "Alice"
+	dlg1.text = "Premier dialogue."
+	seq.dialogues.append(dlg1)
+
+	var dlg2 = DialogueModel.new()
+	dlg2.character = "Bob"
+	dlg2.text = "Deuxième dialogue."
+	seq.dialogues.append(dlg2)
+
+	var dlg3 = DialogueModel.new()
+	dlg3.character = "Charlie"
+	dlg3.text = "Troisième dialogue."
+	seq.dialogues.append(dlg3)
+
+	return story
+
+
+## Story multi-dialogues avec ending to_be_continued : pour tester history et skip.
+static func make_multi_dialogue_story() -> RefCounted:
+	var story = make_minimal_story()
+	var seq = story.chapters[0].scenes[0].sequences[0]
+
+	seq.dialogues.clear()
+	for i in 4:
+		var dlg = DialogueModel.new()
+		dlg.character = "Narrateur"
+		dlg.text = "Dialogue %d." % (i + 1)
+		seq.dialogues.append(dlg)
+
+	seq.ending = make_ending_auto("to_be_continued", "")
 	return story
 
 

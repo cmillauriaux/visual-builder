@@ -312,6 +312,46 @@ func count_graph_nodes(graph: GraphEdit) -> int:
 
 
 # =============================================================================
+# Clic droit (menus contextuels canvas)
+# =============================================================================
+
+## Effectuer un clic droit à une position (en coordonnées viewport).
+func right_click_at(viewport_pos: Vector2) -> void:
+	var win_pos = _viewport_to_window(viewport_pos)
+	await _move_mouse(viewport_pos)
+	var down = InputEventMouseButton.new()
+	down.position = win_pos
+	down.global_position = win_pos
+	down.pressed = true
+	down.button_index = MOUSE_BUTTON_RIGHT
+	Input.parse_input_event(down)
+	Input.flush_buffered_events()
+	await wait_frames(2)
+	var up = InputEventMouseButton.new()
+	up.position = win_pos
+	up.global_position = win_pos
+	up.pressed = false
+	up.button_index = MOUSE_BUTTON_RIGHT
+	Input.parse_input_event(up)
+	Input.flush_buffered_events()
+	await wait_frames(2)
+
+
+# =============================================================================
+# Rename (fallback signal pour ConfirmationDialog)
+# =============================================================================
+
+## Ouvrir le RenameDialog puis émettre sa confirmation.
+## Les ConfirmationDialog sont des fenêtres séparées → on émet le signal directement.
+func emit_rename_confirmed(nav_ctrl, open_method: String, uuid: String, new_name: String, new_subtitle: String = "") -> void:
+	nav_ctrl.call(open_method, uuid)
+	await wait_frames(2)
+	if nav_ctrl._rename_dialog and is_instance_valid(nav_ctrl._rename_dialog):
+		nav_ctrl._rename_dialog.rename_confirmed.emit(uuid, new_name, new_subtitle)
+	await wait_frames()
+
+
+# =============================================================================
 # Screenshots (debug)
 # =============================================================================
 
