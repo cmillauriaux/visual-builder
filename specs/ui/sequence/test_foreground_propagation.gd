@@ -9,8 +9,12 @@ var Sequence = load("res://src/models/sequence.gd")
 var Dialogue = load("res://src/models/dialogue.gd")
 var Foreground = load("res://src/models/foreground.gd")
 
+var VisualEditorScript = load("res://src/ui/sequence/sequence_visual_editor.gd")
+var MainScript = load("res://src/main.gd")
+
 var _ctrl: Node = null
 var _seq_editor: Control = null
+var _visual_editor: Control = null
 var _sequence = null
 
 
@@ -22,6 +26,10 @@ func before_each():
 	_seq_editor = Control.new()
 	_seq_editor.set_script(SequenceEditor)
 	add_child_autofree(_seq_editor)
+
+	_visual_editor = Control.new()
+	_visual_editor.set_script(VisualEditorScript)
+	add_child_autofree(_visual_editor)
 
 	_sequence = Sequence.new()
 	_sequence.seq_name = "Test"
@@ -97,3 +105,57 @@ func test_compute_fg_changes_detects_multiple_changes():
 	assert_eq(changes.size(), 2)
 	assert_true(changes.has("scale"))
 	assert_true(changes.has("flip_h"))
+
+
+# --- on_foreground_selected / on_foreground_deselected ---
+
+func _setup_ctrl_with_visual_editor():
+	## Wire _ctrl._main with a real visual editor for on_foreground_selected tests.
+	_visual_editor.load_sequence(_sequence)
+	# Create a mock main that has the expected properties by using a GDScript
+	# that declares _visual_editor and _sequence_editor_ctrl.
+	var mock_script = GDScript.new()
+	mock_script.source_code = """
+extends Control
+var _visual_editor
+var _sequence_editor_ctrl
+"""
+	mock_script.reload()
+	var mock_main = Control.new()
+	mock_main.set_script(mock_script)
+	mock_main._visual_editor = _visual_editor
+	mock_main._sequence_editor_ctrl = _seq_editor
+	add_child_autofree(mock_main)
+	_ctrl.setup(mock_main)
+
+
+func test_on_foreground_selected_captures_snapshot():
+	var fg = Foreground.new()
+	fg.anchor_bg = Vector2(0.3, 0.7)
+	fg.scale = 1.5
+	_sequence.foregrounds.append(fg)
+	_setup_ctrl_with_visual_editor()
+
+	_ctrl.on_foreground_selected(fg.uuid)
+	assert_eq(_ctrl._fg_snapshot_uuid, fg.uuid)
+	assert_eq(_ctrl._fg_initial_snapshot["anchor_bg"], Vector2(0.3, 0.7))
+	assert_almost_eq(_ctrl._fg_initial_snapshot["scale"], 1.5, 0.001)
+
+
+func test_on_foreground_selected_clears_snapshot_when_fg_not_found():
+	_setup_ctrl_with_visual_editor()
+
+	_ctrl.on_foreground_selected("nonexistent-uuid")
+	assert_eq(_ctrl._fg_snapshot_uuid, "nonexistent-uuid")
+	assert_eq(_ctrl._fg_initial_snapshot.size(), 0)
+
+
+func test_on_foreground_deselected_clears_state():
+	var fg = Foreground.new()
+	_sequence.foregrounds.append(fg)
+	_setup_ctrl_with_visual_editor()
+	_ctrl.on_foreground_selected(fg.uuid)
+
+	_ctrl.on_foreground_deselected()
+	assert_eq(_ctrl._fg_snapshot_uuid, "")
+	assert_eq(_ctrl._fg_initial_snapshot.size(), 0)
