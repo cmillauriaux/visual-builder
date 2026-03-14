@@ -69,6 +69,7 @@ signal foreground_deselected()
 signal foreground_replace_requested(uuid: String)
 signal foreground_replace_with_new_requested(uuid: String)
 signal inherited_foreground_edit_confirmed()
+signal foreground_modified(uuid: String)
 
 func _ready() -> void:
 	clip_contents = true
@@ -568,6 +569,7 @@ func _on_fg_gui_input(event: InputEvent, uuid: String) -> void:
 				if _dragging_fg:
 					_apply_snap_to_foreground(uuid)
 					_update_foreground_visuals()
+					foreground_modified.emit(uuid)
 				_dragging_fg = false
 	elif event is InputEventMouseMotion and _dragging_fg and uuid in _selected_fg_uuids:
 		var mm := event as InputEventMouseMotion
@@ -597,6 +599,8 @@ func _on_resize_handle_input(event: InputEvent, uuid: String) -> void:
 				if fg:
 					_resize_start_scale = fg.scale
 			else:
+				if _resizing_fg:
+					foreground_modified.emit(uuid)
 				_resizing_fg = false
 			accept_event()
 	elif event is InputEventMouseMotion and _resizing_fg:
