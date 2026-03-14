@@ -45,6 +45,10 @@ var _drag_start_wrapper_pos: Vector2 = Vector2.ZERO
 var _resize_start_pos: Vector2 = Vector2.ZERO
 var _resize_start_scale: float = 1.0
 
+## Inheritance mode — indicates foregrounds are inherited from another dialogue
+var _is_inherited_mode: bool = false
+var _inherited_from_index: int = -1
+
 ## Backward-compatible accessor — returns last selected UUID or "".
 var _selected_fg_uuid: String:
 	get:
@@ -57,10 +61,14 @@ var _context_menu: PopupMenu = null
 var _bg_context_menu: PopupMenu = null
 var _context_menu_uuid: String = ""
 
+# --- Inherit confirmation ---
+var _inherit_confirm_dialog: AcceptDialog = null
+
 signal foreground_selected(uuid: String)
 signal foreground_deselected()
 signal foreground_replace_requested(uuid: String)
 signal foreground_replace_with_new_requested(uuid: String)
+signal inherited_foreground_edit_confirmed()
 
 func _ready() -> void:
 	clip_contents = true
@@ -142,6 +150,15 @@ func _ready() -> void:
 	_bg_context_menu.add_item("Coller le foreground", 4)
 	_bg_context_menu.id_pressed.connect(_on_context_menu_id_pressed)
 	add_child(_bg_context_menu)
+
+	# Confirmation dialog for inherited foreground editing
+	_inherit_confirm_dialog = AcceptDialog.new()
+	_inherit_confirm_dialog.title = "Foreground hérité"
+	_inherit_confirm_dialog.dialog_text = ""
+	_inherit_confirm_dialog.ok_button_text = "Confirmer"
+	_inherit_confirm_dialog.add_cancel_button("Annuler")
+	_inherit_confirm_dialog.confirmed.connect(_on_inherit_confirmed)
+	add_child(_inherit_confirm_dialog)
 
 	EventBus.play_started.connect(_on_play_started)
 
@@ -360,6 +377,13 @@ func _create_fg_visual(fg) -> void:
 	border.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	wrapper.add_child(border)
 
+	var inherit_border = ColorRect.new()
+	inherit_border.name = "InheritBorder"
+	inherit_border.color = Color(1.0, 0.67, 0.0, 0.4)  # orange
+	inherit_border.visible = false
+	inherit_border.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	wrapper.add_child(inherit_border)
+
 	var handle = ColorRect.new()
 	handle.name = "ResizeHandle"
 	handle.custom_minimum_size = Vector2(20, 20)
@@ -464,17 +488,26 @@ func _update_fg_non_visual_props(wrapper: Control, fg) -> void:
 
 	# Opacity — ne pas écraser si une transition gère l'alpha
 	if fg.uuid not in _transitioning_uuids:
-		wrapper.modulate.a = fg.opacity
+		if _is_inherited_mode:
+			wrapper.modulate.a = fg.opacity * 0.5
+		else:
+			wrapper.modulate.a = fg.opacity
 
 	# Selection border — visible for all selected foregrounds
 	var is_selected = fg.uuid in _selected_fg_uuids
 	var border: ColorRect = wrapper.get_node("SelectionBorder")
-	border.visible = is_selected
+	border.visible = is_selected and not _is_inherited_mode
 	border.size = wrapper.size
 
-	# Resize handle — only for single selection
+	# Inheritance border — visible when foregrounds are inherited
+	var inherit_border = wrapper.get_node_or_null("InheritBorder")
+	if inherit_border:
+		inherit_border.visible = _is_inherited_mode
+		inherit_border.size = wrapper.size
+
+	# Resize handle — only for single selection and not inherited
 	var handle: ColorRect = wrapper.get_node("ResizeHandle")
-	handle.visible = is_selected and _selected_fg_uuids.size() == 1
+	handle.visible = is_selected and _selected_fg_uuids.size() == 1 and not _is_inherited_mode
 	handle.position = wrapper.size - Vector2(20, 20)
 
 # --- Foreground interaction ---
@@ -507,7 +540,16 @@ func _on_fg_gui_input(event: InputEvent, uuid: String) -> void:
 		return
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
+		# Block interactions on inherited foregrounds — show confirmation
+		if _is_inherited_mode and mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
+			_show_inherit_confirmation()
+			accept_event()
+			return
 		if mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed:
+			if _is_inherited_mode:
+				_show_inherit_confirmation()
+				accept_event()
+				return
 			if uuid not in _selected_fg_uuids:
 				_select_foreground(uuid)
 			_show_context_menu(uuid, mb.global_position)
@@ -735,6 +777,8 @@ func load_sequence(sequence) -> void:
 	_transitioning_uuids.clear()
 	_dragging_fg = false
 	_resizing_fg = false
+	_is_inherited_mode = false
+	_inherited_from_index = -1
 	_update_visual()
 	_update_foreground_visuals()
 	call_deferred("apply_auto_fit")
@@ -779,6 +823,25 @@ func remove_foreground(uuid: String) -> void:
 		if is_instance_valid(_fg_visual_map[uuid]):
 			_fg_visual_map[uuid].queue_free()
 		_fg_visual_map.erase(uuid)
+
+func select_foreground_by_uuid(uuid: String) -> void:
+	_select_foreground(uuid)
+
+
+func set_inherited_mode(is_inherited: bool, from_index: int = -1) -> void:
+	_is_inherited_mode = is_inherited
+	_inherited_from_index = from_index
+	_update_foreground_visuals()
+
+
+func is_inherited_mode() -> bool:
+	return _is_inherited_mode
+
+
+func show_foreground(uuid: String) -> void:
+	_hidden_fg_uuids.erase(uuid)
+	_update_foreground_visuals()
+
 
 func hide_foreground(uuid: String) -> void:
 	if uuid not in _hidden_fg_uuids:
@@ -920,3 +983,19 @@ func refresh_foreground_flip() -> void:
 		tex_rect.flip_v = fg.flip_v
 		wrapper.set_meta("fg_flip_h", fg.flip_h)
 		wrapper.set_meta("fg_flip_v", fg.flip_v)
+
+
+# --- Inherited foreground confirmation ---
+
+func _show_inherit_confirmation() -> void:
+	if _inherit_confirm_dialog == null:
+		return
+	var source_text = ""
+	if _inherited_from_index >= 0:
+		source_text = " du dialogue #%d" % (_inherited_from_index + 1)
+	_inherit_confirm_dialog.dialog_text = "Ce foreground est hérité%s.\nLe modifier créera une copie locale pour ce dialogue." % source_text
+	_inherit_confirm_dialog.popup_centered()
+
+
+func _on_inherit_confirmed() -> void:
+	inherited_foreground_edit_confirmed.emit()

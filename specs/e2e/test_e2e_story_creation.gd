@@ -73,7 +73,7 @@ func test_create_full_story_hierarchy():
 
 	# 8. Vérifier le dialogue par défaut et en ajouter un
 	assert_eq(_main._editor_main._current_sequence.dialogues.size(), 1)
-	assert_gt(_main._dialogue_list_container.get_child_count(), 0, "Dialogue list should not be empty")
+	assert_gt(_main._dialogue_timeline.get_child_count(), 0, "Dialogue list should not be empty")
 	_main._seq_ui_ctrl.on_add_dialogue_pressed()
 	assert_eq(_main._editor_main._current_sequence.dialogues.size(), 2)
 

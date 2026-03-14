@@ -9,9 +9,11 @@ const ChapterGraphViewScript = preload("res://src/views/chapter_graph_view.gd")
 const SceneGraphViewScript = preload("res://src/views/scene_graph_view.gd")
 const SequenceGraphViewScript = preload("res://src/views/sequence_graph_view.gd")
 const SequenceVisualEditorScript = preload("res://src/ui/sequence/sequence_visual_editor.gd")
-const DialogueListPanelScript = preload("res://src/ui/sequence/dialogue_list_panel.gd")
+const DialogueEditSectionScript = preload("res://src/ui/sequence/dialogue_edit_section.gd")
+const ForegroundLayerPanelScript = preload("res://src/ui/sequence/foreground_layer_panel.gd")
+const ForegroundPropertiesPanelScript = preload("res://src/ui/sequence/foreground_properties_panel.gd")
+const DialogueTimelineScript = preload("res://src/ui/sequence/dialogue_timeline.gd")
 const EndingEditorScene = preload("res://src/ui/editors/ending_editor.tscn")
-const TransitionPanelScript = preload("res://src/ui/sequence/transition_panel.gd")
 const ForegroundTransitionScript = preload("res://src/ui/visual/foreground_transition.gd")
 const SequenceFxPlayerScript = preload("res://src/ui/visual/sequence_fx_player.gd")
 const FxPanelScript = preload("res://src/ui/sequence/fx_panel.gd")
@@ -169,13 +171,13 @@ static func _build_content_area(main: Control) -> void:
 
 
 static func _build_sequence_editor(main: Control) -> void:
-	# --- Sequence Editor Panel (VBox: toolbar + content) ---
+	# --- Sequence Editor Panel (VBox: toolbar + HSplit + timeline) ---
 	main._sequence_editor_panel = VBoxContainer.new()
 	main._sequence_editor_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
 	main._sequence_editor_panel.visible = false
 	main._content_area.add_child(main._sequence_editor_panel)
 
-	# Sequence Toolbar
+	# Sequence Toolbar (inchangé)
 	main._sequence_toolbar = HBoxContainer.new()
 	main._sequence_editor_panel.add_child(main._sequence_toolbar)
 
@@ -214,57 +216,46 @@ static func _build_sequence_editor(main: Control) -> void:
 	main._stop_button.visible = false
 	main._sequence_toolbar.add_child(main._stop_button)
 
-	# Sequence Content (HSplit: preview left, dialogues right)
+	# Main Content (HSplit: canvas left, right panel right)
 	main._sequence_content = HSplitContainer.new()
 	main._sequence_content.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	main._sequence_editor_panel.add_child(main._sequence_content)
 
-	# Left: Visual Editor + Transition Panel (~65%)
-	main._left_panel = VBoxContainer.new()
-	main._left_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	main._left_panel.size_flags_stretch_ratio = 1.85
-	main._sequence_content.add_child(main._left_panel)
-
+	# Left: Visual Editor only (~65%)
 	main._visual_editor = Control.new()
 	main._visual_editor.set_script(SequenceVisualEditorScript)
+	main._visual_editor.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	main._visual_editor.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	main._left_panel.add_child(main._visual_editor)
+	main._visual_editor.size_flags_stretch_ratio = 1.85
+	main._sequence_content.add_child(main._visual_editor)
 
-	main._transition_panel = VBoxContainer.new()
-	main._transition_panel.set_script(TransitionPanelScript)
-	main._left_panel.add_child(main._transition_panel)
+	# Right Panel (~35%): Dialogue + Calques + Propriétés + Onglets
+	main._right_panel = VBoxContainer.new()
+	main._right_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	main._right_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	main._right_panel.size_flags_stretch_ratio = 1.0
+	main._sequence_content.add_child(main._right_panel)
 
-	# Right: Dialogue Panel (~35%) with TabContainer
-	main._dialogue_panel = VBoxContainer.new()
-	main._dialogue_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	main._dialogue_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	main._dialogue_panel.size_flags_stretch_ratio = 1.0
-	main._sequence_content.add_child(main._dialogue_panel)
+	# Section 1: Dialogue edit
+	main._dialogue_edit_section = DialogueEditSectionScript.new()
+	main._right_panel.add_child(main._dialogue_edit_section)
 
+	# Section 2: Foreground Layer Panel (extensible)
+	main._layer_panel = ForegroundLayerPanelScript.new()
+	main._layer_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	main._right_panel.add_child(main._layer_panel)
+
+	# Section 3: Foreground Properties Panel
+	main._properties_panel = ForegroundPropertiesPanelScript.new()
+	main._right_panel.add_child(main._properties_panel)
+
+	# Section 4: Onglets secondaires (sans Dialogues)
 	main._tab_container = TabContainer.new()
 	main._tab_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	main._tab_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	main._dialogue_panel.add_child(main._tab_container)
+	main._tab_container.custom_minimum_size = Vector2(0, 150)
+	main._right_panel.add_child(main._tab_container)
 
-	# Tab 0: Dialogues
-	var dialogues_tab = VBoxContainer.new()
-	dialogues_tab.name = "Dialogues"
-	main._tab_container.add_child(dialogues_tab)
-
-	var dialogue_scroll = ScrollContainer.new()
-	dialogue_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	dialogues_tab.add_child(dialogue_scroll)
-
-	main._dialogue_list_container = VBoxContainer.new()
-	main._dialogue_list_container.set_script(DialogueListPanelScript)
-	main._dialogue_list_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	dialogue_scroll.add_child(main._dialogue_list_container)
-
-	main._add_dialogue_btn = Button.new()
-	main._add_dialogue_btn.text = "+ Ajouter un dialogue"
-	dialogues_tab.add_child(main._add_dialogue_btn)
-
-	# Tab 1: Terminaison
+	# Tab 0: Terminaison
 	var terminaison_tab = VBoxContainer.new()
 	terminaison_tab.name = "Terminaison"
 	main._tab_container.add_child(terminaison_tab)
@@ -272,7 +263,7 @@ static func _build_sequence_editor(main: Control) -> void:
 	main._ending_editor = EndingEditorScene.instantiate()
 	terminaison_tab.add_child(main._ending_editor)
 
-	# Tab 2: Musique
+	# Tab 1: Musique
 	var musique_scroll = ScrollContainer.new()
 	musique_scroll.name = "Musique"
 	musique_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -283,18 +274,22 @@ static func _build_sequence_editor(main: Control) -> void:
 	main._audio_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	musique_scroll.add_child(main._audio_panel)
 
-	# Tab 3: FX
+	# Tab 2: FX
 	main._fx_panel = VBoxContainer.new()
 	main._fx_panel.set_script(FxPanelScript)
 	main._fx_panel.name = "FX"
 	main._fx_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	main._tab_container.add_child(main._fx_panel)
 
-	# Tab 4: Paramètres / Transitions (Séquence)
+	# Tab 3: Paramètres / Transitions (Séquence)
 	main._sequence_transition_panel = VBoxContainer.new()
 	main._sequence_transition_panel.name = "Paramètres"
 	main._tab_container.add_child(main._sequence_transition_panel)
 	_build_sequence_transition_tab(main)
+
+	# Bottom: Dialogue Timeline
+	main._dialogue_timeline = DialogueTimelineScript.new()
+	main._sequence_editor_panel.add_child(main._dialogue_timeline)
 
 	# Legacy dialogue editor (kept for API compat)
 	main._dialogue_editor = Control.new()

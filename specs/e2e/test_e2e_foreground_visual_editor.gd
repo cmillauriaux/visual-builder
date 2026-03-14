@@ -45,8 +45,8 @@ func test_select_foreground_on_canvas():
 
 	assert_true(fg1_uuid in _main._visual_editor._selected_fg_uuids,
 		"FG1 should be selected")
-	assert_true(_main._transition_panel.visible,
-		"Transition panel should be visible when FG selected")
+	assert_true(_main._properties_panel.visible,
+		"Properties panel should be visible when FG selected")
 
 
 func test_deselect_foreground_click_empty():
@@ -67,8 +67,8 @@ func test_deselect_foreground_click_empty():
 
 	assert_true(_main._visual_editor._selected_fg_uuids.is_empty(),
 		"Selection should be empty after deselect")
-	assert_false(_main._transition_panel.visible,
-		"Transition panel should be hidden after deselect")
+	assert_false(_main._properties_panel.visible,
+		"Properties panel should be hidden after deselect")
 
 
 func test_foreground_z_order_child_ordering():

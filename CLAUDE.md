@@ -83,6 +83,77 @@ xvfb-run -a $GODOT --path . -s addons/gut/gut_cmdln.gd -gdir=res://specs/e2e/
 - **Cibles actuelles** : 65% total, 0% par fichier (pour le monitoring).
 
 
+## Debug visuel : lancer l'app et prendre des captures d'écran
+
+Quand un bug visuel ne peut pas être diagnostiqué par les tests seuls, **tu DOIS lancer l'app, prendre un screenshot et le vérifier toi-même** avant d'annoncer un fix. Ne jamais proposer des corrections à l'aveugle sur des problèmes visuels.
+
+### Prérequis macOS
+
+L'app qui exécute tes commandes (VS Code / Terminal) doit avoir la permission **Enregistrement d'écran** :
+Préférences Système → Confidentialité et sécurité → Enregistrement de l'écran → activer l'app.
+
+### Lancer l'app avec navigation automatique
+
+Pour ouvrir automatiquement une story et naviguer vers une séquence spécifique, ajouter temporairement dans `main.gd` à la fin de `_ready()` :
+
+```gdscript
+call_deferred("_debug_auto_load")
+
+func _debug_auto_load() -> void:
+    _nav_ctrl._on_load_dir_selected("/chemin/vers/story")
+    await get_tree().process_frame
+    await get_tree().process_frame
+    _editor_main.navigate_to_chapter("CHAPTER_UUID")
+    _editor_main.navigate_to_scene("SCENE_UUID")
+    _editor_main.navigate_to_sequence("SEQUENCE_UUID")
+    if _editor_main._current_sequence:
+        load_sequence_editors(_editor_main._current_sequence)
+    refresh_current_view()
+```
+
+Les UUIDs se trouvent dans les fichiers YAML de la story (`chapters/*/chapter.yaml`, `chapters/*/scenes/*.yaml`).
+
+### Lancer et capturer
+
+```bash
+GODOT=${GODOT_PATH:-$(command -v godot || echo "/Applications/Godot-4.6.1.app/Contents/MacOS/Godot")}
+
+# Lancer l'app en arrière-plan et capturer la sortie console
+$GODOT --path . > /tmp/godot_debug.log 2>&1 &
+GODOT_PID=$!
+
+# Attendre le chargement puis prendre un screenshot
+sleep 10
+screencapture -x /tmp/godot_screenshot.png
+
+# Lire le screenshot (Claude Code peut lire les images)
+# → Utiliser l'outil Read sur /tmp/godot_screenshot.png
+
+# Crop d'une zone spécifique (ex: timeline en bas de l'éditeur)
+sips -c HAUTEUR LARGEUR --cropOffset Y X /tmp/godot_screenshot.png --out /tmp/crop.png
+
+# Vérifier les logs debug
+grep "MON_TAG" /tmp/godot_debug.log
+
+# Tuer l'app quand c'est fini
+kill $GODOT_PID
+```
+
+### Ajouter des indicateurs visuels temporaires
+
+Pour vérifier qu'un élément est rendu au bon endroit, ajouter un `ColorRect` de couleur vive :
+
+```gdscript
+var debug_rect = ColorRect.new()
+debug_rect.color = Color(1, 0, 0, 0.5)  # Rouge semi-transparent
+debug_rect.position = ma_position
+debug_rect.size = ma_taille
+debug_rect.mouse_filter = MOUSE_FILTER_IGNORE
+parent.add_child(debug_rect)
+```
+
+**Important** : toujours retirer le code debug (auto-load, print, ColorRect) après le diagnostic.
+
 ## Project Structure
 
 - `project.godot` — Main engine configuration

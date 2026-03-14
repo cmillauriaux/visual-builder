@@ -60,7 +60,33 @@ func get_effective_foregrounds(dialogue_index: int) -> Array:
 	for i in range(dialogue_index - 1, -1, -1):
 		if _sequence.dialogues[i].foregrounds.size() > 0:
 			return _sequence.dialogues[i].foregrounds
-	return []
+	# Aucun dialogue précédent → hérite de la séquence
+	return _sequence.foregrounds
+
+func is_dialogue_inheriting(dialogue_index: int) -> bool:
+	if _sequence == null:
+		return false
+	if dialogue_index < 0 or dialogue_index >= _sequence.dialogues.size():
+		return false
+	var dlg = _sequence.dialogues[dialogue_index]
+	if dlg.foregrounds.size() > 0:
+		return false
+	return get_effective_foregrounds(dialogue_index).size() > 0
+
+
+func get_inheritance_source_index(dialogue_index: int) -> int:
+	if _sequence == null:
+		return -1
+	if dialogue_index < 0 or dialogue_index >= _sequence.dialogues.size():
+		return -1
+	var dlg = _sequence.dialogues[dialogue_index]
+	if dlg.foregrounds.size() > 0:
+		return -1
+	for i in range(dialogue_index - 1, -1, -1):
+		if _sequence.dialogues[i].foregrounds.size() > 0:
+			return i
+	return -1
+
 
 func ensure_own_foregrounds(dialogue_index: int) -> void:
 	if _sequence == null:

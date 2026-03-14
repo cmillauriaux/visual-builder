@@ -78,8 +78,9 @@ func test_add_dialogue_via_button_click():
 	# Vérifier le nombre initial de dialogues
 	assert_eq(_main._editor_main._current_sequence.dialogues.size(), 1)
 
-	# Clic sur "Ajouter dialogue"
-	await _ui.click_button(_main._add_dialogue_btn, "Ajouter dialogue")
+	# Ajouter dialogue via le contrôleur (le bouton séparé n'existe plus)
+	_main._seq_ui_ctrl.on_add_dialogue_pressed()
+	await _ui.wait_frames()
 	assert_eq(_main._editor_main._current_sequence.dialogues.size(), 2)
 
 

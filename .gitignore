@@ -2,4 +2,6 @@
 .godot/
 .env
 /android/
+build/.superpowers/
 build/
+.superpowers/

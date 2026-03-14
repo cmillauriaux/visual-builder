@@ -65,53 +65,34 @@ func test_tab_container_exists():
 	assert_not_null(_main._tab_container, "TabContainer should exist")
 	assert_true(_main._tab_container is TabContainer, "Should be a TabContainer")
 
-func test_tab_container_has_5_tabs():
-	assert_eq(_main._tab_container.get_tab_count(), 5, "Should have 5 tabs")
+func test_tab_container_has_4_tabs():
+	assert_eq(_main._tab_container.get_tab_count(), 4, "Should have 4 tabs")
 
 func test_tab_names():
-	assert_eq(_main._tab_container.get_tab_title(0), "Dialogues")
-	assert_eq(_main._tab_container.get_tab_title(1), "Terminaison")
-	assert_eq(_main._tab_container.get_tab_title(2), "Musique")
-	assert_eq(_main._tab_container.get_tab_title(3), "FX")
-	assert_eq(_main._tab_container.get_tab_title(4), "Paramètres")
-
-# --- Contenu de l'onglet Dialogues ---
-
-func test_dialogues_tab_contains_scroll():
-	var dialogues_tab = _main._tab_container.get_child(0)
-	var has_scroll = false
-	for child in dialogues_tab.get_children():
-		if child is ScrollContainer:
-			has_scroll = true
-			break
-	assert_true(has_scroll, "Dialogues tab should contain a ScrollContainer")
-
-func test_dialogue_list_container_in_dialogues_tab():
-	assert_not_null(_main._dialogue_list_container, "Dialogue list container should exist")
-	# Verify it's a descendant of the dialogues tab
-	var dialogues_tab = _main._tab_container.get_child(0)
-	assert_true(dialogues_tab.is_ancestor_of(_main._dialogue_list_container),
-		"Dialogue list should be inside dialogues tab")
+	assert_eq(_main._tab_container.get_tab_title(0), "Terminaison")
+	assert_eq(_main._tab_container.get_tab_title(1), "Musique")
+	assert_eq(_main._tab_container.get_tab_title(2), "FX")
+	assert_eq(_main._tab_container.get_tab_title(3), "Paramètres")
 
 # --- Contenu de l'onglet Terminaison ---
 
 func test_ending_editor_in_terminaison_tab():
 	assert_not_null(_main._ending_editor, "Ending editor should exist")
-	var terminaison_tab = _main._tab_container.get_child(1)
+	var terminaison_tab = _main._tab_container.get_child(0)
 	assert_true(terminaison_tab.is_ancestor_of(_main._ending_editor),
 		"Ending editor should be inside terminaison tab")
 
 # --- Placeholders Musique et FX ---
 
 func test_fx_tab_has_fx_panel():
-	var fx_tab = _main._tab_container.get_child(3)
+	var fx_tab = _main._tab_container.get_child(2)
 	assert_not_null(fx_tab, "FX tab should exist")
 	assert_eq(fx_tab, _main._fx_panel, "FX tab should be the FxPanel")
 
 # --- Sélection par défaut ---
 
-func test_dialogues_tab_selected_by_default():
-	assert_eq(_main._tab_container.current_tab, 0, "Dialogues tab should be selected by default")
+func test_terminaison_tab_selected_by_default():
+	assert_eq(_main._tab_container.current_tab, 0, "Terminaison tab should be selected by default")
 
 # --- Indicateur de terminaison ---
 
@@ -119,7 +100,7 @@ func test_terminaison_tab_no_indicator_when_no_ending():
 	var seq = _navigate_to_sequence()
 	seq.ending = null
 	_main._update_ending_tab_indicator()
-	assert_eq(_main._tab_container.get_tab_title(1), "Terminaison")
+	assert_eq(_main._tab_container.get_tab_title(0), "Terminaison")
 
 func test_terminaison_tab_indicator_when_ending_configured():
 	var seq = _navigate_to_sequence()
@@ -130,12 +111,12 @@ func test_terminaison_tab_indicator_when_ending_configured():
 	ending.auto_consequence = cons
 	seq.ending = ending
 	_main._update_ending_tab_indicator()
-	assert_eq(_main._tab_container.get_tab_title(1), "Terminaison ●")
+	assert_eq(_main._tab_container.get_tab_title(0), "Terminaison ●")
 
 func test_indicator_updates_on_ending_changed():
 	var seq = _navigate_to_sequence()
 	# Initially no ending
-	assert_eq(_main._tab_container.get_tab_title(1), "Terminaison")
+	assert_eq(_main._tab_container.get_tab_title(0), "Terminaison")
 	# Add ending
 	var ending = EndingScript.new()
 	ending.type = "choices"
@@ -146,7 +127,7 @@ func test_indicator_updates_on_ending_changed():
 	# Attendre que l'EventBus propage le signal à main.gd
 	await wait_frames(1)
 	
-	assert_eq(_main._tab_container.get_tab_title(1), "Terminaison ●")
+	assert_eq(_main._tab_container.get_tab_title(0), "Terminaison ●")
 
 # --- Fonctionnalités existantes ---
 

@@ -146,7 +146,7 @@ func test_exit_fullscreen_restores_hierarchy():
 	var original_parent = main_ctrl._visual_editor.get_parent()
 	main_ctrl._play_ctrl._enter_play_fullscreen()
 	main_ctrl._play_ctrl._exit_play_fullscreen()
-	assert_eq(main_ctrl._visual_editor.get_parent(), main_ctrl._left_panel, "Visual editor should be restored to left_panel")
+	assert_eq(main_ctrl._visual_editor.get_parent(), main_ctrl._sequence_content, "Visual editor should be restored to left_panel")
 
 func test_stop_button_visible_in_fullscreen():
 	var main_ctrl = Control.new()

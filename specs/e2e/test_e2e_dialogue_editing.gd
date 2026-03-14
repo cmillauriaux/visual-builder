@@ -30,7 +30,8 @@ func test_add_dialogue():
 	var initial_count = seq.dialogues.size()
 	assert_eq(initial_count, 3)
 
-	await _ui.click_button(_main._add_dialogue_btn, "Ajouter dialogue")
+	_main._seq_ui_ctrl.on_add_dialogue_pressed()
+	await _ui.wait_frames()
 
 	assert_eq(seq.dialogues.size(), initial_count + 1,
 		"Should have one more dialogue after add")
@@ -44,7 +45,8 @@ func test_add_multiple_dialogues():
 	var initial_count = seq.dialogues.size()
 
 	for i in 3:
-		await _ui.click_button(_main._add_dialogue_btn, "Ajouter dialogue %d" % i)
+		_main._seq_ui_ctrl.on_add_dialogue_pressed()
+		await _ui.wait_frames()
 
 	assert_eq(seq.dialogues.size(), initial_count + 3,
 		"Should have 3 more dialogues after 3 adds")
@@ -110,7 +112,8 @@ func test_add_preserves_existing():
 	for dlg in seq.dialogues:
 		original_texts.append(dlg.text)
 
-	await _ui.click_button(_main._add_dialogue_btn, "Ajouter dialogue")
+	_main._seq_ui_ctrl.on_add_dialogue_pressed()
+	await _ui.wait_frames()
 
 	# L'ajout insère après la sélection courante, donc les textes originaux
 	# sont tous toujours présents (potentiellement à des indices décalés).
@@ -136,7 +139,7 @@ func test_list_rebuild_after_deletion():
 	await _ui.wait_frames()
 
 	# Vérifier que le nombre d'items dans la liste correspond au modèle
-	var list_count = _main._dialogue_list_container.get_item_count() if _main._dialogue_list_container.has_method("get_item_count") else seq.dialogues.size()
+	var list_count = _main._dialogue_timeline.get_item_count() if _main._dialogue_timeline.has_method("get_item_count") else seq.dialogues.size()
 	assert_eq(seq.dialogues.size(), 2, "Model should have 2 dialogues")
 
 

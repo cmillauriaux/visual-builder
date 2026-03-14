@@ -1,0 +1,121 @@
+extends PanelContainer
+
+## Timeline horizontale des dialogues en bas de l'éditeur de séquence.
+## Affiche des vignettes pour chaque dialogue avec mini-aperçu et indicateurs d'héritage.
+
+const DialogueTimelineItemScript = preload("res://src/ui/sequence/dialogue_timeline_item.gd")
+
+var _seq_editor = null
+var _items: Array = []
+var _hbox: HBoxContainer
+var _add_btn: PanelContainer
+var _selected_index: int = -1
+
+signal dialogue_clicked(index: int)
+signal dialogue_delete_requested(index: int)
+signal add_dialogue_requested()
+signal foreground_dropped_on_dialogue(fg_data, target_index: int)
+
+func _ready() -> void:
+	custom_minimum_size = Vector2(0, 100)
+
+	var scroll = ScrollContainer.new()
+	scroll.set_anchors_preset(PRESET_FULL_RECT)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	add_child(scroll)
+
+	_hbox = HBoxContainer.new()
+	_hbox.add_theme_constant_override("separation", 6)
+	_hbox.size_flags_horizontal = SIZE_EXPAND_FILL
+	scroll.add_child(_hbox)
+
+	# Add dialogue button (always at the end)
+	_add_btn = PanelContainer.new()
+	_add_btn.custom_minimum_size = Vector2(50, 0)
+	_add_btn.mouse_filter = MOUSE_FILTER_STOP
+	var add_label = Label.new()
+	add_label.text = "+"
+	add_label.add_theme_font_size_override("font_size", 20)
+	add_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	add_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	add_label.add_theme_color_override("font_color", Color(0.35, 0.35, 0.35))
+	_add_btn.add_child(add_label)
+	_add_btn.gui_input.connect(_on_add_btn_input)
+
+
+func setup(seq_editor) -> void:
+	_seq_editor = seq_editor
+	rebuild()
+
+
+func rebuild() -> void:
+	_clear_items()
+
+	if _seq_editor == null:
+		return
+	var seq = _seq_editor.get_sequence()
+	if seq == null:
+		return
+
+	var bg_path = seq.background if seq.background else ""
+
+	for i in range(seq.dialogues.size()):
+		var dlg = seq.dialogues[i]
+		var has_own_fg = dlg.foregrounds.size() > 0
+		var effective_fgs = _seq_editor.get_effective_foregrounds(i)
+		var fg_count = effective_fgs.size()
+		var is_inherited = not has_own_fg and fg_count > 0
+		var item = DialogueTimelineItemScript.new()
+		item.setup(i, dlg, is_inherited, fg_count, bg_path, effective_fgs)
+		_hbox.add_child(item)
+		_items.append(item)
+
+		item.item_clicked.connect(_on_item_clicked)
+
+	# Re-add the "+" button at the end
+	if _add_btn.get_parent():
+		_add_btn.get_parent().remove_child(_add_btn)
+	_hbox.add_child(_add_btn)
+
+	# Restore selection
+	if _selected_index >= 0 and _selected_index < _items.size():
+		_items[_selected_index].set_selected(true)
+
+
+func select_item(index: int) -> void:
+	_selected_index = index
+	for i in range(_items.size()):
+		if is_instance_valid(_items[i]):
+			_items[i].set_selected(i == index)
+
+
+func highlight_item(index: int) -> void:
+	select_item(index)
+
+
+func _clear_items() -> void:
+	for item in _items:
+		if is_instance_valid(item):
+			item.queue_free()
+	_items.clear()
+	if _add_btn.get_parent():
+		_add_btn.get_parent().remove_child(_add_btn)
+
+
+func _on_item_clicked(index: int) -> void:
+	select_item(index)
+	dialogue_clicked.emit(index)
+
+
+func _on_add_btn_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		add_dialogue_requested.emit()
+
+
+func _on_foreground_dropped(fg_data, target_index: int) -> void:
+	foreground_dropped_on_dialogue.emit(fg_data, target_index)
+
+
+func get_item_count() -> int:
+	return _items.size()

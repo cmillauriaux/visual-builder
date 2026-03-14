@@ -58,7 +58,7 @@ func test_full_user_workflow_integration():
 	
 	# 5. Vérifier que l'éditeur de séquence a bien chargé les données
 	# (Le premier dialogue par défaut)
-	assert_gt(_main._dialogue_list_container.get_child_count(), 0, "Dialogue list should not be empty")
+	assert_gt(_main._dialogue_timeline.get_child_count(), 0, "Dialogue list should not be empty")
 
 	# 6. Tester le retour arrière
 	_main._nav_ctrl.on_back_pressed()

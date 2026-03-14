@@ -67,13 +67,13 @@ var _normalize_fg_button: Button
 var _play_button: Button
 var _stop_button: Button
 var _sequence_content: HSplitContainer
-var _left_panel: VBoxContainer
 var _visual_editor: Control
-var _transition_panel: VBoxContainer
-var _dialogue_panel: VBoxContainer
+var _right_panel: VBoxContainer
+var _dialogue_edit_section: VBoxContainer
+var _layer_panel: VBoxContainer
+var _properties_panel: VBoxContainer
 var _tab_container: TabContainer
-var _dialogue_list_container: VBoxContainer
-var _add_dialogue_btn: Button
+var _dialogue_timeline: PanelContainer
 var _dialogue_editor: Control
 var _ending_editor: VBoxContainer
 
@@ -236,10 +236,26 @@ func _connect_signals() -> void:
 	_grid_toggle.toggled.connect(_seq_ui_ctrl.on_grid_toggled)
 	_snap_toggle.toggled.connect(_seq_ui_ctrl.on_snap_toggled)
 	_normalize_fg_button.pressed.connect(_seq_ui_ctrl.on_normalize_foregrounds_pressed)
-	_add_dialogue_btn.pressed.connect(_seq_ui_ctrl.on_add_dialogue_pressed)
-	_dialogue_list_container.dialogue_delete_requested.connect(_seq_ui_ctrl.on_delete_dialogue)
 	_play_button.pressed.connect(_play_ctrl.on_play_pressed)
 	_stop_button.pressed.connect(_play_ctrl.on_stop_pressed)
+
+	# Timeline
+	_dialogue_timeline.dialogue_clicked.connect(_on_timeline_dialogue_clicked)
+	_dialogue_timeline.add_dialogue_requested.connect(_seq_ui_ctrl.on_add_dialogue_pressed)
+	_dialogue_timeline.foreground_dropped_on_dialogue.connect(_on_foreground_dropped_on_dialogue)
+
+	# Dialogue edit section
+	_dialogue_edit_section.dialogue_character_changed.connect(_on_dialogue_character_changed)
+	_dialogue_edit_section.dialogue_text_changed.connect(_on_dialogue_text_changed)
+	_dialogue_edit_section.dialogue_delete_requested.connect(_seq_ui_ctrl.on_delete_dialogue)
+
+	# Layer panel
+	_layer_panel.foreground_clicked.connect(_on_layer_foreground_clicked)
+	_layer_panel.foreground_visibility_toggled.connect(_on_layer_visibility_toggled)
+	_layer_panel.add_foreground_requested.connect(_seq_ui_ctrl.on_add_foreground_pressed)
+
+	# Properties panel
+	_properties_panel.properties_changed.connect(_on_foreground_properties_changed)
 
 	# Editors
 	_ending_editor.ending_changed.connect(_nav_ctrl.on_ending_changed)
@@ -268,7 +284,7 @@ func _connect_signals() -> void:
 	_visual_editor.foreground_deselected.connect(_on_foreground_deselected)
 	_visual_editor.foreground_replace_requested.connect(_seq_ui_ctrl.on_foreground_replace_requested)
 	_visual_editor.foreground_replace_with_new_requested.connect(_seq_ui_ctrl.on_foreground_replace_with_new_requested)
-	_transition_panel.transition_changed.connect(_on_foreground_transition_changed)
+	_visual_editor.inherited_foreground_edit_confirmed.connect(_on_inherited_fg_edit_confirmed)
 	_fx_panel.fx_changed.connect(_on_fx_changed)
 	_audio_panel.audio_changed.connect(_on_audio_changed)
 
@@ -297,20 +313,20 @@ func update_preview_for_dialogue(index: int) -> void:
 
 
 func highlight_dialogue_in_list(index: int) -> void:
-	_dialogue_list_container.highlight_item(index)
+	_dialogue_timeline.highlight_item(index)
 
 
 func _rebuild_dialogue_list() -> void:
-	_dialogue_list_container.setup(_sequence_editor_ctrl)
+	_dialogue_timeline.setup(_sequence_editor_ctrl)
 
 
 func _update_ending_tab_indicator() -> void:
 	if _tab_container == null: return
 	var seq = _sequence_editor_ctrl.get_sequence()
 	if seq and seq.ending != null:
-		_tab_container.set_tab_title(1, "Terminaison ●")
+		_tab_container.set_tab_title(0, "Terminaison ●")
 	else:
-		_tab_container.set_tab_title(1, "Terminaison")
+		_tab_container.set_tab_title(0, "Terminaison")
 
 
 # --- Selection handlers ---
@@ -318,29 +334,134 @@ func _update_ending_tab_indicator() -> void:
 func _on_dialogue_selected(index: int) -> void:
 	update_preview_for_dialogue(index)
 	highlight_dialogue_in_list(index)
+	_update_dialogue_edit_section(index)
+	_update_layer_panel(index)
+	_update_visual_editor_inherited_mode(index)
+	_properties_panel.hide_panel()
+
+
+func _update_dialogue_edit_section(index: int) -> void:
+	var seq = _sequence_editor_ctrl.get_sequence()
+	if seq == null or index < 0 or index >= seq.dialogues.size():
+		_dialogue_edit_section.clear()
+		return
+	_dialogue_edit_section.load_dialogue(index, seq.dialogues[index])
+
+
+func _update_layer_panel(index: int) -> void:
+	var seq = _sequence_editor_ctrl.get_sequence()
+	if seq == null or index < 0 or index >= seq.dialogues.size():
+		_layer_panel.update_layers([], false)
+		return
+	var dlg = seq.dialogues[index]
+	var has_own_fg = dlg.foregrounds.size() > 0
+	var fgs = _sequence_editor_ctrl.get_effective_foregrounds(index)
+	var is_inherited = not has_own_fg and fgs.size() > 0
+	var inherited_from = _sequence_editor_ctrl.get_inheritance_source_index(index) if is_inherited else -1
+	_layer_panel.update_layers(fgs, is_inherited, inherited_from)
 
 
 func _on_foreground_selected(uuid: String) -> void:
 	var idx = _sequence_editor_ctrl.get_selected_dialogue_index()
 	if idx < 0:
-		_transition_panel.hide_panel()
+		_properties_panel.hide_panel()
 		return
 	var fgs = _sequence_editor_ctrl.get_effective_foregrounds(idx)
 	for fg in fgs:
 		if fg.uuid == uuid:
-			_transition_panel.show_for_foreground(fg)
+			_properties_panel.show_for_foreground(fg)
+			_layer_panel.select_foreground(uuid)
 			return
-	_transition_panel.hide_panel()
+	_properties_panel.hide_panel()
 
 
 func _on_foreground_deselected() -> void:
-	_transition_panel.hide_panel()
+	_properties_panel.hide_panel()
+	_layer_panel.deselect_all()
 
 
-func _on_foreground_transition_changed() -> void:
+func _on_foreground_properties_changed() -> void:
 	_visual_editor.refresh_foreground_z_order()
 	_visual_editor.refresh_foreground_flip()
+	_visual_editor.update_foregrounds()
+	_rebuild_dialogue_list()
 	EventBus.story_modified.emit()
+
+
+# --- New handlers for timeline and layer panel ---
+
+func _on_timeline_dialogue_clicked(index: int) -> void:
+	_sequence_editor_ctrl.select_dialogue(index)
+
+
+func _on_dialogue_character_changed(index: int, character: String) -> void:
+	var seq = _sequence_editor_ctrl.get_sequence()
+	if seq == null or index < 0 or index >= seq.dialogues.size():
+		return
+	seq.dialogues[index].character = character
+	_rebuild_dialogue_list()
+	EventBus.story_modified.emit()
+
+
+func _on_dialogue_text_changed(index: int, text: String) -> void:
+	var seq = _sequence_editor_ctrl.get_sequence()
+	if seq == null or index < 0 or index >= seq.dialogues.size():
+		return
+	seq.dialogues[index].text = text
+	_rebuild_dialogue_list()
+	EventBus.story_modified.emit()
+
+
+func _on_layer_foreground_clicked(uuid: String) -> void:
+	_visual_editor.select_foreground_by_uuid(uuid)
+
+
+func _on_layer_visibility_toggled(uuid: String, is_visible: bool) -> void:
+	if is_visible:
+		_visual_editor.show_foreground(uuid)
+	else:
+		_visual_editor.hide_foreground(uuid)
+
+
+func _on_foreground_dropped_on_dialogue(fg_data, target_index: int) -> void:
+	var seq = _sequence_editor_ctrl.get_sequence()
+	if seq == null or target_index < 0 or target_index >= seq.dialogues.size():
+		return
+	# Ensure target dialogue has own foregrounds
+	_sequence_editor_ctrl.ensure_own_foregrounds(target_index)
+	# Copy the foreground with a new UUID
+	var fg_copy = _sequence_editor_ctrl._copy_foreground(fg_data.foreground)
+	fg_copy.uuid = _generate_uuid()
+	seq.dialogues[target_index].foregrounds.append(fg_copy)
+	_rebuild_dialogue_list()
+	EventBus.story_modified.emit()
+
+
+func _update_visual_editor_inherited_mode(index: int) -> void:
+	var is_inherited = _sequence_editor_ctrl.is_dialogue_inheriting(index)
+	var from_index = _sequence_editor_ctrl.get_inheritance_source_index(index) if is_inherited else -1
+	_visual_editor.set_inherited_mode(is_inherited, from_index)
+
+
+func _on_inherited_fg_edit_confirmed() -> void:
+	var idx = _sequence_editor_ctrl.get_selected_dialogue_index()
+	if idx < 0:
+		return
+	_sequence_editor_ctrl.ensure_own_foregrounds(idx)
+	_update_layer_panel(idx)
+	_visual_editor.set_inherited_mode(false)
+	update_preview_for_dialogue(idx)
+	EventBus.story_modified.emit()
+
+
+func _generate_uuid() -> String:
+	var chars = "0123456789abcdef"
+	var uuid = ""
+	for i in range(32):
+		if i == 8 or i == 12 or i == 16 or i == 20:
+			uuid += "-"
+		uuid += chars[randi() % chars.length()]
+	return uuid
 
 
 func _on_fx_changed() -> void:
@@ -419,7 +540,10 @@ func load_sequence_editors(seq) -> void:
 	_rebuild_dialogue_list()
 	if seq.dialogues.size() > 0:
 		_sequence_editor_ctrl.select_dialogue(0)
-	_tab_container.current_tab = 0
+	else:
+		_dialogue_edit_section.clear()
+		_layer_panel.update_layers([], false)
+		_properties_panel.hide_panel()
 	
 	var is_playing = _play_ctrl.is_story_play_mode()
 	_play_button.visible = not is_playing

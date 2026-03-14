@@ -384,7 +384,8 @@ func _enter_play_fullscreen() -> void:
 func _exit_play_fullscreen() -> void:
 	if _fullscreen_layer == null:
 		return
-	_main._visual_editor.reparent(_main._left_panel)
+	_main._visual_editor.reparent(_main._sequence_content)
+	_main._sequence_content.move_child(_main._visual_editor, 0)
 	_main._vbox.visible = true
 	_fullscreen_layer.queue_free()
 	_fullscreen_layer = null

@@ -1,6 +1,6 @@
 extends "res://specs/e2e/e2e_editor_base.gd"
 
-## Tests e2e — Panneau de propriétés des foregrounds (TransitionPanel).
+## Tests e2e — Panneau de propriétés des foregrounds (PropertiesPanel).
 ##
 ## Vérifie le type de transition, la durée, le z-order, le flip,
 ## et la visibilité du panneau selon la sélection.
@@ -40,10 +40,10 @@ func test_set_transition_type_fade():
 	await _load_story_and_navigate_to_sequence_edit(story)
 
 	var uuid = await _select_first_foreground()
-	assert_true(_main._transition_panel.visible, "Panel should be visible")
+	assert_true(_main._properties_panel.visible, "Panel should be visible")
 
 	# Changer le type de transition via l'OptionButton
-	await _ui.select_option(_main._transition_panel._type_option, 1)  # "fade"
+	await _ui.select_option(_main._properties_panel._type_option, 1)  # "fade"
 
 	var fg = _main._visual_editor.find_foreground(uuid)
 	assert_eq(fg.transition_type, "fade",
@@ -57,7 +57,7 @@ func test_set_transition_duration():
 	var uuid = await _select_first_foreground()
 
 	# Changer la durée
-	await _ui.set_spinbox_value(_main._transition_panel._duration_spin, 1.5)
+	await _ui.set_spinbox_value(_main._properties_panel._duration_spin, 1.5)
 
 	var fg = _main._visual_editor.find_foreground(uuid)
 	assert_almost_eq(fg.transition_duration, 1.5, 0.01,
@@ -71,7 +71,7 @@ func test_set_z_order():
 	var uuid = await _select_first_foreground()
 
 	# Changer le z-order
-	await _ui.set_spinbox_value(_main._transition_panel._z_order_spin, 10)
+	await _ui.set_spinbox_value(_main._properties_panel._z_order_spin, 10)
 
 	var fg = _main._visual_editor.find_foreground(uuid)
 	assert_eq(fg.z_order, 10,
@@ -84,11 +84,12 @@ func test_set_flip_horizontal():
 
 	var uuid = await _select_first_foreground()
 
-	# Sélectionner flip horizontal (index 1)
-	await _ui.select_option(_main._transition_panel._flip_option, 1)
+	# Activer flip horizontal via CheckButton
+	_main._properties_panel._flip_h_check.button_pressed = true
+	await _ui.wait_frames()
 
 	var fg = _main._visual_editor.find_foreground(uuid)
-	assert_true(fg.flip_h, "flip_h should be true after selecting horizontal")
+	assert_true(fg.flip_h, "flip_h should be true after toggling horizontal")
 	assert_false(fg.flip_v, "flip_v should be false for horizontal only")
 
 
@@ -98,8 +99,10 @@ func test_set_flip_both():
 
 	var uuid = await _select_first_foreground()
 
-	# Sélectionner flip "Les deux" (index 3)
-	await _ui.select_option(_main._transition_panel._flip_option, 3)
+	# Activer flip H et V via CheckButtons
+	_main._properties_panel._flip_h_check.button_pressed = true
+	_main._properties_panel._flip_v_check.button_pressed = true
+	await _ui.wait_frames()
 
 	var fg = _main._visual_editor.find_foreground(uuid)
 	assert_true(fg.flip_h, "flip_h should be true for 'both'")
@@ -111,11 +114,11 @@ func test_panel_hidden_on_deselect():
 	await _load_story_and_navigate_to_sequence_edit(story)
 
 	await _select_first_foreground()
-	assert_true(_main._transition_panel.visible, "Panel should be visible when FG selected")
+	assert_true(_main._properties_panel.visible, "Panel should be visible when FG selected")
 
 	# Désélectionner
 	_main._visual_editor._deselect_foreground()
 	await _ui.wait_frames()
 
-	assert_false(_main._transition_panel.visible,
+	assert_false(_main._properties_panel.visible,
 		"Panel should be hidden after deselect")

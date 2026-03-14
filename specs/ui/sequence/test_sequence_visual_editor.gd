@@ -458,3 +458,83 @@ func test_wrapper_reused_for_unchanged_fg_among_changed_ones():
 	# Jessy doit avoir un nouveau wrapper
 	assert_true(_editor._fg_visual_map.has(new_jessy.uuid),
 		"Jessy (changée) doit avoir un nouveau wrapper")
+
+# --- Indicateurs d'héritage ---
+
+func test_set_inherited_mode():
+	_editor.load_sequence(_sequence)
+	assert_false(_editor.is_inherited_mode())
+	_editor.set_inherited_mode(true, 2)
+	assert_true(_editor.is_inherited_mode())
+	assert_eq(_editor._inherited_from_index, 2)
+
+func test_inherited_mode_resets_on_load():
+	_editor.set_inherited_mode(true, 1)
+	_editor.load_sequence(_sequence)
+	assert_false(_editor.is_inherited_mode())
+
+func test_inherited_fg_has_reduced_opacity():
+	_editor.load_sequence(_sequence)
+	_editor.add_foreground("Hero", "hero.png")
+	var uuid = _sequence.foregrounds[0].uuid
+	_editor.set_inherited_mode(true, 0)
+	var wrapper = _editor.get_foreground_node(uuid)
+	assert_almost_eq(wrapper.modulate.a, 0.5, 0.01,
+		"Inherited FG should have ~50% opacity")
+
+func test_non_inherited_fg_has_full_opacity():
+	_editor.load_sequence(_sequence)
+	_editor.add_foreground("Hero", "hero.png")
+	var uuid = _sequence.foregrounds[0].uuid
+	_editor.set_inherited_mode(false)
+	var wrapper = _editor.get_foreground_node(uuid)
+	assert_almost_eq(wrapper.modulate.a, 1.0, 0.01,
+		"Non-inherited FG should have full opacity")
+
+func test_inherited_fg_shows_inherit_border():
+	_editor.load_sequence(_sequence)
+	_editor.add_foreground("Hero", "hero.png")
+	var uuid = _sequence.foregrounds[0].uuid
+	_editor.set_inherited_mode(true, 0)
+	var wrapper = _editor.get_foreground_node(uuid)
+	var inherit_border = wrapper.get_node_or_null("InheritBorder")
+	assert_not_null(inherit_border)
+	assert_true(inherit_border.visible, "Inherit border should be visible")
+
+func test_non_inherited_fg_hides_inherit_border():
+	_editor.load_sequence(_sequence)
+	_editor.add_foreground("Hero", "hero.png")
+	var uuid = _sequence.foregrounds[0].uuid
+	_editor.set_inherited_mode(false)
+	var wrapper = _editor.get_foreground_node(uuid)
+	var inherit_border = wrapper.get_node_or_null("InheritBorder")
+	assert_not_null(inherit_border)
+	assert_false(inherit_border.visible, "Inherit border should be hidden")
+
+func test_inherited_fg_hides_selection_border():
+	_editor.load_sequence(_sequence)
+	_editor.add_foreground("Hero", "hero.png")
+	var uuid = _sequence.foregrounds[0].uuid
+	_editor._select_foreground(uuid)
+	_editor.set_inherited_mode(true, 0)
+	var wrapper = _editor.get_foreground_node(uuid)
+	var border = wrapper.get_node("SelectionBorder")
+	assert_false(border.visible, "Selection border hidden in inherited mode")
+
+func test_inherited_fg_hides_resize_handle():
+	_editor.load_sequence(_sequence)
+	_editor.add_foreground("Hero", "hero.png")
+	var uuid = _sequence.foregrounds[0].uuid
+	_editor._select_foreground(uuid)
+	_editor.set_inherited_mode(true, 0)
+	var wrapper = _editor.get_foreground_node(uuid)
+	var handle = wrapper.get_node("ResizeHandle")
+	assert_false(handle.visible, "Resize handle hidden in inherited mode")
+
+func test_inherit_confirm_dialog_exists():
+	assert_not_null(_editor._inherit_confirm_dialog)
+
+func test_inherit_confirmed_signal():
+	watch_signals(_editor)
+	_editor._on_inherit_confirmed()
+	assert_signal_emitted(_editor, "inherited_foreground_edit_confirmed")

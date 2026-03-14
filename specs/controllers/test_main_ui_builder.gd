@@ -94,9 +94,9 @@ func test_builds_condition_editor() -> void:
 	assert_false(_main._condition_editor_panel.visible)
 
 
-func test_builds_tab_container_with_5_tabs() -> void:
+func test_builds_tab_container_with_4_tabs() -> void:
 	assert_not_null(_main._tab_container)
-	assert_eq(_main._tab_container.get_tab_count(), 5)
+	assert_eq(_main._tab_container.get_tab_count(), 4)
 
 
 func test_builds_ending_editor() -> void:

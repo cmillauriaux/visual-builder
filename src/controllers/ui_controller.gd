@@ -117,7 +117,7 @@ func enter_fullscreen() -> void:
 	_previous_fullscreen_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_main.add_child(_previous_fullscreen_layer)
 
-	_main._left_panel.remove_child(_main._visual_editor)
+	_main._sequence_content.remove_child(_main._visual_editor)
 	_previous_fullscreen_layer.add_child(_main._visual_editor)
 	_main._visual_editor.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
@@ -145,8 +145,8 @@ func exit_fullscreen() -> void:
 		_main._play_overlay.get_parent().remove_child(_main._play_overlay)
 
 	_previous_fullscreen_layer.remove_child(_main._visual_editor)
-	_main._left_panel.add_child(_main._visual_editor)
-	_main._left_panel.move_child(_main._visual_editor, 0)
+	_main._sequence_content.add_child(_main._visual_editor)
+	_main._sequence_content.move_child(_main._visual_editor, 0)
 	_main._visual_editor.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_main._visual_editor.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_previous_fullscreen_layer.queue_free()

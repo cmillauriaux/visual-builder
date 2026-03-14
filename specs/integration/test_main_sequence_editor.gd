@@ -75,8 +75,8 @@ func test_stop_button_exists():
 func test_visual_editor_exists():
 	assert_not_null(_main._visual_editor)
 
-func test_dialogue_panel_exists():
-	assert_not_null(_main._dialogue_panel)
+func test_right_panel_exists():
+	assert_not_null(_main._right_panel)
 
 func test_sequence_editor_controller_exists():
 	assert_not_null(_main._sequence_editor_ctrl)
@@ -106,7 +106,7 @@ func test_sequence_editor_loaded_with_sequence():
 func test_dialogue_list_shows_items():
 	_navigate_to_sequence_edit()
 	# Le dialogue_panel doit contenir la liste
-	assert_not_null(_main._dialogue_list_container)
+	assert_not_null(_main._dialogue_timeline)
 
 # --- Test Play/Stop button states ---
 

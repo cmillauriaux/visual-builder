@@ -20,8 +20,8 @@ func _load_story_and_navigate(story) -> void:
 	await _ui.double_click_graph_node(_main._sequence_graph_view, seq_uuid)
 	await _ui.wait_for_layout()
 
-	# Aller sur l'onglet Paramètres (index 4)
-	await _ui.select_tab(_main._tab_container, 4)
+	# Aller sur l'onglet Paramètres (index 3)
+	await _ui.select_tab(_main._tab_container, 3)
 	await _ui.wait_frames()
 
 
