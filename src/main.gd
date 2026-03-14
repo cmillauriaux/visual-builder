@@ -285,6 +285,7 @@ func _connect_signals() -> void:
 	_visual_editor.foreground_replace_requested.connect(_seq_ui_ctrl.on_foreground_replace_requested)
 	_visual_editor.foreground_replace_with_new_requested.connect(_seq_ui_ctrl.on_foreground_replace_with_new_requested)
 	_visual_editor.inherited_foreground_edit_confirmed.connect(_on_inherited_fg_edit_confirmed)
+	_visual_editor.foreground_modified.connect(_seq_ui_ctrl.on_foreground_modified)
 	_fx_panel.fx_changed.connect(_on_fx_changed)
 	_audio_panel.audio_changed.connect(_on_audio_changed)
 
@@ -371,6 +372,7 @@ func _on_foreground_selected(uuid: String) -> void:
 		if fg.uuid == uuid:
 			_properties_panel.show_for_foreground(fg)
 			_layer_panel.select_foreground(uuid)
+			_seq_ui_ctrl.on_foreground_selected(uuid)
 			return
 	_properties_panel.hide_panel()
 
@@ -378,6 +380,7 @@ func _on_foreground_selected(uuid: String) -> void:
 func _on_foreground_deselected() -> void:
 	_properties_panel.hide_panel()
 	_layer_panel.deselect_all()
+	_seq_ui_ctrl.on_foreground_deselected()
 
 
 func _on_foreground_properties_changed() -> void:
@@ -386,6 +389,7 @@ func _on_foreground_properties_changed() -> void:
 	_visual_editor.update_foregrounds()
 	_rebuild_dialogue_list()
 	EventBus.story_modified.emit()
+	_seq_ui_ctrl.on_foreground_modified()
 
 
 # --- New handlers for timeline and layer panel ---
@@ -452,6 +456,15 @@ func _on_inherited_fg_edit_confirmed() -> void:
 	_visual_editor.set_inherited_mode(false)
 	update_preview_for_dialogue(idx)
 	EventBus.story_modified.emit()
+	# Re-resolve foreground by UUID after ensure_own_foregrounds (new objects)
+	var selected_uuid = _visual_editor._selected_fg_uuid
+	if selected_uuid != "":
+		var seq = _sequence_editor_ctrl.get_sequence()
+		if seq and idx >= 0 and idx < seq.dialogues.size():
+			for fg in seq.dialogues[idx].foregrounds:
+				if fg.uuid == selected_uuid:
+					_seq_ui_ctrl.on_foreground_selected(selected_uuid)
+					break
 
 
 func _generate_uuid() -> String:
