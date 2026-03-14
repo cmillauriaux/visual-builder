@@ -574,6 +574,229 @@ func test_normalize_does_not_align_distant_positions():
 	assert_almost_eq(dlg_fg.anchor_bg.x, 0.800, 0.001)
 	assert_almost_eq(dlg_fg.anchor_bg.y, 0.800, 0.001)
 
+# --- Propagation: find_similar_foregrounds ---
+
+func test_find_similar_foregrounds_returns_matches_in_following_dialogues():
+	var dlg0 = _add_dialogue("A", "Texte 0")
+	var fg0 = Foreground.new()
+	fg0.anchor_bg = Vector2(0.50, 0.60)
+	dlg0.foregrounds.append(fg0)
+
+	var dlg1 = _add_dialogue("B", "Texte 1")
+	var fg1 = Foreground.new()
+	fg1.anchor_bg = Vector2(0.505, 0.605)  # within 0.01
+	dlg1.foregrounds.append(fg1)
+
+	_editor.load_sequence(_sequence)
+	var matches = _editor.find_similar_foregrounds(Vector2(0.50, 0.60), 0)
+	assert_eq(matches.size(), 1)
+	assert_eq(matches[0]["dialogue_index"], 1)
+	assert_eq(matches[0]["foreground"], fg1)
+
+
+func test_find_similar_foregrounds_ignores_previous_dialogues():
+	var dlg0 = _add_dialogue("A", "Texte 0")
+	var fg0 = Foreground.new()
+	fg0.anchor_bg = Vector2(0.50, 0.60)
+	dlg0.foregrounds.append(fg0)
+
+	var dlg1 = _add_dialogue("B", "Texte 1")
+	var fg1 = Foreground.new()
+	fg1.anchor_bg = Vector2(0.50, 0.60)
+	dlg1.foregrounds.append(fg1)
+
+	_editor.load_sequence(_sequence)
+	var matches = _editor.find_similar_foregrounds(Vector2(0.50, 0.60), 1)
+	assert_eq(matches.size(), 0)
+
+
+func test_find_similar_foregrounds_ignores_inherited_dialogues():
+	var dlg0 = _add_dialogue("A", "Texte 0")
+	var fg0 = Foreground.new()
+	fg0.anchor_bg = Vector2(0.50, 0.60)
+	dlg0.foregrounds.append(fg0)
+
+	var dlg1 = _add_dialogue("B", "Texte 1")
+
+	var dlg2 = _add_dialogue("C", "Texte 2")
+	var fg2 = Foreground.new()
+	fg2.anchor_bg = Vector2(0.50, 0.60)
+	dlg2.foregrounds.append(fg2)
+
+	_editor.load_sequence(_sequence)
+	var matches = _editor.find_similar_foregrounds(Vector2(0.50, 0.60), 0)
+	assert_eq(matches.size(), 1)
+	assert_eq(matches[0]["dialogue_index"], 2)
+
+
+func test_find_similar_foregrounds_no_match_beyond_threshold():
+	var dlg0 = _add_dialogue("A", "Texte 0")
+	var fg0 = Foreground.new()
+	fg0.anchor_bg = Vector2(0.50, 0.60)
+	dlg0.foregrounds.append(fg0)
+
+	var dlg1 = _add_dialogue("B", "Texte 1")
+	var fg1 = Foreground.new()
+	fg1.anchor_bg = Vector2(0.52, 0.60)
+	dlg1.foregrounds.append(fg1)
+
+	_editor.load_sequence(_sequence)
+	var matches = _editor.find_similar_foregrounds(Vector2(0.50, 0.60), 0)
+	assert_eq(matches.size(), 0)
+
+
+func test_find_similar_foregrounds_multiple_matches_in_same_dialogue():
+	var dlg0 = _add_dialogue("A", "Texte 0")
+	var fg0 = Foreground.new()
+	fg0.anchor_bg = Vector2(0.50, 0.60)
+	dlg0.foregrounds.append(fg0)
+
+	var dlg1 = _add_dialogue("B", "Texte 1")
+	var fg1a = Foreground.new()
+	fg1a.anchor_bg = Vector2(0.505, 0.605)
+	dlg1.foregrounds.append(fg1a)
+	var fg1b = Foreground.new()
+	fg1b.anchor_bg = Vector2(0.498, 0.598)
+	dlg1.foregrounds.append(fg1b)
+
+	_editor.load_sequence(_sequence)
+	var matches = _editor.find_similar_foregrounds(Vector2(0.50, 0.60), 0)
+	assert_eq(matches.size(), 2)
+
+
+func test_find_similar_foregrounds_no_sequence_returns_empty():
+	_editor.load_sequence(null)
+	var matches = _editor.find_similar_foregrounds(Vector2(0.50, 0.60), 0)
+	assert_eq(matches.size(), 0)
+
+
+func test_find_similar_foregrounds_empty_dialogues_returns_empty():
+	_editor.load_sequence(_sequence)
+	var matches = _editor.find_similar_foregrounds(Vector2(0.50, 0.60), 0)
+	assert_eq(matches.size(), 0)
+
+
+# --- Propagation: propagate_fg_changes ---
+
+func test_propagate_fg_changes_applies_delta_for_anchor_bg():
+	var dlg0 = _add_dialogue("A", "Texte 0")
+	var fg0 = Foreground.new()
+	fg0.anchor_bg = Vector2(0.50, 0.60)
+	dlg0.foregrounds.append(fg0)
+
+	var dlg1 = _add_dialogue("B", "Texte 1")
+	var fg1 = Foreground.new()
+	fg1.anchor_bg = Vector2(0.505, 0.605)
+	dlg1.foregrounds.append(fg1)
+
+	_editor.load_sequence(_sequence)
+	var matches = [{"dialogue_index": 1, "foreground": fg1}]
+	var changes = {"anchor_bg": Vector2(0.60, 0.70)}
+	_editor.propagate_fg_changes(matches, changes, Vector2(0.50, 0.60))
+	assert_almost_eq(fg1.anchor_bg.x, 0.605, 0.001)
+	assert_almost_eq(fg1.anchor_bg.y, 0.705, 0.001)
+
+
+func test_propagate_fg_changes_applies_absolute_for_scale():
+	var dlg0 = _add_dialogue("A", "Texte 0")
+	var fg0 = Foreground.new()
+	fg0.anchor_bg = Vector2(0.50, 0.60)
+	fg0.scale = 1.0
+	dlg0.foregrounds.append(fg0)
+
+	var dlg1 = _add_dialogue("B", "Texte 1")
+	var fg1 = Foreground.new()
+	fg1.anchor_bg = Vector2(0.50, 0.60)
+	fg1.scale = 0.8
+	dlg1.foregrounds.append(fg1)
+
+	_editor.load_sequence(_sequence)
+	var matches = [{"dialogue_index": 1, "foreground": fg1}]
+	var changes = {"scale": 1.5}
+	_editor.propagate_fg_changes(matches, changes, Vector2(0.50, 0.60))
+	assert_almost_eq(fg1.scale, 1.5, 0.001)
+
+
+func test_propagate_fg_changes_applies_absolute_for_flip():
+	var dlg0 = _add_dialogue("A", "Texte 0")
+	var fg0 = Foreground.new()
+	fg0.anchor_bg = Vector2(0.50, 0.60)
+	dlg0.foregrounds.append(fg0)
+
+	var dlg1 = _add_dialogue("B", "Texte 1")
+	var fg1 = Foreground.new()
+	fg1.anchor_bg = Vector2(0.50, 0.60)
+	fg1.flip_h = false
+	dlg1.foregrounds.append(fg1)
+
+	_editor.load_sequence(_sequence)
+	var matches = [{"dialogue_index": 1, "foreground": fg1}]
+	var changes = {"flip_h": true}
+	_editor.propagate_fg_changes(matches, changes, Vector2(0.50, 0.60))
+	assert_true(fg1.flip_h)
+
+
+func test_propagate_fg_changes_applies_absolute_for_z_order():
+	var dlg0 = _add_dialogue("A", "Texte 0")
+	var fg0 = Foreground.new()
+	fg0.anchor_bg = Vector2(0.50, 0.60)
+	dlg0.foregrounds.append(fg0)
+
+	var dlg1 = _add_dialogue("B", "Texte 1")
+	var fg1 = Foreground.new()
+	fg1.anchor_bg = Vector2(0.50, 0.60)
+	fg1.z_order = 0
+	dlg1.foregrounds.append(fg1)
+
+	_editor.load_sequence(_sequence)
+	var matches = [{"dialogue_index": 1, "foreground": fg1}]
+	var changes = {"z_order": 5}
+	_editor.propagate_fg_changes(matches, changes, Vector2(0.50, 0.60))
+	assert_eq(fg1.z_order, 5)
+
+
+func test_propagate_fg_changes_applies_absolute_for_opacity():
+	var dlg0 = _add_dialogue("A", "Texte 0")
+	var fg0 = Foreground.new()
+	fg0.anchor_bg = Vector2(0.50, 0.60)
+	dlg0.foregrounds.append(fg0)
+
+	var dlg1 = _add_dialogue("B", "Texte 1")
+	var fg1 = Foreground.new()
+	fg1.anchor_bg = Vector2(0.50, 0.60)
+	fg1.opacity = 1.0
+	dlg1.foregrounds.append(fg1)
+
+	_editor.load_sequence(_sequence)
+	var matches = [{"dialogue_index": 1, "foreground": fg1}]
+	var changes = {"opacity": 0.5}
+	_editor.propagate_fg_changes(matches, changes, Vector2(0.50, 0.60))
+	assert_almost_eq(fg1.opacity, 0.5, 0.001)
+
+
+func test_propagate_fg_changes_mixed_delta_and_absolute():
+	var dlg0 = _add_dialogue("A", "Texte 0")
+	var fg0 = Foreground.new()
+	fg0.anchor_bg = Vector2(0.50, 0.60)
+	dlg0.foregrounds.append(fg0)
+
+	var dlg1 = _add_dialogue("B", "Texte 1")
+	var fg1 = Foreground.new()
+	fg1.anchor_bg = Vector2(0.505, 0.605)
+	fg1.scale = 0.8
+	fg1.flip_h = false
+	dlg1.foregrounds.append(fg1)
+
+	_editor.load_sequence(_sequence)
+	var matches = [{"dialogue_index": 1, "foreground": fg1}]
+	var changes = {"anchor_bg": Vector2(0.60, 0.70), "scale": 2.0, "flip_h": true}
+	_editor.propagate_fg_changes(matches, changes, Vector2(0.50, 0.60))
+	assert_almost_eq(fg1.anchor_bg.x, 0.605, 0.001)
+	assert_almost_eq(fg1.anchor_bg.y, 0.705, 0.001)
+	assert_almost_eq(fg1.scale, 2.0, 0.001)
+	assert_true(fg1.flip_h)
+
+
 # --- Helper ---
 
 func _add_dialogue(character: String, text: String):

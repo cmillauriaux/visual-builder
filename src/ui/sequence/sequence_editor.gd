@@ -199,6 +199,33 @@ func _align_foreground_positions(foregrounds: Array, reference: Array) -> void:
 				fg.anchor_fg = ref.anchor_fg
 				break
 
+# --- Propagation foregrounds ---
+
+const PROPAGATION_THRESHOLD := 0.01
+
+func find_similar_foregrounds(anchor_bg: Vector2, from_dialogue_index: int, threshold: float = PROPAGATION_THRESHOLD) -> Array:
+	if _sequence == null:
+		return []
+	var matches := []
+	for i in range(from_dialogue_index + 1, _sequence.dialogues.size()):
+		var dlg = _sequence.dialogues[i]
+		if dlg.foregrounds.size() == 0:
+			continue
+		for fg in dlg.foregrounds:
+			if absf(fg.anchor_bg.x - anchor_bg.x) <= threshold and absf(fg.anchor_bg.y - anchor_bg.y) <= threshold:
+				matches.append({"dialogue_index": i, "foreground": fg})
+	return matches
+
+func propagate_fg_changes(matches: Array, changes: Dictionary, initial_anchor_bg: Vector2) -> void:
+	for match_entry in matches:
+		var fg = match_entry["foreground"]
+		for prop in changes.keys():
+			if prop == "anchor_bg":
+				var delta = changes["anchor_bg"] - initial_anchor_bg
+				fg.anchor_bg += delta
+			else:
+				fg.set(prop, changes[prop])
+
 # --- CRUD Dialogues ---
 
 func add_dialogue(character: String, text: String) -> void:
