@@ -7,6 +7,12 @@ signal menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_bac
 const ImagePickerDialogScript = preload("res://src/ui/dialogs/image_picker_dialog.gd")
 const AudioPickerDialogScript = preload("res://src/ui/dialogs/audio_picker_dialog.gd")
 
+const UI_THEME_ASSETS = [
+	"button_brown.png", "button_red.png", "button_red_close.png",
+	"panel_brown.png", "panel_brown_dark.png", "banner_hanging.png",
+	"checkbox_brown_empty.png", "checkbox_brown_checked.png"
+]
+
 var _menu_title_edit: LineEdit
 var _menu_subtitle_edit: LineEdit
 var _menu_bg_edit: LineEdit
@@ -31,6 +37,13 @@ var _app_icon_edit: LineEdit
 var _app_icon_preview: TextureRect
 var _app_icon_warning: Label
 var _show_title_banner_check: CheckButton
+# UI Theme tab
+var _ui_theme_default_btn: Button
+var _ui_theme_custom_btn: Button
+var _ui_theme_default_panel: VBoxContainer
+var _ui_theme_custom_panel: VBoxContainer
+var _ui_theme_assets_list: VBoxContainer
+var _ui_theme_mode: String = "default"
 var _story = null
 var _story_base_path: String = ""
 var _current_menu_music: String = ""
@@ -363,12 +376,85 @@ func _init():
 
 	tabs.add_child(tbc_vbox)
 
+	# ── Onglet Thème UI ──────────────────────────────────────────────────────────
+	var ui_theme_vbox = VBoxContainer.new()
+	ui_theme_vbox.name = "ThemeUI"
+	ui_theme_vbox.add_theme_constant_override("separation", 8)
+
+	# Boutons radio (ButtonGroup)
+	var bg = ButtonGroup.new()
+	var mode_hbox = HBoxContainer.new()
+	mode_hbox.add_theme_constant_override("separation", 4)
+
+	_ui_theme_default_btn = Button.new()
+	_ui_theme_default_btn.name = "DefaultBtn"
+	_ui_theme_default_btn.text = "Par défaut"
+	_ui_theme_default_btn.toggle_mode = true
+	_ui_theme_default_btn.button_group = bg
+	_ui_theme_default_btn.button_pressed = true
+	mode_hbox.add_child(_ui_theme_default_btn)
+
+	_ui_theme_custom_btn = Button.new()
+	_ui_theme_custom_btn.name = "CustomBtn"
+	_ui_theme_custom_btn.text = "Personnaliser"
+	_ui_theme_custom_btn.toggle_mode = true
+	_ui_theme_custom_btn.button_group = bg
+	mode_hbox.add_child(_ui_theme_custom_btn)
+
+	ui_theme_vbox.add_child(mode_hbox)
+
+	# Panneau mode défaut
+	_ui_theme_default_panel = VBoxContainer.new()
+	_ui_theme_default_panel.name = "DefaultPanel"
+	var default_label = Label.new()
+	default_label.text = "Thème Kenney Adventure (par défaut)"
+	_ui_theme_default_panel.add_child(default_label)
+	var default_desc = Label.new()
+	default_desc.text = "Le jeu utilisera le thème brun aventure intégré."
+	default_desc.autowrap_mode = TextServer.AUTOWRAP_WORD
+	_ui_theme_default_panel.add_child(default_desc)
+	ui_theme_vbox.add_child(_ui_theme_default_panel)
+
+	# Panneau mode personnalisé
+	_ui_theme_custom_panel = VBoxContainer.new()
+	_ui_theme_custom_panel.name = "CustomPanel"
+	_ui_theme_custom_panel.visible = false
+	_ui_theme_custom_panel.add_theme_constant_override("separation", 4)
+
+	var assets_label = Label.new()
+	assets_label.name = "AssetsCountLabel"
+	assets_label.text = "Assets personnalisés (0 / 8)"
+	_ui_theme_custom_panel.add_child(assets_label)
+
+	var scroll = ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(0, 150)
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_ui_theme_assets_list = VBoxContainer.new()
+	_ui_theme_assets_list.name = "AssetsList"
+	_ui_theme_assets_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(_ui_theme_assets_list)
+	_ui_theme_custom_panel.add_child(scroll)
+
+	var browse_all_btn = Button.new()
+	browse_all_btn.name = "BrowseAllButton"
+	browse_all_btn.text = "📂 Parcourir…"
+	browse_all_btn.pressed.connect(_on_browse_ui_assets_pressed)
+	_ui_theme_custom_panel.add_child(browse_all_btn)
+
+	ui_theme_vbox.add_child(_ui_theme_custom_panel)
+	tabs.add_child(ui_theme_vbox)
+
+	# Connexions
+	_ui_theme_default_btn.toggled.connect(_on_ui_theme_mode_toggled.bind("default"))
+	_ui_theme_custom_btn.toggled.connect(_on_ui_theme_mode_toggled.bind("custom"))
+
 	# Titres des onglets (après ajout des enfants)
 	tabs.set_tab_title(0, "Menu")
 	tabs.set_tab_title(1, "Analytics")
 	tabs.set_tab_title(2, "Liens")
 	tabs.set_tab_title(3, "Game Over")
 	tabs.set_tab_title(4, "À suivre")
+	tabs.set_tab_title(5, "Thème UI")
 
 	add_child(tabs)
 	confirmed.connect(_on_confirmed)
@@ -392,6 +478,14 @@ func setup(story, story_base_path: String = "") -> void:
 	_show_title_banner_check.button_pressed = story.show_title_banner if story.get("show_title_banner") != null else true
 	_story = story
 	_story_base_path = story_base_path
+	_ui_theme_mode = story.ui_theme_mode if story.get("ui_theme_mode") != null else "default"
+	if _ui_theme_mode == "custom":
+		_ui_theme_custom_btn.button_pressed = true
+	else:
+		_ui_theme_default_btn.button_pressed = true
+	_ui_theme_default_panel.visible = (_ui_theme_mode == "default")
+	_ui_theme_custom_panel.visible = (_ui_theme_mode == "custom")
+	_refresh_ui_theme_assets_list()
 	_current_menu_music = story.menu_music if story.get("menu_music") != null else ""
 	_update_menu_music_label()
 	_update_preview()
@@ -447,6 +541,9 @@ func get_app_icon() -> String:
 
 func get_show_title_banner() -> bool:
 	return _show_title_banner_check.button_pressed
+
+func get_ui_theme_mode() -> String:
+	return _ui_theme_mode
 
 
 # ── Utilitaires chemins ──────────────────────────────────────────────────────
@@ -650,3 +747,129 @@ func _on_confirmed() -> void:
 		_to_be_continued_title_edit.text, _to_be_continued_subtitle_edit.text, _to_be_continued_bg_edit.text,
 		_app_icon_edit.text, _show_title_banner_check.button_pressed
 	)
+
+
+# ── Handlers Thème UI ────────────────────────────────────────────────────────
+
+func _on_ui_theme_mode_toggled(pressed: bool, mode: String) -> void:
+	if not pressed:
+		return
+	_ui_theme_mode = mode
+	_ui_theme_default_panel.visible = (mode == "default")
+	_ui_theme_custom_panel.visible = (mode == "custom")
+
+
+func _refresh_ui_theme_assets_list() -> void:
+	for child in _ui_theme_assets_list.get_children():
+		child.queue_free()
+	if _story_base_path == "":
+		return
+	var ui_dir = _story_base_path + "/assets/ui"
+	var count = 0
+	for filename in UI_THEME_ASSETS:
+		var path = ui_dir + "/" + filename
+		if FileAccess.file_exists(path):
+			count += 1
+			_ui_theme_assets_list.add_child(_make_asset_row(filename, path))
+	# Mettre à jour le label de comptage
+	var lbl = _ui_theme_custom_panel.get_node_or_null("AssetsCountLabel")
+	if lbl:
+		lbl.text = "Assets personnalisés (%d / %d)" % [count, UI_THEME_ASSETS.size()]
+
+
+func _make_asset_row(filename: String, abs_path: String) -> HBoxContainer:
+	var row = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+
+	var preview = TextureRect.new()
+	preview.custom_minimum_size = Vector2(48, 48)
+	preview.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	var img = Image.new()
+	if img.load(abs_path) == OK:
+		preview.texture = ImageTexture.create_from_image(img)
+	row.add_child(preview)
+
+	var lbl = Label.new()
+	lbl.text = filename
+	lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(lbl)
+
+	var del_btn = Button.new()
+	del_btn.text = "✕"
+	del_btn.pressed.connect(_on_delete_ui_asset_pressed.bind(filename))
+	row.add_child(del_btn)
+
+	var replace_btn = Button.new()
+	replace_btn.text = "Remplacer"
+	replace_btn.pressed.connect(_on_replace_ui_asset_pressed.bind(filename))
+	row.add_child(replace_btn)
+
+	return row
+
+
+func _on_delete_ui_asset_pressed(filename: String) -> void:
+	if _story_base_path == "":
+		return
+	var path = _story_base_path + "/assets/ui/" + filename
+	if FileAccess.file_exists(path):
+		DirAccess.remove_absolute(path)
+	_refresh_ui_theme_assets_list()
+
+
+func _on_replace_ui_asset_pressed(filename: String) -> void:
+	var picker = FileDialog.new()
+	picker.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+	picker.access = FileDialog.ACCESS_FILESYSTEM
+	picker.filters = ["*.png ; Images PNG"]
+	picker.file_selected.connect(_on_replace_ui_asset_file_selected.bind(filename))
+	add_child(picker)
+	picker.popup_centered(Vector2i(800, 600))
+
+
+func _on_replace_ui_asset_file_selected(path: String, filename: String) -> void:
+	_import_ui_asset(path, filename)
+
+
+func _on_browse_ui_assets_pressed() -> void:
+	var picker = FileDialog.new()
+	picker.file_mode = FileDialog.FILE_MODE_OPEN_FILES
+	picker.access = FileDialog.ACCESS_FILESYSTEM
+	picker.filters = ["*.png ; Images PNG"]
+	picker.files_selected.connect(_on_browse_ui_assets_files_selected)
+	add_child(picker)
+	picker.popup_centered(Vector2i(800, 600))
+
+
+func _on_browse_ui_assets_files_selected(paths: PackedStringArray) -> void:
+	var ignored: Array[String] = []
+	for path in paths:
+		var filename = path.get_file()
+		if filename in UI_THEME_ASSETS:
+			_import_ui_asset(path, filename)
+		else:
+			ignored.append(filename)
+	if ignored.size() > 0:
+		_show_ignored_files_warning(ignored)
+	_refresh_ui_theme_assets_list()
+
+
+func _import_ui_asset(src_path: String, filename: String) -> void:
+	if _story_base_path == "":
+		return
+	var ui_dir = _story_base_path + "/assets/ui"
+	if not DirAccess.dir_exists_absolute(ui_dir):
+		DirAccess.make_dir_recursive_absolute(ui_dir)
+	var dest = ui_dir + "/" + filename
+	DirAccess.copy_absolute(src_path, dest)
+	_refresh_ui_theme_assets_list()
+
+
+func _show_ignored_files_warning(ignored: Array[String]) -> void:
+	var dialog = AcceptDialog.new()
+	dialog.title = "Fichiers ignorés"
+	dialog.dialog_text = "%d fichier(s) ignoré(s) (nom non reconnu) :\n%s" % [
+		ignored.size(), "\n".join(ignored)
+	]
+	add_child(dialog)
+	dialog.popup_centered()

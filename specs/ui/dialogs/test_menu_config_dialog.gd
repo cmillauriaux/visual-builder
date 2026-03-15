@@ -375,3 +375,27 @@ func test_confirmed_signal_includes_show_title_banner():
 	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p]))
 	_dialog._on_confirmed()
 	assert_false(captured[15])
+
+
+# --- Onglet Thème UI ---
+
+func test_has_ui_theme_tab() -> void:
+	var tabs = _dialog.get_node("TabContainer")
+	var found = false
+	for i in tabs.get_tab_count():
+		if tabs.get_tab_title(i) == "Thème UI":
+			found = true
+			break
+	assert_true(found, "TabContainer doit avoir un onglet 'Thème UI'")
+
+func test_setup_fills_ui_theme_mode_default() -> void:
+	var story = _make_story()
+	story.ui_theme_mode = "default"
+	_dialog.setup(story, "/tmp/test_story")
+	assert_eq(_dialog.get_ui_theme_mode(), "default")
+
+func test_setup_fills_ui_theme_mode_custom() -> void:
+	var story = _make_story()
+	story.ui_theme_mode = "custom"
+	_dialog.setup(story, "/tmp/test_story")
+	assert_eq(_dialog.get_ui_theme_mode(), "custom")
