@@ -19,6 +19,7 @@ const OptionsMenuScript = preload("res://src/ui/menu/options_menu.gd")
 const PlayFabAnalyticsServiceScript = preload("res://src/services/playfab_analytics_service.gd")
 const PckChapterLoaderScript = preload("res://src/services/pck_chapter_loader.gd")
 const UIScale = preload("res://src/ui/themes/ui_scale.gd")
+const GameTheme = preload("res://src/ui/themes/game_theme.gd")
 const PwaInstallPromptScript = preload("res://src/ui/menu/pwa_install_prompt.gd")
 const LocaleDetector = preload("res://src/services/locale_detector.gd")
 
@@ -307,6 +308,7 @@ func _load_story_and_show_menu(path: String) -> void:
 	_reload_i18n()
 	_load_max_progression()
 	_configure_analytics(story)
+	_apply_game_ui_theme(story)
 	_show_main_menu(_current_story)
 	_pwa_install_prompt.show_if_needed(_settings.pwa_prompt_dismissed)
 
@@ -1070,4 +1072,21 @@ func _show_toast(message: String) -> void:
 func _on_pwa_prompt_closed(dont_show_again: bool) -> void:
 	if dont_show_again:
 		_settings.pwa_prompt_dismissed = true
+
+
+# --- UI Theme ---
+
+func _apply_game_ui_theme(story: RefCounted) -> void:
+	if story == null or story.get("ui_theme_mode") != "custom":
+		return
+	var ui_path = "res://story/assets/ui"
+	self.theme = GameTheme.create_theme(ui_path)
+	if _main_menu and _main_menu.has_method("update_banner"):
+		_main_menu.update_banner(ui_path)
+	if _pause_menu and _pause_menu.has_method("apply_custom_theme"):
+		_pause_menu.apply_custom_theme(ui_path)
+	if _save_load_menu and _save_load_menu.has_method("apply_custom_theme"):
+		_save_load_menu.apply_custom_theme(ui_path)
+	if _chapter_scene_menu and _chapter_scene_menu.has_method("apply_custom_theme"):
+		_chapter_scene_menu.apply_custom_theme(ui_path)
 		_settings.save_settings()
