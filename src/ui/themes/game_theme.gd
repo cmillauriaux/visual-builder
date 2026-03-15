@@ -23,14 +23,22 @@ const BUTTON_CONTENT_V = 8
 const SCROLLBAR_MARGIN = { "left": 8, "right": 8, "top": 16, "bottom": 16 }
 
 
-static func create_theme() -> Theme:
+static func _resolve_asset(filename: String, story_ui_path: String) -> Texture2D:
+	if story_ui_path != "":
+		var custom_path = story_ui_path + "/" + filename
+		if FileAccess.file_exists(custom_path):
+			return load(custom_path)
+	return load(ASSETS_PATH + filename)
+
+
+static func create_theme(story_ui_path: String = "") -> Theme:
 	var theme = Theme.new()
-	_setup_button(theme)
-	_setup_option_button(theme)
-	_setup_panel_container(theme)
+	_setup_button(theme, story_ui_path)
+	_setup_option_button(theme, story_ui_path)
+	_setup_panel_container(theme, story_ui_path)
 	_setup_label(theme)
 	_setup_rich_text_label(theme)
-	_setup_check_button(theme)
+	_setup_check_button(theme, story_ui_path)
 	_setup_separator(theme)
 	_setup_slider(theme)
 	_setup_scrollbar(theme)
@@ -38,8 +46,8 @@ static func create_theme() -> Theme:
 
 
 ## Applique le style "danger" (bouton rouge) à un bouton spécifique.
-static func apply_danger_style(button: Button) -> void:
-	var tex = load(ASSETS_PATH + "button_red.png")
+static func apply_danger_style(button: Button, story_ui_path: String = "") -> void:
+	var tex = _resolve_asset("button_red.png", story_ui_path)
 	if tex == null:
 		return
 	button.add_theme_stylebox_override("normal", _make_button_stylebox(tex, Color(1, 1, 1, 1)))
@@ -52,8 +60,8 @@ static func apply_danger_style(button: Button) -> void:
 
 
 ## Applique le style "close" (bouton rouge avec X) à un bouton spécifique.
-static func apply_close_style(button: Button) -> void:
-	var tex = load(ASSETS_PATH + "button_red_close.png")
+static func apply_close_style(button: Button, story_ui_path: String = "") -> void:
+	var tex = _resolve_asset("button_red_close.png", story_ui_path)
 	if tex == null:
 		return
 	button.add_theme_stylebox_override("normal", _make_button_stylebox(tex, Color(1, 1, 1, 1)))
@@ -66,8 +74,8 @@ static func apply_close_style(button: Button) -> void:
 
 
 ## Applique le style panel_brown_dark à un PanelContainer spécifique.
-static func apply_dark_panel_style(panel: PanelContainer) -> void:
-	var tex = load(ASSETS_PATH + "panel_brown_dark.png")
+static func apply_dark_panel_style(panel: PanelContainer, story_ui_path: String = "") -> void:
+	var tex = _resolve_asset("panel_brown_dark.png", story_ui_path)
 	if tex == null:
 		return
 	panel.add_theme_stylebox_override("panel", _make_panel_stylebox(tex))
@@ -75,8 +83,8 @@ static func apply_dark_panel_style(panel: PanelContainer) -> void:
 
 # --- Privé : setup par type de contrôle ---
 
-static func _setup_button(theme: Theme) -> void:
-	var tex = load(ASSETS_PATH + "button_brown.png")
+static func _setup_button(theme: Theme, story_ui_path: String = "") -> void:
+	var tex = _resolve_asset("button_brown.png", story_ui_path)
 	if tex == null:
 		return
 	theme.set_stylebox("normal", "Button", _make_button_stylebox(tex, Color(1, 1, 1, 1)))
@@ -92,8 +100,8 @@ static func _setup_button(theme: Theme) -> void:
 	theme.set_font_size("font_size", "Button", UIScale.scale(16))
 
 
-static func _setup_option_button(theme: Theme) -> void:
-	var tex = load(ASSETS_PATH + "button_brown.png")
+static func _setup_option_button(theme: Theme, story_ui_path: String = "") -> void:
+	var tex = _resolve_asset("button_brown.png", story_ui_path)
 	if tex == null:
 		return
 	theme.set_stylebox("normal", "OptionButton", _make_button_stylebox(tex, Color(1, 1, 1, 1)))
@@ -107,8 +115,8 @@ static func _setup_option_button(theme: Theme) -> void:
 	theme.set_font_size("font_size", "OptionButton", UIScale.scale(16))
 
 
-static func _setup_panel_container(theme: Theme) -> void:
-	var tex = load(ASSETS_PATH + "panel_brown.png")
+static func _setup_panel_container(theme: Theme, story_ui_path: String = "") -> void:
+	var tex = _resolve_asset("panel_brown.png", story_ui_path)
 	if tex == null:
 		return
 	theme.set_stylebox("panel", "PanelContainer", _make_panel_stylebox(tex))
@@ -124,9 +132,9 @@ static func _setup_rich_text_label(theme: Theme) -> void:
 	theme.set_font_size("normal_font_size", "RichTextLabel", UIScale.scale(16))
 
 
-static func _setup_check_button(theme: Theme) -> void:
-	var unchecked = load(ASSETS_PATH + "checkbox_brown_empty.png")
-	var checked = load(ASSETS_PATH + "checkbox_brown_checked.png")
+static func _setup_check_button(theme: Theme, story_ui_path: String = "") -> void:
+	var unchecked = _resolve_asset("checkbox_brown_empty.png", story_ui_path)
+	var checked = _resolve_asset("checkbox_brown_checked.png", story_ui_path)
 	if unchecked:
 		theme.set_icon("unchecked", "CheckButton", unchecked)
 	if checked:

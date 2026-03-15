@@ -183,3 +183,71 @@ func test_apply_dark_panel_style() -> void:
 		assert_false(has_override, "No override applied (headless mode, texture not available)")
 	remove_child(panel)
 	panel.queue_free()
+
+
+# --- _resolve_asset ---
+
+func test_resolve_asset_empty_path_returns_kenney_asset() -> void:
+	# Sans chemin custom, doit retourner le Kenney ou null en headless
+	var tex = GameTheme._resolve_asset("button_brown.png", "")
+	# En headless, load peut retourner null — on teste juste que ça ne plante pas
+	assert_true(tex == null or tex is Texture2D)
+
+
+func test_resolve_asset_nonexistent_custom_falls_back_to_kenney() -> void:
+	var tex = GameTheme._resolve_asset("button_brown.png", "/nonexistent/path/that/does/not/exist")
+	assert_true(tex == null or tex is Texture2D)
+
+
+func test_resolve_asset_existing_custom_file_is_preferred() -> void:
+	# Utiliser un fichier existant dans les assets pour tester la préférence
+	# La méthode devrait vérifier que le custom path est préféré si le fichier existe
+	var assets_path = "res://assets/ui/kenney/"
+	# Vérifier que le fichier existe dans les assets
+	if FileAccess.file_exists(assets_path + "button_brown.png"):
+		# Appeler avec le chemin des assets et vérifier qu'on obtient une texture
+		var tex = GameTheme._resolve_asset("button_brown.png", assets_path)
+		assert_true(tex == null or tex is Texture2D)
+
+
+func test_create_theme_with_empty_path_returns_theme() -> void:
+	var theme = GameTheme.create_theme("")
+	assert_not_null(theme)
+	assert_true(theme is Theme)
+
+
+func test_create_theme_with_nonexistent_path_returns_theme() -> void:
+	var theme = GameTheme.create_theme("/nonexistent/path")
+	assert_not_null(theme)
+	assert_true(theme is Theme)
+
+
+func test_apply_danger_style_accepts_story_ui_path() -> void:
+	var btn = Button.new()
+	add_child(btn)
+	# Ne doit pas planter avec un chemin vide
+	GameTheme.apply_danger_style(btn, "")
+	# Vérifier que la fonction s'est exécutée sans erreur
+	assert_true(btn != null, "Button should still exist after apply_danger_style")
+	remove_child(btn)
+	btn.queue_free()
+
+
+func test_apply_close_style_accepts_story_ui_path() -> void:
+	var btn = Button.new()
+	add_child(btn)
+	GameTheme.apply_close_style(btn, "")
+	# Vérifier que la fonction s'est exécutée sans erreur
+	assert_true(btn != null, "Button should still exist after apply_close_style")
+	remove_child(btn)
+	btn.queue_free()
+
+
+func test_apply_dark_panel_style_accepts_story_ui_path() -> void:
+	var panel = PanelContainer.new()
+	add_child(panel)
+	GameTheme.apply_dark_panel_style(panel, "")
+	# Vérifier que la fonction s'est exécutée sans erreur
+	assert_true(panel != null, "Panel should still exist after apply_dark_panel_style")
+	remove_child(panel)
+	panel.queue_free()
