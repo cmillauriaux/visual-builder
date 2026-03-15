@@ -41,3 +41,10 @@ func test_get_background_services_returns_empty_array() -> void:
 	var result := plugin.get_background_services()
 	assert_typeof(result, TYPE_ARRAY)
 	assert_eq(result.size(), 0)
+
+
+func test_get_image_picker_tabs_returns_empty_array() -> void:
+	var plugin := VBPlugin.new()
+	var result := plugin.get_image_picker_tabs()
+	assert_typeof(result, TYPE_ARRAY)
+	assert_eq(result.size(), 0)

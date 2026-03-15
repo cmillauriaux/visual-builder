@@ -98,3 +98,23 @@ func test_background_service_setup_callback_is_callable() -> void:
 	var cb := func(n, c): pass
 	def.setup_callback = cb
 	assert_true(def.setup_callback.is_valid())
+
+
+# --- ImagePickerTabDef ---
+
+func test_image_picker_tab_has_label_field() -> void:
+	var def := Contributions.ImagePickerTabDef.new()
+	assert_eq(def.label, "")
+
+
+func test_image_picker_tab_label_can_be_set() -> void:
+	var def := Contributions.ImagePickerTabDef.new()
+	def.label = "IA"
+	assert_eq(def.label, "IA")
+
+
+func test_image_picker_tab_create_tab_is_callable() -> void:
+	var def := Contributions.ImagePickerTabDef.new()
+	var cb := func(_ctx): return Control.new()
+	def.create_tab = cb
+	assert_true(def.create_tab.is_valid())

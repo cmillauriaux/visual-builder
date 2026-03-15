@@ -43,3 +43,13 @@ class BackgroundServiceDef extends RefCounted:
 	var service_script: Script = null
 	## Optional: called once after main.add_child() with (node, ctx)
 	var setup_callback: Callable
+
+
+class ImagePickerTabDef extends RefCounted:
+	## Tab label shown in the TabContainer
+	var label: String = ""
+	## Returns a Control given a context Dictionary.
+	## Context keys: mode (int), story_base_path (String), story,
+	##   category_service, on_image_selected: Callable(path),
+	##   on_show_preview: Callable(texture, filename)
+	var create_tab: Callable

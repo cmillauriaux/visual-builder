@@ -184,6 +184,24 @@ func test_background_service_added_to_main() -> void:
 	assert_true(found, "Background service node should be added to main")
 
 
+# --- Image picker tab aggregation ---
+
+func test_get_image_picker_tabs_returns_empty_when_no_plugins() -> void:
+	assert_eq(_manager.get_image_picker_tabs().size(), 0)
+
+
+func test_get_image_picker_tabs_collects_from_plugins() -> void:
+	var plugin := _PluginWithPickerTab.new()
+	_manager.register_plugin(plugin)
+	assert_eq(_manager.get_image_picker_tabs().size(), 1)
+
+
+func test_get_image_picker_tabs_aggregates_multiple_plugins() -> void:
+	_manager.register_plugin(_PluginWithPickerTab.new())
+	_manager.register_plugin(_PluginWithPickerTab.new())
+	assert_eq(_manager.get_image_picker_tabs().size(), 2)
+
+
 # --- Scan resilience ---
 
 func test_scan_nonexistent_dir_does_not_crash() -> void:
@@ -278,6 +296,14 @@ class _PluginWithService extends VBPlugin:
 	func get_background_services() -> Array:
 		var def := Contributions.BackgroundServiceDef.new()
 		def.service_script = load("res://specs/plugins/fixtures/dummy_service.gd")
+		return [def]
+
+
+class _PluginWithPickerTab extends VBPlugin:
+	func get_image_picker_tabs() -> Array:
+		var def := Contributions.ImagePickerTabDef.new()
+		def.label = "IA"
+		def.create_tab = func(_ctx): return Control.new()
 		return [def]
 
 
