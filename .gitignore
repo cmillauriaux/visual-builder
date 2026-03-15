@@ -5,3 +5,4 @@
 build/.superpowers/
 build/
 .superpowers/.worktrees/
+.superpowers/brainstorm/
