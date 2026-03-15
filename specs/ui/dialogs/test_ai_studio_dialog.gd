@@ -529,7 +529,7 @@ func test_add_custom_expression():
 
 
 func test_add_custom_expression_via_input_clears_text():
-	_dialog._expr_custom_input.text = "excited"
+	_dialog._expr_custom_input.text = "unique_test_expression_xyz"
 	_dialog._on_expr_add_custom()
 	assert_eq(_dialog._expr_custom_input.text, "")
 
@@ -670,6 +670,18 @@ func test_save_all_skips_failed_items():
 func test_context_menu_has_regenerate():
 	assert_eq(_dialog._expr_context_menu.get_item_text(0), "Régénérer")
 
+func test_select_all_btns_disabled_when_inputs_disabled():
+	_dialog._expr_set_inputs_enabled(false)
+	assert_true(_dialog._expr_elementary_select_all_btn.disabled)
+	assert_true(_dialog._expr_advanced_select_all_btn.disabled)
+
+
+func test_select_all_btns_enabled_when_inputs_enabled():
+	_dialog._expr_set_inputs_enabled(false)
+	_dialog._expr_set_inputs_enabled(true)
+	assert_false(_dialog._expr_elementary_select_all_btn.disabled)
+	assert_false(_dialog._expr_advanced_select_all_btn.disabled)
+
 
 func test_context_menu_has_delete():
 	assert_eq(_dialog._expr_context_menu.get_item_text(1), "Supprimer")
@@ -785,10 +797,6 @@ func test_config_empty_custom_expressions():
 
 
 # ========================================================
-# Helpers
-# ========================================================
-
-# ========================================================
 # Expressions — Groupes
 # ========================================================
 
@@ -901,6 +909,10 @@ func test_get_selected_expressions_includes_custom():
 	var selected = _dialog._get_selected_expressions()
 	assert_true(selected.has("ma_custom_expr"), "Custom expression devrait être dans la sélection")
 
+
+# ========================================================
+# Helpers
+# ========================================================
 
 func _remove_dir_recursive(path: String) -> void:
 	var dir = DirAccess.open(path)

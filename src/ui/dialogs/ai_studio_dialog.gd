@@ -1241,6 +1241,8 @@ func _expr_set_inputs_enabled(enabled: bool) -> void:
 	_expr_face_box_slider.editable = enabled
 	_expr_custom_input.editable = enabled
 	_expr_add_custom_btn.disabled = not enabled
+	_expr_elementary_select_all_btn.disabled = not enabled
+	_expr_advanced_select_all_btn.disabled = not enabled
 	for cb in _expr_elementary_checkboxes + _expr_advanced_checkboxes:
 		cb.disabled = not enabled
 
