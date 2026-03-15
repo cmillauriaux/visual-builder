@@ -185,15 +185,34 @@ func test_advanced_select_all_checks_only_advanced():
 		assert_false(cb.button_pressed, "Elementary '%s' ne devrait pas être coché" % cb.text)
 
 
+func test_elementary_select_all_btn_text_becomes_decocher_tout():
+	# Partir de zéro — tout décoché
+	for cb in _dialog._expr_elementary_checkboxes:
+		cb.button_pressed = false
+	# Cliquer "Cocher tout" → coche tout + met à jour le libellé
+	_dialog._expr_elementary_select_all_btn.emit_signal("pressed")
+	assert_eq(_dialog._expr_elementary_select_all_btn.text, "Décocher tout")
+
+
+func test_advanced_select_all_btn_text_becomes_decocher_tout():
+	for cb in _dialog._expr_advanced_checkboxes:
+		cb.button_pressed = false
+	_dialog._expr_advanced_select_all_btn.emit_signal("pressed")
+	assert_eq(_dialog._expr_advanced_select_all_btn.text, "Décocher tout")
+
+
 func test_get_selected_expressions_includes_custom():
 	# Décocher toutes les expressions par défaut
 	for cb in _dialog._expr_elementary_checkboxes:
 		cb.button_pressed = false
 	for cb in _dialog._expr_advanced_checkboxes:
 		cb.button_pressed = false
-	# Ajouter une expression custom cochée
+	# Ajouter une expression custom
 	_dialog._expr_custom_input.text = "ma_custom_expr"
 	_dialog._on_expr_add_custom()
+	# La checkbox custom est créée décochée — la cocher manuellement
+	var last_child = _dialog._expr_custom_container.get_child(_dialog._expr_custom_container.get_child_count() - 1)
+	last_child.get_child(0).button_pressed = true
 	var selected = _dialog._get_selected_expressions()
 	assert_true(selected.has("ma_custom_expr"), "Custom expression devrait être dans la sélection")
 ```
@@ -213,6 +232,156 @@ Attendu : FAIL sur les nouveaux tests (ELEMENTARY_EXPRESSIONS manquant, etc.)
 git add specs/ui/dialogs/test_ai_studio_dialog.gd
 git commit -m "test(ai-studio): add failing tests for expression groups UI"
 ```
+
+---
+
+### Task 2b : Mettre à jour les tests existants qui référencent les anciens noms
+
+**Files:**
+- Modify: `specs/ui/dialogs/test_ai_studio_dialog.gd`
+
+Ces 10 tests existants référencent `_expr_expression_checkboxes` ou `DEFAULT_EXPRESSIONS` et casseront dès que les constantes et variables seront renommées en Task 3. Les mettre à jour maintenant pour qu'ils soient prêts.
+
+- [ ] **Step 1 : Remplacer `test_expr_has_default_expression_checkboxes`**
+
+```gdscript
+# Ancien :
+func test_expr_has_default_expression_checkboxes():
+	# At least 30 default expressions
+	var default_count = AIStudioDialog.DEFAULT_EXPRESSIONS.size()
+	assert_true(_dialog._expr_expression_checkboxes.size() >= default_count)
+
+# Nouveau :
+func test_expr_has_default_expression_checkboxes():
+	var default_count = AIStudioDialog.ELEMENTARY_EXPRESSIONS.size() + AIStudioDialog.ADVANCED_EXPRESSIONS.size()
+	assert_eq(_dialog._expr_elementary_checkboxes.size() + _dialog._expr_advanced_checkboxes.size(), default_count)
+```
+
+- [ ] **Step 2 : Remplacer `test_expr_expression_labels`**
+
+```gdscript
+# Ancien :
+func test_expr_expression_labels():
+	assert_eq(_dialog._expr_expression_checkboxes[0].text, "smile")
+	assert_eq(_dialog._expr_expression_checkboxes[1].text, "sad")
+	assert_eq(_dialog._expr_expression_checkboxes[2].text, "shy")
+	assert_eq(_dialog._expr_expression_checkboxes[3].text, "grumpy")
+	assert_eq(_dialog._expr_expression_checkboxes[4].text, "laughing out loud")
+
+# Nouveau :
+func test_expr_expression_labels():
+	assert_eq(_dialog._expr_elementary_checkboxes[0].text, "smile")
+	assert_eq(_dialog._expr_elementary_checkboxes[1].text, "sad")
+	assert_eq(_dialog._expr_elementary_checkboxes[2].text, "shy")
+	assert_eq(_dialog._expr_elementary_checkboxes[3].text, "grumpy")
+	assert_eq(_dialog._expr_elementary_checkboxes[4].text, "laughing out loud")
+```
+
+- [ ] **Step 3 : Remplacer `test_expr_first_expression_checked_by_default`**
+
+```gdscript
+# Ancien :
+func test_expr_first_expression_checked_by_default():
+	assert_true(_dialog._expr_expression_checkboxes[0].button_pressed)
+
+# Nouveau :
+func test_expr_first_expression_checked_by_default():
+	assert_true(_dialog._expr_elementary_checkboxes[0].button_pressed)
+```
+
+- [ ] **Step 4 : Remplacer `test_expr_generate_disabled_without_expression`**
+
+```gdscript
+# Ancien :
+func test_expr_generate_disabled_without_expression():
+	_dialog._url_input.text = "http://localhost:8188"
+	_dialog._expr_source_image_path = "/tmp/test.png"
+	_dialog._expr_prefix_input.text = "hero"
+	# Uncheck all expressions
+	for cb in _dialog._expr_expression_checkboxes:
+		cb.button_pressed = false
+	_dialog._update_expr_generate_button()
+	assert_true(_dialog._expr_generate_btn.disabled)
+
+# Nouveau :
+func test_expr_generate_disabled_without_expression():
+	_dialog._url_input.text = "http://localhost:8188"
+	_dialog._expr_source_image_path = "/tmp/test.png"
+	_dialog._expr_prefix_input.text = "hero"
+	for cb in _dialog._expr_elementary_checkboxes:
+		cb.button_pressed = false
+	for cb in _dialog._expr_advanced_checkboxes:
+		cb.button_pressed = false
+	_dialog._update_expr_generate_button()
+	assert_true(_dialog._expr_generate_btn.disabled)
+```
+
+- [ ] **Step 5 : Remplacer `test_get_selected_expressions_multiple`**
+
+```gdscript
+# Ancien :
+func test_get_selected_expressions_multiple():
+	_dialog._expr_expression_checkboxes[1].button_pressed = true
+	var exprs = _dialog._get_selected_expressions()
+	assert_eq(exprs, ["smile", "sad"])
+
+# Nouveau :
+func test_get_selected_expressions_multiple():
+	_dialog._expr_elementary_checkboxes[1].button_pressed = true
+	var exprs = _dialog._get_selected_expressions()
+	assert_eq(exprs, ["smile", "sad"])
+```
+
+- [ ] **Step 6 : Remplacer les 5 tests custom qui utilisent `_expr_expression_checkboxes.size()`**
+
+Ces tests vérifiaient qu'une expression custom était ajoutée au tableau `_expr_expression_checkboxes`. Après le refactor, les customs ne sont plus dans ce tableau — on vérifie via le container.
+
+```gdscript
+# Remplacer test_add_custom_expression :
+func test_add_custom_expression():
+	var initial_count = _dialog._expr_custom_container.get_child_count()
+	_dialog._add_custom_expression_ui("test_unique_expr")
+	assert_eq(_dialog._expr_custom_container.get_child_count(), initial_count + 1)
+	var last_hbox = _dialog._expr_custom_container.get_child(_dialog._expr_custom_container.get_child_count() - 1)
+	assert_eq(last_hbox.get_child(0).text, "test_unique_expr")
+
+# Remplacer test_add_empty_custom_expression_ignored :
+func test_add_empty_custom_expression_ignored():
+	var initial_count = _dialog._expr_custom_container.get_child_count()
+	_dialog._expr_custom_input.text = ""
+	_dialog._on_expr_add_custom()
+	assert_eq(_dialog._expr_custom_container.get_child_count(), initial_count)
+
+# Remplacer test_add_whitespace_custom_expression_ignored :
+func test_add_whitespace_custom_expression_ignored():
+	var initial_count = _dialog._expr_custom_container.get_child_count()
+	_dialog._expr_custom_input.text = "   "
+	_dialog._on_expr_add_custom()
+	assert_eq(_dialog._expr_custom_container.get_child_count(), initial_count)
+
+# Remplacer test_add_duplicate_expression_ignored :
+func test_add_duplicate_expression_ignored():
+	var initial_count = _dialog._expr_custom_container.get_child_count()
+	_dialog._expr_custom_input.text = "smile"
+	_dialog._on_expr_add_custom()
+	assert_eq(_dialog._expr_custom_container.get_child_count(), initial_count)
+
+# Remplacer test_add_duplicate_expression_case_insensitive :
+func test_add_duplicate_expression_case_insensitive():
+	var initial_count = _dialog._expr_custom_container.get_child_count()
+	_dialog._expr_custom_input.text = "Smile"
+	_dialog._on_expr_add_custom()
+	assert_eq(_dialog._expr_custom_container.get_child_count(), initial_count)
+```
+
+- [ ] **Step 7 : Vérifier que les tests modifiés échouent (attendu)**
+
+```bash
+GODOT=${GODOT_PATH:-$(command -v godot || echo "/Applications/Godot-4.6.1.app/Contents/MacOS/Godot")}
+timeout 30 $GODOT --headless --path . -s addons/gut/gut_cmdln.gd -gtest=res://specs/ui/dialogs/test_ai_studio_dialog.gd
+```
+
+Attendu : les tests mis à jour échouent (les nouvelles variables n'existent pas encore) — c'est normal.
 
 ---
 
