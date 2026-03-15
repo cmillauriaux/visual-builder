@@ -23,6 +23,7 @@ var _auto_content: VBoxContainer
 var _quick_content: VBoxContainer
 var _overlay: ColorRect
 var _confirm_overlay: Control
+var _close_btn: Button
 
 
 func build_ui() -> void:
@@ -59,13 +60,13 @@ func build_ui() -> void:
 	_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(_title_label)
 
-	var close_btn := Button.new()
-	close_btn.text = "✕"
-	close_btn.custom_minimum_size = Vector2(UIScale.scale(50), UIScale.scale(50))
-	close_btn.add_theme_font_size_override("font_size", UIScale.scale(24))
-	close_btn.pressed.connect(func(): close_pressed.emit())
-	GameTheme.apply_close_style(close_btn)
-	header.add_child(close_btn)
+	_close_btn = Button.new()
+	_close_btn.text = "✕"
+	_close_btn.custom_minimum_size = Vector2(UIScale.scale(50), UIScale.scale(50))
+	_close_btn.add_theme_font_size_override("font_size", UIScale.scale(24))
+	_close_btn.pressed.connect(func(): close_pressed.emit())
+	GameTheme.apply_close_style(_close_btn)
+	header.add_child(_close_btn)
 
 	# TabContainer pour les trois onglets
 	_tab_container = TabContainer.new()
@@ -149,6 +150,11 @@ func refresh() -> void:
 
 func get_title_text() -> String:
 	return _title_label.text if _title_label else ""
+
+
+func apply_custom_theme(story_ui_path: String) -> void:
+	if _close_btn:
+		GameTheme.apply_close_style(_close_btn, story_ui_path)
 
 
 func _refresh_manual_saves() -> void:

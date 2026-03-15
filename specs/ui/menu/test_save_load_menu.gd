@@ -41,3 +41,12 @@ func test_hide_menu():
 	menu.hide_menu()
 	assert_false(menu.visible)
 	assert_false(menu._confirm_overlay.visible)
+
+func test_apply_custom_theme_method_exists() -> void:
+	assert_true(SaveLoadMenuScript.new().has_method("apply_custom_theme"), "save_load_menu should have apply_custom_theme")
+
+func test_apply_custom_theme_does_not_crash() -> void:
+	var menu = SaveLoadMenuScript.new()
+	add_child_autofree(menu)
+	menu.build_ui()
+	menu.apply_custom_theme("")

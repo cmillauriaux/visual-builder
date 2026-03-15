@@ -113,6 +113,11 @@ func build_ui() -> void:
 	vbox.add_child(_quit_button)
 
 
+func apply_custom_theme(story_ui_path: String) -> void:
+	if _quit_button:
+		GameTheme.apply_danger_style(_quit_button, story_ui_path)
+
+
 func apply_ui_translations(i18n_dict: Dictionary) -> void:
 	_title_label.text = StoryI18nService.get_ui_string("Pause", i18n_dict)
 	_resume_button.text = StoryI18nService.get_ui_string("Reprendre", i18n_dict)

@@ -159,3 +159,10 @@ func test_set_external_links_hides_both_when_empty() -> void:
 	_menu.set_external_links("", "")
 	assert_false(_menu._patreon_button.visible)
 	assert_false(_menu._itchio_button.visible)
+
+func test_apply_custom_theme_method_exists() -> void:
+	assert_true(_menu.has_method("apply_custom_theme"), "pause_menu should have apply_custom_theme")
+
+func test_apply_custom_theme_does_not_crash() -> void:
+	_menu.apply_custom_theme("")
+	_menu.apply_custom_theme("/nonexistent/path")

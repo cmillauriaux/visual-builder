@@ -318,3 +318,10 @@ func _find_locked_scene(chapter_idx: int, scene_idx: int) -> PanelContainer:
 		return null
 	var node_name := "LockedScene_%d" % scene_idx
 	return row.get_node_or_null(node_name)
+
+
+func test_apply_custom_theme_method_exists() -> void:
+	assert_true(_menu.has_method("apply_custom_theme"), "chapter_scene_menu should have apply_custom_theme")
+
+func test_apply_custom_theme_does_not_crash() -> void:
+	_menu.apply_custom_theme("")
