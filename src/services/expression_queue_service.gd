@@ -99,7 +99,7 @@ func remove_item(index: int) -> void:
 
 
 static func _build_prompt(expression: String) -> String:
-	return "The same character with a %s expression, keep the eyes color" % expression
+	return "The same character with a %s expression, keep the exact same eye color, identical eye color, eye color unchanged" % expression
 
 
 static func _build_filename(prefix: String, expression: String) -> String:

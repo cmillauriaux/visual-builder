@@ -45,5 +45,5 @@ func test_build_prompt():
 	var svc = ExpressionQueueServiceScript
 	assert_eq(
 		svc._build_prompt("smile"),
-		"The same character with a smile expression, keep the eyes color"
+		"The same character with a smile expression, keep the exact same eye color, identical eye color, eye color unchanged"
 	)
