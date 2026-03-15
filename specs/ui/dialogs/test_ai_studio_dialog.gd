@@ -2,7 +2,7 @@ extends GutTest
 
 ## Tests pour AIStudioDialog — Studio IA avec onglets Décliner et Expressions
 
-var AIStudioDialog = load("res://src/ui/dialogs/ai_studio_dialog.gd")
+var AIStudioDialog = load("res://plugins/ai_studio/ai_studio_dialog.gd")
 var ExpressionQueueService = load("res://src/services/expression_queue_service.gd")
 var ComfyUIConfig = load("res://src/services/comfyui_config.gd")
 

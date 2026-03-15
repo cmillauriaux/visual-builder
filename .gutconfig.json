@@ -18,7 +18,9 @@
     "res://specs/controllers/",
     "res://specs/display/",
     "res://specs/ui/themes/",
-    "res://specs/e2e/"
+    "res://specs/e2e/",
+    "res://specs/plugins/",
+    "res://specs/plugins/ai_studio/"
   ],
   "prefix": "test_",
   "suffix": ".gd",

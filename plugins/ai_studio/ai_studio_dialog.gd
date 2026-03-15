@@ -11,9 +11,9 @@ const ImageRenameService = preload("res://src/services/image_rename_service.gd")
 const ImageCategoryService = preload("res://src/services/image_category_service.gd")
 const ExpressionQueueService = preload("res://src/services/expression_queue_service.gd")
 
-const DeclinerTab = preload("res://src/ui/dialogs/ai_studio_decliner_tab.gd")
-const ExpressionsTab = preload("res://src/ui/dialogs/ai_studio_expressions_tab.gd")
-const UpscaleTab = preload("res://src/ui/dialogs/ai_studio_upscale_tab.gd")
+const DeclinerTab = preload("res://plugins/ai_studio/ai_studio_decliner_tab.gd")
+const ExpressionsTab = preload("res://plugins/ai_studio/ai_studio_expressions_tab.gd")
+const UpscaleTab = preload("res://plugins/ai_studio/ai_studio_upscale_tab.gd")
 
 const ELEMENTARY_EXPRESSIONS := [
 	"smile", "sad", "shy", "grumpy", "laughing out loud",

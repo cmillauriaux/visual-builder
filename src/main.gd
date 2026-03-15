@@ -17,6 +17,8 @@ const MenuControllerScript = preload("res://src/controllers/menu_controller.gd")
 const SequenceUIControllerScript = preload("res://src/controllers/sequence_ui_controller.gd")
 const PlayUIControllerScript = preload("res://src/controllers/play_ui_controller.gd")
 const EditorState = preload("res://src/controllers/editor_state.gd")
+const PluginManagerScript = preload("res://src/plugins/plugin_manager.gd")
+const PluginContext = preload("res://src/plugins/plugin_context.gd")
 
 # Contrôleurs métier
 var _editor_main: Control
@@ -32,6 +34,12 @@ var _ui_ctrl: Node
 var _menu_ctrl: Node
 var _seq_ui_ctrl: Node
 var _play_ui_ctrl: Node
+
+# Plugin system
+var _plugin_manager: Node
+var _dock_left: PanelContainer
+var _dock_right: PanelContainer
+var _dock_bottom: PanelContainer
 
 # UI — Top bar
 var _vbox: VBoxContainer
@@ -53,7 +61,9 @@ var _variable_panel: VBoxContainer
 # UI — Content area
 var _content_area: Control
 var _chapter_graph_view: GraphEdit
+var _chapter_plugin_toolbar: HBoxContainer
 var _scene_graph_view: GraphEdit
+var _scene_plugin_toolbar: HBoxContainer
 var _sequence_graph_view: GraphEdit
 
 # UI — Sequence editor
@@ -150,6 +160,9 @@ func _ready() -> void:
 	# Connexion des signaux
 	_connect_signals()
 
+	# Charger les plugins
+	_setup_plugins()
+
 	update_view()
 
 
@@ -187,6 +200,25 @@ func _setup_controllers() -> void:
 	_play_ui_ctrl.set_script(PlayUIControllerScript)
 	_play_ui_ctrl.setup(self)
 	add_child(_play_ui_ctrl)
+
+
+func _setup_plugins() -> void:
+	_plugin_manager = Node.new()
+	_plugin_manager.set_script(PluginManagerScript)
+	add_child(_plugin_manager)
+	_plugin_manager.scan_and_load_plugins()
+	_plugin_manager.apply_contributions(self)
+
+
+func get_current_context() -> RefCounted:
+	var ctx := PluginContext.new()
+	ctx.main_node = self
+	ctx.story = _editor_main._story
+	ctx.story_base_path = _get_story_base_path()
+	ctx.current_chapter = _editor_main._current_chapter
+	ctx.current_scene = _editor_main._current_scene
+	ctx.current_sequence = _editor_main._current_sequence
+	return ctx
 
 
 func _connect_signals() -> void:

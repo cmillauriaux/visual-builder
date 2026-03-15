@@ -39,6 +39,7 @@ static func build(main: Control) -> void:
 	_build_welcome_screen(main)
 	_build_play_overlay(main)
 	_build_variable_display(main)
+	_build_dock_zones(main)
 	_build_helpers(main)
 
 
@@ -110,8 +111,6 @@ static func _build_top_bar(main: Control) -> void:
 	parametres_popup.add_item("Galerie", 2)
 	parametres_popup.add_item("Notifications", 3)
 	parametres_popup.add_separator()
-	parametres_popup.add_item("Studio IA", 5)
-	parametres_popup.add_separator()
 	parametres_popup.add_item("Langues", 4)
 	main._top_bar.add_child(main._parametres_menu)
 
@@ -155,12 +154,30 @@ static func _build_content_area(main: Control) -> void:
 	main._chapter_graph_view.visible = false
 	main._content_area.add_child(main._chapter_graph_view)
 
+	# Plugin toolbar overlay for chapter view (anchored to top, hidden when empty)
+	main._chapter_plugin_toolbar = HBoxContainer.new()
+	main._chapter_plugin_toolbar.set_anchor_and_offset(SIDE_LEFT, 0, 0)
+	main._chapter_plugin_toolbar.set_anchor_and_offset(SIDE_RIGHT, 1, 0)
+	main._chapter_plugin_toolbar.set_anchor_and_offset(SIDE_TOP, 0, 0)
+	main._chapter_plugin_toolbar.set_anchor_and_offset(SIDE_BOTTOM, 0, 32)
+	main._chapter_plugin_toolbar.visible = false
+	main._content_area.add_child(main._chapter_plugin_toolbar)
+
 	# Scene Graph View
 	main._scene_graph_view = GraphEdit.new()
 	main._scene_graph_view.set_script(SceneGraphViewScript)
 	main._scene_graph_view.set_anchors_preset(Control.PRESET_FULL_RECT)
 	main._scene_graph_view.visible = false
 	main._content_area.add_child(main._scene_graph_view)
+
+	# Plugin toolbar overlay for scene view (anchored to top, hidden when empty)
+	main._scene_plugin_toolbar = HBoxContainer.new()
+	main._scene_plugin_toolbar.set_anchor_and_offset(SIDE_LEFT, 0, 0)
+	main._scene_plugin_toolbar.set_anchor_and_offset(SIDE_RIGHT, 1, 0)
+	main._scene_plugin_toolbar.set_anchor_and_offset(SIDE_TOP, 0, 0)
+	main._scene_plugin_toolbar.set_anchor_and_offset(SIDE_BOTTOM, 0, 32)
+	main._scene_plugin_toolbar.visible = false
+	main._content_area.add_child(main._scene_plugin_toolbar)
 
 	# Sequence Graph View
 	main._sequence_graph_view = GraphEdit.new()
@@ -508,6 +525,21 @@ static func _build_variable_display(main: Control) -> void:
 	main._variable_details_overlay = CenterContainer.new()
 	main._variable_details_overlay.set_script(VariableDetailsOverlayScript)
 	main._variable_details_overlay.build_ui()
+
+
+static func _build_dock_zones(main: Control) -> void:
+	## Plugin dock zones — hidden by default, visible when a plugin adds a panel.
+	main._dock_left = PanelContainer.new()
+	main._dock_left.visible = false
+	main._vbox.add_child(main._dock_left)
+
+	main._dock_right = PanelContainer.new()
+	main._dock_right.visible = false
+	main._vbox.add_child(main._dock_right)
+
+	main._dock_bottom = PanelContainer.new()
+	main._dock_bottom.visible = false
+	main._vbox.add_child(main._dock_bottom)
 
 
 static func _build_helpers(main: Control) -> void:
