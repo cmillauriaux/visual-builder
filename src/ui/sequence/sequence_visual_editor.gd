@@ -9,6 +9,8 @@ const ForegroundClipboardScript = preload("res://src/ui/visual/foreground_clipbo
 const TextureLoaderScript = preload("res://src/ui/shared/texture_loader.gd")
 
 const DESIGN_RESOLUTION = Vector2(1920, 1080)
+const FX_Z := 101        # Un cran au-dessus du max fg.z_order (100)
+const UI_OVERLAY_Z := 4096  # Garantit la visibilité de l'UI sur tout le contenu
 
 var _sequence = null
 
@@ -121,12 +123,14 @@ func _ready() -> void:
 	_fx_container = Control.new()
 	_fx_container.name = "FxContainer"
 	_fx_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fx_container.z_index = FX_Z
 	add_child(_fx_container)
 
 	# Overlay container — positioned/sized to match the canvas screen rect (UI goes here)
 	_overlay_container = Control.new()
 	_overlay_container.name = "OverlayContainer"
 	_overlay_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_overlay_container.z_index = UI_OVERLAY_Z
 	add_child(_overlay_container)
 
 	_context_menu = PopupMenu.new()
@@ -737,10 +741,16 @@ func _copy_foreground_params(uuid: String) -> void:
 
 func _paste_foreground_params(uuid: String) -> void:
 	var fg = find_foreground(uuid)
-	if fg == null:
+	if fg == null or not _fg_clipboard.has_data():
 		return
-	if _fg_clipboard.paste_to(fg):
+	# Re-select to refresh the snapshot in the controller before paste.
+	# ensure_own_foregrounds() creates copies with the same UUID, so navigating
+	# between dialogues leaves a stale snapshot. Re-selecting forces a fresh capture.
+	_select_foreground(uuid)
+	var pasted = _fg_clipboard.paste_to(fg)
+	if pasted:
 		_update_foreground_visuals()
+		foreground_modified.emit(uuid)
 
 func _copy_foreground(uuid: String) -> void:
 	var fg = find_foreground(uuid)

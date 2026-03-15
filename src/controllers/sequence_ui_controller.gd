@@ -190,8 +190,6 @@ func _compute_fg_changes(fg, snapshot: Dictionary) -> Dictionary:
 
 
 func on_foreground_selected(uuid: String) -> void:
-	# Note: for inherited foregrounds, this snapshot may reference a shared object.
-	# main.gd re-captures after ensure_own_foregrounds() creates local copies.
 	_fg_snapshot_uuid = uuid
 	var fg = _main._visual_editor.find_foreground(uuid)
 	if fg:
