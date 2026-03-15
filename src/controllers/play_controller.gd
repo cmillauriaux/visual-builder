@@ -3,6 +3,8 @@ extends Node
 ## Gère toute la logique de lecture (play) : séquence, story play,
 ## mode plein écran, typewriter, transitions de foregrounds et choix.
 
+const GameTheme = preload("res://src/ui/themes/game_theme.gd")
+
 # Services et contrôleurs requis
 var _main: Control
 var _sequence_editor_ctrl: Control
@@ -41,6 +43,11 @@ func is_story_play_mode() -> bool:
 # --- Sequence Play ---
 
 func on_play_pressed() -> void:
+	var _play_ui_path = ""
+	var _play_story = _main._editor_main.get_current_story() if _main._editor_main.has_method("get_current_story") else null
+	if _play_story != null and _play_story.get("ui_theme_mode") == "custom":
+		_play_ui_path = _main._get_story_base_path() + "/assets/ui"
+	_apply_play_ui_theme(_main._play_overlay, _main._choice_overlay, _play_ui_path)
 	_previous_play_foregrounds = []
 	_seen_fg_uuids = {}
 	EventBus.play_started.emit("sequence")
@@ -116,6 +123,7 @@ func _on_play_fx_finished() -> void:
 
 
 func on_stop_pressed() -> void:
+	_clear_play_ui_theme(_main._play_overlay, _main._choice_overlay)
 	_sequence_fx_player.stop_fx()
 	if _music_player:
 		_music_player.stop_music()
@@ -319,6 +327,11 @@ func _apply_sequence_audio() -> void:
 # --- Story Play ---
 
 func on_top_play_pressed() -> void:
+	var _play_ui_path = ""
+	var _play_story = _main._editor_main.get_current_story() if _main._editor_main.has_method("get_current_story") else null
+	if _play_story != null and _play_story.get("ui_theme_mode") == "custom":
+		_play_ui_path = _main._get_story_base_path() + "/assets/ui"
+	_apply_play_ui_theme(_main._play_overlay, _main._choice_overlay, _play_ui_path)
 	var level = _main._editor_main.get_current_level()
 	_story_play_return_level = level
 	_is_story_play_mode = true
@@ -466,3 +479,16 @@ func _input(event: InputEvent) -> void:
 		else:
 			_sequence_editor_ctrl.advance_play()
 		get_viewport().set_input_as_handled()
+
+
+# --- UI Theme helpers ---
+
+func _apply_play_ui_theme(play_overlay: PanelContainer, choice_overlay: CenterContainer, story_ui_path: String) -> void:
+	var theme = GameTheme.create_theme(story_ui_path)
+	play_overlay.theme = theme
+	choice_overlay.theme = theme
+
+
+func _clear_play_ui_theme(play_overlay: PanelContainer, choice_overlay: CenterContainer) -> void:
+	play_overlay.theme = null
+	choice_overlay.theme = null
