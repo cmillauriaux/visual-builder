@@ -7,7 +7,7 @@
 
 ## Contexte
 
-L'onglet "Expressions" de l'AI Studio (`src/ui/dialogs/ai_studio_dialog.gd`) affiche actuellement les 40 expressions par défaut dans un seul `HFlowContainer` avec un unique bouton "Tout cocher/Décocher tout".
+L'onglet "Expressions" de l'AI Studio (`src/ui/dialogs/ai_studio_dialog.gd`) affiche actuellement les 45 expressions par défaut dans un seul `HFlowContainer` avec un unique bouton "Cocher tout/Décocher tout".
 
 Deux problèmes à corriger :
 
@@ -20,7 +20,7 @@ Deux problèmes à corriger :
 
 ### Objectif
 
-Diviser les 40 expressions en deux groupes visuels, chacun avec son propre bouton "Tout cocher/Décocher tout".
+Diviser les 45 expressions en deux groupes visuels, chacun avec son propre bouton "Cocher tout/Décocher tout".
 
 ### Groupes
 
@@ -30,7 +30,7 @@ smile, sad, shy, grumpy, laughing out loud, angry, surprised, scared,
 bored, speaking, happy, calm, crying, determined, exhausted, annoyed
 ```
 
-**Expressions avancées** (24 expressions) :
+**Expressions avancées** (29 expressions) :
 ```
 worried, neutral, disgusted, confused, proud, embarrassed, idle, thinking,
 listening, cheerful, confident, playful, curious, warm, friendly, joyful,
@@ -43,13 +43,13 @@ relieved, suspicious, tender, desperate, nostalgic, seductive
 Remplacer la section "Expressions :" actuelle par :
 
 ```
-[Label "Expressions élémentaires"]  [Button "Tout cocher"]
+[Label "Expressions élémentaires"]  [Button "Cocher tout"]
 HFlowContainer — elementary checkboxes (16)
 
 HSeparator
 
-[Label "Expressions avancées"]      [Button "Tout cocher"]
-HFlowContainer — advanced checkboxes (24)
+[Label "Expressions avancées"]      [Button "Cocher tout"]
+HFlowContainer — advanced checkboxes (29)
 
 HSeparator
 
@@ -58,11 +58,11 @@ VBoxContainer — custom expressions       ← inchangé
 HBoxContainer — input + bouton Ajouter   ← inchangé
 ```
 
-### Comportement des boutons "Tout cocher"
+### Comportement des boutons "Cocher tout / Décocher tout"
 
 - Chaque bouton n'agit que sur les checkboxes de **son groupe**.
-- Libellé dynamique : **"Décocher tout"** si toutes les cases du groupe sont cochées, sinon **"Tout cocher"**.
-- La mise à jour du libellé se déclenche à chaque `toggled` d'une checkbox du groupe (même logique que l'actuel bouton global).
+- Libellé dynamique : **"Décocher tout"** si toutes les cases du groupe sont cochées, sinon **"Cocher tout"** (même convention que l'actuel bouton global).
+- La mise à jour du libellé se déclenche à chaque `toggled` d'une checkbox du groupe.
 
 ### Changements dans le code
 
@@ -71,14 +71,14 @@ HBoxContainer — input + bouton Ajouter   ← inchangé
 - Remplacer la constante `DEFAULT_EXPRESSIONS` par deux constantes :
   ```gdscript
   const ELEMENTARY_EXPRESSIONS := ["smile", "sad", ...]   # 16 items
-  const ADVANCED_EXPRESSIONS := ["worried", "neutral", ...] # 24 items
+  const ADVANCED_EXPRESSIONS := ["worried", "neutral", ...] # 29 items
   ```
 - Remplacer `_expr_expression_checkboxes: Array` par deux tableaux :
   ```gdscript
   var _expr_elementary_checkboxes: Array = []
   var _expr_advanced_checkboxes: Array = []
   ```
-- Ajouter deux boutons de sélection de groupe :
+- Remplacer le bouton global `toggle_all_btn` (actuellement variable locale) par deux variables de classe :
   ```gdscript
   var _expr_elementary_select_all_btn: Button
   var _expr_advanced_select_all_btn: Button
@@ -92,7 +92,7 @@ HBoxContainer — input + bouton Ajouter   ← inchangé
 
 ### Fichier concerné
 
-`src/services/expression_queue_service.gd`, fonction `_build_prompt` (ligne 101).
+`src/services/expression_queue_service.gd`, fonction `_build_prompt`.
 
 ### Avant
 
@@ -119,9 +119,10 @@ static func _build_prompt(expression: String) -> String:
 ## Tests à mettre à jour / ajouter
 
 **`specs/ui/dialogs/test_ai_studio_dialog.gd`**
-- Vérifier que `ELEMENTARY_EXPRESSIONS` et `ADVANCED_EXPRESSIONS` sont disjoints et couvrent les 40 expressions.
-- Vérifier que les deux boutons "Tout cocher" n'agissent que sur leur groupe.
-- Vérifier que `_get_selected_expressions()` retourne les expressions des deux groupes.
+- Vérifier que `ELEMENTARY_EXPRESSIONS` et `ADVANCED_EXPRESSIONS` sont disjoints et couvrent les 45 expressions (16 + 29).
+- Vérifier que le bouton "Cocher tout" d'un groupe coche uniquement les checkboxes de ce groupe.
+- Vérifier que le bouton "Décocher tout" d'un groupe décoche uniquement les checkboxes de ce groupe.
+- Vérifier que `_get_selected_expressions()` retourne les expressions cochées des deux groupes **et** des expressions custom.
 
 **`specs/services/test_expression_queue_service.gd`**
 - Vérifier que `_build_prompt("smile")` retourne `"The same character with a smile expression, keep the eyes color"`.
