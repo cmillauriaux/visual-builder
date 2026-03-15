@@ -4,4 +4,4 @@
 /android/
 build/.superpowers/
 build/
-.superpowers/
+.superpowers/.worktrees/
