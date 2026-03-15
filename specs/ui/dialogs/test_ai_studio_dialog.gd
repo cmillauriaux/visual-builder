@@ -352,21 +352,20 @@ func test_expr_has_face_box_value_label():
 	assert_eq(_dialog._expr_face_box_value_label.text, "80")
 
 func test_expr_has_default_expression_checkboxes():
-	# At least 30 default expressions
-	var default_count = AIStudioDialog.DEFAULT_EXPRESSIONS.size()
-	assert_true(_dialog._expr_expression_checkboxes.size() >= default_count)
+	var default_count = AIStudioDialog.ELEMENTARY_EXPRESSIONS.size() + AIStudioDialog.ADVANCED_EXPRESSIONS.size()
+	assert_eq(_dialog._expr_elementary_checkboxes.size() + _dialog._expr_advanced_checkboxes.size(), default_count)
 
 
 func test_expr_expression_labels():
-	assert_eq(_dialog._expr_expression_checkboxes[0].text, "smile")
-	assert_eq(_dialog._expr_expression_checkboxes[1].text, "sad")
-	assert_eq(_dialog._expr_expression_checkboxes[2].text, "shy")
-	assert_eq(_dialog._expr_expression_checkboxes[3].text, "grumpy")
-	assert_eq(_dialog._expr_expression_checkboxes[4].text, "laughing out loud")
+	assert_eq(_dialog._expr_elementary_checkboxes[0].text, "smile")
+	assert_eq(_dialog._expr_elementary_checkboxes[1].text, "sad")
+	assert_eq(_dialog._expr_elementary_checkboxes[2].text, "shy")
+	assert_eq(_dialog._expr_elementary_checkboxes[3].text, "grumpy")
+	assert_eq(_dialog._expr_elementary_checkboxes[4].text, "laughing out loud")
 
 
 func test_expr_first_expression_checked_by_default():
-	assert_true(_dialog._expr_expression_checkboxes[0].button_pressed)
+	assert_true(_dialog._expr_elementary_checkboxes[0].button_pressed)
 
 
 func test_expr_has_custom_input():
@@ -494,8 +493,9 @@ func test_expr_generate_disabled_without_expression():
 	_dialog._url_input.text = "http://localhost:8188"
 	_dialog._expr_source_image_path = "/tmp/test.png"
 	_dialog._expr_prefix_input.text = "hero"
-	# Uncheck all expressions
-	for cb in _dialog._expr_expression_checkboxes:
+	for cb in _dialog._expr_elementary_checkboxes:
+		cb.button_pressed = false
+	for cb in _dialog._expr_advanced_checkboxes:
 		cb.button_pressed = false
 	_dialog._update_expr_generate_button()
 	assert_true(_dialog._expr_generate_btn.disabled)
@@ -511,7 +511,7 @@ func test_get_selected_expressions_default():
 
 
 func test_get_selected_expressions_multiple():
-	_dialog._expr_expression_checkboxes[1].button_pressed = true
+	_dialog._expr_elementary_checkboxes[1].button_pressed = true
 	var exprs = _dialog._get_selected_expressions()
 	assert_eq(exprs, ["smile", "sad"])
 
@@ -521,10 +521,11 @@ func test_get_selected_expressions_multiple():
 # ========================================================
 
 func test_add_custom_expression():
-	var initial_count = _dialog._expr_expression_checkboxes.size()
+	var initial_count = _dialog._expr_custom_container.get_child_count()
 	_dialog._add_custom_expression_ui("test_unique_expr")
-	assert_eq(_dialog._expr_expression_checkboxes.size(), initial_count + 1)
-	assert_eq(_dialog._expr_expression_checkboxes[initial_count].text, "test_unique_expr")
+	assert_eq(_dialog._expr_custom_container.get_child_count(), initial_count + 1)
+	var last_hbox = _dialog._expr_custom_container.get_child(_dialog._expr_custom_container.get_child_count() - 1)
+	assert_eq(last_hbox.get_child(0).text, "test_unique_expr")
 
 
 func test_add_custom_expression_via_input_clears_text():
@@ -534,17 +535,17 @@ func test_add_custom_expression_via_input_clears_text():
 
 
 func test_add_empty_custom_expression_ignored():
-	var initial_count = _dialog._expr_expression_checkboxes.size()
+	var initial_count = _dialog._expr_custom_container.get_child_count()
 	_dialog._expr_custom_input.text = ""
 	_dialog._on_expr_add_custom()
-	assert_eq(_dialog._expr_expression_checkboxes.size(), initial_count)
+	assert_eq(_dialog._expr_custom_container.get_child_count(), initial_count)
 
 
 func test_add_whitespace_custom_expression_ignored():
-	var initial_count = _dialog._expr_expression_checkboxes.size()
+	var initial_count = _dialog._expr_custom_container.get_child_count()
 	_dialog._expr_custom_input.text = "   "
 	_dialog._on_expr_add_custom()
-	assert_eq(_dialog._expr_expression_checkboxes.size(), initial_count)
+	assert_eq(_dialog._expr_custom_container.get_child_count(), initial_count)
 
 
 func test_custom_expression_has_delete_button():
@@ -556,17 +557,17 @@ func test_custom_expression_has_delete_button():
 
 
 func test_add_duplicate_expression_ignored():
-	var initial_count = _dialog._expr_expression_checkboxes.size()
+	var initial_count = _dialog._expr_custom_container.get_child_count()
 	_dialog._expr_custom_input.text = "smile"
 	_dialog._on_expr_add_custom()
-	assert_eq(_dialog._expr_expression_checkboxes.size(), initial_count)
+	assert_eq(_dialog._expr_custom_container.get_child_count(), initial_count)
 
 
 func test_add_duplicate_expression_case_insensitive():
-	var initial_count = _dialog._expr_expression_checkboxes.size()
+	var initial_count = _dialog._expr_custom_container.get_child_count()
 	_dialog._expr_custom_input.text = "Smile"
 	_dialog._on_expr_add_custom()
-	assert_eq(_dialog._expr_expression_checkboxes.size(), initial_count)
+	assert_eq(_dialog._expr_custom_container.get_child_count(), initial_count)
 
 
 # ========================================================
@@ -786,6 +787,120 @@ func test_config_empty_custom_expressions():
 # ========================================================
 # Helpers
 # ========================================================
+
+# ========================================================
+# Expressions — Groupes
+# ========================================================
+
+func test_elementary_expressions_count():
+	assert_eq(AIStudioDialog.ELEMENTARY_EXPRESSIONS.size(), 16)
+
+
+func test_advanced_expressions_count():
+	assert_eq(AIStudioDialog.ADVANCED_EXPRESSIONS.size(), 29)
+
+
+func test_expressions_total_is_45():
+	var all = AIStudioDialog.ELEMENTARY_EXPRESSIONS + AIStudioDialog.ADVANCED_EXPRESSIONS
+	assert_eq(all.size(), 45)
+
+
+func test_expression_groups_are_disjoint():
+	for expr in AIStudioDialog.ELEMENTARY_EXPRESSIONS:
+		assert_false(
+			AIStudioDialog.ADVANCED_EXPRESSIONS.has(expr),
+			"Expression '%s' présente dans les deux groupes" % expr
+		)
+
+
+func test_has_elementary_checkboxes():
+	assert_not_null(_dialog._expr_elementary_checkboxes)
+	assert_eq(_dialog._expr_elementary_checkboxes.size(), 16)
+
+
+func test_has_advanced_checkboxes():
+	assert_not_null(_dialog._expr_advanced_checkboxes)
+	assert_eq(_dialog._expr_advanced_checkboxes.size(), 29)
+
+
+func test_has_elementary_select_all_btn():
+	assert_not_null(_dialog._expr_elementary_select_all_btn)
+	assert_is(_dialog._expr_elementary_select_all_btn, Button)
+
+
+func test_has_advanced_select_all_btn():
+	assert_not_null(_dialog._expr_advanced_select_all_btn)
+	assert_is(_dialog._expr_advanced_select_all_btn, Button)
+
+
+func test_elementary_select_all_btn_initial_text():
+	# Seule la première expression est cochée au départ → pas "toutes cochées"
+	assert_eq(_dialog._expr_elementary_select_all_btn.text, "Cocher tout")
+
+
+func test_advanced_select_all_btn_initial_text():
+	assert_eq(_dialog._expr_advanced_select_all_btn.text, "Cocher tout")
+
+
+func test_elementary_select_all_checks_only_elementary():
+	# Décocher toutes d'abord
+	for cb in _dialog._expr_elementary_checkboxes:
+		cb.button_pressed = false
+	for cb in _dialog._expr_advanced_checkboxes:
+		cb.button_pressed = false
+	# Cliquer le bouton "Cocher tout" des élémentaires
+	_dialog._expr_elementary_select_all_btn.emit_signal("pressed")
+	# Toutes les élémentaires cochées
+	for cb in _dialog._expr_elementary_checkboxes:
+		assert_true(cb.button_pressed, "Elementary '%s' devrait être coché" % cb.text)
+	# Les avancées restent décochées
+	for cb in _dialog._expr_advanced_checkboxes:
+		assert_false(cb.button_pressed, "Advanced '%s' ne devrait pas être coché" % cb.text)
+
+
+func test_advanced_select_all_checks_only_advanced():
+	for cb in _dialog._expr_elementary_checkboxes:
+		cb.button_pressed = false
+	for cb in _dialog._expr_advanced_checkboxes:
+		cb.button_pressed = false
+	_dialog._expr_advanced_select_all_btn.emit_signal("pressed")
+	for cb in _dialog._expr_advanced_checkboxes:
+		assert_true(cb.button_pressed, "Advanced '%s' devrait être coché" % cb.text)
+	for cb in _dialog._expr_elementary_checkboxes:
+		assert_false(cb.button_pressed, "Elementary '%s' ne devrait pas être coché" % cb.text)
+
+
+func test_elementary_select_all_btn_text_becomes_decocher_tout():
+	# Partir de zéro — tout décoché
+	for cb in _dialog._expr_elementary_checkboxes:
+		cb.button_pressed = false
+	# Cliquer "Cocher tout" → coche tout + met à jour le libellé
+	_dialog._expr_elementary_select_all_btn.emit_signal("pressed")
+	assert_eq(_dialog._expr_elementary_select_all_btn.text, "Décocher tout")
+
+
+func test_advanced_select_all_btn_text_becomes_decocher_tout():
+	for cb in _dialog._expr_advanced_checkboxes:
+		cb.button_pressed = false
+	_dialog._expr_advanced_select_all_btn.emit_signal("pressed")
+	assert_eq(_dialog._expr_advanced_select_all_btn.text, "Décocher tout")
+
+
+func test_get_selected_expressions_includes_custom():
+	# Décocher toutes les expressions par défaut
+	for cb in _dialog._expr_elementary_checkboxes:
+		cb.button_pressed = false
+	for cb in _dialog._expr_advanced_checkboxes:
+		cb.button_pressed = false
+	# Ajouter une expression custom
+	_dialog._expr_custom_input.text = "ma_custom_expr"
+	_dialog._on_expr_add_custom()
+	# La checkbox custom est créée décochée — la cocher manuellement
+	var last_child = _dialog._expr_custom_container.get_child(_dialog._expr_custom_container.get_child_count() - 1)
+	last_child.get_child(0).button_pressed = true
+	var selected = _dialog._get_selected_expressions()
+	assert_true(selected.has("ma_custom_expr"), "Custom expression devrait être dans la sélection")
+
 
 func _remove_dir_recursive(path: String) -> void:
 	var dir = DirAccess.open(path)
