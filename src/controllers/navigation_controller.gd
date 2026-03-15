@@ -471,7 +471,7 @@ func on_menu_config_requested() -> void:
 	_menu_config_dialog.popup_centered()
 
 
-func _on_menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_background: String, menu_music: String = "", playfab_title_id: String = "", playfab_enabled: bool = false, patreon_url: String = "", itchio_url: String = "", game_over_title: String = "", game_over_subtitle: String = "", game_over_background: String = "", to_be_continued_title: String = "", to_be_continued_subtitle: String = "", to_be_continued_background: String = "", app_icon: String = "", show_title_banner: bool = true) -> void:
+func _on_menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_background: String, menu_music: String = "", playfab_title_id: String = "", playfab_enabled: bool = false, patreon_url: String = "", itchio_url: String = "", game_over_title: String = "", game_over_subtitle: String = "", game_over_background: String = "", to_be_continued_title: String = "", to_be_continued_subtitle: String = "", to_be_continued_background: String = "", app_icon: String = "", show_title_banner: bool = true, ui_theme_mode: String = "default") -> void:
 	_main._editor_main._story.menu_title = menu_title
 	_main._editor_main._story.menu_subtitle = menu_subtitle
 	_main._editor_main._story.menu_background = menu_background
@@ -488,6 +488,7 @@ func _on_menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_b
 	_main._editor_main._story.to_be_continued_background = to_be_continued_background
 	_main._editor_main._story.app_icon = app_icon
 	_main._editor_main._story.show_title_banner = show_title_banner
+	_main._editor_main._story.ui_theme_mode = ui_theme_mode
 
 
 func on_variables_changed() -> void:

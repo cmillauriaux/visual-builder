@@ -79,7 +79,7 @@ func test_confirmed_emits_signal():
 	var story = _make_story("Mon Titre", "Mon Sous-titre", "bg.png")
 	_dialog.setup(story, "/tmp/test_story")
 	var emitted := [false]
-	_dialog.menu_config_confirmed.connect(func(_a,_b,_c,_d,_e,_f,_g,_h,_i,_j,_k,_l,_m,_n,_o,_p): emitted[0] = true)
+	_dialog.menu_config_confirmed.connect(func(_a,_b,_c,_d,_e,_f,_g,_h,_i,_j,_k,_l,_m,_n,_o,_p,_q): emitted[0] = true)
 	_dialog._on_confirmed()
 	assert_true(emitted[0], "Le signal menu_config_confirmed doit être émis")
 
@@ -87,7 +87,7 @@ func test_confirmed_signal_params():
 	var story = _make_story("T", "S", "B")
 	_dialog.setup(story, "/tmp/test_story")
 	var captured := []
-	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p]))
+	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q]))
 	_dialog._on_confirmed()
 	assert_eq(captured[0], "T")
 	assert_eq(captured[1], "S")
@@ -152,7 +152,7 @@ func test_confirmed_signal_includes_links():
 	story.itchio_url = "https://test.itch.io/game"
 	_dialog.setup(story, "/tmp/test_story")
 	var captured := []
-	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p]))
+	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q]))
 	_dialog._on_confirmed()
 	assert_eq(captured[6], "https://www.patreon.com/test")
 	assert_eq(captured[7], "https://test.itch.io/game")
@@ -163,7 +163,7 @@ func test_validate_url_rejects_invalid():
 	_dialog._patreon_url_edit.text = "not-a-url"
 	_dialog._itchio_url_edit.text = "ftp://invalid.com"
 	var captured := []
-	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p]))
+	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q]))
 	_dialog._on_confirmed()
 	assert_eq(captured[6], "", "URL invalide doit être traitée comme vide")
 	assert_eq(captured[7], "", "URL invalide doit être traitée comme vide")
@@ -173,7 +173,7 @@ func test_validate_url_accepts_https():
 	_dialog.setup(story, "/tmp/test_story")
 	_dialog._patreon_url_edit.text = "https://www.patreon.com/test"
 	var captured := []
-	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p]))
+	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q]))
 	_dialog._on_confirmed()
 	assert_eq(captured[6], "https://www.patreon.com/test")
 
@@ -182,7 +182,7 @@ func test_validate_url_accepts_http():
 	_dialog.setup(story, "/tmp/test_story")
 	_dialog._patreon_url_edit.text = "http://www.patreon.com/test"
 	var captured := []
-	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p]))
+	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q]))
 	_dialog._on_confirmed()
 	assert_eq(captured[6], "http://www.patreon.com/test")
 
@@ -277,7 +277,7 @@ func test_confirmed_signal_includes_ending_screen_params():
 	story.to_be_continued_background = "tbcbg.png"
 	_dialog.setup(story, "/tmp")
 	var captured := []
-	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p]))
+	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q]))
 	_dialog._on_confirmed()
 	assert_eq(captured[8], "GO")
 	assert_eq(captured[9], "GOS")
@@ -338,7 +338,7 @@ func test_confirmed_signal_includes_app_icon():
 	story.app_icon = "myicon.png"
 	_dialog.setup(story, "/tmp")
 	var captured := []
-	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p]))
+	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q]))
 	_dialog._on_confirmed()
 	assert_eq(captured[14], "myicon.png")
 
@@ -372,7 +372,7 @@ func test_confirmed_signal_includes_show_title_banner():
 	story.show_title_banner = false
 	_dialog.setup(story, "/tmp")
 	var captured := []
-	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p]))
+	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q]))
 	_dialog._on_confirmed()
 	assert_false(captured[15])
 
@@ -399,3 +399,33 @@ func test_setup_fills_ui_theme_mode_custom() -> void:
 	story.ui_theme_mode = "custom"
 	_dialog.setup(story, "/tmp/test_story")
 	assert_eq(_dialog.get_ui_theme_mode(), "custom")
+
+func test_confirmed_signal_includes_ui_theme_mode() -> void:
+	var story = _make_story()
+	story.ui_theme_mode = "custom"
+	_dialog.setup(story, "/tmp/test_story")
+
+	var received_mode = ""
+	_dialog.menu_config_confirmed.connect(
+		func(_t, _st, _bg, _mu, _pf_id, _pf_en, _pa, _it,
+			 _go_t, _go_st, _go_bg, _tbc_t, _tbc_st, _tbc_bg,
+			 _ic, _sh, ui_mode):
+			received_mode = ui_mode
+	)
+	_dialog._on_confirmed()
+	assert_eq(received_mode, "custom", "Signal should include ui_theme_mode as 17th param")
+
+func test_confirmed_signal_ui_theme_mode_default() -> void:
+	var story = _make_story()
+	story.ui_theme_mode = "default"
+	_dialog.setup(story, "/tmp/test_story")
+
+	var received_mode = "sentinel"
+	_dialog.menu_config_confirmed.connect(
+		func(_t, _st, _bg, _mu, _pf_id, _pf_en, _pa, _it,
+			 _go_t, _go_st, _go_bg, _tbc_t, _tbc_st, _tbc_bg,
+			 _ic, _sh, ui_mode):
+			received_mode = ui_mode
+	)
+	_dialog._on_confirmed()
+	assert_eq(received_mode, "default")
