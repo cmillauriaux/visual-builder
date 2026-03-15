@@ -405,27 +405,23 @@ func test_confirmed_signal_includes_ui_theme_mode() -> void:
 	story.ui_theme_mode = "custom"
 	_dialog.setup(story, "/tmp/test_story")
 
-	var received_mode = ""
+	var captured := []
 	_dialog.menu_config_confirmed.connect(
-		func(_t, _st, _bg, _mu, _pf_id, _pf_en, _pa, _it,
-			 _go_t, _go_st, _go_bg, _tbc_t, _tbc_st, _tbc_bg,
-			 _ic, _sh, ui_mode):
-			received_mode = ui_mode
+		func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q):
+			captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q])
 	)
 	_dialog._on_confirmed()
-	assert_eq(received_mode, "custom", "Signal should include ui_theme_mode as 17th param")
+	assert_eq(captured[16], "custom", "Signal should include ui_theme_mode as 17th param")
 
 func test_confirmed_signal_ui_theme_mode_default() -> void:
 	var story = _make_story()
 	story.ui_theme_mode = "default"
 	_dialog.setup(story, "/tmp/test_story")
 
-	var received_mode = "sentinel"
+	var captured := []
 	_dialog.menu_config_confirmed.connect(
-		func(_t, _st, _bg, _mu, _pf_id, _pf_en, _pa, _it,
-			 _go_t, _go_st, _go_bg, _tbc_t, _tbc_st, _tbc_bg,
-			 _ic, _sh, ui_mode):
-			received_mode = ui_mode
+		func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q):
+			captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q])
 	)
 	_dialog._on_confirmed()
-	assert_eq(received_mode, "default")
+	assert_eq(captured[16], "default")
