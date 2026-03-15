@@ -42,7 +42,7 @@ func _on_play_choice_requested(choices: Array) -> void:
 	_main._choice_panel.add_child(container)
 	_main._choice_overlay.visible = true
 	if not _main._choice_overlay.get_parent():
-		_main.add_child(_main._choice_overlay)
+		_main._visual_editor._overlay_container.add_child(_main._choice_overlay)
 
 
 func _on_play_choice_selected(index: int) -> void:

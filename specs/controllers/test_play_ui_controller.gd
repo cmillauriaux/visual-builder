@@ -2,19 +2,26 @@ extends GutTest
 
 var PlayUIControllerScript
 
+class MockVisualEditor extends Control:
+	var _overlay_container = Control.new()
+	func _init():
+		add_child(_overlay_container)
+
 class MockMain extends Control:
 	var _play_character_label = Label.new()
 	var _play_text_label = Label.new()
 	var _choice_overlay = Control.new()
 	var _choice_panel = Control.new()
 	var _play_ctrl = Node.new()
-	
+	var _visual_editor: Control
+
 	func _init():
+		_visual_editor = MockVisualEditor.new()
 		_choice_overlay.add_child(_choice_panel)
 		add_child(_play_character_label)
 		add_child(_play_text_label)
-		add_child(_choice_overlay)
 		add_child(_play_ctrl)
+		add_child(_visual_editor)
 
 var _ctrl
 var _main
