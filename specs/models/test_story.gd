@@ -157,3 +157,29 @@ func test_menu_fields_from_dict_missing():
 	assert_eq(story.menu_title, "")
 	assert_eq(story.menu_subtitle, "")
 	assert_eq(story.menu_background, "")
+
+func test_ui_theme_mode_default_value() -> void:
+	var story = Story.new()
+	assert_eq(story.ui_theme_mode, "default", "ui_theme_mode should default to 'default'")
+
+func test_to_dict_includes_ui_theme() -> void:
+	var story = Story.new()
+	story.ui_theme_mode = "custom"
+	var d = story.to_dict()
+	assert_true(d.has("ui_theme"), "to_dict should include 'ui_theme' key")
+	assert_eq(d["ui_theme"]["mode"], "custom")
+
+func test_to_dict_ui_theme_default() -> void:
+	var story = Story.new()
+	var d = story.to_dict()
+	assert_eq(d["ui_theme"]["mode"], "default")
+
+func test_from_dict_reads_ui_theme_mode() -> void:
+	var d = {"ui_theme": {"mode": "custom"}}
+	var story = Story.from_dict(d)
+	assert_eq(story.ui_theme_mode, "custom")
+
+func test_from_dict_missing_ui_theme_defaults_to_default() -> void:
+	var d = {}  # ancienne story sans ui_theme
+	var story = Story.from_dict(d)
+	assert_eq(story.ui_theme_mode, "default", "Missing field should default to 'default'")

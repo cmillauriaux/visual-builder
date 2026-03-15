@@ -33,6 +33,7 @@ var to_be_continued_subtitle: String = ""
 var to_be_continued_background: String = ""
 var app_icon: String = ""
 var show_title_banner: bool = true
+var ui_theme_mode: String = "default"
 
 func _init():
 	var now = _iso_now()
@@ -137,6 +138,7 @@ func to_dict() -> Dictionary:
 		},
 		"app_icon": app_icon,
 		"show_title_banner": show_title_banner,
+		"ui_theme": { "mode": ui_theme_mode },
 	}
 
 static func from_dict(d: Dictionary):
@@ -196,6 +198,7 @@ static func from_dict(d: Dictionary):
 
 	story.app_icon = d.get("app_icon", "")
 	story.show_title_banner = d.get("show_title_banner", true)
+	story.ui_theme_mode = d.get("ui_theme", {}).get("mode", "default")
 
 	return story
 
