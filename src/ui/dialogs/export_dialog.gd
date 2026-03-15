@@ -3,11 +3,14 @@ extends ConfirmationDialog
 ## Dialogue d'export d'une story en jeu standalone.
 ## Demande la plateforme cible et le dossier de destination.
 
-signal export_requested(platform: String, output_path: String)
+signal export_requested(platform: String, output_path: String, quality: String)
 
 const PLATFORMS = ["Web (HTML5)", "macOS", "Linux", "Windows", "Android"]
 const PLATFORM_IDS = ["web", "macos", "linux", "windows", "android"]
+const QUALITIES = ["HD", "SD", "Ultra SD"]
+const QUALITY_IDS = ["hd", "sd", "ultrasd"]
 
+var _quality_dropdown: OptionButton
 var _platform_dropdown: OptionButton
 var _path_edit: LineEdit
 var _browse_button: Button
@@ -23,6 +26,17 @@ func _init():
 	var vbox = VBoxContainer.new()
 	vbox.name = "ContentVBox"
 	vbox.add_theme_constant_override("separation", 8)
+
+	# Qualité
+	var quality_label = Label.new()
+	quality_label.text = "Qualité"
+	vbox.add_child(quality_label)
+
+	_quality_dropdown = OptionButton.new()
+	_quality_dropdown.name = "QualityDropdown"
+	for q in QUALITIES:
+		_quality_dropdown.add_item(q)
+	vbox.add_child(_quality_dropdown)
 
 	# Plateforme
 	var platform_label = Label.new()
@@ -82,6 +96,13 @@ func setup(story) -> void:
 	_status_label.remove_theme_color_override("font_color")
 
 
+func get_selected_quality() -> String:
+	var idx = _quality_dropdown.selected
+	if idx < 0 or idx >= QUALITY_IDS.size():
+		return "hd"
+	return QUALITY_IDS[idx]
+
+
 func get_selected_platform() -> String:
 	var idx = _platform_dropdown.selected
 	if idx < 0 or idx >= PLATFORM_IDS.size():
@@ -114,4 +135,4 @@ func _on_dir_selected(dir: String) -> void:
 
 
 func _on_confirmed() -> void:
-	export_requested.emit(get_selected_platform(), get_output_path())
+	export_requested.emit(get_selected_platform(), get_output_path(), get_selected_quality())

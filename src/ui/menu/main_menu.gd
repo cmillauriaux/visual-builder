@@ -166,6 +166,28 @@ func build_ui() -> void:
 	_loading_label.add_theme_color_override("font_color", Color.WHITE)
 	_loading_overlay.add_child(_loading_label)
 
+	# Label édition (visible uniquement dans le jeu exporté)
+	var edition = ProjectSettings.get_setting("application/config/edition", "")
+	if edition != "":
+		var version_str = ProjectSettings.get_setting("application/config/version", "")
+		var release_date = ProjectSettings.get_setting("application/config/release_date", "")
+		var edition_label = Label.new()
+		edition_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		edition_label.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+		edition_label.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+		edition_label.grow_vertical = Control.GROW_DIRECTION_BEGIN
+		var parts = [edition + " edition"]
+		if version_str != "":
+			parts.append("v" + version_str)
+		if release_date != "":
+			parts.append(release_date)
+		edition_label.text = " — ".join(parts)
+		edition_label.add_theme_font_size_override("font_size", UIScale.scale(12))
+		edition_label.add_theme_color_override("font_color", Color(1, 1, 1, 0.5))
+		edition_label.offset_right = -UIScale.scale(8)
+		edition_label.offset_bottom = -UIScale.scale(6)
+		add_child(edition_label)
+
 	# Sous-menu Options (plein écran avec marge)
 	_options_center = MarginContainer.new()
 	var options_center = _options_center

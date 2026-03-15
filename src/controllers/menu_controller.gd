@@ -53,12 +53,12 @@ func on_export_pressed() -> void:
 	dialog.popup_centered()
 
 
-func _on_export_requested(platform: String, output_path: String) -> void:
+func _on_export_requested(platform: String, output_path: String, quality: String) -> void:
 	if _main._editor_main._story == null:
 		return
-	
+
 	var story_path = _main._get_story_base_path()
-	var result = _main._export_service.export_story(_main._editor_main._story, platform, output_path, story_path)
+	var result = _main._export_service.export_story(_main._editor_main._story, platform, output_path, story_path, quality)
 	
 	if result.success:
 		_show_export_result(result.output_path, result.log_path)

@@ -20,7 +20,7 @@ class ExportResult:
 
 
 ## Exécute l'exportation pour une story donnée.
-func export_story(story: RefCounted, platform: String, output_path: String, story_path: String) -> ExportResult:
+func export_story(story: RefCounted, platform: String, output_path: String, story_path: String, quality: String = "hd") -> ExportResult:
 	if story == null:
 		return ExportResult.new(false, output_path, "", "Aucune histoire chargée.")
 
@@ -69,11 +69,17 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 		story_exclude.append("ui")
 	_copy_dir_recursive(abs_story_dir, abs_temp_story, story_exclude)
 	
-	# 3b. Optimiser les fichiers audio pour le web (si ffmpeg est disponible)
+	# 3b. Redimensionner les images si qualité SD ou Ultra SD
+	if quality == "sd":
+		_resize_story_images(abs_temp_story, 2, log_path)
+	elif quality == "ultrasd":
+		_resize_story_images(abs_temp_story, 4, log_path)
+
+	# 3c. Optimiser les fichiers audio pour le web (si ffmpeg est disponible)
 	if platform == "web":
 		_optimize_audio_files(abs_temp_story, log_path)
 
-	# 3c. Copier le menu_background comme boot splash si défini
+	# 3d. Copier le menu_background comme boot splash si défini
 	var boot_splash_res_path := ""
 	if story.menu_background != "":
 		var bg_abs_src = abs_story_dir + "/" + story.menu_background
@@ -87,7 +93,7 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 			DirAccess.copy_absolute(bg_abs_src, bg_abs_dst)
 			boot_splash_res_path = "res://boot_splash.png"
 
-	# 3d. Générer les icônes d'application à partir de app_icon
+	# 3e. Générer les icônes d'application à partir de app_icon
 	if story.get("app_icon") != null and story.app_icon != "":
 		var icon_src = story.app_icon
 		if not FileAccess.file_exists(icon_src):
@@ -179,10 +185,15 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 
 	# Créer override.cfg pour forcer les paramètres à l'exécution
 	var override_path = abs_temp_project + "/override.cfg"
+	var edition_label = {"hd": "HD", "sd": "SD", "ultrasd": "Ultra SD"}.get(quality, "HD")
+	var release_date = Time.get_date_string_from_system()
 	var f_ov = FileAccess.open(override_path, FileAccess.WRITE)
 	if f_ov:
 		f_ov.store_line("[application]")
 		f_ov.store_line("config/story_path=\"res://story\"")
+		f_ov.store_line("config/edition=\"" + edition_label + "\"")
+		f_ov.store_line("config/version=\"" + story.version + "\"")
+		f_ov.store_line("config/release_date=\"" + release_date + "\"")
 		f_ov.close()
 
 	# 6. (Anciennement modification de game.tscn, maintenant inutile avec override.cfg)
@@ -558,6 +569,45 @@ func _find_audio_files(dir_path: String) -> Array:
 			var ext = file_name.get_extension().to_lower()
 			if ext == "mp3" or ext == "ogg" or ext == "wav":
 				result.append(full_path)
+		file_name = dir.get_next()
+	return result
+
+
+func _resize_story_images(story_dir: String, divisor: int, log_path: String) -> void:
+	var files = _find_image_files_recursive(story_dir)
+	_append_log(log_path, "→ Redimensionnement images (÷%d) : %d fichiers..." % [divisor, files.size()])
+	for path in files:
+		var img = Image.new()
+		if img.load(path) != OK:
+			_append_log(log_path, "  ⚠ Impossible de charger : " + path.get_file())
+			continue
+		var new_w = max(1, img.get_width() / divisor)
+		var new_h = max(1, img.get_height() / divisor)
+		img.resize(new_w, new_h, Image.INTERPOLATE_LANCZOS)
+		var ext = path.get_extension().to_lower()
+		if ext == "png":
+			img.save_png(path)
+		else:
+			img.save_jpg(path)
+		_append_log(log_path, "  → %s (%dx%d)" % [path.get_file(), new_w, new_h])
+
+
+func _find_image_files_recursive(dir_path: String) -> Array:
+	var result = []
+	var dir = DirAccess.open(dir_path)
+	if dir == null:
+		return result
+	dir.list_dir_begin()
+	var file_name = dir.get_next()
+	while file_name != "":
+		if file_name != "." and file_name != "..":
+			var full_path = dir_path + "/" + file_name
+			if dir.current_is_dir():
+				result.append_array(_find_image_files_recursive(full_path))
+			else:
+				var ext = file_name.get_extension().to_lower()
+				if ext == "png" or ext == "jpg" or ext == "jpeg":
+					result.append(full_path)
 		file_name = dir.get_next()
 	return result
 

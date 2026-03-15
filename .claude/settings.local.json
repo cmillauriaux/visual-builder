@@ -6,7 +6,9 @@
       "Bash(xargs grep -l \"format.*variable\\\\|variable.*format\")",
       "Bash(echo $GODOT_PATH)",
       "Bash(timeout 120 \"/c/Program Files/Godot/Godot_v4.4.1-stable_win64_console.exe\" --headless --path . -s addons/gut/gut_cmdln.gd)",
-      "Bash(timeout 120 \"/c/Program Files/Godot/Godot_v4.4.1-stable_win64_console.exe\" --headless --path . -s addons/gut/gut_cmdln.gd -gtest=res://specs/ui/play/test_variable_sidebar.gd)"
+      "Bash(timeout 120 \"/c/Program Files/Godot/Godot_v4.4.1-stable_win64_console.exe\" --headless --path . -s addons/gut/gut_cmdln.gd -gtest=res://specs/ui/play/test_variable_sidebar.gd)",
+      "Bash(GODOT=/Applications/Godot-4.6.1.app/Contents/MacOS/Godot)",
+      "Bash(timeout 120 $GODOT --headless --path . -s addons/gut/gut_cmdln.gd)"
     ]
   }
 }
