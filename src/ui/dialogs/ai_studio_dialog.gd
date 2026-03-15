@@ -11,16 +11,20 @@ const ImageRenameService = preload("res://src/services/image_rename_service.gd")
 const ImageCategoryService = preload("res://src/services/image_category_service.gd")
 const ExpressionQueueService = preload("res://src/services/expression_queue_service.gd")
 
-const DEFAULT_EXPRESSIONS := [
+const ELEMENTARY_EXPRESSIONS := [
 	"smile", "sad", "shy", "grumpy", "laughing out loud",
-	"angry", "surprised", "worried", "neutral", "scared",
-	"disgusted", "confused", "proud", "embarrassed", "bored",
-	"idle", "speaking", "thinking", "listening", "happy",
-	"cheerful", "confident", "playful", "curious", "calm",
-	"warm", "friendly", "joyful", "serene", "enthusiastic",
-	"excited", "crying", "hopeful", "determined", "jealous",
-	"dreamy", "mischievous", "exhausted", "relieved", "suspicious",
-	"tender", "annoyed", "desperate", "nostalgic", "seductive",
+	"angry", "surprised", "scared", "bored", "speaking",
+	"happy", "calm", "crying", "determined", "exhausted",
+	"annoyed",
+]
+
+const ADVANCED_EXPRESSIONS := [
+	"worried", "neutral", "disgusted", "confused", "proud",
+	"embarrassed", "idle", "thinking", "listening", "cheerful",
+	"confident", "playful", "curious", "warm", "friendly",
+	"joyful", "serene", "enthusiastic", "excited", "hopeful",
+	"jealous", "dreamy", "mischievous", "relieved", "suspicious",
+	"tender", "desperate", "nostalgic", "seductive",
 ]
 
 var _story = null
@@ -74,7 +78,10 @@ var _expr_denoise_slider: HSlider
 var _expr_denoise_value_label: Label
 var _expr_face_box_slider: HSlider
 var _expr_face_box_value_label: Label
-var _expr_expression_checkboxes: Array = []
+var _expr_elementary_checkboxes: Array = []
+var _expr_advanced_checkboxes: Array = []
+var _expr_elementary_select_all_btn: Button
+var _expr_advanced_select_all_btn: Button
 var _expr_custom_container: VBoxContainer
 var _expr_custom_input: LineEdit
 var _expr_add_custom_btn: Button
@@ -556,43 +563,81 @@ func _build_expressions_tab() -> void:
 
 	vbox.add_child(HSeparator.new())
 
-	# Expressions
-	var expr_header = HBoxContainer.new()
-	vbox.add_child(expr_header)
+	# Expressions élémentaires
+	var elem_header = HBoxContainer.new()
+	vbox.add_child(elem_header)
 
-	var expr_label = Label.new()
-	expr_label.text = "Expressions :"
-	expr_label.add_theme_font_size_override("font_size", 16)
-	expr_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	expr_header.add_child(expr_label)
+	var elem_label = Label.new()
+	elem_label.text = "Expressions élémentaires"
+	elem_label.add_theme_font_size_override("font_size", 16)
+	elem_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	elem_header.add_child(elem_label)
 
-	var toggle_all_btn = Button.new()
-	toggle_all_btn.text = "Décocher tout"
-	toggle_all_btn.pressed.connect(func():
-		var all_checked = _expr_expression_checkboxes.all(func(c): return c.button_pressed)
-		for c in _expr_expression_checkboxes:
+	_expr_elementary_select_all_btn = Button.new()
+	_expr_elementary_select_all_btn.text = "Cocher tout"
+	_expr_elementary_select_all_btn.pressed.connect(func():
+		var all_checked = _expr_elementary_checkboxes.all(func(c): return c.button_pressed)
+		for c in _expr_elementary_checkboxes:
 			c.button_pressed = not all_checked
-		toggle_all_btn.text = "Cocher tout" if all_checked else "Décocher tout"
+		_update_group_select_all_btn(_expr_elementary_select_all_btn, _expr_elementary_checkboxes)
 		_update_expr_generate_button()
 	)
-	expr_header.add_child(toggle_all_btn)
+	elem_header.add_child(_expr_elementary_select_all_btn)
 
-	var expr_flow = HFlowContainer.new()
-	expr_flow.add_theme_constant_override("h_separation", 8)
-	expr_flow.add_theme_constant_override("v_separation", 4)
-	vbox.add_child(expr_flow)
+	var elem_flow = HFlowContainer.new()
+	elem_flow.add_theme_constant_override("h_separation", 8)
+	elem_flow.add_theme_constant_override("v_separation", 4)
+	vbox.add_child(elem_flow)
 
-	for i in range(DEFAULT_EXPRESSIONS.size()):
+	for i in range(ELEMENTARY_EXPRESSIONS.size()):
 		var cb = CheckBox.new()
-		cb.text = DEFAULT_EXPRESSIONS[i]
+		cb.text = ELEMENTARY_EXPRESSIONS[i]
 		cb.button_pressed = (i == 0)
 		cb.toggled.connect(func(_p):
-			var all_checked = _expr_expression_checkboxes.all(func(c): return c.button_pressed)
-			toggle_all_btn.text = "Décocher tout" if all_checked else "Cocher tout"
+			_update_group_select_all_btn(_expr_elementary_select_all_btn, _expr_elementary_checkboxes)
 			_update_expr_generate_button()
 		)
-		expr_flow.add_child(cb)
-		_expr_expression_checkboxes.append(cb)
+		elem_flow.add_child(cb)
+		_expr_elementary_checkboxes.append(cb)
+
+	vbox.add_child(HSeparator.new())
+
+	# Expressions avancées
+	var adv_header = HBoxContainer.new()
+	vbox.add_child(adv_header)
+
+	var adv_label = Label.new()
+	adv_label.text = "Expressions avancées"
+	adv_label.add_theme_font_size_override("font_size", 16)
+	adv_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	adv_header.add_child(adv_label)
+
+	_expr_advanced_select_all_btn = Button.new()
+	_expr_advanced_select_all_btn.text = "Cocher tout"
+	_expr_advanced_select_all_btn.pressed.connect(func():
+		var all_checked = _expr_advanced_checkboxes.all(func(c): return c.button_pressed)
+		for c in _expr_advanced_checkboxes:
+			c.button_pressed = not all_checked
+		_update_group_select_all_btn(_expr_advanced_select_all_btn, _expr_advanced_checkboxes)
+		_update_expr_generate_button()
+	)
+	adv_header.add_child(_expr_advanced_select_all_btn)
+
+	var adv_flow = HFlowContainer.new()
+	adv_flow.add_theme_constant_override("h_separation", 8)
+	adv_flow.add_theme_constant_override("v_separation", 4)
+	vbox.add_child(adv_flow)
+
+	for expr in ADVANCED_EXPRESSIONS:
+		var cb = CheckBox.new()
+		cb.text = expr
+		cb.button_pressed = false
+		cb.toggled.connect(func(_p):
+			_update_group_select_all_btn(_expr_advanced_select_all_btn, _expr_advanced_checkboxes)
+			_update_expr_generate_button()
+		)
+		adv_flow.add_child(cb)
+		_expr_advanced_checkboxes.append(cb)
 
 	# Custom expressions
 	vbox.add_child(HSeparator.new())
@@ -924,6 +969,11 @@ func _update_expr_generate_button() -> void:
 	_expr_generate_btn.disabled = not (has_url and has_source and has_prefix and has_expr)
 
 
+func _update_group_select_all_btn(btn: Button, checkboxes: Array) -> void:
+	var all_checked = checkboxes.all(func(c): return c.button_pressed)
+	btn.text = "Décocher tout" if all_checked else "Cocher tout"
+
+
 func _update_expr_preview_button() -> void:
 	if _expr_preview_btn == null:
 		return
@@ -933,9 +983,14 @@ func _update_expr_preview_button() -> void:
 
 func _get_selected_expressions() -> Array:
 	var expressions: Array = []
-	for cb in _expr_expression_checkboxes:
+	for cb in _expr_elementary_checkboxes + _expr_advanced_checkboxes:
 		if cb.button_pressed:
 			expressions.append(cb.text)
+	for child in _expr_custom_container.get_children():
+		if child is HBoxContainer and child.get_child_count() > 0:
+			var cb = child.get_child(0)
+			if cb is CheckBox and cb.button_pressed:
+				expressions.append(cb.text)
 	return expressions
 
 
@@ -988,9 +1043,14 @@ func _on_expr_add_custom() -> void:
 
 
 func _expression_already_exists(expr_text: String) -> bool:
-	for cb in _expr_expression_checkboxes:
+	for cb in _expr_elementary_checkboxes + _expr_advanced_checkboxes:
 		if cb.text.to_lower() == expr_text.to_lower():
 			return true
+	for child in _expr_custom_container.get_children():
+		if child is HBoxContainer and child.get_child_count() > 0:
+			var cb = child.get_child(0)
+			if cb is CheckBox and cb.text.to_lower() == expr_text.to_lower():
+				return true
 	return false
 
 
@@ -1009,7 +1069,6 @@ func _add_custom_expression_ui(expr_text: String) -> void:
 	del_btn.text = "✕"
 	del_btn.custom_minimum_size = Vector2(30, 0)
 	del_btn.pressed.connect(func():
-		_expr_expression_checkboxes.erase(cb)
 		hbox.queue_free()
 		_save_custom_expressions()
 		_update_expr_generate_button()
@@ -1017,7 +1076,6 @@ func _add_custom_expression_ui(expr_text: String) -> void:
 	hbox.add_child(del_btn)
 
 	_expr_custom_container.add_child(hbox)
-	_expr_expression_checkboxes.append(cb)
 
 
 func _save_custom_expressions() -> void:
@@ -1183,7 +1241,7 @@ func _expr_set_inputs_enabled(enabled: bool) -> void:
 	_expr_face_box_slider.editable = enabled
 	_expr_custom_input.editable = enabled
 	_expr_add_custom_btn.disabled = not enabled
-	for cb in _expr_expression_checkboxes:
+	for cb in _expr_elementary_checkboxes + _expr_advanced_checkboxes:
 		cb.disabled = not enabled
 
 
