@@ -198,6 +198,14 @@ func _inject_background_services(plugin: RefCounted, main: Control) -> void:
 			def.setup_callback.call(node, _build_context())
 
 
+## Returns all ImagePickerTabDef contributions from all plugins.
+func get_image_picker_tabs() -> Array:
+	var result: Array = []
+	for plugin in _plugins:
+		result.append_array(plugin.get_image_picker_tabs())
+	return result
+
+
 func _build_context() -> RefCounted:
 	var ctx := PluginContext.new()
 	ctx.main_node = _current_main

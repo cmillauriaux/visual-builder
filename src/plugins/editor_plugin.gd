@@ -24,3 +24,7 @@ func get_sequence_tabs() -> Array:
 
 func get_background_services() -> Array:
 	return []
+
+
+func get_image_picker_tabs() -> Array:
+	return []

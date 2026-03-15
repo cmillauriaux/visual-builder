@@ -105,8 +105,13 @@ func _open_image_picker(mode: int, on_selected: Callable) -> void:
 	var story = _main._editor_main._story if _main._editor_main else null
 	picker.setup(mode, story_base_path, story)
 	picker.image_selected.connect(on_selected)
-	
-	# Pre-fill IA source image
+
+	# Inject plugin tabs (e.g. IA tab from ai_studio plugin)
+	if _main.get("_plugin_manager") != null:
+		for tab_def in _main._plugin_manager.get_image_picker_tabs():
+			picker.add_plugin_tab(tab_def)
+
+	# Pre-fill source image in plugin tabs
 	var source = _get_current_source_image(mode)
 	if source != "":
 		picker.set_source_image(source)

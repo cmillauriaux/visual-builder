@@ -5,6 +5,7 @@ extends GutTest
 
 var ImagePickerDialog = load("res://src/ui/dialogs/image_picker_dialog.gd")
 var ImageCategoryService = load("res://src/services/image_category_service.gd")
+const Contributions = preload("res://src/plugins/contributions.gd")
 
 var _dialog: Window
 var _test_dir: String = ""
@@ -30,8 +31,8 @@ func test_has_tab_container():
 	assert_not_null(_dialog._tab_container)
 	assert_is(_dialog._tab_container, TabContainer)
 
-func test_has_three_tabs():
-	assert_eq(_dialog._tab_container.get_tab_count(), 3)
+func test_has_two_tabs_by_default():
+	assert_eq(_dialog._tab_container.get_tab_count(), 2)
 
 func test_tab_fichier_exists():
 	assert_eq(_dialog._tab_container.get_tab_title(0), "Fichier")
@@ -39,8 +40,6 @@ func test_tab_fichier_exists():
 func test_tab_galerie_exists():
 	assert_eq(_dialog._tab_container.get_tab_title(1), "Galerie")
 
-func test_tab_ia_exists():
-	assert_eq(_dialog._tab_container.get_tab_title(2), "IA")
 
 func test_has_validate_button():
 	assert_not_null(_dialog._validate_btn)
@@ -380,518 +379,53 @@ func test_on_file_selected_without_story_does_not_set_path():
 	_dialog._on_file_selected_from_dialog("/some/path/image.png")
 	assert_eq(_dialog._selected_path, "")
 
-# --- Onglet IA : Structure UI ---
 
-func test_ia_has_url_input():
-	assert_not_null(_dialog._ia_url_input)
-	assert_is(_dialog._ia_url_input, LineEdit)
+# --- Plugin tab injection ---
 
-func test_ia_has_token_input():
-	assert_not_null(_dialog._ia_token_input)
-	assert_is(_dialog._ia_token_input, LineEdit)
-	assert_true(_dialog._ia_token_input.secret)
-
-func test_ia_has_prompt_input():
-	assert_not_null(_dialog._ia_prompt_input)
-	assert_is(_dialog._ia_prompt_input, TextEdit)
-
-func test_ia_has_generate_button():
-	assert_not_null(_dialog._ia_generate_btn)
-	assert_is(_dialog._ia_generate_btn, Button)
-
-func test_ia_has_accept_button():
-	assert_not_null(_dialog._ia_accept_btn)
-	assert_is(_dialog._ia_accept_btn, Button)
-
-func test_ia_has_regenerate_button():
-	assert_not_null(_dialog._ia_regenerate_btn)
-	assert_is(_dialog._ia_regenerate_btn, Button)
-
-func test_ia_has_status_label():
-	assert_not_null(_dialog._ia_status_label)
-	assert_is(_dialog._ia_status_label, Label)
-
-func test_ia_has_progress_bar():
-	assert_not_null(_dialog._ia_progress_bar)
-	assert_is(_dialog._ia_progress_bar, ProgressBar)
-
-func test_ia_has_source_path_label():
-	assert_not_null(_dialog._ia_source_path_label)
-	assert_is(_dialog._ia_source_path_label, Label)
-
-func test_ia_has_result_preview():
-	assert_not_null(_dialog._ia_result_preview)
-	assert_is(_dialog._ia_result_preview, TextureRect)
-
-func test_ia_has_choose_source_button():
-	assert_not_null(_dialog._ia_choose_source_btn)
-	assert_is(_dialog._ia_choose_source_btn, Button)
-
-# --- Onglet IA : Bouton Galerie source ---
-
-func test_ia_has_choose_gallery_button():
-	assert_not_null(_dialog._ia_choose_gallery_btn)
-	assert_is(_dialog._ia_choose_gallery_btn, Button)
-
-func test_ia_choose_gallery_button_disabled_without_story():
+func test_add_plugin_tab_adds_tab_to_container() -> void:
+	var tab_def: RefCounted = Contributions.ImagePickerTabDef.new()
+	tab_def.label = "IA"
+	tab_def.create_tab = func(_ctx): return Control.new()
 	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, "")
-	assert_true(_dialog._ia_choose_gallery_btn.disabled)
-
-func test_ia_choose_gallery_button_enabled_with_story():
-	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
-	assert_false(_dialog._ia_choose_gallery_btn.disabled)
-
-func test_ia_set_inputs_disabled_includes_gallery_button():
-	_dialog._ia_set_inputs_enabled(false)
-	assert_true(_dialog._ia_choose_gallery_btn.disabled)
-
-func test_ia_set_inputs_enabled_includes_gallery_button():
-	_dialog._ia_set_inputs_enabled(false)
-	_dialog._ia_set_inputs_enabled(true)
-	assert_false(_dialog._ia_choose_gallery_btn.disabled)
-
-# --- Onglet IA : CFG slider ---
-
-func test_ia_has_cfg_slider():
-	assert_not_null(_dialog._ia_cfg_slider)
-	assert_is(_dialog._ia_cfg_slider, HSlider)
-
-func test_ia_cfg_slider_default_value():
-	assert_eq(_dialog._ia_cfg_slider.value, 1.0)
-
-func test_ia_cfg_slider_range():
-	assert_eq(_dialog._ia_cfg_slider.min_value, 1.0)
-	assert_eq(_dialog._ia_cfg_slider.max_value, 30.0)
-
-func test_ia_cfg_slider_step():
-	assert_eq(_dialog._ia_cfg_slider.step, 0.5)
-
-func test_ia_has_cfg_value_label():
-	assert_not_null(_dialog._ia_cfg_value_label)
-	assert_is(_dialog._ia_cfg_value_label, Label)
-	assert_eq(_dialog._ia_cfg_value_label.text, "1.0")
-
-# --- Onglet IA : État initial ---
-
-func test_ia_accept_button_initially_disabled():
-	assert_true(_dialog._ia_accept_btn.disabled)
-
-func test_ia_regenerate_button_initially_disabled():
-	assert_true(_dialog._ia_regenerate_btn.disabled)
-
-func test_ia_progress_bar_initially_hidden():
-	assert_false(_dialog._ia_progress_bar.visible)
-
-func test_ia_generate_button_initially_disabled():
-	assert_true(_dialog._ia_generate_btn.disabled)
-
-func test_ia_progress_bar_is_indeterminate():
-	assert_true(_dialog._ia_progress_bar.indeterminate)
-
-# --- Onglet IA : Generate button state ---
-
-func test_ia_generate_enabled_when_fields_filled():
-	_dialog._ia_source_image_path = "/path/to/image.png"
-	_dialog._ia_url_input.text = "http://localhost:8188"
-	_dialog._ia_prompt_input.text = "a cute cat"
-	_dialog._ia_update_generate_button_state()
-	assert_false(_dialog._ia_generate_btn.disabled)
-
-func test_ia_generate_disabled_without_source():
-	_dialog._ia_source_image_path = ""
-	_dialog._ia_url_input.text = "http://localhost:8188"
-	_dialog._ia_prompt_input.text = "a cute cat"
-	_dialog._ia_update_generate_button_state()
-	assert_true(_dialog._ia_generate_btn.disabled)
-
-func test_ia_generate_disabled_without_prompt():
-	_dialog._ia_source_image_path = "/path/to/img.png"
-	_dialog._ia_url_input.text = "http://localhost:8188"
-	_dialog._ia_prompt_input.text = ""
-	_dialog._ia_update_generate_button_state()
-	assert_true(_dialog._ia_generate_btn.disabled)
-
-func test_ia_generate_disabled_without_url():
-	_dialog._ia_source_image_path = "/path/to/img.png"
-	_dialog._ia_url_input.text = ""
-	_dialog._ia_prompt_input.text = "a cute cat"
-	_dialog._ia_update_generate_button_state()
-	assert_true(_dialog._ia_generate_btn.disabled)
-
-# --- Onglet IA : set_source_image ---
-
-func test_set_source_image_sets_path():
-	_dialog.set_source_image("/path/to/image.png")
-	assert_eq(_dialog._ia_source_image_path, "/path/to/image.png")
-
-func test_set_source_image_updates_label():
-	_dialog.set_source_image("/path/to/image.png")
-	assert_string_contains(_dialog._ia_source_path_label.text, "image.png")
-
-func test_set_source_image_empty_resets_label():
-	_dialog.set_source_image("/path/to/image.png")
-	_dialog.set_source_image("")
-	assert_eq(_dialog._ia_source_image_path, "")
-	assert_string_contains(_dialog._ia_source_path_label.text.to_lower(), "aucune")
-
-# --- Onglet IA : Status messages ---
-
-func test_ia_show_status_message():
-	_dialog._ia_show_status("Uploading...")
-	assert_eq(_dialog._ia_status_label.text, "Uploading...")
-	assert_true(_dialog._ia_progress_bar.visible)
-
-func test_ia_show_error_message():
-	_dialog._ia_show_error("Network error")
-	assert_string_contains(_dialog._ia_status_label.text, "Network error")
-	assert_false(_dialog._ia_progress_bar.visible)
-
-func test_ia_show_success_message():
-	_dialog._ia_show_success("Done!")
-	assert_eq(_dialog._ia_status_label.text, "Done!")
-	assert_false(_dialog._ia_progress_bar.visible)
-
-# --- Onglet IA : Status colors ---
-
-func test_ia_status_color_on_progress():
-	_dialog._ia_show_status("loading")
-	var color = _dialog._ia_status_label.get_theme_color("font_color")
-	assert_almost_eq(color.r, 0.8, 0.1)
-
-func test_ia_status_color_on_success():
-	_dialog._ia_show_success("ok")
-	var color = _dialog._ia_status_label.get_theme_color("font_color")
-	assert_true(color.g > 0.8, "Success should be green")
-
-func test_ia_status_color_on_error():
-	_dialog._ia_show_error("fail")
-	var color = _dialog._ia_status_label.get_theme_color("font_color")
-	assert_true(color.r > 0.8, "Error should be red")
-
-# --- Onglet IA : Inputs disabled/enabled ---
-
-func test_ia_set_inputs_disabled():
-	_dialog._ia_set_inputs_enabled(false)
-	assert_false(_dialog._ia_url_input.editable)
-	assert_false(_dialog._ia_token_input.editable)
-	assert_false(_dialog._ia_prompt_input.editable)
-	assert_true(_dialog._ia_choose_source_btn.disabled)
-
-func test_ia_set_inputs_enabled():
-	_dialog._ia_set_inputs_enabled(false)
-	_dialog._ia_set_inputs_enabled(true)
-	assert_true(_dialog._ia_url_input.editable)
-	assert_true(_dialog._ia_token_input.editable)
-	assert_true(_dialog._ia_prompt_input.editable)
-	assert_false(_dialog._ia_choose_source_btn.disabled)
-
-# --- Onglet IA : Save dir depends on mode ---
-
-func test_ia_save_dir_foreground_mode():
-	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
-	assert_true(_dialog._get_assets_dir().contains("foregrounds"))
-
-func test_ia_save_dir_background_mode():
-	_dialog.setup(ImagePickerDialog.Mode.BACKGROUND, _test_dir)
-	assert_true(_dialog._get_assets_dir().contains("backgrounds"))
-
-# --- Onglet IA : Source preview ---
-
-func test_ia_load_source_preview_with_valid_image():
-	var tmp_dir = "user://test_ia_preview_%d" % randi()
-	DirAccess.make_dir_recursive_absolute(tmp_dir)
-	var img_path = tmp_dir + "/source.png"
-	var img = Image.create(1, 1, false, Image.FORMAT_RGB8)
-	img.save_png(img_path)
-	_dialog._ia_load_source_preview(img_path)
-	assert_not_null(_dialog._ia_source_preview.texture)
-	_remove_dir_recursive(tmp_dir)
-
-func test_ia_load_source_preview_with_invalid_path_clears_texture():
-	_dialog._ia_source_preview.texture = ImageTexture.new()
-	_dialog._ia_load_source_preview("user://nonexistent/path.png")
-	assert_null(_dialog._ia_source_preview.texture)
-
-func test_ia_load_source_preview_empty_path_clears_texture():
-	_dialog._ia_source_preview.texture = ImageTexture.new()
-	_dialog._ia_load_source_preview("")
-	assert_null(_dialog._ia_source_preview.texture)
-
-# --- Image Preview : Structure ---
-
-func test_has_image_preview():
-	assert_not_null(_dialog._image_preview)
-	assert_is(_dialog._image_preview, Control)
-
-func test_image_preview_initially_hidden():
-	assert_false(_dialog._image_preview.visible)
-
-# --- Image Preview : show_image_preview ---
-
-func test_show_image_preview_opens_popup():
-	var img = Image.create(2, 2, false, Image.FORMAT_RGB8)
-	var tex = ImageTexture.create_from_image(img)
-	_dialog._show_image_preview(tex, "test.png")
-	assert_true(_dialog._image_preview.visible)
-
-func test_show_image_preview_null_texture_stays_hidden():
-	_dialog._show_image_preview(null, "test.png")
-	assert_false(_dialog._image_preview.visible)
-
-# --- Image Preview : show_image_preview_from_path ---
-
-func test_show_image_preview_from_path_with_valid_image():
-	var tmp_dir = "user://test_preview_%d" % randi()
-	DirAccess.make_dir_recursive_absolute(tmp_dir)
-	var img_path = tmp_dir + "/preview_test.png"
-	_create_minimal_png(img_path)
-	_dialog._show_image_preview_from_path(img_path)
-	assert_true(_dialog._image_preview.visible)
-	_remove_dir_recursive(tmp_dir)
-
-func test_show_image_preview_from_path_empty_does_nothing():
-	_dialog._show_image_preview_from_path("")
-	assert_false(_dialog._image_preview.visible)
-
-# --- Image Preview : IA result click ---
-
-func test_ia_result_preview_mouse_filter_stop():
-	assert_eq(_dialog._ia_result_preview.mouse_filter, Control.MOUSE_FILTER_STOP)
-
-# --- Image Preview : IA source click ---
-
-func test_ia_source_preview_mouse_filter_stop():
-	assert_eq(_dialog._ia_source_preview.mouse_filter, Control.MOUSE_FILTER_STOP)
-
-# --- Galerie : Filtre par catégorie ---
-
-func test_has_gallery_category_filter_container():
-	assert_not_null(_dialog._gallery_category_filter_container)
-	assert_is(_dialog._gallery_category_filter_container, HBoxContainer)
-
-
-func test_gallery_category_filter_has_default_categories():
-	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
-	assert_eq(_dialog._gallery_category_checkboxes.size(), 3)
-
-
-func test_gallery_category_checkboxes_initially_unchecked():
-	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
-	for cb in _dialog._gallery_category_checkboxes:
-		assert_false(cb.button_pressed)
-
-
-func test_category_service_loaded_on_setup():
-	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
-	assert_not_null(_dialog._category_service)
-
-
-func test_gallery_context_menu_initially_null():
-	assert_null(_dialog._gallery_context_menu)
-
-
-func test_gallery_context_menu_rename_is_first_item():
-	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
-	_dialog._show_gallery_context_menu(_test_dir + "/assets/foregrounds/test.png", Vector2(100, 100))
-	assert_eq(_dialog._gallery_context_menu.get_item_text(0), "Renommer")
-
-
-func test_gallery_context_menu_rename_id_is_8000():
-	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
-	_dialog._show_gallery_context_menu(_test_dir + "/assets/foregrounds/test.png", Vector2(100, 100))
-	assert_eq(_dialog._gallery_context_menu.get_item_id(0), 8000)
-
-
-func test_gallery_context_menu_has_rename_then_separator():
-	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
-	_dialog._show_gallery_context_menu(_test_dir + "/assets/foregrounds/test.png", Vector2(100, 100))
-	# index 0 = Renommer, index 1 = separator
-	assert_true(_dialog._gallery_context_menu.is_item_separator(1))
-
-
-func test_gallery_context_menu_total_count_with_default_categories():
-	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
-	_dialog._show_gallery_context_menu(_test_dir + "/assets/foregrounds/test.png", Vector2(100, 100))
-	# Renommer + sep + 3 categories + sep + Gérer = 7
-	assert_eq(_dialog._gallery_context_menu.item_count, 7)
-
-
-func test_gallery_has_image_renamed_signal():
-	assert_true(_dialog.has_signal("image_renamed"))
-
-
-# --- Onglet IA : Workflow selector ---
-
-func test_ia_has_workflow_option():
-	assert_not_null(_dialog._ia_workflow_option)
-	assert_is(_dialog._ia_workflow_option, OptionButton)
-
-func test_ia_workflow_option_has_two_items():
-	assert_eq(_dialog._ia_workflow_option.item_count, 2)
-
-func test_ia_workflow_option_first_is_creation():
-	assert_eq(_dialog._ia_workflow_option.get_item_text(0), "Création")
-
-func test_ia_workflow_option_second_is_expression():
-	assert_eq(_dialog._ia_workflow_option.get_item_text(1), "Expression")
-
-func test_ia_workflow_option_default_is_creation():
-	assert_eq(_dialog._ia_workflow_option.selected, 0)
-
-func test_ia_workflow_option_creation_id_is_0():
-	assert_eq(_dialog._ia_workflow_option.get_item_id(0), 0)
-
-func test_ia_workflow_option_expression_id_is_1():
-	assert_eq(_dialog._ia_workflow_option.get_item_id(1), 1)
-
-func test_ia_set_inputs_disabled_includes_workflow():
-	_dialog._ia_set_inputs_enabled(false)
-	assert_true(_dialog._ia_workflow_option.disabled)
-
-func test_ia_set_inputs_enabled_includes_workflow():
-	_dialog._ia_set_inputs_enabled(false)
-	_dialog._ia_set_inputs_enabled(true)
-	assert_false(_dialog._ia_workflow_option.disabled)
-
-# --- Onglet IA : Nom de l'image ---
-
-func test_ia_has_name_input():
-	assert_not_null(_dialog._ia_name_input)
-	assert_is(_dialog._ia_name_input, LineEdit)
-
-func test_ia_name_input_initially_empty():
-	assert_eq(_dialog._ia_name_input.text, "")
-
-func test_ia_name_input_initially_not_editable():
-	assert_false(_dialog._ia_name_input.editable)
-
-func test_ia_name_input_has_placeholder():
-	assert_ne(_dialog._ia_name_input.placeholder_text, "")
-
-func test_ia_name_input_editable_after_generation():
-	var img = Image.create(2, 2, false, Image.FORMAT_RGB8)
-	_dialog._on_ia_generation_completed(img)
-	assert_true(_dialog._ia_name_input.editable)
-
-func test_ia_name_input_prefilled_after_generation():
-	var img = Image.create(2, 2, false, Image.FORMAT_RGB8)
-	_dialog._on_ia_generation_completed(img)
-	assert_string_starts_with(_dialog._ia_name_input.text, "ai_")
-
-func test_ia_name_input_disabled_during_generation():
-	_dialog._ia_set_inputs_enabled(false)
-	assert_false(_dialog._ia_name_input.editable)
-
-func test_ia_name_input_enabled_after_generation():
-	_dialog._ia_set_inputs_enabled(false)
-	_dialog._ia_set_inputs_enabled(true)
-	assert_true(_dialog._ia_name_input.editable)
-
-func test_ia_accept_uses_custom_name():
-	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
-	var img = Image.create(2, 2, false, Image.FORMAT_RGB8)
-	_dialog._ia_generated_image = img
-	_dialog._ia_name_input.text = "mon_personnage"
-	watch_signals(_dialog)
-	_dialog._on_ia_accept_pressed()
-	assert_signal_emitted(_dialog, "image_selected")
-	var args = get_signal_parameters(_dialog, "image_selected")
-	assert_string_contains(args[0], "mon_personnage.png")
-
-func test_ia_accept_fallback_name_when_empty():
-	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
-	var img = Image.create(2, 2, false, Image.FORMAT_RGB8)
-	_dialog._ia_generated_image = img
-	_dialog._ia_name_input.text = ""
-	watch_signals(_dialog)
-	_dialog._on_ia_accept_pressed()
-	assert_signal_emitted(_dialog, "image_selected")
-	var args = get_signal_parameters(_dialog, "image_selected")
-	assert_string_contains(args[0], "ai_")
-
-func test_ia_accept_rejects_invalid_name():
-	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
-	var img = Image.create(2, 2, false, Image.FORMAT_RGB8)
-	_dialog._ia_generated_image = img
-	_dialog._ia_name_input.text = "nom avec espaces"
-	watch_signals(_dialog)
-	_dialog._on_ia_accept_pressed()
-	assert_signal_not_emitted(_dialog, "image_selected")
-
-func test_ia_accept_shows_error_on_invalid_name():
-	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
-	var img = Image.create(2, 2, false, Image.FORMAT_RGB8)
-	_dialog._ia_generated_image = img
-	_dialog._ia_name_input.text = "nom avec espaces"
-	_dialog._on_ia_accept_pressed()
-	assert_ne(_dialog._ia_status_label.text, "")
-
-func test_ia_accept_shows_overwrite_confirmation():
-	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
-	var dir = _test_dir + "/assets/foregrounds"
-	DirAccess.make_dir_recursive_absolute(dir)
-	_create_minimal_png(dir + "/existing.png")
-	var img = Image.create(2, 2, false, Image.FORMAT_RGB8)
-	_dialog._ia_generated_image = img
-	_dialog._ia_name_input.text = "existing"
-	watch_signals(_dialog)
-	_dialog._on_ia_accept_pressed()
-	# Should NOT emit yet — confirmation dialog shown
-	assert_signal_not_emitted(_dialog, "image_selected")
-	var confirm_dialog: ConfirmationDialog = null
-	for child in _dialog.get_children():
-		if child is ConfirmationDialog:
-			confirm_dialog = child
-			break
-	assert_not_null(confirm_dialog, "A confirmation dialog should appear")
-
-
-func test_ia_accept_overwrites_on_confirm():
-	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
-	var dir = _test_dir + "/assets/foregrounds"
-	DirAccess.make_dir_recursive_absolute(dir)
-	_create_minimal_png(dir + "/existing.png")
-	var img = Image.create(2, 2, false, Image.FORMAT_RGB8)
-	_dialog._ia_generated_image = img
-	_dialog._ia_name_input.text = "existing"
-	watch_signals(_dialog)
-	_dialog._on_ia_accept_pressed()
-	# Confirm overwrite
-	for child in _dialog.get_children():
-		if child is ConfirmationDialog:
-			child.confirmed.emit()
-			break
-	assert_signal_emitted(_dialog, "image_selected")
-	var args = get_signal_parameters(_dialog, "image_selected")
-	assert_string_contains(args[0], "existing.png")
-	assert_false(FileAccess.file_exists(dir + "/existing_1.png"))
-
-# --- Popup "Choisir une image source" : filtre catégories ---
-
-func test_ia_choose_gallery_filter_no_checkboxes_shows_all():
-	var dir = _test_dir + "/assets/foregrounds"
-	DirAccess.make_dir_recursive_absolute(dir)
-	_create_minimal_png(dir + "/img1.png")
-	_create_minimal_png(dir + "/img2.png")
-	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
-	# Aucune case cochée → toutes les images
-	var all_images = _dialog._list_gallery_images()
-	var selected: Array = []
-	var filtered = _dialog._category_service.filter_paths_by_categories(all_images, selected)
-	assert_eq(filtered.size(), 2)
-
-
-func test_ia_choose_gallery_filter_by_category():
-	var dir = _test_dir + "/assets/foregrounds"
-	DirAccess.make_dir_recursive_absolute(dir)
-	_create_minimal_png(dir + "/img1.png")
-	_create_minimal_png(dir + "/img2.png")
-	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
-	_dialog._category_service.assign_image_to_category("foregrounds/img1.png", "Base")
-	var all_images = _dialog._list_gallery_images()
-	var filtered = _dialog._category_service.filter_paths_by_categories(all_images, ["Base"])
-	assert_eq(filtered.size(), 1)
-	assert_string_contains(filtered[0], "img1.png")
+	_dialog.add_plugin_tab(tab_def)
+	assert_eq(_dialog._tab_container.get_tab_title(2), "IA")
+
+
+func test_add_plugin_tab_calls_setup_on_tab() -> void:
+	var calls := []
+	var tab_def: RefCounted = Contributions.ImagePickerTabDef.new()
+	tab_def.label = "Test"
+	var fake_tab := _TabWithSetup.new()
+	fake_tab.calls = calls
+	tab_def.create_tab = func(_ctx): return fake_tab
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, "")
+	_dialog.add_plugin_tab(tab_def)
+	assert_eq(calls.size(), 1)
+
+
+func test_set_source_image_forwards_to_plugin_tab() -> void:
+	var paths := []
+	var tab_def: RefCounted = Contributions.ImagePickerTabDef.new()
+	tab_def.label = "IA"
+	var fake_tab := _TabWithSource.new()
+	fake_tab.paths = paths
+	tab_def.create_tab = func(_ctx): return fake_tab
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, "")
+	_dialog.add_plugin_tab(tab_def)
+	_dialog.set_source_image("/some/image.png")
+	assert_eq(paths, ["/some/image.png"])
+
+
+class _TabWithSetup extends Control:
+	var calls: Array = []
+	func setup(_ctx: Dictionary) -> void:
+		calls.append(true)
+
+
+class _TabWithSource extends Control:
+	var paths: Array = []
+	func set_source_image(path: String) -> void:
+		paths.append(path)
 
 
 # --- Helpers ---

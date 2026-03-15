@@ -9,9 +9,6 @@ signal image_selected(path: String)
 
 const FICHIER_TAB := 0
 const GALERIE_TAB := 1
-const IA_TAB := 2
-const ComfyUIConfig = preload("res://src/services/comfyui_config.gd")
-const ComfyUIClient = preload("res://src/services/comfyui_client.gd")
 const ImagePreviewPopup = preload("res://src/ui/shared/image_preview_popup.gd")
 const ImageCategoryService = preload("res://src/services/image_category_service.gd")
 const CategoryManagerDialogScript = preload("res://src/ui/dialogs/category_manager_dialog.gd")
@@ -41,34 +38,11 @@ var _gallery_category_filter_container: HBoxContainer
 var _gallery_category_checkboxes: Array = []
 var _gallery_context_menu: PopupMenu
 
-# IA tab UI
-var _ia_workflow_option: OptionButton
-var _ia_url_input: LineEdit
-var _ia_token_input: LineEdit
-var _ia_source_path_label: Label
-var _ia_source_preview: TextureRect
-var _ia_choose_source_btn: Button
-var _ia_choose_gallery_btn: Button
-var _ia_prompt_input: TextEdit
-var _ia_cfg_slider: HSlider
-var _ia_cfg_value_label: Label
-var _ia_steps_slider: HSlider
-var _ia_steps_value_label: Label
-var _ia_generate_btn: Button
-var _ia_result_preview: TextureRect
-var _ia_status_label: Label
-var _ia_progress_bar: ProgressBar
-var _ia_name_input: LineEdit
-var _ia_accept_btn: Button
-var _ia_regenerate_btn: Button
-
 # Image preview
 var _image_preview: Control
 
-# IA state
-var _ia_client: Node = null
-var _ia_source_image_path: String = ""
-var _ia_generated_image: Image = null
+# Plugin tabs: Array of {control: Control, tab_def}
+var _plugin_tabs: Array = []
 
 func _ready() -> void:
 	title = "Sélectionner un foreground"
@@ -87,8 +61,6 @@ func setup(mode: int, story_base_path: String, story = null) -> void:
 		title = "Sélectionner un foreground"
 	_reset_selection()
 	_update_story_warning()
-	if _ia_choose_gallery_btn:
-		_ia_choose_gallery_btn.disabled = (story_base_path == "")
 	_category_service = ImageCategoryService.new()
 	if story_base_path != "":
 		_category_service.load_from(story_base_path)
@@ -106,15 +78,12 @@ func _update_story_warning() -> void:
 	if _no_story_label:
 		_no_story_label.visible = (_story_base_path == "")
 
+## Forwards a source image path to any plugin tab that accepts it.
 func set_source_image(path: String) -> void:
-	_ia_source_image_path = path
-	if _ia_source_path_label:
-		if path != "":
-			_ia_source_path_label.text = path.get_file()
-		else:
-			_ia_source_path_label.text = "Aucune image sélectionnée"
-	_ia_load_source_preview(path)
-	_ia_update_generate_button_state()
+	for entry in _plugin_tabs:
+		var ctrl: Control = entry.control
+		if ctrl.has_method("set_source_image"):
+			ctrl.set_source_image(path)
 
 func _build_ui() -> void:
 	var margin = MarginContainer.new()
@@ -145,7 +114,6 @@ func _build_ui() -> void:
 
 	_build_file_tab()
 	_build_gallery_tab()
-	_build_ia_tab()
 
 	# Séparateur
 	var sep = HSeparator.new()
@@ -263,207 +231,29 @@ func _build_gallery_tab() -> void:
 	_gallery_grid.columns = 4
 	gallery_inner.add_child(_gallery_grid)
 
-func _build_ia_tab() -> void:
-	var ia_tab = ScrollContainer.new()
-	ia_tab.name = "IA"
-	ia_tab.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_tab_container.add_child(ia_tab)
+## Adds a plugin-contributed tab to the TabContainer.
+## Must be called after setup() so context is available.
+func add_plugin_tab(tab_def: RefCounted) -> void:
+	var ctx := {
+		"mode": _mode,
+		"story_base_path": _story_base_path,
+		"story": _story,
+		"category_service": _category_service,
+		"on_image_selected": func(path: String): image_selected.emit(path); hide(),
+		"on_show_preview": func(tex: Texture2D, name: String): _show_image_preview(tex, name),
+	}
+	var tab_control: Control = tab_def.create_tab.call(ctx)
+	tab_control.name = tab_def.label
+	_tab_container.add_child(tab_control)
+	if tab_control.has_method("setup"):
+		tab_control.setup(ctx)
+	_plugin_tabs.append({"control": tab_control, "tab_def": tab_def})
 
-	var vbox = VBoxContainer.new()
-	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	vbox.add_theme_constant_override("separation", 8)
-	ia_tab.add_child(vbox)
-
-	# --- URL ComfyUI ---
-	var url_label = Label.new()
-	url_label.text = "URL ComfyUI :"
-	vbox.add_child(url_label)
-
-	_ia_url_input = LineEdit.new()
-	_ia_url_input.placeholder_text = "http://localhost:8188"
-	_ia_url_input.text_changed.connect(func(_t): _ia_update_generate_button_state())
-	vbox.add_child(_ia_url_input)
-
-	# --- Token ---
-	var token_label = Label.new()
-	token_label.text = "Token (optionnel) :"
-	vbox.add_child(token_label)
-
-	_ia_token_input = LineEdit.new()
-	_ia_token_input.secret = true
-	_ia_token_input.placeholder_text = "Laisser vide si pas d'auth"
-	vbox.add_child(_ia_token_input)
-
-	# --- Workflow selector ---
-	var workflow_label = Label.new()
-	workflow_label.text = "Workflow :"
-	vbox.add_child(workflow_label)
-
-	_ia_workflow_option = OptionButton.new()
-	_ia_workflow_option.add_item("Création", 0)
-	_ia_workflow_option.add_item("Expression", 1)
-	_ia_workflow_option.selected = 0
-	vbox.add_child(_ia_workflow_option)
-
-	# --- Image source ---
-	var source_label = Label.new()
-	source_label.text = "Image source :"
-	vbox.add_child(source_label)
-
-	var source_hbox = HBoxContainer.new()
-	vbox.add_child(source_hbox)
-
-	_ia_source_preview = TextureRect.new()
-	_ia_source_preview.custom_minimum_size = Vector2(64, 64)
-	_ia_source_preview.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
-	_ia_source_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	_ia_source_preview.mouse_filter = Control.MOUSE_FILTER_STOP
-	_ia_source_preview.gui_input.connect(func(event: InputEvent):
-		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			_show_image_preview(_ia_source_preview.texture, _ia_source_image_path.get_file())
-	)
-	source_hbox.add_child(_ia_source_preview)
-
-	_ia_source_path_label = Label.new()
-	_ia_source_path_label.text = "Aucune image sélectionnée"
-	_ia_source_path_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	source_hbox.add_child(_ia_source_path_label)
-
-	_ia_choose_source_btn = Button.new()
-	_ia_choose_source_btn.text = "Parcourir..."
-	_ia_choose_source_btn.pressed.connect(_on_ia_choose_source)
-	source_hbox.add_child(_ia_choose_source_btn)
-
-	_ia_choose_gallery_btn = Button.new()
-	_ia_choose_gallery_btn.text = "Galerie..."
-	_ia_choose_gallery_btn.pressed.connect(_on_ia_choose_from_gallery)
-	source_hbox.add_child(_ia_choose_gallery_btn)
-
-	# --- Prompt ---
-	var prompt_label = Label.new()
-	prompt_label.text = "Prompt :"
-	vbox.add_child(prompt_label)
-
-	_ia_prompt_input = TextEdit.new()
-	_ia_prompt_input.custom_minimum_size.y = 60
-	_ia_prompt_input.placeholder_text = "Décrivez l'image à générer..."
-	_ia_prompt_input.text_changed.connect(func(): _ia_update_generate_button_state())
-	vbox.add_child(_ia_prompt_input)
-
-	# --- CFG slider ---
-	var cfg_hbox = HBoxContainer.new()
-	cfg_hbox.add_theme_constant_override("separation", 8)
-	vbox.add_child(cfg_hbox)
-
-	var cfg_label = Label.new()
-	cfg_label.text = "CFG :"
-	cfg_hbox.add_child(cfg_label)
-
-	_ia_cfg_slider = HSlider.new()
-	_ia_cfg_slider.min_value = 1.0
-	_ia_cfg_slider.max_value = 30.0
-	_ia_cfg_slider.step = 0.5
-	_ia_cfg_slider.value = 1.0
-	_ia_cfg_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_ia_cfg_slider.value_changed.connect(func(val: float): _ia_cfg_value_label.text = str(val))
-	cfg_hbox.add_child(_ia_cfg_slider)
-
-	_ia_cfg_value_label = Label.new()
-	_ia_cfg_value_label.text = "1.0"
-	_ia_cfg_value_label.custom_minimum_size.x = 32
-	cfg_hbox.add_child(_ia_cfg_value_label)
-
-	# --- Steps slider ---
-	var steps_hbox = HBoxContainer.new()
-	steps_hbox.add_theme_constant_override("separation", 8)
-	vbox.add_child(steps_hbox)
-
-	var steps_label = Label.new()
-	steps_label.text = "Steps :"
-	steps_hbox.add_child(steps_label)
-
-	_ia_steps_slider = HSlider.new()
-	_ia_steps_slider.min_value = 1
-	_ia_steps_slider.max_value = 50
-	_ia_steps_slider.step = 1
-	_ia_steps_slider.value = 4
-	_ia_steps_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_ia_steps_slider.value_changed.connect(func(val: float): _ia_steps_value_label.text = str(int(val)))
-	steps_hbox.add_child(_ia_steps_slider)
-
-	_ia_steps_value_label = Label.new()
-	_ia_steps_value_label.text = "4"
-	_ia_steps_value_label.custom_minimum_size.x = 32
-	steps_hbox.add_child(_ia_steps_value_label)
-
-	# --- Generate button ---
-	_ia_generate_btn = Button.new()
-	_ia_generate_btn.text = "Générer"
-	_ia_generate_btn.disabled = true
-	_ia_generate_btn.pressed.connect(_on_ia_generate_pressed)
-	vbox.add_child(_ia_generate_btn)
-
-	# --- Separator ---
-	var sep = HSeparator.new()
-	vbox.add_child(sep)
-
-	# --- Result preview ---
-	_ia_result_preview = TextureRect.new()
-	_ia_result_preview.custom_minimum_size = Vector2(200, 200)
-	_ia_result_preview.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_ia_result_preview.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
-	_ia_result_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	_ia_result_preview.mouse_filter = Control.MOUSE_FILTER_STOP
-	_ia_result_preview.gui_input.connect(func(event: InputEvent):
-		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			_show_image_preview(_ia_result_preview.texture, "Résultat IA")
-	)
-	vbox.add_child(_ia_result_preview)
-
-	# --- Status ---
-	_ia_status_label = Label.new()
-	_ia_status_label.text = ""
-	vbox.add_child(_ia_status_label)
-
-	_ia_progress_bar = ProgressBar.new()
-	_ia_progress_bar.visible = false
-	_ia_progress_bar.custom_minimum_size.y = 8
-	_ia_progress_bar.indeterminate = true
-	vbox.add_child(_ia_progress_bar)
-
-	# --- Image name ---
-	var name_label = Label.new()
-	name_label.text = "Nom de l'image :"
-	vbox.add_child(name_label)
-
-	_ia_name_input = LineEdit.new()
-	_ia_name_input.placeholder_text = "Nom du fichier (sans extension)"
-	_ia_name_input.editable = false
-	vbox.add_child(_ia_name_input)
-
-	# --- Action buttons ---
-	var action_hbox = HBoxContainer.new()
-	action_hbox.add_theme_constant_override("separation", 8)
-	vbox.add_child(action_hbox)
-
-	_ia_accept_btn = Button.new()
-	_ia_accept_btn.text = "Accepter"
-	_ia_accept_btn.disabled = true
-	_ia_accept_btn.pressed.connect(_on_ia_accept_pressed)
-	action_hbox.add_child(_ia_accept_btn)
-
-	_ia_regenerate_btn = Button.new()
-	_ia_regenerate_btn.text = "Regénérer"
-	_ia_regenerate_btn.disabled = true
-	_ia_regenerate_btn.pressed.connect(_on_ia_regenerate_pressed)
-	action_hbox.add_child(_ia_regenerate_btn)
 
 func _on_tab_changed(tab: int) -> void:
 	_reset_selection()
 	if tab == GALERIE_TAB:
 		_refresh_gallery()
-	elif tab == IA_TAB:
-		_ia_load_config()
 
 func _refresh_gallery() -> void:
 	for child in _gallery_grid.get_children():
@@ -572,7 +362,10 @@ func _on_validate() -> void:
 		hide()
 
 func _on_cancel() -> void:
-	_ia_cancel_generation()
+	for entry in _plugin_tabs:
+		var ctrl: Control = entry.control
+		if ctrl.has_method("cleanup"):
+			ctrl.cleanup()
 	hide()
 
 func _get_assets_dir() -> String:
@@ -751,292 +544,6 @@ func _open_gallery_category_manager() -> void:
 	)
 	manager.popup_centered()
 
-
-# --- IA Tab Methods ---
-
-func _ia_load_config() -> void:
-	var config = ComfyUIConfig.new()
-	config.load_from()
-	_ia_url_input.text = config.get_url()
-	_ia_token_input.text = config.get_token()
-	_ia_update_generate_button_state()
-
-func _ia_update_generate_button_state() -> void:
-	if _ia_generate_btn == null:
-		return
-	var has_url = _ia_url_input.text.strip_edges() != ""
-	var has_prompt = _ia_prompt_input.text.strip_edges() != ""
-	var has_source = _ia_source_image_path != ""
-	_ia_generate_btn.disabled = not (has_url and has_prompt and has_source)
-
-func _ia_show_status(message: String) -> void:
-	_ia_status_label.text = message
-	_ia_status_label.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8))
-	_ia_progress_bar.visible = true
-
-func _ia_show_success(message: String) -> void:
-	_ia_status_label.text = message
-	_ia_status_label.add_theme_color_override("font_color", Color(0.4, 0.9, 0.4))
-	_ia_progress_bar.visible = false
-
-func _ia_show_error(message: String) -> void:
-	_ia_status_label.text = message
-	_ia_status_label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.4))
-	_ia_progress_bar.visible = false
-
-func _ia_set_inputs_enabled(enabled: bool) -> void:
-	_ia_url_input.editable = enabled
-	_ia_token_input.editable = enabled
-	_ia_prompt_input.editable = enabled
-	_ia_name_input.editable = enabled
-	_ia_choose_source_btn.disabled = not enabled
-	_ia_choose_gallery_btn.disabled = not enabled
-	_ia_workflow_option.disabled = not enabled
-
-func _on_ia_choose_source() -> void:
-	var dialog = ImageFileDialog.new()
-	dialog.file_selected.connect(func(path: String):
-		_ia_source_image_path = path
-		_ia_source_path_label.text = path.get_file()
-		_ia_load_source_preview(path)
-		_ia_update_generate_button_state()
-	)
-	add_child(dialog)
-	dialog.popup_centered(Vector2i(900, 600))
-
-func _on_ia_choose_from_gallery() -> void:
-	var gallery_window = Window.new()
-	gallery_window.title = "Choisir une image source"
-	gallery_window.size = Vector2i(600, 450)
-	gallery_window.exclusive = true
-
-	var margin = MarginContainer.new()
-	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 12)
-	margin.add_theme_constant_override("margin_right", 12)
-	margin.add_theme_constant_override("margin_top", 12)
-	margin.add_theme_constant_override("margin_bottom", 12)
-	gallery_window.add_child(margin)
-
-	var vbox = VBoxContainer.new()
-	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
-	vbox.add_theme_constant_override("separation", 8)
-	margin.add_child(vbox)
-
-	# Filtre par catégorie
-	var filter_hbox = HBoxContainer.new()
-	filter_hbox.add_theme_constant_override("separation", 4)
-	vbox.add_child(filter_hbox)
-
-	var filter_label = Label.new()
-	filter_label.text = "Filtrer :"
-	filter_hbox.add_child(filter_label)
-
-	var source_checkboxes: Array = []
-	if _category_service:
-		for cat in _category_service.get_categories():
-			var cb = CheckBox.new()
-			cb.text = cat
-			filter_hbox.add_child(cb)
-			source_checkboxes.append(cb)
-
-	# Scroll + grille
-	var scroll = ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	vbox.add_child(scroll)
-
-	var grid = GridContainer.new()
-	grid.columns = 4
-	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.add_child(grid)
-
-	var empty_msg = Label.new()
-	empty_msg.text = "Aucune image dans la galerie."
-	empty_msg.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	empty_msg.visible = false
-	vbox.add_child(empty_msg)
-
-	# Reconstruction de la grille selon le filtre actif
-	var rebuild_grid = func():
-		for child in grid.get_children():
-			child.queue_free()
-		var all_images = _list_gallery_images()
-		var selected_cats: Array = []
-		for cb in source_checkboxes:
-			if cb.button_pressed:
-				selected_cats.append(cb.text)
-		var images = all_images
-		if not selected_cats.is_empty() and _category_service:
-			images = _category_service.filter_paths_by_categories(all_images, selected_cats)
-		empty_msg.visible = images.is_empty()
-		scroll.visible = not images.is_empty()
-		for path in images:
-			var container = Panel.new()
-			container.custom_minimum_size = Vector2(120, 140)
-			container.mouse_filter = Control.MOUSE_FILTER_STOP
-			var item_vbox = VBoxContainer.new()
-			item_vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
-			item_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-			item_vbox.mouse_filter = Control.MOUSE_FILTER_PASS
-			container.add_child(item_vbox)
-			var tex_rect = TextureRect.new()
-			tex_rect.custom_minimum_size = Vector2(100, 100)
-			tex_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			var img = Image.new()
-			if img.load(path) == OK:
-				tex_rect.texture = ImageTexture.create_from_image(img)
-			item_vbox.add_child(tex_rect)
-			var name_label = Label.new()
-			name_label.text = path.get_file()
-			name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			name_label.clip_text = true
-			name_label.custom_minimum_size.x = 100
-			name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			item_vbox.add_child(name_label)
-			container.gui_input.connect(func(event: InputEvent):
-				if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-					_ia_source_image_path = path
-					_ia_source_path_label.text = path.get_file()
-					_ia_load_source_preview(path)
-					_ia_update_generate_button_state()
-					gallery_window.queue_free()
-			)
-			grid.add_child(container)
-
-	for cb in source_checkboxes:
-		cb.toggled.connect(func(_p): rebuild_grid.call())
-
-	rebuild_grid.call()
-
-	var cancel_btn = Button.new()
-	cancel_btn.text = "Annuler"
-	cancel_btn.pressed.connect(func(): gallery_window.queue_free())
-	vbox.add_child(cancel_btn)
-
-	gallery_window.close_requested.connect(func(): gallery_window.queue_free())
-	add_child(gallery_window)
-	gallery_window.popup_centered()
-
-func _ia_load_source_preview(path: String) -> void:
-	if path == "":
-		_ia_source_preview.texture = null
-		return
-	if not FileAccess.file_exists(path):
-		_ia_source_preview.texture = null
-		return
-	var img = Image.new()
-	if img.load(path) == OK:
-		_ia_source_preview.texture = ImageTexture.create_from_image(img)
-	else:
-		_ia_source_preview.texture = null
-
-func _on_ia_generate_pressed() -> void:
-	# Load existing config (preserves negative_prompt, custom expressions)
-	# then override url/token from UI inputs
-	var config = ComfyUIConfig.new()
-	config.load_from()
-	config.set_url(_ia_url_input.text.strip_edges())
-	config.set_token(_ia_token_input.text.strip_edges())
-	config.save_to()
-
-	# Create client
-	if _ia_client != null:
-		_ia_client.cancel()
-		_ia_client.queue_free()
-
-	_ia_client = Node.new()
-	_ia_client.set_script(ComfyUIClient)
-	add_child(_ia_client)
-
-	_ia_client.generation_completed.connect(_on_ia_generation_completed)
-	_ia_client.generation_failed.connect(_on_ia_generation_failed)
-	_ia_client.generation_progress.connect(_on_ia_generation_progress)
-
-	_ia_generate_btn.disabled = true
-	_ia_accept_btn.disabled = true
-	_ia_regenerate_btn.disabled = true
-	_ia_generated_image = null
-	_ia_result_preview.texture = null
-	_ia_name_input.text = ""
-	_ia_name_input.editable = false
-	_ia_set_inputs_enabled(false)
-	_ia_show_status("Lancement...")
-
-	var remove_bg = (_mode != Mode.BACKGROUND)
-	var cfg_value = _ia_cfg_slider.value
-	var steps_value = int(_ia_steps_slider.value)
-	var workflow_type = _ia_workflow_option.get_selected_id()
-	var neg_prompt = config.get_negative_prompt()
-	_ia_client.generate(config, _ia_source_image_path, _ia_prompt_input.text, remove_bg, cfg_value, steps_value, workflow_type, 0.5, neg_prompt)
-
-func _on_ia_generation_completed(image: Image) -> void:
-	_ia_generated_image = image
-	var tex = ImageTexture.create_from_image(image)
-	_ia_result_preview.texture = tex
-	_ia_show_success("Génération terminée !")
-	var timestamp = str(Time.get_unix_time_from_system()).replace(".", "_")
-	_ia_name_input.text = "ai_" + timestamp
-	_ia_name_input.editable = true
-	_ia_accept_btn.disabled = false
-	_ia_regenerate_btn.disabled = false
-	_ia_set_inputs_enabled(true)
-	_ia_update_generate_button_state()
-
-func _on_ia_generation_failed(error: String) -> void:
-	_ia_show_error("Erreur : " + error)
-	_ia_regenerate_btn.disabled = false
-	_ia_set_inputs_enabled(true)
-	_ia_update_generate_button_state()
-
-func _on_ia_generation_progress(status: String) -> void:
-	_ia_show_status(status)
-
-func _on_ia_accept_pressed() -> void:
-	if _ia_generated_image == null:
-		return
-
-	var name = _ia_name_input.text.strip_edges()
-	if name == "":
-		var timestamp = str(Time.get_unix_time_from_system()).replace(".", "_")
-		name = "ai_" + timestamp
-
-	var format_error = ImageRenameService.validate_name_format(name)
-	if format_error != "":
-		_ia_show_error(format_error)
-		return
-
-	var dir_path = _get_assets_dir()
-	DirAccess.make_dir_recursive_absolute(dir_path)
-	var file_path = dir_path + "/" + name + ".png"
-
-	if FileAccess.file_exists(file_path):
-		var dialog = ConfirmationDialog.new()
-		dialog.dialog_text = "L'image « %s » existe déjà.\nVoulez-vous l'écraser ?" % file_path.get_file()
-		dialog.ok_button_text = "Écraser"
-		add_child(dialog)
-		dialog.confirmed.connect(func():
-			_ia_do_save(file_path, dir_path)
-			dialog.queue_free()
-		)
-		dialog.canceled.connect(dialog.queue_free)
-		dialog.popup_centered()
-		return
-
-	_ia_do_save(file_path, dir_path)
-
-
-func _ia_do_save(file_path: String, dir_path: String) -> void:
-	_ia_generated_image.save_png(file_path)
-	GalleryCacheService.clear_dir(dir_path)
-
-	image_selected.emit(file_path)
-	hide()
-
-func _on_ia_regenerate_pressed() -> void:
-	_on_ia_generate_pressed()
-
 # --- Image Preview ---
 
 func _show_image_preview(texture: Texture2D, filename: String) -> void:
@@ -1050,9 +557,3 @@ func _show_image_preview_from_path(path: String) -> void:
 	if img.load(path) == OK:
 		var tex = ImageTexture.create_from_image(img)
 		_show_image_preview(tex, path.get_file())
-
-func _ia_cancel_generation() -> void:
-	if _ia_client != null:
-		_ia_client.cancel()
-		_ia_client.queue_free()
-		_ia_client = null
