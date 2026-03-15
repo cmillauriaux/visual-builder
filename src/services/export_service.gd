@@ -64,7 +64,10 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 	var abs_story_dir = ProjectSettings.globalize_path(story_path)
 	var abs_temp_story = abs_temp_project + "/story"
 	DirAccess.make_dir_recursive_absolute(abs_temp_story)
-	_copy_dir_recursive(abs_story_dir, abs_temp_story, ["artbook"])
+	var story_exclude = ["artbook"]
+	if story.get("ui_theme_mode") != "custom":
+		story_exclude.append("ui")
+	_copy_dir_recursive(abs_story_dir, abs_temp_story, story_exclude)
 	
 	# 3b. Optimiser les fichiers audio pour le web (si ffmpeg est disponible)
 	if platform == "web":
@@ -347,7 +350,7 @@ func _copy_dir_recursive(from: String, to: String, exclude: Array = []) -> void:
 			if dir.current_is_dir():
 				if not DirAccess.dir_exists_absolute(to_path):
 					DirAccess.make_dir_recursive_absolute(to_path)
-				_copy_dir_recursive(from_path, to_path, [])
+				_copy_dir_recursive(from_path, to_path, exclude)
 			else:
 				DirAccess.copy_absolute(from_path, to_path)
 			file_name = dir.get_next()
