@@ -251,9 +251,9 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 			f_log.store_string(line)
 		f_log.close()
 
-	# 9b. Découper en PCK par chapitre (web uniquement)
-	if platform == "web" and exit_code == 0 and FileAccess.file_exists(export_file):
-		_split_pck_by_chapter(abs_temp_project, export_file.get_base_dir(), godot_bin, log_path)
+	# 9b. Découper en PCK par chapitre (web, windows, macos)
+	if platform in ["web", "windows", "macos"] and exit_code == 0 and FileAccess.file_exists(export_file):
+		_split_pck_by_chapter(abs_temp_project, export_file.get_base_dir(), godot_bin, log_path, preset_name, export_file, platform == "web")
 
 	# 9c. Cache-bust : hasher et renommer les fichiers engine (web uniquement)
 	if platform == "web" and exit_code == 0 and FileAccess.file_exists(export_file):
@@ -452,7 +452,7 @@ func extract_export_error(log_path: String) -> String:
 ".join(reasons)
 
 
-func _split_pck_by_chapter(temp_project: String, export_dir: String, godot_bin: String, log_path: String) -> void:
+func _split_pck_by_chapter(temp_project: String, export_dir: String, godot_bin: String, log_path: String, reexport_preset: String, reexport_file: String, cache_bust_names: bool = false) -> void:
 	_append_log(log_path, "→ Découpage PCK par chapitre...")
 
 	# Lancer le script headless pour créer les PCK chapitres
@@ -471,39 +471,38 @@ func _split_pck_by_chapter(temp_project: String, export_dir: String, godot_bin: 
 		_append_log(log_path, "  ⚠ Échec du découpage PCK (non bloquant)")
 		return
 
-	# Cache-bust : hasher et renommer les PCK chapitres AVANT le re-export
-	_append_log(log_path, "→ Cache-bust : hashage des PCK chapitres...")
+	# Cache-bust : hasher et renommer les PCK chapitres (web uniquement — HTTP cache)
 	var manifest_path_temp = temp_project + "/story/pck_manifest.json"
 	var manifest_text = ""
 	if FileAccess.file_exists(manifest_path_temp):
 		manifest_text = FileAccess.get_file_as_string(manifest_path_temp)
 
-	var dir = DirAccess.open(export_dir)
-	if dir and manifest_text != "":
-		dir.list_dir_begin()
-		var fname = dir.get_next()
-		while fname != "":
-			if fname.begins_with("chapter_") and fname.ends_with(".pck"):
-				var full_path = export_dir + "/" + fname
-				var hash = _compute_file_hash(full_path)
-				var base = fname.get_basename()
-				var new_name = base + "." + hash + ".pck"
-				dir.rename(fname, new_name)
-				manifest_text = manifest_text.replace(fname, new_name)
-				_append_log(log_path, "  %s → %s" % [fname, new_name])
-			fname = dir.get_next()
+	if cache_bust_names:
+		_append_log(log_path, "→ Cache-bust : hashage des PCK chapitres...")
+		var dir = DirAccess.open(export_dir)
+		if dir and manifest_text != "":
+			dir.list_dir_begin()
+			var fname = dir.get_next()
+			while fname != "":
+				if fname.begins_with("chapter_") and fname.ends_with(".pck"):
+					var full_path = export_dir + "/" + fname
+					var hash = _compute_file_hash(full_path)
+					var base = fname.get_basename()
+					var new_name = base + "." + hash + ".pck"
+					dir.rename(fname, new_name)
+					manifest_text = manifest_text.replace(fname, new_name)
+					_append_log(log_path, "  %s → %s" % [fname, new_name])
+				fname = dir.get_next()
 
-		var f_manifest = FileAccess.open(manifest_path_temp, FileAccess.WRITE)
-		if f_manifest:
-			f_manifest.store_string(manifest_text)
-			f_manifest.close()
+			var f_manifest = FileAccess.open(manifest_path_temp, FileAccess.WRITE)
+			if f_manifest:
+				f_manifest.store_string(manifest_text)
+				f_manifest.close()
 
-	# Re-exporter le core PCK (bake le manifest avec les noms hashés)
+	# Re-exporter le core PCK allégé (sans les assets chapitres retirés par pck_chapter_builder)
 	_append_log(log_path, "→ Ré-export du core PCK allégé...")
 	var reexport_output = []
-	var preset_name = "Web"
-	var export_file = export_dir + "/index.html"
-	var reexport_args = ["--path", temp_project, "--headless", "--export-release", preset_name, export_file]
+	var reexport_args = ["--path", temp_project, "--headless", "--export-release", reexport_preset, reexport_file]
 	OS.execute(godot_bin, reexport_args, reexport_output, true)
 
 	for line in reexport_output:

@@ -101,6 +101,32 @@ var _expr_queue: RefCounted = null
 var _expr_generating: bool = false
 var _expr_context_index: int = -1
 
+# --- Upscale tab ---
+var _upscale_source_preview: TextureRect
+var _upscale_source_path_label: Label
+var _upscale_choose_source_btn: Button
+var _upscale_choose_gallery_btn: Button
+var _upscale_max_dim_input: SpinBox
+var _upscale_dim_feedback_label: Label
+var _upscale_model_option: OptionButton
+var _upscale_denoise_slider: HSlider
+var _upscale_denoise_value_label: Label
+var _upscale_tile_btns: Array = []
+var _upscale_selected_tile_size: int = 512
+var _upscale_prompt_input: TextEdit
+var _upscale_generate_btn: Button
+var _upscale_result_preview: TextureRect
+var _upscale_status_label: Label
+var _upscale_progress_bar: ProgressBar
+var _upscale_save_btn: Button
+var _upscale_regenerate_btn: Button
+
+# Upscale state
+var _upscale_source_image_path: String = ""
+var _upscale_original_size: Vector2i = Vector2i.ZERO
+var _upscale_generated_image: Image = null
+var _upscale_client: Node = null
+
 
 func _ready() -> void:
 	title = "Studio IA"
@@ -120,11 +146,13 @@ func setup(story, story_base_path: String) -> void:
 	var has_story = story_base_path != ""
 	_decl_choose_gallery_btn.disabled = not has_story
 	_expr_choose_gallery_btn.disabled = not has_story
+	_upscale_choose_gallery_btn.disabled = not has_story
 
 
 func _on_close() -> void:
 	_cancel_decl_generation()
 	_cancel_expr_generation()
+	_cancel_upscale_generation()
 	queue_free()
 
 
@@ -185,6 +213,7 @@ func _build_ui() -> void:
 
 	_build_decliner_tab()
 	_build_expressions_tab()
+	_build_upscale_tab()
 
 	vbox.add_child(HSeparator.new())
 
@@ -766,6 +795,7 @@ func _save_config() -> void:
 func _update_all_generate_buttons() -> void:
 	_update_decl_generate_button()
 	_update_expr_generate_button()
+	_update_upscale_generate_button()
 
 
 func _update_cfg_hints() -> void:
@@ -1463,6 +1493,431 @@ func _expr_do_save_all(completed: Array, dir_path: String, overwrite: bool) -> v
 	_expr_status_label.text = "%d images sauvegardées dans assets/foregrounds/" % saved_count
 	_expr_status_label.add_theme_color_override("font_color", Color(0.4, 0.9, 0.4))
 	_expr_save_all_btn.disabled = true
+
+
+# ========================================================
+# Upscale Tab
+# ========================================================
+
+func _build_upscale_tab() -> void:
+	var scroll = ScrollContainer.new()
+	scroll.name = "Upscale"
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_tab_container.add_child(scroll)
+
+	var vbox = VBoxContainer.new()
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.add_theme_constant_override("separation", 8)
+	scroll.add_child(vbox)
+
+	# Image source
+	var source_label = Label.new()
+	source_label.text = "Image source :"
+	vbox.add_child(source_label)
+
+	var source_hbox = HBoxContainer.new()
+	vbox.add_child(source_hbox)
+
+	_upscale_source_preview = TextureRect.new()
+	_upscale_source_preview.custom_minimum_size = Vector2(64, 64)
+	_upscale_source_preview.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	_upscale_source_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_upscale_source_preview.mouse_filter = Control.MOUSE_FILTER_STOP
+	_upscale_source_preview.gui_input.connect(func(event: InputEvent):
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			if _upscale_source_preview.texture:
+				_show_image_preview(_upscale_source_preview.texture, _upscale_source_image_path.get_file())
+	)
+	source_hbox.add_child(_upscale_source_preview)
+
+	_upscale_source_path_label = Label.new()
+	_upscale_source_path_label.text = "Aucune image sélectionnée"
+	_upscale_source_path_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	source_hbox.add_child(_upscale_source_path_label)
+
+	_upscale_choose_source_btn = Button.new()
+	_upscale_choose_source_btn.text = "Parcourir..."
+	_upscale_choose_source_btn.pressed.connect(_on_upscale_choose_source)
+	source_hbox.add_child(_upscale_choose_source_btn)
+
+	_upscale_choose_gallery_btn = Button.new()
+	_upscale_choose_gallery_btn.text = "Galerie..."
+	_upscale_choose_gallery_btn.pressed.connect(_on_upscale_choose_from_gallery)
+	source_hbox.add_child(_upscale_choose_gallery_btn)
+
+	# Dimension maximale
+	var dim_label = Label.new()
+	dim_label.text = "Dimension maximale :"
+	vbox.add_child(dim_label)
+
+	var dim_hbox = HBoxContainer.new()
+	dim_hbox.add_theme_constant_override("separation", 8)
+	vbox.add_child(dim_hbox)
+
+	_upscale_max_dim_input = SpinBox.new()
+	_upscale_max_dim_input.min_value = 64
+	_upscale_max_dim_input.max_value = 8192
+	_upscale_max_dim_input.step = 64
+	_upscale_max_dim_input.value = 2048
+	_upscale_max_dim_input.suffix = "px"
+	_upscale_max_dim_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_upscale_max_dim_input.value_changed.connect(func(_v: float): _upscale_update_dim_feedback())
+	dim_hbox.add_child(_upscale_max_dim_input)
+
+	_upscale_dim_feedback_label = Label.new()
+	_upscale_dim_feedback_label.text = ""
+	_upscale_dim_feedback_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	dim_hbox.add_child(_upscale_dim_feedback_label)
+
+	var dim_hint = Label.new()
+	dim_hint.text = "Ratio préservé. Valeur inférieure = downscale."
+	dim_hint.add_theme_font_size_override("font_size", 11)
+	dim_hint.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
+	vbox.add_child(dim_hint)
+
+	# Modèle d'upscale
+	var model_label = Label.new()
+	model_label.text = "Modèle d'upscale :"
+	vbox.add_child(model_label)
+
+	_upscale_model_option = OptionButton.new()
+	_upscale_model_option.add_item("4x-UltraSharp.pth", 0)
+	_upscale_model_option.add_item("4x_NMKD-Siax_200k.pth", 1)
+	_upscale_model_option.add_item("RealESRGAN_x4plus.pth", 2)
+	_upscale_model_option.add_item("RealESRGAN_x4plus_anime_6B.pth", 3)
+	_upscale_model_option.selected = 0
+	vbox.add_child(_upscale_model_option)
+
+	# Denoise
+	var denoise_hbox = HBoxContainer.new()
+	denoise_hbox.add_theme_constant_override("separation", 8)
+	vbox.add_child(denoise_hbox)
+
+	var denoise_label = Label.new()
+	denoise_label.text = "Denoise :"
+	denoise_hbox.add_child(denoise_label)
+
+	_upscale_denoise_slider = HSlider.new()
+	_upscale_denoise_slider.min_value = 0.0
+	_upscale_denoise_slider.max_value = 1.0
+	_upscale_denoise_slider.step = 0.05
+	_upscale_denoise_slider.value = 0.35
+	_upscale_denoise_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_upscale_denoise_slider.value_changed.connect(func(val: float):
+		_upscale_denoise_value_label.text = str(snapped(val, 0.01))
+	)
+	denoise_hbox.add_child(_upscale_denoise_slider)
+
+	_upscale_denoise_value_label = Label.new()
+	_upscale_denoise_value_label.text = "0.35"
+	_upscale_denoise_value_label.custom_minimum_size.x = 36
+	denoise_hbox.add_child(_upscale_denoise_value_label)
+
+	var denoise_hint = Label.new()
+	denoise_hint.text = "0.0 — fidèle / 1.0 — créatif"
+	denoise_hint.add_theme_font_size_override("font_size", 11)
+	denoise_hint.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
+	vbox.add_child(denoise_hint)
+
+	# Tile size
+	var tile_label = Label.new()
+	tile_label.text = "Tile size :"
+	vbox.add_child(tile_label)
+
+	var tile_hbox = HBoxContainer.new()
+	tile_hbox.add_theme_constant_override("separation", 4)
+	vbox.add_child(tile_hbox)
+
+	_upscale_tile_btns = []
+	_upscale_selected_tile_size = 512
+	var tile_sizes = [256, 512, 768, 1024]
+	var make_tile_handler = func(s: int) -> Callable:
+		return func():
+			_upscale_selected_tile_size = s
+			for b in _upscale_tile_btns:
+				b.button_pressed = (b.text == str(s))
+	for tile_size in tile_sizes:
+		var btn = Button.new()
+		btn.text = str(tile_size)
+		btn.toggle_mode = true
+		btn.button_pressed = (tile_size == 512)
+		btn.pressed.connect(make_tile_handler.call(tile_size))
+		tile_hbox.add_child(btn)
+		_upscale_tile_btns.append(btn)
+
+	# Prompt optionnel
+	var prompt_label = Label.new()
+	prompt_label.text = "Prompt (optionnel) :"
+	vbox.add_child(prompt_label)
+
+	_upscale_prompt_input = TextEdit.new()
+	_upscale_prompt_input.custom_minimum_size.y = 48
+	_upscale_prompt_input.placeholder_text = "sharp details, high quality, crisp edges..."
+	vbox.add_child(_upscale_prompt_input)
+
+	# Generate button
+	_upscale_generate_btn = Button.new()
+	_upscale_generate_btn.text = "▲ Upscaler"
+	_upscale_generate_btn.disabled = true
+	_upscale_generate_btn.pressed.connect(_on_upscale_generate_pressed)
+	vbox.add_child(_upscale_generate_btn)
+
+	vbox.add_child(HSeparator.new())
+
+	# Result preview
+	_upscale_result_preview = TextureRect.new()
+	_upscale_result_preview.custom_minimum_size = Vector2(200, 200)
+	_upscale_result_preview.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_upscale_result_preview.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	_upscale_result_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_upscale_result_preview.mouse_filter = Control.MOUSE_FILTER_STOP
+	_upscale_result_preview.gui_input.connect(func(event: InputEvent):
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			if _upscale_result_preview.texture:
+				_show_image_preview(_upscale_result_preview.texture, "Résultat Upscale")
+	)
+	vbox.add_child(_upscale_result_preview)
+
+	_upscale_status_label = Label.new()
+	_upscale_status_label.text = ""
+	vbox.add_child(_upscale_status_label)
+
+	_upscale_progress_bar = ProgressBar.new()
+	_upscale_progress_bar.visible = false
+	_upscale_progress_bar.custom_minimum_size.y = 8
+	_upscale_progress_bar.indeterminate = true
+	vbox.add_child(_upscale_progress_bar)
+
+	var action_hbox = HBoxContainer.new()
+	action_hbox.add_theme_constant_override("separation", 8)
+	vbox.add_child(action_hbox)
+
+	_upscale_save_btn = Button.new()
+	_upscale_save_btn.text = "💾 Sauvegarder"
+	_upscale_save_btn.disabled = true
+	_upscale_save_btn.pressed.connect(_on_upscale_save_pressed)
+	action_hbox.add_child(_upscale_save_btn)
+
+	_upscale_regenerate_btn = Button.new()
+	_upscale_regenerate_btn.text = "↻ Regénérer"
+	_upscale_regenerate_btn.disabled = true
+	_upscale_regenerate_btn.pressed.connect(_on_upscale_generate_pressed)
+	action_hbox.add_child(_upscale_regenerate_btn)
+
+
+# ========================================================
+# Upscale Logic
+# ========================================================
+
+static func _compute_upscale_target(original: Vector2i, max_dim: int) -> Vector2i:
+	if original == Vector2i.ZERO:
+		return Vector2i.ZERO
+	var scale = float(max_dim) / float(max(original.x, original.y))
+	return Vector2i(roundi(original.x * scale), roundi(original.y * scale))
+
+
+func _upscale_update_dim_feedback() -> void:
+	if _upscale_original_size == Vector2i.ZERO:
+		_upscale_dim_feedback_label.text = ""
+		return
+	var max_dim = int(_upscale_max_dim_input.value)
+	var target = _compute_upscale_target(_upscale_original_size, max_dim)
+	var scale = float(max_dim) / float(max(_upscale_original_size.x, _upscale_original_size.y))
+	var arrow = "↑" if scale >= 1.0 else "↓"
+	_upscale_dim_feedback_label.text = "→ %d × %d px (%s%.1f×)" % [target.x, target.y, arrow, scale]
+
+
+func _upscale_set_source(path: String) -> void:
+	_upscale_source_image_path = path
+	_upscale_source_path_label.text = path.get_file()
+	_load_preview(_upscale_source_preview, path)
+	var img = Image.new()
+	if img.load(path) == OK:
+		_upscale_original_size = Vector2i(img.get_width(), img.get_height())
+	else:
+		_upscale_original_size = Vector2i.ZERO
+	_upscale_update_dim_feedback()
+	_update_upscale_generate_button()
+
+
+func _on_upscale_choose_source() -> void:
+	var dialog = ImageFileDialog.new()
+	dialog.file_selected.connect(func(path: String): _upscale_set_source(path))
+	add_child(dialog)
+	dialog.popup_centered(Vector2i(900, 600))
+
+
+func _on_upscale_choose_from_gallery() -> void:
+	_open_gallery_source_picker(func(path: String): _upscale_set_source(path))
+
+
+func _update_upscale_generate_button() -> void:
+	if _upscale_generate_btn == null:
+		return
+	var has_url = _url_input.text.strip_edges() != ""
+	var has_source = _upscale_source_image_path != ""
+	_upscale_generate_btn.disabled = not (has_url and has_source)
+
+
+func _on_upscale_generate_pressed() -> void:
+	_save_config()
+
+	if _upscale_client != null:
+		_upscale_client.cancel()
+		_upscale_client.queue_free()
+
+	_upscale_client = Node.new()
+	_upscale_client.set_script(ComfyUIClient)
+	add_child(_upscale_client)
+
+	_upscale_client.generation_completed.connect(_on_upscale_generation_completed)
+	_upscale_client.generation_failed.connect(_on_upscale_generation_failed)
+	_upscale_client.generation_progress.connect(_on_upscale_generation_progress)
+
+	_upscale_generate_btn.disabled = true
+	_upscale_save_btn.disabled = true
+	_upscale_regenerate_btn.disabled = true
+	_upscale_generated_image = null
+	_upscale_result_preview.texture = null
+	_upscale_set_inputs_enabled(false)
+	_upscale_show_status("Lancement...")
+
+	var config = ComfyUIConfig.new()
+	config.set_url(_url_input.text.strip_edges())
+	config.set_token(_token_input.text.strip_edges())
+
+	var max_dim = int(_upscale_max_dim_input.value)
+	var target = _compute_upscale_target(_upscale_original_size, max_dim)
+	var model_name = _upscale_model_option.get_item_text(_upscale_model_option.selected)
+	var denoise_val = _upscale_denoise_slider.value
+	var tile_size = _upscale_selected_tile_size
+	var prompt_text = _upscale_prompt_input.text.strip_edges()
+	var neg_prompt = _negative_prompt_input.text.strip_edges()
+
+	_upscale_client.generate(
+		config,
+		_upscale_source_image_path,
+		prompt_text,
+		false,
+		1.0,
+		4,
+		ComfyUIClient.WorkflowType.UPSCALE,
+		denoise_val,
+		neg_prompt,
+		80,
+		model_name,
+		tile_size,
+		target.x,
+		target.y
+	)
+
+
+func _on_upscale_generation_completed(image: Image) -> void:
+	_upscale_generated_image = image
+	var tex = ImageTexture.create_from_image(image)
+	_upscale_result_preview.texture = tex
+	_upscale_show_success("Upscale terminé !")
+	_upscale_save_btn.disabled = false
+	_upscale_regenerate_btn.disabled = false
+	_upscale_set_inputs_enabled(true)
+	_update_upscale_generate_button()
+
+
+func _on_upscale_generation_failed(error: String) -> void:
+	_upscale_show_error("Erreur : " + error)
+	_upscale_regenerate_btn.disabled = false
+	_upscale_set_inputs_enabled(true)
+	_update_upscale_generate_button()
+
+
+func _on_upscale_generation_progress(status: String) -> void:
+	_upscale_show_status(status)
+
+
+func _upscale_show_status(message: String) -> void:
+	_upscale_status_label.text = message
+	_upscale_status_label.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8))
+	_upscale_progress_bar.visible = true
+
+
+func _upscale_show_success(message: String) -> void:
+	_upscale_status_label.text = message
+	_upscale_status_label.add_theme_color_override("font_color", Color(0.4, 0.9, 0.4))
+	_upscale_progress_bar.visible = false
+
+
+func _upscale_show_error(message: String) -> void:
+	_upscale_status_label.text = message
+	_upscale_status_label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.4))
+	_upscale_progress_bar.visible = false
+
+
+func _upscale_set_inputs_enabled(enabled: bool) -> void:
+	_url_input.editable = enabled
+	_token_input.editable = enabled
+	_negative_prompt_input.editable = enabled
+	_upscale_choose_source_btn.disabled = not enabled
+	if _story_base_path == "":
+		_upscale_choose_gallery_btn.disabled = true
+	else:
+		_upscale_choose_gallery_btn.disabled = not enabled
+	_upscale_max_dim_input.editable = enabled
+	_upscale_model_option.disabled = not enabled
+	_upscale_denoise_slider.editable = enabled
+	_upscale_prompt_input.editable = enabled
+	for btn in _upscale_tile_btns:
+		btn.disabled = not enabled
+
+
+func _cancel_upscale_generation() -> void:
+	if _upscale_client != null:
+		_upscale_client.cancel()
+		_upscale_client.queue_free()
+		_upscale_client = null
+
+
+func _on_upscale_save_pressed() -> void:
+	if _upscale_generated_image == null:
+		return
+
+	var fg_path = _story_base_path + "/assets/foregrounds"
+	var bg_path = _story_base_path + "/assets/backgrounds"
+	var base_name = _upscale_source_image_path.get_file().get_basename() + "_upscaled"
+	if base_name == "_upscaled":
+		base_name = "upscaled_" + str(Time.get_unix_time_from_system()).replace(".", "_")
+
+	if _upscale_source_image_path.begins_with(fg_path) and fg_path != "/assets/foregrounds":
+		_upscale_do_save(fg_path, base_name)
+	elif _upscale_source_image_path.begins_with(bg_path) and bg_path != "/assets/backgrounds":
+		_upscale_do_save(bg_path, base_name)
+	else:
+		var dialog = ConfirmationDialog.new()
+		dialog.dialog_text = "Où sauvegarder l'image upscalée ?"
+		dialog.ok_button_text = "Foreground"
+		dialog.add_button("Background", true, "background")
+		add_child(dialog)
+		dialog.confirmed.connect(func():
+			_upscale_do_save(fg_path, base_name)
+			dialog.queue_free()
+		)
+		dialog.custom_action.connect(func(action: String):
+			if action == "background":
+				_upscale_do_save(bg_path, base_name)
+				dialog.queue_free()
+		)
+		dialog.canceled.connect(dialog.queue_free)
+		dialog.popup_centered()
+
+
+func _upscale_do_save(dir_path: String, base_name: String) -> void:
+	DirAccess.make_dir_recursive_absolute(dir_path)
+	var file_path = _resolve_unique_path(dir_path, base_name + ".png")
+	_upscale_generated_image.save_png(file_path)
+	GalleryCacheService.clear_dir(dir_path)
+	_upscale_show_success("Sauvegardé : " + file_path.get_file())
+	_upscale_generated_image = null
+	_upscale_result_preview.texture = null
+	_upscale_save_btn.disabled = true
 
 
 # ========================================================

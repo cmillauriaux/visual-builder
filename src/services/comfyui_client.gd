@@ -8,7 +8,7 @@ signal generation_completed(image: Image)
 signal generation_failed(error: String)
 signal generation_progress(status: String)
 
-enum WorkflowType { CREATION = 0, EXPRESSION = 1 }
+enum WorkflowType { CREATION = 0, EXPRESSION = 1, UPSCALE = 2 }
 
 var _generating: bool = false
 var _prompt_id: String = ""
@@ -22,6 +22,10 @@ var _denoise: float = 0.5
 var _workflow_type: int = WorkflowType.CREATION
 var _negative_prompt: String = ""
 var _face_box_size: int = 80
+var _upscale_model_name: String = "4x-UltraSharp.pth"
+var _upscale_tile_size: int = 512
+var _upscale_target_w: int = 0
+var _upscale_target_h: int = 0
 
 # --- Workflow template (Flux 2 Klein + BiRefNet) ---
 # Reproduit exactement Edit_Image_Transparent_API.json
@@ -387,12 +391,146 @@ const EXPRESSION_WORKFLOW_TEMPLATE: Dictionary = {
 	}
 }
 
+# --- Upscale workflow template (ESRGAN + Ultimate SD Upscale + Flux 2 Klein) ---
+# Paramètres dynamiques : 1.inputs.image, 2.inputs.model_name,
+#                         4.inputs.width, 4.inputs.height,
+#                         13.inputs.text, 20.inputs.denoise, 20.inputs.seed,
+#                         20.inputs.tile_width, 20.inputs.tile_height
+
+const UPSCALE_WORKFLOW_TEMPLATE: Dictionary = {
+	"1": {
+		"class_type": "LoadImage",
+		"inputs": {
+			"image": ""
+		}
+	},
+	"2": {
+		"class_type": "UpscaleModelLoader",
+		"inputs": {
+			"model_name": "4x-UltraSharp.pth"
+		}
+	},
+	"3": {
+		"class_type": "ImageUpscaleWithModel",
+		"inputs": {
+			"upscale_model": ["2", 0],
+			"image": ["1", 0]
+		}
+	},
+	"4": {
+		"class_type": "ImageScale",
+		"inputs": {
+			"image": ["3", 0],
+			"upscale_method": "lanczos",
+			"width": 0,
+			"height": 0,
+			"crop": "disabled"
+		}
+	},
+	"75:70": {
+		"class_type": "UNETLoader",
+		"inputs": {
+			"unet_name": "flux-2-klein-9b-fp8.safetensors",
+			"weight_dtype": "default"
+		}
+	},
+	"75:71": {
+		"class_type": "CLIPLoader",
+		"inputs": {
+			"clip_name": "qwen_3_8b_fp8mixed.safetensors",
+			"type": "flux2",
+			"device": "default"
+		}
+	},
+	"75:72": {
+		"class_type": "VAELoader",
+		"inputs": {
+			"vae_name": "flux2-vae.safetensors"
+		}
+	},
+	"13": {
+		"class_type": "CLIPTextEncode",
+		"inputs": {
+			"text": "",
+			"clip": ["75:71", 0]
+		}
+	},
+	"14": {
+		"class_type": "ConditioningZeroOut",
+		"inputs": {
+			"conditioning": ["13", 0]
+		}
+	},
+	"20": {
+		"class_type": "UltimateSDUpscale",
+		"inputs": {
+			"upscale_by": 1.0,
+			"seed": 0,
+			"steps": 4,
+			"cfg": 1.0,
+			"sampler_name": "euler",
+			"scheduler": "simple",
+			"denoise": 0.35,
+			"mode_type": "Linear",
+			"tile_width": 512,
+			"tile_height": 512,
+			"mask_blur": 8,
+			"tile_padding": 32,
+			"seam_fix_mode": "None",
+			"seam_fix_denoise": 0.35,
+			"seam_fix_width": 64,
+			"seam_fix_mask_blur": 8,
+			"seam_fix_padding": 16,
+			"force_uniform_tiles": true,
+			"tiled_decode": false,
+			"image": ["4", 0],
+			"model": ["75:70", 0],
+			"positive": ["13", 0],
+			"negative": ["14", 0],
+			"vae": ["75:72", 0]
+		}
+	},
+	"9": {
+		"class_type": "SaveImage",
+		"inputs": {
+			"filename_prefix": "Upscale",
+			"images": ["20", 0]
+		}
+	}
+}
+
 func is_generating() -> bool:
 	return _generating
 
 # --- Build workflow with dynamic parameters ---
 
+func _build_upscale_workflow(filename: String, prompt_text: String, seed: int, denoise: float, model_name: String, tile_size: int, target_w: int, target_h: int, negative_prompt: String) -> Dictionary:
+	var wf = UPSCALE_WORKFLOW_TEMPLATE.duplicate(true)
+	wf["1"]["inputs"]["image"] = filename
+	wf["2"]["inputs"]["model_name"] = model_name
+	wf["4"]["inputs"]["width"] = target_w
+	wf["4"]["inputs"]["height"] = target_h
+	wf["13"]["inputs"]["text"] = prompt_text
+	wf["20"]["inputs"]["denoise"] = denoise
+	wf["20"]["inputs"]["seed"] = seed
+	wf["20"]["inputs"]["tile_width"] = tile_size
+	wf["20"]["inputs"]["tile_height"] = tile_size
+	if negative_prompt.strip_edges() != "":
+		wf["75:83"] = {
+			"class_type": "CLIPTextEncode",
+			"inputs": {
+				"text": negative_prompt,
+				"clip": ["75:71", 0]
+			}
+		}
+		wf["20"]["inputs"]["negative"] = ["75:83", 0]
+		wf.erase("14")
+	return wf
+
+
 func build_workflow(filename: String, prompt_text: String, seed: int, remove_background: bool = true, cfg: float = 1.0, steps: int = 4, workflow_type: int = WorkflowType.CREATION, denoise: float = 0.5, negative_prompt: String = "", face_box_size: int = 80) -> Dictionary:
+	if workflow_type == WorkflowType.UPSCALE:
+		return _build_upscale_workflow(filename, prompt_text, seed, denoise, _upscale_model_name, _upscale_tile_size, _upscale_target_w, _upscale_target_h, negative_prompt)
 	if workflow_type == WorkflowType.EXPRESSION:
 		return _build_expression_workflow(filename, prompt_text, seed, remove_background, cfg, steps, denoise, negative_prompt, face_box_size)
 	var wf = WORKFLOW_TEMPLATE.duplicate(true)
@@ -531,7 +669,7 @@ func parse_history_response(json_str: String, prompt_id: String) -> Dictionary:
 
 # --- Full generation flow ---
 
-func generate(config: RefCounted, source_image_path: String, prompt_text: String, remove_background: bool = true, cfg: float = 1.0, steps: int = 4, workflow_type: int = WorkflowType.CREATION, denoise: float = 0.5, negative_prompt: String = "", face_box_size: int = 80) -> void:
+func generate(config: RefCounted, source_image_path: String, prompt_text: String, remove_background: bool = true, cfg: float = 1.0, steps: int = 4, workflow_type: int = WorkflowType.CREATION, denoise: float = 0.5, negative_prompt: String = "", face_box_size: int = 80, upscale_model_name: String = "4x-UltraSharp.pth", tile_size: int = 512, target_w: int = 0, target_h: int = 0) -> void:
 	if _generating:
 		generation_failed.emit("Une génération est déjà en cours")
 		return
@@ -546,6 +684,10 @@ func generate(config: RefCounted, source_image_path: String, prompt_text: String
 	_workflow_type = workflow_type
 	_negative_prompt = negative_prompt
 	_face_box_size = face_box_size
+	_upscale_model_name = upscale_model_name
+	_upscale_tile_size = tile_size
+	_upscale_target_w = target_w
+	_upscale_target_h = target_h
 
 	generation_progress.emit("Chargement de l'image source...")
 
