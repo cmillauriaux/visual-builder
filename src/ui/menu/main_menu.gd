@@ -33,6 +33,7 @@ var _menu_content: CenterContainer
 var _loading_overlay: CenterContainer
 var _loading_label: Label
 var _banner_wrapper: CenterContainer
+var _banner_texture_rect: TextureRect = null
 
 # Settings partagés
 var _settings: RefCounted
@@ -87,6 +88,7 @@ func build_ui() -> void:
 		banner.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		banner.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		banner_stack.add_child(banner)
+		_banner_texture_rect = banner
 
 	# Labels centrés sur la bannière
 	var label_center = CenterContainer.new()
@@ -185,6 +187,12 @@ func build_ui() -> void:
 	)
 	_options_menu.closed.connect(func(): options_center.visible = false)
 	options_center.add_child(_options_menu)
+
+
+func update_banner(story_ui_path: String) -> void:
+	var tex = GameTheme._resolve_asset("banner_hanging.png", story_ui_path)
+	if tex and _banner_texture_rect:
+		_banner_texture_rect.texture = tex
 
 
 func setup(story, base_path: String) -> void:

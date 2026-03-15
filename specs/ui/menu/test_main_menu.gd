@@ -172,3 +172,23 @@ func test_itchio_hidden_when_url_empty():
 	story.itchio_url = ""
 	_menu.setup(story, "res://")
 	assert_false(_menu._itchio_button.visible)
+
+
+# --- Banner updates ---
+
+func test_update_banner_does_not_crash_with_empty_path() -> void:
+	# update_banner doit exister et ne pas planter avec un chemin vide
+	assert_true(_menu.has_method("update_banner"), "main_menu should have update_banner method")
+	_menu.update_banner("")
+
+func test_update_banner_does_not_crash_with_nonexistent_path() -> void:
+	_menu.update_banner("/nonexistent/path/that/does/not/exist")
+	# Pas de crash = succès
+
+func test_update_banner_does_not_crash_with_valid_path() -> void:
+	# Appeler update_banner avec un chemin valide
+	# En headless mode, load() peut retourner null, mais update_banner() doit gérer ce cas gracieusement
+	# Note : _banner_texture_rect est null en headless mode (GPU absent), donc
+	# update_banner() gère ce cas avec `if tex and _banner_texture_rect:`
+	_menu.update_banner("res://assets/ui")  # Valid path that exists in the project
+	# Si pas de crash = succès
