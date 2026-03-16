@@ -6,6 +6,7 @@ extends VBoxContainer
 var _foreground = null
 
 var _title_label: Label
+var _name_label: Label
 var _pos_x_spin: SpinBox
 var _pos_y_spin: SpinBox
 var _scale_spin: SpinBox
@@ -33,6 +34,21 @@ func _ready() -> void:
 	_title_label.add_theme_font_size_override("font_size", 12)
 	_title_label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
 	add_child(_title_label)
+
+	# Nom du foreground
+	var name_row = HBoxContainer.new()
+	add_child(name_row)
+	var name_key_label = Label.new()
+	name_key_label.text = "Nom"
+	name_key_label.custom_minimum_size = Vector2(70, 0)
+	name_row.add_child(name_key_label)
+
+	_name_label = Label.new()
+	_name_label.size_flags_horizontal = SIZE_EXPAND_FILL
+	_name_label.clip_text = true
+	name_row.add_child(_name_label)
+
+	add_child(HSeparator.new())
 
 	# Position
 	var pos_row = HBoxContainer.new()
@@ -160,7 +176,8 @@ func _ready() -> void:
 func show_for_foreground(fg) -> void:
 	_foreground = fg
 	_updating = true
-	_title_label.text = "Propriétés — %s" % fg.fg_name
+	_title_label.text = "Propriétés"
+	_name_label.text = fg.fg_name
 	_pos_x_spin.value = fg.anchor_bg.x
 	_pos_y_spin.value = fg.anchor_bg.y
 	_scale_spin.value = fg.scale

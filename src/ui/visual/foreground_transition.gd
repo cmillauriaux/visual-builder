@@ -185,8 +185,10 @@ func apply_morph(target: Control, old_state: Dictionary, duration: float, clone 
 		clone.size = old_state["size"]
 		tween.tween_property(clone, "position", target_pos, duration)
 		tween.tween_property(clone, "size", target_size, duration)
-		# Retirer le clone à la fin
-		tween.chain().tween_callback(clone.queue_free)
+		# Retirer le clone à la fin (chemin normal : tween complété)
+		tween.chain().tween_callback(func(): if is_instance_valid(clone): clone.queue_free())
+		# Si target est libéré avant la fin du tween, libérer le clone aussi
+		target.tree_exiting.connect(func(): if is_instance_valid(clone): clone.queue_free(), CONNECT_ONE_SHOT)
 	else:
 		# Même image : interpolation linéaire d'opacité
 		target.modulate.a = old_state["modulate_a"]

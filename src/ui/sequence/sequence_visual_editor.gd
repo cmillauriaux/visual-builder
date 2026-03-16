@@ -795,6 +795,15 @@ func load_sequence(sequence) -> void:
 	_inherited_from_index = -1
 	_update_visual()
 	_update_foreground_visuals()
+	# Nettoyer les nœuds non tracés (clones de transitions interrompues)
+	if _fg_container:
+		var tracked := {}
+		for uuid in _fg_visual_map:
+			if is_instance_valid(_fg_visual_map[uuid]):
+				tracked[_fg_visual_map[uuid]] = true
+		for child in _fg_container.get_children():
+			if not tracked.has(child):
+				child.queue_free()
 	call_deferred("apply_auto_fit")
 
 ## Met à jour uniquement les foregrounds sans toucher au background, aux transitions en cours,
