@@ -89,6 +89,48 @@ func test_clear():
 	assert_eq(_panel._report_content.get_child_count(), 0)
 
 
+# === Chapter timings ===
+
+func test_show_chapter_timings_block_visible():
+	var report = _make_success_report()
+	_panel.show_report(report)
+	var timing_title = _panel._report_content.get_node_or_null("ChapterTimingsTitle")
+	assert_not_null(timing_title, "Le titre de la section timing doit exister")
+
+func test_show_chapter_timings_list_has_correct_count():
+	var report = _make_success_report()
+	_panel.show_report(report)
+	var timing_list = _panel._report_content.get_node_or_null("ChapterTimingsList")
+	assert_not_null(timing_list, "La liste des timings doit exister")
+	assert_eq(timing_list.get_child_count(), 1)
+
+func test_show_chapter_timings_label_text():
+	var report = _make_success_report()
+	_panel.show_report(report)
+	var timing_list = _panel._report_content.get_node_or_null("ChapterTimingsList")
+	assert_not_null(timing_list)
+	var label: Label = timing_list.get_child(0)
+	# 150 sec = 2 min 30 sec, 315 sec = 5 min 15 sec
+	assert_true(label.text.contains("Chapitre 1"), "Le nom du chapitre doit apparaître")
+	assert_true(label.text.contains("de "), "Le mot 'de' doit apparaître avant le min")
+	assert_true(label.text.contains(" a "), "Le séparateur ' a ' doit apparaître entre min et max")
+	assert_true(label.text.contains("2 min 30 sec"), "Le min doit être formaté")
+	assert_true(label.text.contains("5 min 15 sec"), "Le max doit être formaté")
+
+func test_show_chapter_timings_hidden_when_empty():
+	var report = _make_failure_report()  # chapter_timings: []
+	_panel.show_report(report)
+	var timing_title = _panel._report_content.get_node_or_null("ChapterTimingsTitle")
+	assert_null(timing_title, "Le titre timing ne doit pas exister si chapter_timings est vide")
+
+func test_show_chapter_timings_hidden_when_key_absent():
+	var report = _make_success_report()
+	report.erase("chapter_timings")
+	_panel.show_report(report)
+	var timing_title = _panel._report_content.get_node_or_null("ChapterTimingsTitle")
+	assert_null(timing_title, "Le titre timing ne doit pas exister si la clé est absente")
+
+
 # === Helpers ===
 
 func _make_success_report() -> Dictionary:
@@ -109,6 +151,9 @@ func _make_success_report() -> Dictionary:
 		"total_runs": 1,
 		"all_nodes": 2,
 		"visited_nodes": 2,
+		"chapter_timings": [
+			{"chapter_name": "Chapitre 1", "min_seconds": 150.0, "max_seconds": 315.0},
+		],
 	}
 
 func _make_failure_report() -> Dictionary:
@@ -128,4 +173,5 @@ func _make_failure_report() -> Dictionary:
 		"total_runs": 1,
 		"all_nodes": 2,
 		"visited_nodes": 1,
+		"chapter_timings": [],
 	}

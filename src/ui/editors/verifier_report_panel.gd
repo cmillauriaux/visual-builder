@@ -86,6 +86,29 @@ func show_report(report: Dictionary) -> void:
 	# Separator
 	_report_content.add_child(HSeparator.new())
 
+	# Chapter timings
+	var chapter_timings: Array = report.get("chapter_timings", [])
+	if chapter_timings.size() > 0:
+		var timings_title = Label.new()
+		timings_title.name = "ChapterTimingsTitle"
+		timings_title.text = "-- Duree estimee par chapitre --"
+		timings_title.add_theme_font_size_override("font_size", 15)
+		timings_title.add_theme_color_override("font_color", Color(0.75, 0.75, 0.75))
+		_report_content.add_child(timings_title)
+
+		var timings_list = VBoxContainer.new()
+		timings_list.name = "ChapterTimingsList"
+		_report_content.add_child(timings_list)
+
+		for timing in chapter_timings:
+			var item = Label.new()
+			var min_str := _format_duration(timing.get("min_seconds", 0.0))
+			var max_str := _format_duration(timing.get("max_seconds", 0.0))
+			item.text = "  %s    de %s  a  %s" % [timing.get("chapter_name", ""), min_str, max_str]
+			timings_list.add_child(item)
+
+		_report_content.add_child(HSeparator.new())
+
 	# Orphan nodes
 	var orphans: Array = report.get("orphan_nodes", [])
 	if orphans.size() > 0:
@@ -168,6 +191,17 @@ func _add_run_item(parent: VBoxContainer, run: Dictionary) -> void:
 	var spacer = Control.new()
 	spacer.custom_minimum_size.y = 8
 	parent.add_child(spacer)
+
+
+func _format_duration(seconds: float) -> String:
+	var total_sec := int(round(seconds))
+	var m := total_sec / 60
+	var s := total_sec % 60
+	if m == 0:
+		return "%d sec" % s
+	if s == 0:
+		return "%d min" % m
+	return "%d min %d sec" % [m, s]
 
 
 func clear() -> void:
