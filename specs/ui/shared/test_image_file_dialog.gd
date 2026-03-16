@@ -38,3 +38,21 @@ func test_update_preview_null_on_directory():
 	dialog._update_preview("res://src")
 	assert_null(dialog._preview_rect.texture)
 	dialog.free()
+
+func test_update_preview_non_image_extension():
+	var dialog = ImageFileDialog.new()
+	dialog._update_preview("/some/file.txt")
+	assert_null(dialog._preview_rect.texture)
+	dialog.free()
+
+
+func test_update_preview_png_success():
+	var dialog = ImageFileDialog.new()
+	# Créer un PNG minimal valide (1x1 pixel blanc)
+	var img = Image.create(1, 1, false, Image.FORMAT_RGB8)
+	var path = OS.get_user_data_dir() + "/test_preview.png"
+	img.save_png(path)
+	dialog._update_preview(path)
+	assert_not_null(dialog._preview_rect.texture)
+	DirAccess.remove_absolute(path)
+	dialog.free()

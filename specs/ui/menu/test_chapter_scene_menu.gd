@@ -325,3 +325,4 @@ func test_apply_custom_theme_method_exists() -> void:
 
 func test_apply_custom_theme_does_not_crash() -> void:
 	_menu.apply_custom_theme("")
+	pass_test("apply_custom_theme did not crash")

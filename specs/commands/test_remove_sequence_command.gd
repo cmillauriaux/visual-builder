@@ -25,3 +25,11 @@ func test_undo_restores_sequence():
 	cmd.execute()
 	cmd.undo()
 	assert_eq(scene.sequences.size(), 1)
+
+func test_get_label():
+	var scene = SceneDataScript.new()
+	var sequence = SequenceScript.new()
+	sequence.seq_name = "Ma Séquence"
+	scene.sequences.append(sequence)
+	var cmd = RemoveSequenceCommandScript.new(scene, sequence)
+	assert_eq(cmd.get_label(), "Suppression séquence \"Ma Séquence\"")

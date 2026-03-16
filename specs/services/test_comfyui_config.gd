@@ -33,10 +33,26 @@ func test_save_and_load():
 	cfg.set_token("my-token")
 	var path = "user://test_comfy.cfg"
 	cfg.save_to(path)
-	
+
 	var cfg2 = ComfyUIConfigScript.new()
 	cfg2.load_from(path)
 	assert_eq(cfg2.get_url(), "http://custom:8188")
 	assert_eq(cfg2.get_token(), "my-token")
-	
+
 	DirAccess.remove_absolute(path)
+
+func test_save_and_load_custom_expressions():
+	var cfg = ComfyUIConfigScript.new()
+	cfg.set_custom_expressions(PackedStringArray(["smile", "surprise"]))
+	var path = "user://test_comfy_expr.cfg"
+	cfg.save_to(path)
+	var cfg2 = ComfyUIConfigScript.new()
+	cfg2.load_from(path)
+	assert_eq(cfg2.get_custom_expressions().size(), 2)
+	assert_eq(cfg2.get_custom_expressions()[0], "smile")
+	DirAccess.remove_absolute(path)
+
+func test_negative_prompt():
+	var cfg = ComfyUIConfigScript.new()
+	cfg.set_negative_prompt("ugly, bad")
+	assert_eq(cfg.get_negative_prompt(), "ugly, bad")

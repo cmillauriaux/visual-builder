@@ -25,3 +25,11 @@ func test_undo_restores_condition():
 	cmd.execute()
 	cmd.undo()
 	assert_eq(scene.conditions.size(), 1)
+
+func test_get_label():
+	var scene = SceneDataScript.new()
+	var condition = ConditionScript.new()
+	condition.condition_name = "Test Condition"
+	scene.conditions.append(condition)
+	var cmd = RemoveConditionCommandScript.new(scene, condition)
+	assert_eq(cmd.get_label(), "Suppression condition \"Test Condition\"")

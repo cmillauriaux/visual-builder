@@ -64,3 +64,101 @@ func test_parse_history_response_pending():
 	var json = '{"id1": {"status": {"completed": false}}}'
 	var parsed = client.parse_history_response(json, "id1")
 	assert_eq(parsed["status"], "pending")
+
+func test_is_generating_default():
+	var client = ComfyUIClientScript.new()
+	assert_false(client.is_generating())
+
+func test_parse_prompt_response_empty_string():
+	var client = ComfyUIClientScript.new()
+	var result = client.parse_prompt_response("")
+	assert_eq(result, "")
+
+func test_parse_history_response_invalid_json():
+	var client = ComfyUIClientScript.new()
+	var parsed = client.parse_history_response("not valid json", "id1")
+	assert_eq(parsed["status"], "error")
+
+func test_parse_history_response_missing_prompt_id():
+	var client = ComfyUIClientScript.new()
+	var json = '{"other_id": {}}'
+	var parsed = client.parse_history_response(json, "id1")
+	assert_eq(parsed["status"], "pending")
+
+func test_parse_history_response_completed_no_outputs():
+	var client = ComfyUIClientScript.new()
+	var json = '{"id1": {"status": {"completed": true}}}'
+	var parsed = client.parse_history_response(json, "id1")
+	assert_eq(parsed["status"], "error")
+
+func test_parse_history_response_no_images_in_outputs():
+	var client = ComfyUIClientScript.new()
+	var json = '{"id1": {"outputs": {"9": {"data": []}}}}'
+	var parsed = client.parse_history_response(json, "id1")
+	assert_eq(parsed["status"], "error")
+
+func test_build_workflow_upscale():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("test.png", "prompt", 42, true, 1.0, 4, 2, 0.5)
+	assert_true(wf.has("1"))
+	assert_eq(wf["1"]["inputs"]["image"], "test.png")
+	assert_eq(wf["13"]["inputs"]["text"], "prompt")
+	assert_eq(wf["20"]["inputs"]["seed"], 42)
+
+func test_build_workflow_upscale_with_negative_prompt():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("test.png", "prompt", 42, true, 1.0, 4, 2, 0.5, "ugly")
+	assert_true(wf.has("75:83"))
+	assert_eq(wf["75:83"]["inputs"]["text"], "ugly")
+	assert_false(wf.has("14"))
+
+func test_build_workflow_creation_with_negative_prompt():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("test.png", "prompt", 42, true, 1.0, 4, 0, 0.5, "ugly")
+	assert_true(wf.has("75:83"))
+	assert_eq(wf["75:83"]["inputs"]["text"], "ugly")
+
+func test_generate_already_generating():
+	var client = ComfyUIClientScript.new()
+	add_child_autofree(client)
+	client._generating = true
+	watch_signals(client)
+	client.generate(null, "", "")
+	assert_signal_emitted(client, "generation_failed")
+
+func test_cancel_when_not_generating():
+	var client = ComfyUIClientScript.new()
+	client._generating = false
+	client.cancel()
+	assert_true(client._cancelled)
+
+func test_cancel_when_generating():
+	var client = ComfyUIClientScript.new()
+	add_child_autofree(client)
+	client._generating = true
+	watch_signals(client)
+	client.cancel()
+	assert_false(client._generating)
+	assert_signal_emitted(client, "generation_progress")
+
+func test_build_expression_workflow_no_bg_removal():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("test.png", "smile", 42, false, 1.0, 4, 1, 0.5)
+	assert_eq(wf["9"]["inputs"]["images"][0], "103")
+	assert_false(wf.has("106"))
+
+func test_parse_history_response_execution_error_in_messages():
+	var client = ComfyUIClientScript.new()
+	var json = JSON.stringify({
+		"id1": {
+			"status": {
+				"completed": false,
+				"messages": [
+					["execution_error", {"node_type": "KSampler", "exception_message": "cuda error"}]
+				]
+			}
+		}
+	})
+	var parsed = client.parse_history_response(json, "id1")
+	assert_eq(parsed["status"], "error")
+	assert_string_contains(parsed["error"], "KSampler")

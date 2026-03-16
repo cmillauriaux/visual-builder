@@ -21,3 +21,9 @@ func test_undo_restores_name():
 	cmd.execute()
 	cmd.undo()
 	assert_eq(name_container[0], "Old")
+
+func test_get_label():
+	var setter = func(n, s): pass
+	var getter = func(): return ["Old", ""]
+	var cmd = RenameNodeCommandScript.new(setter, getter, "Nouveau Nom", "", "Old", "", "chapitre")
+	assert_string_contains(cmd.get_label(), "Nouveau Nom")

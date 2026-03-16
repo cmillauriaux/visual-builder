@@ -28,3 +28,11 @@ func test_undo_restores_chapter():
 	cmd.undo()
 	assert_eq(story.chapters.size(), 1)
 	assert_eq(story.chapters[0].chapter_name, "Chapter to remove")
+
+func test_get_label():
+	var story = StoryScript.new()
+	var chapter = ChapterScript.new()
+	chapter.chapter_name = "Mon Chapitre"
+	story.chapters.append(chapter)
+	var cmd = RemoveChapterCommandScript.new(story, chapter)
+	assert_eq(cmd.get_label(), "Suppression chapitre \"Mon Chapitre\"")

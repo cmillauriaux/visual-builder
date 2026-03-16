@@ -499,6 +499,94 @@ func test_morph_no_regression_existing_transitions():
 	assert_eq(actions["a1"], "fade_in", "Pas de match → fade_in")
 
 
+
+# --- apply_tween_fade_in ---
+
+func test_apply_tween_fade_in_sets_alpha_to_zero() -> void:
+	var ctrl = Control.new()
+	add_child_autofree(ctrl)
+	ctrl.modulate.a = 1.0
+	_transition.apply_tween_fade_in(ctrl, 0.5)
+	assert_eq(ctrl.modulate.a, 0.0)
+
+func test_apply_tween_fade_in_returns_tween() -> void:
+	var ctrl = Control.new()
+	add_child_autofree(ctrl)
+	var tween = _transition.apply_tween_fade_in(ctrl, 0.5)
+	assert_not_null(tween)
+
+
+# --- apply_tween_fade_out ---
+
+func test_apply_tween_fade_out_sets_alpha_to_one() -> void:
+	var ctrl = Control.new()
+	add_child_autofree(ctrl)
+	ctrl.modulate.a = 0.0
+	_transition.apply_tween_fade_out(ctrl, 0.5)
+	assert_eq(ctrl.modulate.a, 1.0)
+
+func test_apply_tween_fade_out_returns_tween() -> void:
+	var ctrl = Control.new()
+	add_child_autofree(ctrl)
+	var tween = _transition.apply_tween_fade_out(ctrl, 0.5)
+	assert_not_null(tween)
+
+func test_apply_tween_fade_out_with_free_on_complete() -> void:
+	var ctrl = Control.new()
+	add_child(ctrl)
+	var tween = _transition.apply_tween_fade_out(ctrl, 0.1, true)
+	assert_not_null(tween)
+	ctrl.queue_free()
+
+
+# --- apply_morph ---
+
+func test_apply_morph_without_clone() -> void:
+	var ctrl = Control.new()
+	add_child_autofree(ctrl)
+	ctrl.position = Vector2(100, 100)
+	ctrl.size = Vector2(50, 50)
+	ctrl.modulate.a = 1.0
+	var old_state = {
+		"position": Vector2(50, 50),
+		"size": Vector2(40, 40),
+		"modulate_a": 0.5
+	}
+	var tween = _transition.apply_morph(ctrl, old_state, 0.5)
+	assert_not_null(tween)
+	# Position should be reset to old_state before the tween
+	assert_eq(ctrl.position, Vector2(50, 50))
+
+func test_apply_morph_with_clone() -> void:
+	var ctrl = Control.new()
+	add_child_autofree(ctrl)
+	var clone = Control.new()
+	add_child_autofree(clone)
+	ctrl.position = Vector2(100, 100)
+	ctrl.size = Vector2(50, 50)
+	ctrl.modulate.a = 1.0
+	var old_state = {
+		"position": Vector2(50, 50),
+		"size": Vector2(40, 40),
+		"modulate_a": 0.5
+	}
+	var tween = _transition.apply_morph(ctrl, old_state, 0.5, clone)
+	assert_not_null(tween)
+	# With clone: target alpha set to 0
+	assert_eq(ctrl.modulate.a, 0.0)
+
+func test_apply_morph_returns_tween() -> void:
+	var ctrl = Control.new()
+	add_child_autofree(ctrl)
+	var old_state = {
+		"position": ctrl.position,
+		"size": ctrl.size,
+		"modulate_a": 1.0
+	}
+	var result = _transition.apply_morph(ctrl, old_state, 0.3)
+	assert_true(result is Tween)
+
+
 # --- Helper ---
 
 func _make_fg(uuid: String, image: String, trans_type: String, trans_dur: float, z: int = 0):

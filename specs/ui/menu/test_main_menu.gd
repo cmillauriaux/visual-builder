@@ -183,12 +183,11 @@ func test_update_banner_does_not_crash_with_empty_path() -> void:
 
 func test_update_banner_does_not_crash_with_nonexistent_path() -> void:
 	_menu.update_banner("/nonexistent/path/that/does/not/exist")
-	# Pas de crash = succès
+	pass_test("update_banner did not crash with nonexistent path")
 
 func test_update_banner_does_not_crash_with_valid_path() -> void:
-	# Appeler update_banner avec un chemin valide
 	# En headless mode, load() peut retourner null, mais update_banner() doit gérer ce cas gracieusement
 	# Note : _banner_texture_rect est null en headless mode (GPU absent), donc
 	# update_banner() gère ce cas avec `if tex and _banner_texture_rect:`
 	_menu.update_banner("res://assets/ui")  # Valid path that exists in the project
-	# Si pas de crash = succès
+	pass_test("update_banner did not crash with valid path")

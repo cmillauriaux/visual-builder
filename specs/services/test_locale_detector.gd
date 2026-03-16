@@ -66,3 +66,18 @@ func test_detect_locale_lowercase():
 	if result != "":
 		assert_eq(result, result.to_lower(),
 			"Le code locale doit être en minuscules")
+
+
+# --- _detect_desktop_locale ---
+
+func test_detect_desktop_locale_returns_string() -> void:
+	var result = LocaleDetector._detect_desktop_locale()
+	assert_typeof(result, TYPE_STRING)
+
+func test_detect_desktop_locale_two_chars_or_empty() -> void:
+	var result = LocaleDetector._detect_desktop_locale()
+	assert_true(result == "" or result.length() == 2)
+
+
+
+

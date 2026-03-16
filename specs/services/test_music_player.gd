@@ -127,3 +127,105 @@ func test_load_audio_stream_unsupported_format() -> void:
 	# Format non supporté — doit renvoyer null (avec warning)
 	var result = MusicPlayerScript._load_audio_stream("/fake/file.aac")
 	assert_null(result)
+
+
+func test_play_music_nonexistent_path() -> void:
+	# Chemin non vide mais fichier inexistant → stream null → early return
+	_player.play_music("/nonexistent/music.ogg")
+	assert_eq(_player._current_music_path, "")
+
+
+func test_play_fx_nonexistent_path() -> void:
+	# Chemin non vide mais fichier inexistant → stream null → early return
+	_player.play_fx("/nonexistent/fx.ogg")
+	assert_eq(_player._current_music_path, "")
+
+
+func test_audio_exists_nonexistent() -> void:
+	assert_false(MusicPlayerScript._audio_exists("/nonexistent/file.ogg"))
+
+
+func test_audio_exists_with_existing_file() -> void:
+	var f = FileAccess.open("user://test_audio_exists.ogg", FileAccess.WRITE)
+	if f:
+		f.store_string("fake")
+		f.close()
+	var path = OS.get_user_data_dir() + "/test_audio_exists.ogg"
+	assert_true(MusicPlayerScript._audio_exists(path))
+	DirAccess.remove_absolute(path)
+
+
+func test_resolve_path_direct_hit() -> void:
+	var f = FileAccess.open("user://test_resolve_direct.ogg", FileAccess.WRITE)
+	if f:
+		f.store_string("fake")
+		f.close()
+	var path = OS.get_user_data_dir() + "/test_resolve_direct.ogg"
+	var result = MusicPlayerScript._resolve_path(path, "")
+	assert_eq(result, path)
+	DirAccess.remove_absolute(path)
+
+
+func test_resolve_path_res_path_no_base() -> void:
+	# res:// path qui n'existe pas, pas de base_path → ""
+	var result = MusicPlayerScript._resolve_path("res://nonexistent_audio.ogg", "")
+	assert_eq(result, "")
+
+
+func test_resolve_path_res_path_with_fallback() -> void:
+	var base = OS.get_user_data_dir() + "/test_res_fallback_%d" % randi()
+	DirAccess.make_dir_recursive_absolute(base + "/assets/music")
+	var f = FileAccess.open(base + "/assets/music/theme.ogg", FileAccess.WRITE)
+	if f:
+		f.store_string("fake")
+		f.close()
+	var result = MusicPlayerScript._resolve_path("res://some/path/theme.ogg", base)
+	assert_eq(result, base + "/assets/music/theme.ogg")
+	DirAccess.remove_absolute(base + "/assets/music/theme.ogg")
+	DirAccess.remove_absolute(base + "/assets/music")
+	DirAccess.remove_absolute(base + "/assets")
+	DirAccess.remove_absolute(base)
+
+
+func test_resolve_path_joined_hit() -> void:
+	var base = OS.get_user_data_dir() + "/test_joined_%d" % randi()
+	DirAccess.make_dir_recursive_absolute(base)
+	var f = FileAccess.open(base + "/theme.ogg", FileAccess.WRITE)
+	if f:
+		f.store_string("fake")
+		f.close()
+	var result = MusicPlayerScript._resolve_path("theme.ogg", base)
+	assert_eq(result, base + "/theme.ogg")
+	DirAccess.remove_absolute(base + "/theme.ogg")
+	DirAccess.remove_absolute(base)
+
+
+func test_load_audio_stream_empty_ogg_file() -> void:
+	var f = FileAccess.open("user://test_load.ogg", FileAccess.WRITE)
+	if f:
+		f.close()  # fichier vide
+	var path = OS.get_user_data_dir() + "/test_load.ogg"
+	var result = MusicPlayerScript._load_audio_stream(path, false)
+	assert_null(result)
+	DirAccess.remove_absolute(path)
+
+
+func test_load_audio_stream_empty_mp3_file() -> void:
+	var f = FileAccess.open("user://test_load.mp3", FileAccess.WRITE)
+	if f:
+		f.close()  # fichier vide
+	var path = OS.get_user_data_dir() + "/test_load.mp3"
+	var result = MusicPlayerScript._load_audio_stream(path, false)
+	assert_null(result)
+	DirAccess.remove_absolute(path)
+
+
+func test_load_audio_stream_existing_wav_external() -> void:
+	var f = FileAccess.open("user://test_load.wav", FileAccess.WRITE)
+	if f:
+		f.store_string("fake wav data")
+		f.close()
+	var path = OS.get_user_data_dir() + "/test_load.wav"
+	var result = MusicPlayerScript._load_audio_stream(path, false)
+	assert_null(result)  # WAV externe non supporté
+	DirAccess.remove_absolute(path)

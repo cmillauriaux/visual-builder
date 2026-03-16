@@ -2,7 +2,7 @@ extends "res://addons/gut/hook_script.gd"
 
 func run():
 	var Coverage = load("res://addons/coverage/coverage.gd")
-	const COVERAGE_TARGET = 65.0
+	const COVERAGE_TARGET = 80.0
 	const FILE_TARGET = 0.0
 	
 	var coverage = Coverage.instance

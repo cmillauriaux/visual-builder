@@ -125,6 +125,7 @@ func test_step5_real_math_dustnbones() -> void:
 	gut.p("  Preview rect: (%.1f, %.1f) → (%.1f, %.1f)" % [preview_pos.x, preview_pos.y, right, bottom])
 	var vis = preview_pos.x < preview_size.x and preview_pos.y < preview_size.y and right > 0 and bottom > 0
 	gut.p("  Visible? %s" % str(vis))
+	assert_true(vis, "fg DustNBones devrait être visible dans le preview")
 
 
 func test_step6_two_foregrounds() -> void:

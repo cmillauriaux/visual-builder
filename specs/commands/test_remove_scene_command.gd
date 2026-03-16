@@ -25,3 +25,11 @@ func test_undo_restores_scene():
 	cmd.execute()
 	cmd.undo()
 	assert_eq(chapter.scenes.size(), 1)
+
+func test_get_label():
+	var chapter = ChapterScript.new()
+	var scene = SceneDataScript.new()
+	scene.scene_name = "Ma Scène"
+	chapter.scenes.append(scene)
+	var cmd = RemoveSceneCommandScript.new(chapter, scene)
+	assert_eq(cmd.get_label(), "Suppression scène \"Ma Scène\"")
