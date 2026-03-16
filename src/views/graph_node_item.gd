@@ -57,6 +57,8 @@ func setup(uuid: String, item_name: String, pos: Vector2, subtitle: String = "",
 		_popup_menu.add_check_item("Point d'entrée", 1)
 		_popup_menu.add_separator()
 		_popup_menu.add_item("Supprimer", 2)
+		_popup_menu.add_separator()
+		_popup_menu.add_item("Copier l'ID", 5)
 		_popup_menu.id_pressed.connect(_on_popup_id_pressed)
 		add_child(_popup_menu)
 
@@ -147,6 +149,8 @@ func setup_as_choice_sequence(uuid: String, item_name: String, pos: Vector2, sub
 	_popup_menu.add_check_item("Point d'entrée", 1)
 	_popup_menu.add_separator()
 	_popup_menu.add_item("Supprimer", 2)
+	_popup_menu.add_separator()
+	_popup_menu.add_item("Copier l'ID", 5)
 	_popup_menu.id_pressed.connect(_on_popup_id_pressed)
 	add_child(_popup_menu)
 
@@ -238,3 +242,5 @@ func _on_popup_id_pressed(id: int) -> void:
 		foregrounds_copy_requested.emit(_uuid)
 	elif id == 4:
 		foregrounds_paste_requested.emit(_uuid)
+	elif id == 5:
+		DisplayServer.clipboard_set(_uuid)
