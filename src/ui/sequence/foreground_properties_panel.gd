@@ -177,7 +177,7 @@ func show_for_foreground(fg) -> void:
 	_foreground = fg
 	_updating = true
 	_title_label.text = "Propriétés"
-	_name_label.text = fg.fg_name
+	_name_label.text = fg.fg_name if fg.fg_name != "" else fg.image.get_file().get_basename()
 	_pos_x_spin.value = fg.anchor_bg.x
 	_pos_y_spin.value = fg.anchor_bg.y
 	_scale_spin.value = fg.scale

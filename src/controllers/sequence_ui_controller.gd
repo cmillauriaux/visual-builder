@@ -65,7 +65,7 @@ func _on_fg_file_selected(path: String) -> void:
 	var idx = _main._sequence_editor_ctrl.get_selected_dialogue_index()
 	if idx < 0:
 		return
-	_main._sequence_editor_ctrl.add_foreground_to_current("", path)
+	_main._sequence_editor_ctrl.add_foreground_to_current(path.get_file().get_basename(), path)
 	_main.update_preview_for_dialogue(idx)
 
 
