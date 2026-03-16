@@ -33,6 +33,7 @@ var autosave_enabled: bool = true
 var ui_scale_mode: int = -1  # -1 = pas encore initialisé, utilise le défaut plateforme
 var toolbar_visible: bool = true
 var pwa_prompt_dismissed: bool = false
+var game_plugins_enabled: Dictionary = {}  # plugin_name -> bool
 
 const TYPEWRITER_SPEEDS: Array[float] = [0.06, 0.03, 0.015, 0.0]
 const TYPEWRITER_SPEED_LABELS: Array[String] = ["Lent", "Normal", "Rapide", "Instantané"]
@@ -93,6 +94,11 @@ func load_settings(path: String = SETTINGS_PATH) -> void:
 	ui_scale_mode = cfg.get_value("display", "ui_scale_mode", get_default_ui_scale_mode())
 	toolbar_visible = cfg.get_value("display", "toolbar_visible", true)
 	pwa_prompt_dismissed = cfg.get_value("display", "pwa_prompt_dismissed", false)
+	var plugins_json: String = cfg.get_value("plugins", "enabled_states", "")
+	if plugins_json != "":
+		var parsed = JSON.parse_string(plugins_json)
+		if parsed is Dictionary:
+			game_plugins_enabled = parsed
 
 
 func save_settings(path: String = SETTINGS_PATH) -> void:
@@ -113,6 +119,8 @@ func save_settings(path: String = SETTINGS_PATH) -> void:
 	cfg.set_value("display", "ui_scale_mode", ui_scale_mode)
 	cfg.set_value("display", "toolbar_visible", toolbar_visible)
 	cfg.set_value("display", "pwa_prompt_dismissed", pwa_prompt_dismissed)
+	if not game_plugins_enabled.is_empty():
+		cfg.set_value("plugins", "enabled_states", JSON.stringify(game_plugins_enabled))
 	cfg.save(path)
 
 

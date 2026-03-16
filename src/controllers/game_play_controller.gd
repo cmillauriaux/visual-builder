@@ -40,6 +40,9 @@ var _skip_max_chapter_index: int = -1
 var _skip_max_scene_index: int = -1
 var _toolbar_visible: bool = true
 
+var _game_plugin_manager: Node = null
+var _plugin_ctx: RefCounted = null
+
 var _dialogue_history: Array[Dictionary] = []
 var _history_button: Button = null
 var _history_panel: Control = null
@@ -267,6 +270,10 @@ func _on_fx_finished_start_sequence() -> void:
 func on_choice_display_requested(choices) -> void:
 	if _auto_play:
 		_auto_play.stop_timer()
+	# Pipeline plugins in-game pour les choix
+	var display_choices = choices
+	if _game_plugin_manager:
+		display_choices = _game_plugin_manager.pipeline_before_choice(_plugin_ctx, choices)
 	_hide_choice_overlay()
 	var vbox = VBoxContainer.new()
 	vbox.name = "ChoiceVBox"
@@ -276,12 +283,12 @@ func on_choice_display_requested(choices) -> void:
 	title_label.add_theme_font_size_override("font_size", UIScale.scale(18))
 	vbox.add_child(title_label)
 	var buttons: Array[Button] = []
-	for i in range(choices.size()):
+	for i in range(display_choices.size()):
 		var btn = Button.new()
-		btn.text = choices[i].text
+		btn.text = display_choices[i].text
 		btn.focus_mode = Control.FOCUS_ALL
 		var idx = i
-		var choice_text = choices[i].text
+		var choice_text = display_choices[i].text
 		btn.pressed.connect(func(): _on_choice_selected(idx, choice_text))
 		vbox.add_child(btn)
 		buttons.append(btn)
@@ -336,10 +343,22 @@ func on_play_dialogue_changed(index: int) -> void:
 	if _auto_play:
 		_auto_play.stop_timer()
 	var dlg = seq.dialogues[index]
-	_play_character_label.text = dlg.character
-	_play_text_label.text = dlg.text
-	add_history_entry(dlg.character, dlg.text)
+	var display_character: String = dlg.character
+	var display_text: String = dlg.text
+	# Pipeline plugins in-game
+	if _game_plugin_manager:
+		if _plugin_ctx:
+			_plugin_ctx.current_dialogue_index = index
+		var result = _game_plugin_manager.pipeline_before_dialogue(_plugin_ctx, display_character, display_text)
+		display_character = result["character"]
+		display_text = result["text"]
+	_play_character_label.text = display_character
+	_play_text_label.text = display_text
+	add_history_entry(display_character, display_text)
 	_play_text_label.visible_characters = 0
+	# Dispatch after-dialogue to plugins
+	if _game_plugin_manager:
+		_game_plugin_manager.dispatch_on_after_dialogue(_plugin_ctx, display_character, display_text)
 	# Restart typewriter for the new dialogue
 	if _typewriter_speed == 0.0:
 		_sequence_editor_ctrl.skip_typewriter()

@@ -1,0 +1,206 @@
+extends GutTest
+
+const PlayFabPluginScript = preload("res://plugins/playfab_analytics/game_plugin.gd")
+const GamePluginContextScript = preload("res://src/plugins/game_plugin_context.gd")
+
+
+var _plugin: RefCounted
+
+
+func before_each():
+	_plugin = PlayFabPluginScript.new()
+
+
+func _create_context(story: RefCounted = null) -> RefCounted:
+	var ctx = GamePluginContextScript.new()
+	ctx.game_node = Control.new()
+	add_child(ctx.game_node)
+	ctx.story = story
+	return ctx
+
+
+func _create_fake_story(title_id: String = "", enabled: bool = false) -> RefCounted:
+	var story = RefCounted.new()
+	story.set_meta("title", "Test Story")
+	story.set_meta("version", "1.0")
+	story.set_meta("playfab_title_id", title_id)
+	story.set_meta("playfab_enabled", enabled)
+	return story
+
+
+class _StoryStub extends RefCounted:
+	var title: String = "Test Story"
+	var version: String = "1.0"
+	var playfab_title_id: String = ""
+	var playfab_enabled: bool = false
+
+
+# --- Identity ---
+
+func test_plugin_name():
+	assert_eq(_plugin.get_plugin_name(), "playfab_analytics")
+
+
+func test_plugin_description_not_empty():
+	assert_ne(_plugin.get_plugin_description(), "")
+
+
+func test_not_configurable():
+	assert_false(_plugin.is_configurable())
+
+
+# --- on_game_ready ---
+
+func test_no_service_when_no_story():
+	var ctx = _create_context()
+	_plugin.on_game_ready(ctx)
+	assert_null(_plugin.get_service())
+	ctx.game_node.queue_free()
+
+
+func test_no_service_when_playfab_disabled():
+	var story = _StoryStub.new()
+	story.playfab_title_id = "ABC123"
+	story.playfab_enabled = false
+	var ctx = _create_context(story)
+	_plugin.on_game_ready(ctx)
+	assert_null(_plugin.get_service())
+	ctx.game_node.queue_free()
+
+
+func test_no_service_when_title_id_empty():
+	var story = _StoryStub.new()
+	story.playfab_title_id = ""
+	story.playfab_enabled = true
+	var ctx = _create_context(story)
+	_plugin.on_game_ready(ctx)
+	assert_null(_plugin.get_service())
+	ctx.game_node.queue_free()
+
+
+func test_service_created_when_configured():
+	var story = _StoryStub.new()
+	story.playfab_title_id = "TESTTITLE"
+	story.playfab_enabled = true
+	var ctx = _create_context(story)
+	_plugin.on_game_ready(ctx)
+	assert_not_null(_plugin.get_service())
+	assert_true(_plugin.get_service() is Node)
+	ctx.game_node.queue_free()
+
+
+func test_service_is_child_of_game_node():
+	var story = _StoryStub.new()
+	story.playfab_title_id = "TESTTITLE"
+	story.playfab_enabled = true
+	var ctx = _create_context(story)
+	_plugin.on_game_ready(ctx)
+	var service = _plugin.get_service()
+	assert_eq(service.get_parent(), ctx.game_node)
+	ctx.game_node.queue_free()
+
+
+# --- on_game_cleanup ---
+
+func test_cleanup_nullifies_service():
+	var story = _StoryStub.new()
+	story.playfab_title_id = "TESTTITLE"
+	story.playfab_enabled = true
+	var ctx = _create_context(story)
+	_plugin.on_game_ready(ctx)
+	assert_not_null(_plugin.get_service())
+	_plugin.on_game_cleanup(ctx)
+	assert_null(_plugin.get_service())
+	ctx.game_node.queue_free()
+
+
+func test_cleanup_safe_when_no_service():
+	var ctx = _create_context()
+	# Should not crash
+	_plugin.on_game_cleanup(ctx)
+	assert_null(_plugin.get_service())
+	ctx.game_node.queue_free()
+
+
+# --- track_event / flush when not active ---
+
+func test_track_event_safe_when_no_service():
+	_plugin.track_event("test_event", {"key": "value"})
+	assert_null(_plugin.get_service())
+
+
+func test_flush_safe_when_no_service():
+	_plugin.flush()
+	assert_null(_plugin.get_service())
+
+
+# --- Hooks without service ---
+
+func test_on_before_chapter_safe_without_service():
+	var ctx = _create_context()
+	_plugin.on_before_chapter(ctx)
+	assert_null(_plugin.get_service())
+	ctx.game_node.queue_free()
+
+
+func test_on_before_scene_safe_without_service():
+	var ctx = _create_context()
+	_plugin.on_before_scene(ctx)
+	assert_null(_plugin.get_service())
+	ctx.game_node.queue_free()
+
+
+func test_on_before_sequence_safe_without_service():
+	var ctx = _create_context()
+	_plugin.on_before_sequence(ctx)
+	assert_null(_plugin.get_service())
+	ctx.game_node.queue_free()
+
+
+func test_on_after_choice_safe_without_service():
+	var ctx = _create_context()
+	_plugin.on_after_choice(ctx, 0, "test")
+	assert_null(_plugin.get_service())
+	ctx.game_node.queue_free()
+
+
+# --- Options controls ---
+
+func test_options_controls_has_entry():
+	var ctrls = _plugin.get_options_controls()
+	assert_eq(ctrls.size(), 1)
+
+
+func test_options_creates_control():
+	var ctrls = _plugin.get_options_controls()
+	var ctrl = ctrls[0].create_control.call(null)
+	assert_not_null(ctrl)
+	assert_true(ctrl is HBoxContainer)
+	ctrl.queue_free()
+
+
+func test_options_shows_inactive_when_no_service():
+	var ctrls = _plugin.get_options_controls()
+	var ctrl = ctrls[0].create_control.call(null)
+	# Second child should be the status label
+	var status_label = ctrl.get_child(1) as Label
+	assert_eq(status_label.text, "Inactif")
+	ctrl.queue_free()
+
+
+# --- Base class interface ---
+
+func test_dialogue_passthrough():
+	var ctx = _create_context()
+	var result = _plugin.on_before_dialogue(ctx, "Alice", "Bonjour")
+	assert_eq(result["character"], "Alice")
+	assert_eq(result["text"], "Bonjour")
+	ctx.game_node.queue_free()
+
+
+func test_choice_passthrough():
+	var ctx = _create_context()
+	var choices = ["A", "B", "C"]
+	var result = _plugin.on_before_choice(ctx, choices)
+	assert_eq(result, ["A", "B", "C"])
+	ctx.game_node.queue_free()

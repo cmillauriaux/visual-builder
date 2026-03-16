@@ -20,7 +20,9 @@
     "res://specs/ui/themes/",
     "res://specs/e2e/",
     "res://specs/plugins/",
-    "res://specs/plugins/ai_studio/"
+    "res://specs/plugins/ai_studio/",
+    "res://specs/plugins/censure/",
+    "res://specs/plugins/playfab_analytics/"
   ],
   "prefix": "test_",
   "suffix": ".gd",
