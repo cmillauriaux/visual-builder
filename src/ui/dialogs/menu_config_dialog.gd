@@ -2,7 +2,7 @@ extends ConfirmationDialog
 
 ## Dialogue de configuration du jeu (menu, analytics, liens, écrans de fin).
 
-signal menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_background: String, menu_music: String, playfab_title_id: String, playfab_enabled: bool, patreon_url: String, itchio_url: String, game_over_title: String, game_over_subtitle: String, game_over_background: String, to_be_continued_title: String, to_be_continued_subtitle: String, to_be_continued_background: String, app_icon: String, show_title_banner: bool, ui_theme_mode: String)
+signal menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_background: String, menu_music: String, patreon_url: String, itchio_url: String, game_over_title: String, game_over_subtitle: String, game_over_background: String, to_be_continued_title: String, to_be_continued_subtitle: String, to_be_continued_background: String, app_icon: String, show_title_banner: bool, ui_theme_mode: String, plugin_settings: Dictionary)
 
 const ImagePickerDialogScript = preload("res://src/ui/dialogs/image_picker_dialog.gd")
 const AudioPickerDialogScript = preload("res://src/ui/dialogs/audio_picker_dialog.gd")
@@ -21,8 +21,6 @@ var _clear_bg_button: Button
 var _bg_preview: TextureRect
 var _menu_music_label: Label
 var _clear_music_button: Button
-var _playfab_title_id_edit: LineEdit
-var _playfab_enabled_check: CheckButton
 var _patreon_url_edit: LineEdit
 var _itchio_url_edit: LineEdit
 var _game_over_bg_edit: LineEdit
@@ -44,6 +42,9 @@ var _ui_theme_default_panel: VBoxContainer
 var _ui_theme_custom_panel: VBoxContainer
 var _ui_theme_assets_list: VBoxContainer
 var _ui_theme_mode: String = "default"
+var _plugins_container: VBoxContainer
+var _plugin_controls: Dictionary = {}  # plugin_name -> Control (editor config root)
+var _game_plugins: Array = []  # loaded VBGamePlugin instances for editor config
 var _story = null
 var _story_base_path: String = ""
 var _current_menu_music: String = ""
@@ -209,31 +210,16 @@ func _init():
 	tabs.add_child(menu_scroll)
 	menu_scroll.add_child(menu_vbox)
 
-	# ── Onglet Analytics ─────────────────────────────────────────────────────
-	var analytics_vbox = VBoxContainer.new()
-	analytics_vbox.name = "Analytics"
-	analytics_vbox.add_theme_constant_override("separation", 4)
-
-	var pf_section_lbl = Label.new()
-	pf_section_lbl.text = "PlayFab Analytics"
-	pf_section_lbl.add_theme_font_size_override("font_size", 16)
-	analytics_vbox.add_child(pf_section_lbl)
-
-	var pf_title_lbl = Label.new()
-	pf_title_lbl.text = "Title ID"
-	analytics_vbox.add_child(pf_title_lbl)
-
-	_playfab_title_id_edit = LineEdit.new()
-	_playfab_title_id_edit.name = "PlayFabTitleIdEdit"
-	_playfab_title_id_edit.placeholder_text = "Laisser vide pour désactiver"
-	analytics_vbox.add_child(_playfab_title_id_edit)
-
-	_playfab_enabled_check = CheckButton.new()
-	_playfab_enabled_check.name = "PlayFabEnabledCheck"
-	_playfab_enabled_check.text = "Activer le tracking PlayFab"
-	analytics_vbox.add_child(_playfab_enabled_check)
-
-	tabs.add_child(analytics_vbox)
+	# ── Onglet Plugins ──────────────────────────────────────────────────────
+	var plugins_scroll = ScrollContainer.new()
+	plugins_scroll.name = "Plugins"
+	plugins_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_plugins_container = VBoxContainer.new()
+	_plugins_container.name = "PluginsContent"
+	_plugins_container.add_theme_constant_override("separation", 8)
+	_plugins_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	plugins_scroll.add_child(_plugins_container)
+	tabs.add_child(plugins_scroll)
 
 	# ── Onglet Liens ─────────────────────────────────────────────────────────
 	var liens_vbox = VBoxContainer.new()
@@ -450,7 +436,7 @@ func _init():
 
 	# Titres des onglets (après ajout des enfants)
 	tabs.set_tab_title(0, "Menu")
-	tabs.set_tab_title(1, "Analytics")
+	tabs.set_tab_title(1, "Plugins")
 	tabs.set_tab_title(2, "Liens")
 	tabs.set_tab_title(3, "Game Over")
 	tabs.set_tab_title(4, "À suivre")
@@ -464,8 +450,6 @@ func setup(story, story_base_path: String = "") -> void:
 	_menu_title_edit.text = story.menu_title
 	_menu_subtitle_edit.text = story.menu_subtitle
 	_menu_bg_edit.text = story.menu_background
-	_playfab_title_id_edit.text = story.playfab_title_id
-	_playfab_enabled_check.button_pressed = story.playfab_enabled
 	_patreon_url_edit.text = story.patreon_url if story.get("patreon_url") != null else ""
 	_itchio_url_edit.text = story.itchio_url if story.get("itchio_url") != null else ""
 	_game_over_bg_edit.text = story.game_over_background if story.get("game_over_background") != null else ""
@@ -492,6 +476,7 @@ func setup(story, story_base_path: String = "") -> void:
 	_update_game_over_preview()
 	_update_tbc_preview()
 	_update_icon_preview()
+	_rebuild_plugins_tab()
 
 
 func get_menu_title() -> String:
@@ -505,12 +490,6 @@ func get_menu_background() -> String:
 
 func get_menu_music() -> String:
 	return _current_menu_music
-
-func get_playfab_title_id() -> String:
-	return _playfab_title_id_edit.text
-
-func get_playfab_enabled() -> bool:
-	return _playfab_enabled_check.button_pressed
 
 func get_patreon_url() -> String:
 	return _patreon_url_edit.text
@@ -741,13 +720,79 @@ static func _validate_url(url: String) -> String:
 func _on_confirmed() -> void:
 	menu_config_confirmed.emit(
 		_menu_title_edit.text, _menu_subtitle_edit.text, _menu_bg_edit.text,
-		_current_menu_music, _playfab_title_id_edit.text, _playfab_enabled_check.button_pressed,
+		_current_menu_music,
 		_validate_url(_patreon_url_edit.text), _validate_url(_itchio_url_edit.text),
 		_game_over_title_edit.text, _game_over_subtitle_edit.text, _game_over_bg_edit.text,
 		_to_be_continued_title_edit.text, _to_be_continued_subtitle_edit.text, _to_be_continued_bg_edit.text,
 		_app_icon_edit.text, _show_title_banner_check.button_pressed,
-		_ui_theme_mode
+		_ui_theme_mode, _collect_plugin_settings()
 	)
+
+
+# ── Plugins tab ──────────────────────────────────────────────────────────────
+
+func _rebuild_plugins_tab() -> void:
+	if _plugins_container == null:
+		return
+	for child in _plugins_container.get_children():
+		child.queue_free()
+	_plugin_controls.clear()
+	_game_plugins = _scan_game_plugins()
+	if _game_plugins.is_empty():
+		var lbl = Label.new()
+		lbl.text = "Aucun plugin détecté"
+		lbl.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
+		_plugins_container.add_child(lbl)
+		return
+	for plugin in _game_plugins:
+		var pname: String = plugin.get_plugin_name()
+		var editor_defs = plugin.get_editor_config_controls()
+		if editor_defs.is_empty():
+			continue
+		var section_lbl = Label.new()
+		section_lbl.text = plugin.get_plugin_description() if plugin.get_plugin_description() != "" else pname
+		section_lbl.add_theme_font_size_override("font_size", 16)
+		_plugins_container.add_child(section_lbl)
+		for def in editor_defs:
+			var ps: Dictionary = _story.plugin_settings.get(pname, {}) if _story else {}
+			var ctrl: Control = def.create_control.call(ps)
+			if ctrl != null:
+				_plugins_container.add_child(ctrl)
+				_plugin_controls[pname] = ctrl
+		_plugins_container.add_child(HSeparator.new())
+
+
+func _scan_game_plugins() -> Array:
+	var plugins: Array = []
+	for dir_path in ["res://plugins/", "res://game_plugins/"]:
+		var dir := DirAccess.open(dir_path)
+		if dir == null:
+			continue
+		dir.list_dir_begin()
+		var entry := dir.get_next()
+		while entry != "":
+			if dir.current_is_dir() and not entry.begins_with("."):
+				var path := "%s%s/game_plugin.gd" % [dir_path, entry]
+				if FileAccess.file_exists(path):
+					var script = load(path)
+					if script:
+						var instance = script.new()
+						if instance.has_method("get_plugin_name") and instance.get_plugin_name() != "":
+							plugins.append(instance)
+			entry = dir.get_next()
+		dir.list_dir_end()
+	return plugins
+
+
+func _collect_plugin_settings() -> Dictionary:
+	var result: Dictionary = _story.plugin_settings.duplicate(true) if _story else {}
+	for plugin in _game_plugins:
+		var pname: String = plugin.get_plugin_name()
+		if _plugin_controls.has(pname):
+			var ctrl = _plugin_controls[pname]
+			if plugin.has_method("read_editor_config"):
+				result[pname] = plugin.read_editor_config(ctrl)
+	return result
 
 
 # ── Handlers Thème UI ────────────────────────────────────────────────────────

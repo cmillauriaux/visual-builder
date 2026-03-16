@@ -126,3 +126,8 @@ func test_get_overlay_panels_returns_empty():
 func test_get_options_controls_returns_empty():
 	var plugin = _create_plugin()
 	assert_eq(plugin.get_options_controls(), [])
+
+
+func test_get_editor_config_controls_returns_empty():
+	var plugin = _create_plugin()
+	assert_eq(plugin.get_editor_config_controls(), [])

@@ -19,20 +19,10 @@ func _create_context(story: RefCounted = null) -> RefCounted:
 	return ctx
 
 
-func _create_fake_story(title_id: String = "", enabled: bool = false) -> RefCounted:
-	var story = RefCounted.new()
-	story.set_meta("title", "Test Story")
-	story.set_meta("version", "1.0")
-	story.set_meta("playfab_title_id", title_id)
-	story.set_meta("playfab_enabled", enabled)
-	return story
-
-
 class _StoryStub extends RefCounted:
 	var title: String = "Test Story"
 	var version: String = "1.0"
-	var playfab_title_id: String = ""
-	var playfab_enabled: bool = false
+	var plugin_settings: Dictionary = {}
 
 
 # --- Identity ---
@@ -60,8 +50,7 @@ func test_no_service_when_no_story():
 
 func test_no_service_when_playfab_disabled():
 	var story = _StoryStub.new()
-	story.playfab_title_id = "ABC123"
-	story.playfab_enabled = false
+	story.plugin_settings = {"playfab_analytics": {"title_id": "ABC123", "enabled": false}}
 	var ctx = _create_context(story)
 	_plugin.on_game_ready(ctx)
 	assert_null(_plugin.get_service())
@@ -70,8 +59,15 @@ func test_no_service_when_playfab_disabled():
 
 func test_no_service_when_title_id_empty():
 	var story = _StoryStub.new()
-	story.playfab_title_id = ""
-	story.playfab_enabled = true
+	story.plugin_settings = {"playfab_analytics": {"title_id": "", "enabled": true}}
+	var ctx = _create_context(story)
+	_plugin.on_game_ready(ctx)
+	assert_null(_plugin.get_service())
+	ctx.game_node.queue_free()
+
+
+func test_no_service_when_no_plugin_settings():
+	var story = _StoryStub.new()
 	var ctx = _create_context(story)
 	_plugin.on_game_ready(ctx)
 	assert_null(_plugin.get_service())
@@ -80,8 +76,7 @@ func test_no_service_when_title_id_empty():
 
 func test_service_created_when_configured():
 	var story = _StoryStub.new()
-	story.playfab_title_id = "TESTTITLE"
-	story.playfab_enabled = true
+	story.plugin_settings = {"playfab_analytics": {"title_id": "TESTTITLE", "enabled": true}}
 	var ctx = _create_context(story)
 	_plugin.on_game_ready(ctx)
 	assert_not_null(_plugin.get_service())
@@ -91,8 +86,7 @@ func test_service_created_when_configured():
 
 func test_service_is_child_of_game_node():
 	var story = _StoryStub.new()
-	story.playfab_title_id = "TESTTITLE"
-	story.playfab_enabled = true
+	story.plugin_settings = {"playfab_analytics": {"title_id": "TESTTITLE", "enabled": true}}
 	var ctx = _create_context(story)
 	_plugin.on_game_ready(ctx)
 	var service = _plugin.get_service()
@@ -104,8 +98,7 @@ func test_service_is_child_of_game_node():
 
 func test_cleanup_nullifies_service():
 	var story = _StoryStub.new()
-	story.playfab_title_id = "TESTTITLE"
-	story.playfab_enabled = true
+	story.plugin_settings = {"playfab_analytics": {"title_id": "TESTTITLE", "enabled": true}}
 	var ctx = _create_context(story)
 	_plugin.on_game_ready(ctx)
 	assert_not_null(_plugin.get_service())
@@ -116,7 +109,6 @@ func test_cleanup_nullifies_service():
 
 func test_cleanup_safe_when_no_service():
 	var ctx = _create_context()
-	# Should not crash
 	_plugin.on_game_cleanup(ctx)
 	assert_null(_plugin.get_service())
 	ctx.game_node.queue_free()
@@ -182,9 +174,43 @@ func test_options_creates_control():
 func test_options_shows_inactive_when_no_service():
 	var ctrls = _plugin.get_options_controls()
 	var ctrl = ctrls[0].create_control.call(null)
-	# Second child should be the status label
 	var status_label = ctrl.get_child(1) as Label
 	assert_eq(status_label.text, "Inactif")
+	ctrl.queue_free()
+
+
+# --- Editor config controls ---
+
+func test_editor_config_controls_has_entry():
+	var defs = _plugin.get_editor_config_controls()
+	assert_eq(defs.size(), 1)
+
+
+func test_editor_config_creates_control():
+	var defs = _plugin.get_editor_config_controls()
+	var ps = {"title_id": "TEST", "enabled": true}
+	var ctrl = defs[0].create_control.call(ps)
+	assert_not_null(ctrl)
+	assert_true(ctrl is VBoxContainer)
+	ctrl.queue_free()
+
+
+func test_editor_config_reads_values():
+	var defs = _plugin.get_editor_config_controls()
+	var ps = {"title_id": "MY_TITLE", "enabled": true}
+	var ctrl = defs[0].create_control.call(ps)
+	var values = PlayFabPluginScript.read_editor_config(ctrl)
+	assert_eq(values["title_id"], "MY_TITLE")
+	assert_eq(values["enabled"], true)
+	ctrl.queue_free()
+
+
+func test_editor_config_empty_by_default():
+	var defs = _plugin.get_editor_config_controls()
+	var ctrl = defs[0].create_control.call({})
+	var values = PlayFabPluginScript.read_editor_config(ctrl)
+	assert_eq(values["title_id"], "")
+	assert_eq(values["enabled"], false)
 	ctrl.queue_free()
 
 

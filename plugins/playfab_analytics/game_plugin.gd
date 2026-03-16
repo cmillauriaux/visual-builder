@@ -1,7 +1,7 @@
 extends "res://src/plugins/game_plugin.gd"
 
 ## Plugin d'analytics PlayFab : encapsule le service PlayFab dans un plugin in-game.
-## Lit la configuration depuis la story (playfab_title_id, playfab_enabled)
+## Lit la configuration depuis story.plugin_settings["playfab_analytics"]
 ## et envoie les événements de télémétrie aux hooks du jeu.
 
 const PlayFabAnalyticsServiceScript = preload("res://src/services/playfab_analytics_service.gd")
@@ -32,8 +32,9 @@ func on_game_ready(ctx: RefCounted) -> void:
 	_story_title = story.title if story.get("title") != null else ""
 	_story_version = story.version if story.get("version") != null else ""
 
-	var title_id: String = story.playfab_title_id if story.get("playfab_title_id") != null else ""
-	var enabled: bool = story.playfab_enabled if story.get("playfab_enabled") != null else false
+	var ps: Dictionary = _get_plugin_config(story)
+	var title_id: String = ps.get("title_id", "")
+	var enabled: bool = ps.get("enabled", false)
 
 	if title_id == "" or not enabled:
 		return
@@ -133,5 +134,64 @@ func _create_options_control(_settings: RefCounted) -> Control:
 	return hbox
 
 
+## Configuration éditeur : champs Title ID et Enabled pour PlayFab.
+func get_editor_config_controls() -> Array:
+	var def := GameContributions.GameOptionsControlDef.new()
+	def.create_control = _create_editor_config
+	return [def]
+
+
+func _create_editor_config(current_settings) -> Control:
+	var ps: Dictionary = {}
+	if current_settings is Dictionary:
+		ps = current_settings
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 4)
+
+	var title_lbl := Label.new()
+	title_lbl.text = "Title ID"
+	vbox.add_child(title_lbl)
+
+	var title_edit := LineEdit.new()
+	title_edit.name = "PlayFabTitleIdEdit"
+	title_edit.placeholder_text = "Laisser vide pour désactiver"
+	title_edit.text = ps.get("title_id", "")
+	vbox.add_child(title_edit)
+
+	var enabled_check := CheckButton.new()
+	enabled_check.name = "PlayFabEnabledCheck"
+	enabled_check.text = "Activer le tracking PlayFab"
+	enabled_check.button_pressed = ps.get("enabled", false)
+	vbox.add_child(enabled_check)
+
+	# Stocker les références pour la lecture via get_editor_config_values()
+	vbox.set_meta("_title_edit", title_edit)
+	vbox.set_meta("_enabled_check", enabled_check)
+
+	return vbox
+
+
+## Lit les valeurs actuelles des contrôles éditeur et retourne un Dictionary.
+static func read_editor_config(control: Control) -> Dictionary:
+	if control == null:
+		return {}
+	var title_edit = control.get_meta("_title_edit", null)
+	var enabled_check = control.get_meta("_enabled_check", null)
+	return {
+		"title_id": title_edit.text if title_edit else "",
+		"enabled": enabled_check.button_pressed if enabled_check else false,
+	}
+
+
 func get_service() -> Node:
 	return _service
+
+
+## Extrait la config du plugin depuis la story.
+static func _get_plugin_config(story: RefCounted) -> Dictionary:
+	if story == null:
+		return {}
+	if story.get("plugin_settings") != null and story.plugin_settings.has("playfab_analytics"):
+		return story.plugin_settings["playfab_analytics"]
+	return {}

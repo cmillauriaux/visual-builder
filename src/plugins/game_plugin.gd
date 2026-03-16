@@ -101,3 +101,11 @@ func get_overlay_panels() -> Array:
 ## Chaque élément est un GameContributions.GameOptionsControlDef.
 func get_options_controls() -> Array:
 	return []
+
+
+## Retourne les contrôles de configuration éditeur pour ce plugin.
+## Appelé dans le dialogue de configuration du jeu (onglet Plugins).
+## Chaque élément est un GameContributions.GameOptionsControlDef.
+## Le create_control reçoit un Dictionary (plugin_settings du plugin).
+func get_editor_config_controls() -> Array:
+	return []

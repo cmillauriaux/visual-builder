@@ -2,60 +2,88 @@ extends GutTest
 
 const Story = preload("res://src/models/story.gd")
 
-# Tests pour les champs PlayFab du modèle Story
+# Tests pour plugin_settings dans le modèle Story (remplace les anciens champs playfab)
 
 
-func test_playfab_default_values():
+func test_plugin_settings_default_empty():
 	var story = Story.new()
-	assert_eq(story.playfab_title_id, "", "playfab_title_id doit être vide par défaut")
-	assert_eq(story.playfab_enabled, false, "playfab_enabled doit être false par défaut")
+	assert_eq(story.plugin_settings.size(), 0, "plugin_settings doit être vide par défaut")
 
 
-func test_playfab_to_dict():
+func test_plugin_settings_to_dict():
 	var story = Story.new()
-	story.playfab_title_id = "ABC123"
-	story.playfab_enabled = true
+	story.plugin_settings = {"playfab_analytics": {"title_id": "ABC123", "enabled": true}}
 	var d = story.to_dict()
-	assert_true(d.has("playfab"), "to_dict doit contenir une clé 'playfab'")
-	assert_eq(d["playfab"]["title_id"], "ABC123")
-	assert_eq(d["playfab"]["enabled"], true)
+	assert_true(d.has("plugin_settings"), "to_dict doit contenir 'plugin_settings'")
+	assert_eq(d["plugin_settings"]["playfab_analytics"]["title_id"], "ABC123")
+	assert_eq(d["plugin_settings"]["playfab_analytics"]["enabled"], true)
 
 
-func test_playfab_to_dict_disabled():
+func test_plugin_settings_to_dict_empty():
 	var story = Story.new()
 	var d = story.to_dict()
-	assert_true(d.has("playfab"))
-	assert_eq(d["playfab"]["title_id"], "")
-	assert_eq(d["playfab"]["enabled"], false)
+	assert_true(d.has("plugin_settings"))
+	assert_eq(d["plugin_settings"].size(), 0)
 
 
-func test_playfab_from_dict():
+func test_plugin_settings_from_dict():
 	var d = {
 		"title": "Test",
-		"playfab": {
-			"title_id": "XYZ789",
-			"enabled": true,
+		"plugin_settings": {
+			"playfab_analytics": {"title_id": "XYZ789", "enabled": true},
 		},
 	}
 	var story = Story.from_dict(d)
-	assert_eq(story.playfab_title_id, "XYZ789")
-	assert_eq(story.playfab_enabled, true)
+	assert_eq(story.plugin_settings["playfab_analytics"]["title_id"], "XYZ789")
+	assert_eq(story.plugin_settings["playfab_analytics"]["enabled"], true)
 
 
-func test_playfab_from_dict_missing():
+func test_plugin_settings_from_dict_missing():
 	var d = {"title": "Old Story"}
 	var story = Story.from_dict(d)
-	assert_eq(story.playfab_title_id, "")
-	assert_eq(story.playfab_enabled, false)
+	assert_eq(story.plugin_settings.size(), 0)
 
 
-func test_playfab_from_dict_partial():
+func test_plugin_settings_from_dict_partial():
 	var d = {
 		"title": "Test",
-		"playfab": {
-			"title_id": "PARTIAL",
+		"plugin_settings": {
+			"playfab_analytics": {"title_id": "PARTIAL"},
 		},
 	}
 	var story = Story.from_dict(d)
-	assert_eq(story.playfab_title_id, "PARTIAL")
-	assert_eq(story.playfab_enabled, false)
+	assert_eq(story.plugin_settings["playfab_analytics"]["title_id"], "PARTIAL")
+
+
+# Rétrocompatibilité : l'ancien format "playfab" est migré vers plugin_settings
+
+func test_retrocompat_playfab_to_plugin_settings():
+	var d = {
+		"title": "Old Story",
+		"playfab": {"title_id": "OLD123", "enabled": true},
+	}
+	var story = Story.from_dict(d)
+	assert_true(story.plugin_settings.has("playfab_analytics"))
+	assert_eq(story.plugin_settings["playfab_analytics"]["title_id"], "OLD123")
+	assert_eq(story.plugin_settings["playfab_analytics"]["enabled"], true)
+
+
+func test_retrocompat_playfab_partial():
+	var d = {
+		"title": "Old Story",
+		"playfab": {"title_id": "PARTIAL_OLD"},
+	}
+	var story = Story.from_dict(d)
+	assert_eq(story.plugin_settings["playfab_analytics"]["title_id"], "PARTIAL_OLD")
+	assert_eq(story.plugin_settings["playfab_analytics"]["enabled"], false)
+
+
+func test_plugin_settings_takes_precedence_over_playfab():
+	var d = {
+		"title": "Test",
+		"plugin_settings": {"playfab_analytics": {"title_id": "NEW", "enabled": true}},
+		"playfab": {"title_id": "OLD", "enabled": false},
+	}
+	var story = Story.from_dict(d)
+	assert_eq(story.plugin_settings["playfab_analytics"]["title_id"], "NEW")
+	assert_eq(story.plugin_settings["playfab_analytics"]["enabled"], true)
