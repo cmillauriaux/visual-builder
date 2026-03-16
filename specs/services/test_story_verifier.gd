@@ -748,7 +748,7 @@ func test_format_duration_rounds_to_nearest_minute():
 # === _compute_chapter_timings ===
 
 func test_compute_timings_direct_single_chapter():
-	# 10 mots + 2 clics dans Ch1 : (10/200)*60 + 2*5 = 3.0 + 10.0 = 13.0 sec
+	# 10 mots + 2 clics dans Ch1 via game_over : (10/200)*60 + 2*5 = 3.0 + 10.0 = 13.0 sec
 	var runs = [
 		{
 			"ending_reason": "game_over",
@@ -760,12 +760,14 @@ func test_compute_timings_direct_single_chapter():
 	var timings = _verifier._compute_chapter_timings(runs)
 	assert_eq(timings.size(), 1)
 	assert_eq(timings[0]["chapter_name"], "Ch1")
-	assert_almost_eq(timings[0]["min_seconds"], 13.0, 0.01)
-	assert_almost_eq(timings[0]["max_seconds"], 13.0, 0.01)
+	assert_true(timings[0].has("game_over"), "game_over doit etre present")
+	assert_false(timings[0].has("continuation"), "continuation ne doit pas etre present")
+	assert_almost_eq(timings[0]["game_over"]["min_seconds"], 13.0, 0.01)
+	assert_almost_eq(timings[0]["game_over"]["max_seconds"], 13.0, 0.01)
 
 func test_compute_timings_direct_two_runs_min_max():
-	# Run 1 : Ch1 = 0 mots, 1 clic -> 5.0 sec
-	# Run 2 : Ch1 = 200 mots, 2 clics -> 60.0 + 10.0 = 70.0 sec
+	# Run 1 (game_over) : Ch1 = 0 mots, 1 clic -> 5.0 sec
+	# Run 2 (to_be_continued) : Ch1 = 200 mots, 2 clics -> 60.0 + 10.0 = 70.0 sec
 	var runs = [
 		{
 			"ending_reason": "game_over",
@@ -778,8 +780,29 @@ func test_compute_timings_direct_two_runs_min_max():
 	]
 	var timings = _verifier._compute_chapter_timings(runs)
 	assert_eq(timings.size(), 1)
-	assert_almost_eq(timings[0]["min_seconds"], 5.0, 0.01)
-	assert_almost_eq(timings[0]["max_seconds"], 70.0, 0.01)
+	assert_true(timings[0].has("game_over"), "game_over doit etre present")
+	assert_almost_eq(timings[0]["game_over"]["min_seconds"], 5.0, 0.01)
+	assert_almost_eq(timings[0]["game_over"]["max_seconds"], 5.0, 0.01)
+	assert_true(timings[0].has("continuation"), "continuation doit etre present")
+	assert_almost_eq(timings[0]["continuation"]["min_seconds"], 70.0, 0.01)
+	assert_almost_eq(timings[0]["continuation"]["max_seconds"], 70.0, 0.01)
+
+func test_compute_timings_separates_game_over_from_continuation():
+	# Plusieurs runs game_over et to_be_continued : min/max separes
+	var runs = [
+		{"ending_reason": "game_over", "path": [{"chapter_name": "Ch1", "word_count": 0, "dialogue_count": 1}]},
+		{"ending_reason": "game_over", "path": [{"chapter_name": "Ch1", "word_count": 200, "dialogue_count": 0}]},
+		{"ending_reason": "to_be_continued", "path": [{"chapter_name": "Ch1", "word_count": 0, "dialogue_count": 2}]},
+		{"ending_reason": "to_be_continued", "path": [{"chapter_name": "Ch1", "word_count": 100, "dialogue_count": 0}]},
+	]
+	var timings = _verifier._compute_chapter_timings(runs)
+	assert_eq(timings.size(), 1)
+	# game_over : 5.0 sec et 60.0 sec -> min=5.0, max=60.0
+	assert_almost_eq(timings[0]["game_over"]["min_seconds"], 5.0, 0.01)
+	assert_almost_eq(timings[0]["game_over"]["max_seconds"], 60.0, 0.01)
+	# continuation : 10.0 sec et 30.0 sec -> min=10.0, max=30.0
+	assert_almost_eq(timings[0]["continuation"]["min_seconds"], 10.0, 0.01)
+	assert_almost_eq(timings[0]["continuation"]["max_seconds"], 30.0, 0.01)
 
 func test_compute_timings_excludes_error_runs():
 	var runs = [
@@ -795,8 +818,10 @@ func test_compute_timings_excludes_error_runs():
 	var timings = _verifier._compute_chapter_timings(runs)
 	# Seul le run game_over compte : (100/200)*60 + 3*5 = 30 + 15 = 45 sec
 	assert_eq(timings.size(), 1)
-	assert_almost_eq(timings[0]["min_seconds"], 45.0, 0.01)
-	assert_almost_eq(timings[0]["max_seconds"], 45.0, 0.01)
+	assert_true(timings[0].has("game_over"))
+	assert_false(timings[0].has("continuation"))
+	assert_almost_eq(timings[0]["game_over"]["min_seconds"], 45.0, 0.01)
+	assert_almost_eq(timings[0]["game_over"]["max_seconds"], 45.0, 0.01)
 
 func test_compute_timings_excludes_loop_detected_runs():
 	var runs = [
@@ -812,8 +837,10 @@ func test_compute_timings_excludes_loop_detected_runs():
 	var timings = _verifier._compute_chapter_timings(runs)
 	assert_eq(timings.size(), 1)
 	# Seul to_be_continued compte : (10/200)*60 + 1*5 = 3.0 + 5.0 = 8.0 sec
-	assert_almost_eq(timings[0]["min_seconds"], 8.0, 0.01)
-	assert_almost_eq(timings[0]["max_seconds"], 8.0, 0.01)
+	assert_true(timings[0].has("continuation"))
+	assert_false(timings[0].has("game_over"))
+	assert_almost_eq(timings[0]["continuation"]["min_seconds"], 8.0, 0.01)
+	assert_almost_eq(timings[0]["continuation"]["max_seconds"], 8.0, 0.01)
 
 func test_compute_timings_two_chapters_preserved_order():
 	var runs = [
@@ -851,9 +878,10 @@ func test_verify_chapter_timings_one_chapter():
 	assert_eq(timings.size(), 1)
 	assert_eq(timings[0]["chapter_name"], "Ch1")
 	# _make_sequence crée 1 dialogue "Hello" = 1 mot
-	# time = (1/200)*60 + 1*5 = 0.3 + 5.0 = 5.3 sec
-	assert_almost_eq(timings[0]["min_seconds"], 5.3, 0.01)
-	assert_almost_eq(timings[0]["max_seconds"], 5.3, 0.01)
+	# time = (1/200)*60 + 1*5 = 0.3 + 5.0 = 5.3 sec — chemin game_over
+	assert_true(timings[0].has("game_over"))
+	assert_almost_eq(timings[0]["game_over"]["min_seconds"], 5.3, 0.01)
+	assert_almost_eq(timings[0]["game_over"]["max_seconds"], 5.3, 0.01)
 
 func test_verify_chapter_timings_two_chapters():
 	var story = _make_story()

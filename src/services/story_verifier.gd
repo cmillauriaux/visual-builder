@@ -421,13 +421,14 @@ func _count_sequence_words(seq) -> int:
 
 
 func _compute_chapter_timings(runs: Array) -> Array:
-	var chapter_times: Dictionary = {}  # chapter_name -> Array[float]
+	var chapter_data: Dictionary = {}  # chapter_name -> { "game_over": Array[float], "continuation": Array[float] }
 	var chapter_order: Array = []
 
 	for run in runs:
 		var reason: String = run.get("ending_reason", "")
 		if reason in ["error", "loop_detected"]:
 			continue
+		var bucket: String = "game_over" if reason == "game_over" else "continuation"
 
 		var run_totals: Dictionary = {}  # chapter_name -> seconds for this run
 		for step in run.get("path", []):
@@ -441,20 +442,25 @@ func _compute_chapter_timings(runs: Array) -> Array:
 			run_totals[ch] += (words / WORDS_PER_MINUTE) * 60.0 + clicks * SECONDS_PER_DIALOGUE_CLICK
 
 		for ch in run_totals:
-			if not chapter_times.has(ch):
-				chapter_times[ch] = []
+			if not chapter_data.has(ch):
+				chapter_data[ch] = {"game_over": [], "continuation": []}
 				chapter_order.append(ch)
-			chapter_times[ch].append(run_totals[ch])
+			chapter_data[ch][bucket].append(run_totals[ch])
 
 	var result: Array = []
 	for ch in chapter_order:
-		var times: Array = chapter_times[ch].duplicate()
-		times.sort()
-		result.append({
-			"chapter_name": ch,
-			"min_seconds": times[0],
-			"max_seconds": times[-1],
-		})
+		var entry: Dictionary = {"chapter_name": ch}
+		var go_times: Array = chapter_data[ch]["game_over"]
+		if go_times.size() > 0:
+			var sorted_go := go_times.duplicate()
+			sorted_go.sort()
+			entry["game_over"] = {"min_seconds": sorted_go[0], "max_seconds": sorted_go[-1]}
+		var cont_times: Array = chapter_data[ch]["continuation"]
+		if cont_times.size() > 0:
+			var sorted_cont := cont_times.duplicate()
+			sorted_cont.sort()
+			entry["continuation"] = {"min_seconds": sorted_cont[0], "max_seconds": sorted_cont[-1]}
+		result.append(entry)
 	return result
 
 

@@ -102,20 +102,32 @@ func test_show_chapter_timings_list_has_correct_count():
 	_panel.show_report(report)
 	var timing_list = _panel._report_content.get_node_or_null("ChapterTimingsList")
 	assert_not_null(timing_list, "La liste des timings doit exister")
-	assert_eq(timing_list.get_child_count(), 1)
+	# 1 chapitre avec continuation + game_over = 2 lignes
+	assert_eq(timing_list.get_child_count(), 2)
 
-func test_show_chapter_timings_label_text():
+func test_show_chapter_timings_continuation_label_text():
 	var report = _make_success_report()
 	_panel.show_report(report)
 	var timing_list = _panel._report_content.get_node_or_null("ChapterTimingsList")
 	assert_not_null(timing_list)
 	var label: Label = timing_list.get_child(0)
-	# 150 sec = 2 min 30 sec, 315 sec = 5 min 15 sec
+	# continuation : 150 sec = 2 min 30 sec, 315 sec = 5 min 15 sec
 	assert_true(label.text.contains("Chapitre 1"), "Le nom du chapitre doit apparaître")
-	assert_true(label.text.contains("de "), "Le mot 'de' doit apparaître avant le min")
-	assert_true(label.text.contains(" a "), "Le séparateur ' a ' doit apparaître entre min et max")
+	assert_true(label.text.contains("(Suite)"), "La ligne continuation doit avoir le label (Suite)")
 	assert_true(label.text.contains("2 min 30 sec"), "Le min doit être formaté")
 	assert_true(label.text.contains("5 min 15 sec"), "Le max doit être formaté")
+
+func test_show_chapter_timings_game_over_label_text():
+	var report = _make_success_report()
+	_panel.show_report(report)
+	var timing_list = _panel._report_content.get_node_or_null("ChapterTimingsList")
+	assert_not_null(timing_list)
+	var label: Label = timing_list.get_child(1)
+	# game_over : 60 sec = 1 min, 120 sec = 2 min
+	assert_true(label.text.contains("Chapitre 1"), "Le nom du chapitre doit apparaître")
+	assert_true(label.text.contains("(Game Over)"), "La ligne game_over doit avoir le label (Game Over)")
+	assert_true(label.text.contains("1 min"), "Le min doit être formaté")
+	assert_true(label.text.contains("2 min"), "Le max doit être formaté")
 
 func test_show_chapter_timings_hidden_when_empty():
 	var report = _make_failure_report()  # chapter_timings: []
@@ -152,7 +164,11 @@ func _make_success_report() -> Dictionary:
 		"all_nodes": 2,
 		"visited_nodes": 2,
 		"chapter_timings": [
-			{"chapter_name": "Chapitre 1", "min_seconds": 150.0, "max_seconds": 315.0},
+			{
+				"chapter_name": "Chapitre 1",
+				"continuation": {"min_seconds": 150.0, "max_seconds": 315.0},
+				"game_over": {"min_seconds": 60.0, "max_seconds": 120.0},
+			},
 		],
 	}
 

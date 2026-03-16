@@ -101,11 +101,22 @@ func show_report(report: Dictionary) -> void:
 		_report_content.add_child(timings_list)
 
 		for timing in chapter_timings:
-			var item = Label.new()
-			var min_str := _format_duration(timing.get("min_seconds", 0.0))
-			var max_str := _format_duration(timing.get("max_seconds", 0.0))
-			item.text = "  %s    de %s  a  %s" % [timing.get("chapter_name", ""), min_str, max_str]
-			timings_list.add_child(item)
+			var ch_name: String = timing.get("chapter_name", "")
+			if timing.has("continuation"):
+				var item = Label.new()
+				var sub: Dictionary = timing["continuation"]
+				var min_str := _format_duration(sub.get("min_seconds", 0.0))
+				var max_str := _format_duration(sub.get("max_seconds", 0.0))
+				item.text = "  %s  (Suite)    de %s  a  %s" % [ch_name, min_str, max_str]
+				timings_list.add_child(item)
+			if timing.has("game_over"):
+				var item = Label.new()
+				var sub: Dictionary = timing["game_over"]
+				var min_str := _format_duration(sub.get("min_seconds", 0.0))
+				var max_str := _format_duration(sub.get("max_seconds", 0.0))
+				item.text = "  %s  (Game Over)    de %s  a  %s" % [ch_name, min_str, max_str]
+				item.add_theme_color_override("font_color", Color(1.0, 0.5, 0.5))
+				timings_list.add_child(item)
 
 		_report_content.add_child(HSeparator.new())
 
