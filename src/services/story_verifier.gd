@@ -70,6 +70,7 @@ func verify(story: RefCounted) -> Dictionary:
 		"total_runs": runs.size(),
 		"all_nodes": all_nodes.size(),
 		"visited_nodes": visited_nodes.size(),
+		"chapter_timings": _compute_chapter_timings(runs),
 	}
 
 
@@ -81,6 +82,7 @@ func _empty_report() -> Dictionary:
 		"total_runs": 0,
 		"all_nodes": 0,
 		"visited_nodes": 0,
+		"chapter_timings": [],
 	}
 
 
@@ -416,6 +418,44 @@ func _count_sequence_words(seq) -> int:
 	for dlg in seq.dialogues:
 		total += _word_regex.search_all(dlg.text).size()
 	return total
+
+
+func _compute_chapter_timings(runs: Array) -> Array:
+	var chapter_times: Dictionary = {}  # chapter_name -> Array[float]
+	var chapter_order: Array = []
+
+	for run in runs:
+		var reason: String = run.get("ending_reason", "")
+		if reason in ["error", "loop_detected"]:
+			continue
+
+		var run_totals: Dictionary = {}  # chapter_name -> seconds for this run
+		for step in run.get("path", []):
+			var ch: String = step.get("chapter_name", "")
+			if ch == "":
+				continue
+			if not run_totals.has(ch):
+				run_totals[ch] = 0.0
+			var words: int = step.get("word_count", 0)
+			var clicks: int = step.get("dialogue_count", 0)
+			run_totals[ch] += (words / WORDS_PER_MINUTE) * 60.0 + clicks * SECONDS_PER_DIALOGUE_CLICK
+
+		for ch in run_totals:
+			if not chapter_times.has(ch):
+				chapter_times[ch] = []
+				chapter_order.append(ch)
+			chapter_times[ch].append(run_totals[ch])
+
+	var result: Array = []
+	for ch in chapter_order:
+		var times: Array = chapter_times[ch].duplicate()
+		times.sort()
+		result.append({
+			"chapter_name": ch,
+			"min_seconds": times[0],
+			"max_seconds": times[-1],
+		})
+	return result
 
 
 func _format_duration(seconds: float) -> String:

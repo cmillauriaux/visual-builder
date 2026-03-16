@@ -743,3 +743,144 @@ func test_format_duration_zero():
 
 func test_format_duration_rounds_to_nearest_minute():
 	assert_eq(_verifier._format_duration(59.6), "1 min")
+
+
+# === _compute_chapter_timings ===
+
+func test_compute_timings_direct_single_chapter():
+	# 10 mots + 2 clics dans Ch1 : (10/200)*60 + 2*5 = 3.0 + 10.0 = 13.0 sec
+	var runs = [
+		{
+			"ending_reason": "game_over",
+			"path": [
+				{"chapter_name": "Ch1", "word_count": 10, "dialogue_count": 2},
+			]
+		}
+	]
+	var timings = _verifier._compute_chapter_timings(runs)
+	assert_eq(timings.size(), 1)
+	assert_eq(timings[0]["chapter_name"], "Ch1")
+	assert_almost_eq(timings[0]["min_seconds"], 13.0, 0.01)
+	assert_almost_eq(timings[0]["max_seconds"], 13.0, 0.01)
+
+func test_compute_timings_direct_two_runs_min_max():
+	# Run 1 : Ch1 = 0 mots, 1 clic -> 5.0 sec
+	# Run 2 : Ch1 = 200 mots, 2 clics -> 60.0 + 10.0 = 70.0 sec
+	var runs = [
+		{
+			"ending_reason": "game_over",
+			"path": [{"chapter_name": "Ch1", "word_count": 0, "dialogue_count": 1}]
+		},
+		{
+			"ending_reason": "to_be_continued",
+			"path": [{"chapter_name": "Ch1", "word_count": 200, "dialogue_count": 2}]
+		},
+	]
+	var timings = _verifier._compute_chapter_timings(runs)
+	assert_eq(timings.size(), 1)
+	assert_almost_eq(timings[0]["min_seconds"], 5.0, 0.01)
+	assert_almost_eq(timings[0]["max_seconds"], 70.0, 0.01)
+
+func test_compute_timings_excludes_error_runs():
+	var runs = [
+		{
+			"ending_reason": "error",
+			"path": [{"chapter_name": "Ch1", "word_count": 0, "dialogue_count": 0}]
+		},
+		{
+			"ending_reason": "game_over",
+			"path": [{"chapter_name": "Ch1", "word_count": 100, "dialogue_count": 3}]
+		},
+	]
+	var timings = _verifier._compute_chapter_timings(runs)
+	# Seul le run game_over compte : (100/200)*60 + 3*5 = 30 + 15 = 45 sec
+	assert_eq(timings.size(), 1)
+	assert_almost_eq(timings[0]["min_seconds"], 45.0, 0.01)
+	assert_almost_eq(timings[0]["max_seconds"], 45.0, 0.01)
+
+func test_compute_timings_excludes_loop_detected_runs():
+	var runs = [
+		{
+			"ending_reason": "loop_detected",
+			"path": [{"chapter_name": "Ch1", "word_count": 50, "dialogue_count": 2}]
+		},
+		{
+			"ending_reason": "to_be_continued",
+			"path": [{"chapter_name": "Ch1", "word_count": 10, "dialogue_count": 1}]
+		},
+	]
+	var timings = _verifier._compute_chapter_timings(runs)
+	assert_eq(timings.size(), 1)
+	# Seul to_be_continued compte : (10/200)*60 + 1*5 = 3.0 + 5.0 = 8.0 sec
+	assert_almost_eq(timings[0]["min_seconds"], 8.0, 0.01)
+	assert_almost_eq(timings[0]["max_seconds"], 8.0, 0.01)
+
+func test_compute_timings_two_chapters_preserved_order():
+	var runs = [
+		{
+			"ending_reason": "to_be_continued",
+			"path": [
+				{"chapter_name": "Ch1", "word_count": 0, "dialogue_count": 1},
+				{"chapter_name": "Ch2", "word_count": 0, "dialogue_count": 2},
+			]
+		}
+	]
+	var timings = _verifier._compute_chapter_timings(runs)
+	assert_eq(timings.size(), 2)
+	assert_eq(timings[0]["chapter_name"], "Ch1")
+	assert_eq(timings[1]["chapter_name"], "Ch2")
+
+func test_compute_timings_empty_runs():
+	var timings = _verifier._compute_chapter_timings([])
+	assert_eq(timings.size(), 0)
+
+
+# === verify() inclut chapter_timings ===
+
+func test_verify_includes_chapter_timings_key():
+	var story = _build_simple_story()
+	story.chapters[0].scenes[0].sequences[0].ending = _make_ending_auto("game_over", "")
+	var report = _verifier.verify(story)
+	assert_true(report.has("chapter_timings"), "chapter_timings doit être présent dans le rapport")
+
+func test_verify_chapter_timings_one_chapter():
+	var story = _build_simple_story()
+	story.chapters[0].scenes[0].sequences[0].ending = _make_ending_auto("game_over", "")
+	var report = _verifier.verify(story)
+	var timings = report["chapter_timings"]
+	assert_eq(timings.size(), 1)
+	assert_eq(timings[0]["chapter_name"], "Ch1")
+	# _make_sequence crée 1 dialogue "Hello" = 1 mot
+	# time = (1/200)*60 + 1*5 = 0.3 + 5.0 = 5.3 sec
+	assert_almost_eq(timings[0]["min_seconds"], 5.3, 0.01)
+	assert_almost_eq(timings[0]["max_seconds"], 5.3, 0.01)
+
+func test_verify_chapter_timings_two_chapters():
+	var story = _make_story()
+	var ch1 = _make_chapter("Ch1", Vector2(0, 0))
+	var ch2 = _make_chapter("Ch2", Vector2(200, 0))
+	story.chapters.append(ch1)
+	story.chapters.append(ch2)
+	var sc1 = _make_scene("Sc1")
+	ch1.scenes.append(sc1)
+	var sc2 = _make_scene("Sc2")
+	ch2.scenes.append(sc2)
+	var seq1 = _make_sequence("Seq1")
+	sc1.sequences.append(seq1)
+	var seq2 = _make_sequence("Seq2")
+	sc2.sequences.append(seq2)
+	seq1.ending = _make_ending_auto("redirect_chapter", ch2.uuid)
+	seq2.ending = _make_ending_auto("to_be_continued", "")
+	var report = _verifier.verify(story)
+	var timings = report["chapter_timings"]
+	assert_eq(timings.size(), 2)
+	assert_eq(timings[0]["chapter_name"], "Ch1")
+	assert_eq(timings[1]["chapter_name"], "Ch2")
+
+
+# === _empty_report inclut chapter_timings ===
+
+func test_empty_report_has_chapter_timings():
+	var report = _verifier.verify(null)
+	assert_true(report.has("chapter_timings"))
+	assert_eq(report["chapter_timings"], [])
