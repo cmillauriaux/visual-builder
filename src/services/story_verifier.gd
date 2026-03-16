@@ -113,11 +113,26 @@ func _simulate_run(story: RefCounted, global_coverage: Dictionary, fallback_coun
 		var is_condition: bool = current_node.get("rules") != null
 		var node_name: String = current_node.condition_name if is_condition else current_node.seq_name
 
-		path.append({
-			"uuid": node_uuid,
-			"name": node_name,
-			"type": "condition" if is_condition else "sequence",
-		})
+		if is_condition:
+			path.append({
+				"uuid": node_uuid,
+				"name": node_name,
+				"type": "condition",
+				"chapter_name": chapter.chapter_name,
+				"word_count": 0,
+				"dialogue_count": 0,
+			})
+		else:
+			var _word_count: int = _count_sequence_words(current_node)
+			var _dialogue_count: int = current_node.dialogues.size()
+			path.append({
+				"uuid": node_uuid,
+				"name": node_name,
+				"type": "sequence",
+				"chapter_name": chapter.chapter_name,
+				"word_count": _word_count,
+				"dialogue_count": _dialogue_count,
+			})
 
 		# Detection de boucle
 		var history_str = _serialize_full_history(local_history)
@@ -163,6 +178,9 @@ func _simulate_run(story: RefCounted, global_coverage: Dictionary, fallback_coun
 					"name": "Choix: " + choice.text,
 					"type": "choice",
 					"choice_index": choice_index,
+					"chapter_name": chapter.chapter_name,
+					"word_count": 0,
+					"dialogue_count": 0,
 				})
 				if choice.consequence == null:
 					return _make_run_result(run_index, path, "error")

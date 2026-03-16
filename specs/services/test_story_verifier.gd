@@ -590,6 +590,96 @@ func test_verify_all_nodes_count():
 	assert_eq(report["all_nodes"], 3)  # 2 sequences + 1 condition
 
 
+# === Enrichissement des étapes de path ===
+
+func test_path_step_sequence_has_chapter_name():
+	var story = _build_simple_story()
+	story.chapters[0].scenes[0].sequences[0].ending = _make_ending_auto("game_over", "")
+	var report = _verifier.verify(story)
+	var step = report["runs"][0]["path"][0]
+	assert_eq(step.get("chapter_name", "MISSING"), "Ch1")
+
+func test_path_step_sequence_has_word_count():
+	# _make_sequence ajoute 1 dialogue texte "Hello" = 1 mot
+	var story = _build_simple_story()
+	story.chapters[0].scenes[0].sequences[0].ending = _make_ending_auto("game_over", "")
+	var report = _verifier.verify(story)
+	var step = report["runs"][0]["path"][0]
+	assert_eq(step.get("word_count", -1), 1)
+
+func test_path_step_sequence_has_dialogue_count():
+	var story = _build_simple_story()
+	story.chapters[0].scenes[0].sequences[0].ending = _make_ending_auto("game_over", "")
+	var report = _verifier.verify(story)
+	var step = report["runs"][0]["path"][0]
+	assert_eq(step.get("dialogue_count", -1), 1)
+
+func test_path_step_condition_has_chapter_name_and_zero_counts():
+	var story = _make_story()
+	var ch = _make_chapter("Ch1")
+	story.chapters.append(ch)
+	var sc = _make_scene("Sc1")
+	ch.scenes.append(sc)
+	var cond = ConditionModelScript.new()
+	cond.condition_name = "Cond"
+	cond.position = Vector2(0, 0)
+	var cons = ConsequenceScript.new()
+	cons.type = "game_over"
+	cond.default_consequence = cons
+	sc.conditions.append(cond)
+	sc.entry_point_uuid = cond.uuid
+	var report = _verifier.verify(story)
+	var step = report["runs"][0]["path"][0]
+	assert_eq(step.get("chapter_name", "MISSING"), "Ch1")
+	assert_eq(step.get("word_count", -1), 0)
+	assert_eq(step.get("dialogue_count", -1), 0)
+
+func test_path_step_choice_has_chapter_name_and_zero_counts():
+	var story = _make_story()
+	var ch = _make_chapter("Ch1")
+	story.chapters.append(ch)
+	var sc = _make_scene("Sc1")
+	ch.scenes.append(sc)
+	var seq1 = _make_sequence("Seq1", Vector2(0, 0))
+	var seq2 = _make_sequence("SeqA", Vector2(200, 0))
+	sc.sequences.append(seq1)
+	sc.sequences.append(seq2)
+	sc.entry_point_uuid = seq1.uuid
+	seq1.ending = _make_ending_choices([
+		{"text": "Go A", "type": "redirect_sequence", "target": seq2.uuid},
+	])
+	seq2.ending = _make_ending_auto("game_over", "")
+	var report = _verifier.verify(story)
+	var choice_step = _find_choice_step(report["runs"][0]["path"])
+	assert_eq(choice_step.get("chapter_name", "MISSING"), "Ch1")
+	assert_eq(choice_step.get("word_count", -1), 0)
+	assert_eq(choice_step.get("dialogue_count", -1), 0)
+
+func test_path_step_chapter_name_correct_after_redirect_chapter():
+	# ch1 -> redirect_chapter -> ch2 : les steps de ch2 doivent porter "Ch2"
+	var story = _make_story()
+	var ch1 = _make_chapter("Ch1", Vector2(0, 0))
+	var ch2 = _make_chapter("Ch2", Vector2(200, 0))
+	story.chapters.append(ch1)
+	story.chapters.append(ch2)
+	story.entry_point_uuid = ch1.uuid
+	var sc1 = _make_scene("Sc1")
+	ch1.scenes.append(sc1)
+	var sc2 = _make_scene("Sc2")
+	ch2.scenes.append(sc2)
+	var seq1 = _make_sequence("Seq1")
+	sc1.sequences.append(seq1)
+	var seq2 = _make_sequence("Seq2")
+	sc2.sequences.append(seq2)
+	seq1.ending = _make_ending_auto("redirect_chapter", ch2.uuid)
+	seq2.ending = _make_ending_auto("to_be_continued", "")
+	var report = _verifier.verify(story)
+	var path = report["runs"][0]["path"]
+	# path[0] = seq1 dans Ch1, path[1] = seq2 dans Ch2
+	assert_eq(path[0].get("chapter_name", "MISSING"), "Ch1")
+	assert_eq(path[1].get("chapter_name", "MISSING"), "Ch2")
+
+
 # === Helper ===
 
 func _find_choice_step(path: Array) -> Dictionary:
