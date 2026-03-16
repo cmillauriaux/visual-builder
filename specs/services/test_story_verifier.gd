@@ -597,3 +597,59 @@ func _find_choice_step(path: Array) -> Dictionary:
 		if step["type"] == "choice":
 			return step
 	return {}
+
+
+# === _count_sequence_words ===
+
+func test_count_words_no_dialogues():
+	var seq = SequenceScript.new()
+	assert_eq(_verifier._count_sequence_words(seq), 0)
+
+func test_count_words_one_dialogue():
+	var seq = SequenceScript.new()
+	var dlg = DialogueScript.new()
+	dlg.text = "Hello world"
+	seq.dialogues.append(dlg)
+	assert_eq(_verifier._count_sequence_words(seq), 2)
+
+func test_count_words_multiple_dialogues():
+	var seq = SequenceScript.new()
+	var dlg1 = DialogueScript.new()
+	dlg1.text = "Hello world"
+	var dlg2 = DialogueScript.new()
+	dlg2.text = "Goodbye"
+	seq.dialogues.append(dlg1)
+	seq.dialogues.append(dlg2)
+	assert_eq(_verifier._count_sequence_words(seq), 3)
+
+func test_count_words_newline_separator():
+	var seq = SequenceScript.new()
+	var dlg = DialogueScript.new()
+	dlg.text = "Hello\nworld"
+	seq.dialogues.append(dlg)
+	assert_eq(_verifier._count_sequence_words(seq), 2)
+
+func test_count_words_empty_text():
+	var seq = SequenceScript.new()
+	var dlg = DialogueScript.new()
+	dlg.text = ""
+	seq.dialogues.append(dlg)
+	assert_eq(_verifier._count_sequence_words(seq), 0)
+
+
+# === _format_duration ===
+
+func test_format_duration_seconds_only():
+	assert_eq(_verifier._format_duration(45.0), "45 sec")
+
+func test_format_duration_exact_minutes():
+	assert_eq(_verifier._format_duration(120.0), "2 min")
+
+func test_format_duration_minutes_and_seconds():
+	assert_eq(_verifier._format_duration(150.0), "2 min 30 sec")
+
+func test_format_duration_zero():
+	assert_eq(_verifier._format_duration(0.0), "0 sec")
+
+func test_format_duration_rounds_to_nearest_minute():
+	assert_eq(_verifier._format_duration(59.6), "1 min")

@@ -7,6 +7,8 @@ class_name StoryVerifier
 
 const MAX_RUNS := 100
 const MAX_STEPS := 10000
+const WORDS_PER_MINUTE := 200.0
+const SECONDS_PER_DIALOGUE_CLICK := 5.0
 
 
 func verify(story: RefCounted) -> Dictionary:
@@ -381,3 +383,23 @@ func _has_untried_choices(choice_history: Dictionary, story: RefCounted) -> bool
 					if not tried.has(i):
 						return true
 	return false
+
+
+func _count_sequence_words(seq) -> int:
+	var re := RegEx.new()
+	re.compile("\\S+")
+	var total := 0
+	for dlg in seq.dialogues:
+		total += re.search_all(dlg.text).size()
+	return total
+
+
+func _format_duration(seconds: float) -> String:
+	var total_sec := int(round(seconds))
+	var m := total_sec / 60
+	var s := total_sec % 60
+	if m == 0:
+		return "%d sec" % s
+	if s == 0:
+		return "%d min" % m
+	return "%d min %d sec" % [m, s]
