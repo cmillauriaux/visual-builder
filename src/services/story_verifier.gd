@@ -10,6 +10,11 @@ const MAX_STEPS := 10000
 const WORDS_PER_MINUTE := 200.0
 const SECONDS_PER_DIALOGUE_CLICK := 5.0
 
+# String.split_words() n'existe pas en Godot 4.6.1 — on utilise RegEx a la place.
+# Le regex est compile une seule fois (lazy-init) pour eviter de reconstruire
+# l'automate a chaque appel de _count_sequence_words.
+var _word_regex: RegEx = null
+
 
 func verify(story: RefCounted) -> Dictionary:
 	if story == null:
@@ -386,11 +391,12 @@ func _has_untried_choices(choice_history: Dictionary, story: RefCounted) -> bool
 
 
 func _count_sequence_words(seq) -> int:
-	var re := RegEx.new()
-	re.compile("\\S+")
+	if _word_regex == null:
+		_word_regex = RegEx.new()
+		_word_regex.compile("\\S+")
 	var total := 0
 	for dlg in seq.dialogues:
-		total += re.search_all(dlg.text).size()
+		total += _word_regex.search_all(dlg.text).size()
 	return total
 
 
