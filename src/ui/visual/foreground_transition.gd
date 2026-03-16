@@ -194,19 +194,20 @@ func apply_morph(target: Control, old_state: Dictionary, duration: float, clone 
 		target.modulate.a = old_state["modulate_a"]
 		tween.tween_property(target, "modulate:a", target_alpha, duration)
 
-	# Flip à mi-parcours
-	var tex = target.get_node_or_null("Texture")
-	if tex:
-		var old_flip_h = old_state.get("flip_h", tex.flip_h)
-		var old_flip_v = old_state.get("flip_v", tex.flip_v)
-		var new_flip_h = tex.flip_h
-		var new_flip_v = tex.flip_v
-		if old_flip_h != new_flip_h or old_flip_v != new_flip_v:
-			tex.flip_h = old_flip_h
-			tex.flip_v = old_flip_v
-			tween.tween_callback(func():
-				tex.flip_h = new_flip_h
-				tex.flip_v = new_flip_v
-			).set_delay(duration / 2.0)
+	# Flip à mi-parcours (seulement si pas de clone : avec clone, target fade in invisible donc déjà au bon état)
+	if not clone:
+		var tex = target.get_node_or_null("Texture")
+		if tex:
+			var old_flip_h = old_state.get("flip_h", tex.flip_h)
+			var old_flip_v = old_state.get("flip_v", tex.flip_v)
+			var new_flip_h = tex.flip_h
+			var new_flip_v = tex.flip_v
+			if old_flip_h != new_flip_h or old_flip_v != new_flip_v:
+				tex.flip_h = old_flip_h
+				tex.flip_v = old_flip_v
+				tween.tween_callback(func():
+					tex.flip_h = new_flip_h
+					tex.flip_v = new_flip_v
+				).set_delay(duration / 2.0)
 
 	return tween
