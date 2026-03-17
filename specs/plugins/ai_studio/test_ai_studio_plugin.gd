@@ -1,6 +1,7 @@
 extends GutTest
 
 const AIStudioPlugin = preload("res://plugins/ai_studio/plugin.gd")
+const AIStudioDialog = preload("res://plugins/ai_studio/ai_studio_dialog.gd")
 const Contributions = preload("res://src/plugins/contributions.gd")
 
 
@@ -51,3 +52,10 @@ func test_image_picker_tab_create_tab_returns_control() -> void:
 	assert_not_null(ctrl)
 	assert_true(ctrl is Control)
 	ctrl.queue_free()
+
+
+func test_dialog_has_four_tabs() -> void:
+	var dialog = AIStudioDialog.new()
+	add_child_autofree(dialog)
+	await get_tree().process_frame
+	assert_eq(dialog._tab_container.get_tab_count(), 4)

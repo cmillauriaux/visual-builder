@@ -42,8 +42,8 @@ func test_has_tab_container():
 	assert_is(_dialog._tab_container, TabContainer)
 
 
-func test_has_three_tabs():
-	assert_eq(_dialog._tab_container.get_tab_count(), 3)
+func test_has_four_tabs():
+	assert_eq(_dialog._tab_container.get_tab_count(), 4)
 
 
 func test_tab_decliner_exists():
@@ -52,6 +52,10 @@ func test_tab_decliner_exists():
 
 func test_tab_expressions_exists():
 	assert_eq(_dialog._tab_container.get_tab_title(1), "Expressions")
+
+
+func test_tab_restauration_exists():
+	assert_eq(_dialog._tab_container.get_tab_title(3), "Restauration")
 
 
 func test_has_shared_url_input():
