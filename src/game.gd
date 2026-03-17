@@ -16,11 +16,12 @@ const GameSettings = preload("res://src/ui/menu/game_settings.gd")
 const StoryI18nService = preload("res://src/services/story_i18n_service.gd")
 const GameSaveManager = preload("res://src/persistence/game_save_manager.gd")
 const OptionsMenuScript = preload("res://src/ui/menu/options_menu.gd")
-const PlayFabAnalyticsServiceScript = preload("res://src/services/playfab_analytics_service.gd")
 const PckChapterLoaderScript = preload("res://src/services/pck_chapter_loader.gd")
 const UIScale = preload("res://src/ui/themes/ui_scale.gd")
 const GameTheme = preload("res://src/ui/themes/game_theme.gd")
 const PwaInstallPromptScript = preload("res://src/ui/menu/pwa_install_prompt.gd")
+const GamePluginManagerScript = preload("res://src/plugins/game_plugin_manager.gd")
+const GamePluginContextScript = preload("res://src/plugins/game_plugin_context.gd")
 const LocaleDetector = preload("res://src/services/locale_detector.gd")
 
 ## Chemin vers la story à charger automatiquement.
@@ -109,8 +110,12 @@ var _quickload_confirm_label: Label
 var _quickload_yes_btn: Button
 var _quickload_no_btn: Button
 
-# Analytics
-var _analytics: Node
+# Game plugin system
+var _game_plugin_manager: Node
+var _plugin_toolbar: HBoxContainer
+var _plugin_overlay_left: VBoxContainer
+var _plugin_overlay_right: VBoxContainer
+var _plugin_overlay_top: HBoxContainer
 
 # PCK chapter loader
 var _pck_loader: RefCounted
@@ -137,6 +142,13 @@ func _ready() -> void:
 
 	GameUIBuilder.build(self)
 
+	# Initialiser le système de plugins in-game
+	_game_plugin_manager = Node.new()
+	_game_plugin_manager.set_script(GamePluginManagerScript)
+	add_child(_game_plugin_manager)
+	_game_plugin_manager.load_enabled_states(_settings)
+	_game_plugin_manager.scan_and_load_plugins()
+
 	# Configurer le contrôleur de jeu avec les réglages
 	_story_play_ctrl.setup(null, _settings.autosave_enabled)
 
@@ -148,6 +160,7 @@ func _ready() -> void:
 	_play_ctrl = Node.new()
 	_play_ctrl.set_script(GamePlayControllerScript)
 	_play_ctrl.setup(self)
+	_play_ctrl._game_plugin_manager = _game_plugin_manager
 	add_child(_play_ctrl)
 
 	# Connecter les signaux du play
@@ -176,21 +189,17 @@ func _ready() -> void:
 	_variable_sidebar.details_requested.connect(_on_variable_details_requested)
 	_variable_details_overlay.close_requested.connect(_on_variable_details_close)
 
-	# Analytics PlayFab
-	_analytics = Node.new()
-	_analytics.set_script(PlayFabAnalyticsServiceScript)
-	_analytics.name = "PlayFabAnalytics"
-	add_child(_analytics)
-
 	# Connecter le signal autosave
 	_story_play_ctrl.autosave_triggered.connect(_on_autosave_triggered)
 
-	# Connecter les signaux analytics du story play controller
-	_story_play_ctrl.chapter_entered.connect(_on_analytics_chapter_entered)
-	_story_play_ctrl.scene_entered.connect(_on_analytics_scene_entered)
-	_story_play_ctrl.sequence_entered.connect(_on_analytics_sequence_entered)
-	_story_play_ctrl.choice_made.connect(_on_analytics_choice_made)
+	# Connecter le signal story_finished pour les analytics (via plugin)
 	_story_play_ctrl.story_finished_with_reason.connect(_on_analytics_story_finished)
+
+	# Connecter les signaux pour le système de plugins in-game
+	_story_play_ctrl.chapter_entered.connect(_on_plugin_chapter_entered)
+	_story_play_ctrl.scene_entered.connect(_on_plugin_scene_entered)
+	_story_play_ctrl.sequence_entered.connect(_on_plugin_sequence_entered)
+	_story_play_ctrl.choice_made.connect(_on_plugin_choice_made)
 
 	# Connecter les signaux de chargement PCK entre chapitres
 	_story_play_ctrl.chapter_loading_started.connect(_on_chapter_loading_started)
@@ -203,6 +212,7 @@ func _ready() -> void:
 	_main_menu.quit_pressed.connect(_on_quit)
 	_main_menu.options_applied.connect(_on_options_applied)
 	_main_menu.set_settings(_settings)
+	_main_menu.set_game_plugin_manager(_game_plugin_manager)
 
 	# Connecter les signaux des écrans de fin
 	_game_over_screen.back_to_menu_pressed.connect(_on_play_finished_return)
@@ -239,6 +249,7 @@ func _ready() -> void:
 	_pause_options_menu.build_ui()
 	_pause_options_menu.applied.connect(_on_pause_options_applied)
 	_pause_options_menu.closed.connect(_on_pause_options_closed)
+	_pause_options_menu.set_game_plugin_manager(_game_plugin_manager)
 	_pause_options_center.add_child(_pause_options_menu)
 
 	# Connecter les signaux du menu save/load
@@ -307,8 +318,8 @@ func _load_story_and_show_menu(path: String) -> void:
 
 	_reload_i18n()
 	_load_max_progression()
-	_configure_analytics(story)
 	_apply_game_ui_theme(story)
+	_setup_game_plugins()
 	_show_main_menu(_current_story)
 	_pwa_install_prompt.show_if_needed(_settings.pwa_prompt_dismissed)
 
@@ -421,10 +432,9 @@ func _on_new_game() -> void:
 		if chapter:
 			await _preload_chapter_with_ui(chapter.uuid)
 	_main_menu.hide_menu()
-	_analytics.track_event("story_started", {
-		"story_title": _current_story.title,
-		"story_version": _current_story.version,
-	})
+	if _game_plugin_manager:
+		var ctx = _build_game_plugin_context()
+		_game_plugin_manager.dispatch_on_story_started(ctx, _current_story.title, _current_story.version)
 	_play_ctrl.start_story(_current_story, _current_story_path)
 
 
@@ -435,8 +445,9 @@ func _on_load_game() -> void:
 
 
 func _on_quit() -> void:
-	_analytics.track_event("game_quit", {})
-	_analytics.flush()
+	if _game_plugin_manager:
+		var ctx = _build_game_plugin_context()
+		_game_plugin_manager.dispatch_on_game_quit(ctx, "", "", "")
 	get_tree().quit()
 
 
@@ -708,13 +719,16 @@ func _on_save_slot(slot_index: int) -> void:
 	var state := _collect_game_state()
 	GameSaveManager.save_game_state(slot_index, state, _pending_screenshot)
 	_update_cached_progression(state)
-	_analytics.track_event("story_saved", {
-		"story_title": _current_story.title if _current_story else "",
-		"slot_index": slot_index,
-		"chapter": state.get("chapter_name", ""),
-		"scene": state.get("scene_name", ""),
-		"sequence": state.get("sequence_name", ""),
-	})
+	if _game_plugin_manager:
+		var ctx = _build_game_plugin_context()
+		_game_plugin_manager.dispatch_on_story_saved(
+			ctx,
+			_current_story.title if _current_story else "",
+			slot_index,
+			state.get("chapter_name", ""),
+			state.get("scene_name", ""),
+			state.get("sequence_name", ""),
+		)
 	_save_load_menu.hide_menu()
 	get_tree().paused = false
 
@@ -768,10 +782,9 @@ func _on_load_slot(slot_index: int) -> void:
 	if saved_chapter_uuid != "":
 		await _preload_chapter_with_ui(saved_chapter_uuid)
 	# Reprendre depuis la sauvegarde
-	_analytics.track_event("story_loaded", {
-		"story_title": _current_story.title if _current_story else "",
-		"slot_index": slot_index,
-	})
+	if _game_plugin_manager:
+		var ctx = _build_game_plugin_context()
+		_game_plugin_manager.dispatch_on_story_loaded(ctx, _current_story.title if _current_story else "", slot_index)
 	_play_ctrl.start_from_save(_current_story, save_data, _current_story_path)
 
 
@@ -799,10 +812,13 @@ func _on_pause_new_game() -> void:
 		var chapter = _story_play_ctrl._find_entry(_current_story.chapters, _current_story.entry_point_uuid)
 		if chapter:
 			await _preload_chapter_with_ui(chapter.uuid)
-	_analytics.track_event("story_started", {
-		"story_title": _current_story.title if _current_story else "",
-		"story_version": _current_story.version if _current_story else "",
-	})
+	if _game_plugin_manager:
+		var ctx = _build_game_plugin_context()
+		_game_plugin_manager.dispatch_on_story_started(
+			ctx,
+			_current_story.title if _current_story else "",
+			_current_story.version if _current_story else "",
+		)
 	_play_ctrl.stop_and_restart(_current_story, _current_story_path)
 
 
@@ -810,12 +826,14 @@ func _on_pause_quit() -> void:
 	var chapter = _story_play_ctrl.get_current_chapter()
 	var scene = _story_play_ctrl.get_current_scene()
 	var seq = _story_play_ctrl.get_current_sequence()
-	_analytics.track_event("game_quit", {
-		"chapter": chapter.chapter_name if chapter else "",
-		"scene": scene.scene_name if scene else "",
-		"sequence": seq.seq_name if seq else "",
-	})
-	_analytics.flush()
+	if _game_plugin_manager:
+		var ctx = _build_game_plugin_context()
+		_game_plugin_manager.dispatch_on_game_quit(
+			ctx,
+			chapter.chapter_name if chapter else "",
+			scene.scene_name if scene else "",
+			seq.seq_name if seq else "",
+		)
 	_pause_menu.hide_menu()
 	get_tree().paused = false
 	_play_ctrl.stop_current()
@@ -919,12 +937,63 @@ func _on_variable_details_close() -> void:
 	_variable_details_overlay.hide_details()
 
 
-# --- PlayFab Analytics ---
+# --- Game Plugin System ---
 
-func _configure_analytics(story) -> void:
-	_analytics.configure(story.playfab_title_id, story.playfab_enabled)
-	if _analytics.is_configured():
-		_analytics.login_anonymous()
+func _build_game_plugin_context() -> RefCounted:
+	var ctx := GamePluginContextScript.new()
+	ctx.story = _current_story
+	ctx.story_base_path = _current_story_path
+	ctx.game_node = self
+	ctx.settings = _settings
+	if _story_play_ctrl:
+		ctx.current_chapter = _story_play_ctrl.get_current_chapter()
+		ctx.current_scene = _story_play_ctrl.get_current_scene()
+		ctx.current_sequence = _story_play_ctrl.get_current_sequence()
+		if _story_play_ctrl.get("_variables") != null:
+			ctx.variables = _story_play_ctrl._variables
+	return ctx
+
+
+func _setup_game_plugins() -> void:
+	if _game_plugin_manager == null or _current_story == null:
+		return
+	var ctx = _build_game_plugin_context()
+	_play_ctrl._plugin_ctx = ctx
+	_game_plugin_manager.inject_toolbar_buttons(_plugin_toolbar, ctx)
+	_game_plugin_manager.inject_overlay_panels(
+		_plugin_overlay_left, _plugin_overlay_right, _plugin_overlay_top, ctx)
+	_game_plugin_manager.dispatch_on_game_ready(ctx)
+
+
+func _on_plugin_chapter_entered(_chapter_name: String, _chapter_uuid: String) -> void:
+	if _game_plugin_manager == null:
+		return
+	var ctx = _build_game_plugin_context()
+	_play_ctrl._plugin_ctx = ctx
+	_game_plugin_manager.dispatch_on_before_chapter(ctx)
+
+
+func _on_plugin_scene_entered(_scene_name: String, _scene_uuid: String) -> void:
+	if _game_plugin_manager == null:
+		return
+	var ctx = _build_game_plugin_context()
+	_play_ctrl._plugin_ctx = ctx
+	_game_plugin_manager.dispatch_on_before_scene(ctx)
+
+
+func _on_plugin_sequence_entered(_seq_name: String, _seq_uuid: String) -> void:
+	if _game_plugin_manager == null:
+		return
+	var ctx = _build_game_plugin_context()
+	_play_ctrl._plugin_ctx = ctx
+	_game_plugin_manager.dispatch_on_before_sequence(ctx)
+
+
+func _on_plugin_choice_made(_seq_uuid: String, choice_index: int, choice_text: String) -> void:
+	if _game_plugin_manager == null:
+		return
+	var ctx = _build_game_plugin_context()
+	_game_plugin_manager.dispatch_on_after_choice(ctx, choice_index, choice_text)
 
 
 func _on_chapter_loading_started(chapter_name: String) -> void:
@@ -947,38 +1016,10 @@ func _on_chapter_loading_finished() -> void:
 		remove_meta("_loading_progress_cb")
 
 
-func _on_analytics_chapter_entered(chapter_name: String, chapter_uuid: String) -> void:
-	_analytics.track_event("chapter_entered", {
-		"chapter_name": chapter_name,
-		"chapter_uuid": chapter_uuid,
-	})
-
-
-func _on_analytics_scene_entered(scene_name: String, scene_uuid: String) -> void:
-	_analytics.track_event("scene_entered", {
-		"scene_name": scene_name,
-		"scene_uuid": scene_uuid,
-	})
-
-
-func _on_analytics_sequence_entered(sequence_name: String, sequence_uuid: String) -> void:
-	_analytics.track_event("sequence_entered", {
-		"sequence_name": sequence_name,
-		"sequence_uuid": sequence_uuid,
-	})
-
-
-func _on_analytics_choice_made(sequence_uuid: String, choice_index: int, choice_text: String) -> void:
-	_analytics.track_event("choice_made", {
-		"sequence_uuid": sequence_uuid,
-		"choice_index": choice_index,
-		"choice_text": choice_text,
-	})
-
-
 func _on_analytics_story_finished(reason: String) -> void:
-	_analytics.track_event("story_finished", {"reason": reason})
-	_analytics.flush()
+	if _game_plugin_manager:
+		var ctx = _build_game_plugin_context()
+		_game_plugin_manager.dispatch_on_story_finished(ctx, reason)
 
 
 # --- Quicksave / Quickload ---
@@ -1006,10 +1047,9 @@ func _on_quicksave() -> void:
 	if ok:
 		_update_cached_progression(state)
 		_show_toast(StoryI18nService.get_ui_string("Sauvegarde rapide effectuée", _i18n_dict))
-		_analytics.track_event("quicksave", {
-			"story_title": _current_story.title if _current_story else "",
-			"chapter": state.get("chapter_name", ""),
-		})
+		if _game_plugin_manager:
+			var ctx = _build_game_plugin_context()
+			_game_plugin_manager.dispatch_on_quicksave(ctx, _current_story.title if _current_story else "", state.get("chapter_name", ""))
 
 
 func _on_quickload() -> void:
@@ -1043,9 +1083,9 @@ func _do_quickload() -> void:
 		_current_story = story
 		_current_story_path = target_path
 		_reload_i18n()
-	_analytics.track_event("quickload", {
-		"story_title": _current_story.title if _current_story else "",
-	})
+	if _game_plugin_manager:
+		var ctx = _build_game_plugin_context()
+		_game_plugin_manager.dispatch_on_quickload(ctx, _current_story.title if _current_story else "")
 	_play_ctrl.start_from_save(_current_story, save_data, _current_story_path)
 
 

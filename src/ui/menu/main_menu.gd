@@ -254,6 +254,11 @@ func set_settings(settings: RefCounted) -> void:
 	_settings = settings
 
 
+func set_game_plugin_manager(manager: Node) -> void:
+	if _options_menu and _options_menu.has_method("set_game_plugin_manager"):
+		_options_menu.set_game_plugin_manager(manager)
+
+
 func show_menu() -> void:
 	visible = true
 

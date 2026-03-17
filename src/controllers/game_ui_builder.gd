@@ -35,6 +35,7 @@ static func build(game: Control) -> void:
 	_build_music_player(game)
 	# Play buttons bar (Save, Load, Auto) — added last so it renders on top of everything
 	_build_play_buttons_bar(game)
+	_build_game_plugin_containers(game)
 	_build_toast_overlay(game)
 	_build_loading_overlay(game)
 	_build_quickload_confirm(game)
@@ -355,6 +356,55 @@ static func _build_music_player(game: Control) -> void:
 	game._music_player = Node.new()
 	game._music_player.set_script(MusicPlayerScript)
 	game.add_child(game._music_player)
+
+
+static func _build_game_plugin_containers(game: Control) -> void:
+	var s := UIScale.get_scale()
+
+	# Container toolbar au-dessus du dialogue (HBoxContainer, aligné à gauche)
+	game._plugin_toolbar = HBoxContainer.new()
+	game._plugin_toolbar.visible = false
+	game._plugin_toolbar.alignment = BoxContainer.ALIGNMENT_BEGIN
+	game._plugin_toolbar.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	game._plugin_toolbar.offset_top = -roundi(188 * s)
+	game._plugin_toolbar.offset_bottom = -roundi(150 * s)
+	game._plugin_toolbar.offset_left = 3
+	game._plugin_toolbar.mouse_filter = Control.MOUSE_FILTER_PASS
+	game.add_child(game._plugin_toolbar)
+
+	# Overlay gauche (VBoxContainer, bord gauche)
+	game._plugin_overlay_left = VBoxContainer.new()
+	game._plugin_overlay_left.set_anchors_preset(Control.PRESET_LEFT_WIDE)
+	game._plugin_overlay_left.offset_left = roundi(10 * s)
+	game._plugin_overlay_left.offset_right = roundi(200 * s)
+	game._plugin_overlay_left.offset_top = roundi(50 * s)
+	game._plugin_overlay_left.offset_bottom = -roundi(200 * s)
+	game._plugin_overlay_left.visible = false
+	game._plugin_overlay_left.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	game.add_child(game._plugin_overlay_left)
+
+	# Overlay droit (VBoxContainer, bord droit)
+	game._plugin_overlay_right = VBoxContainer.new()
+	game._plugin_overlay_right.set_anchors_preset(Control.PRESET_RIGHT_WIDE)
+	game._plugin_overlay_right.offset_left = -roundi(200 * s)
+	game._plugin_overlay_right.offset_right = -roundi(10 * s)
+	game._plugin_overlay_right.offset_top = roundi(50 * s)
+	game._plugin_overlay_right.offset_bottom = -roundi(200 * s)
+	game._plugin_overlay_right.visible = false
+	game._plugin_overlay_right.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	game.add_child(game._plugin_overlay_right)
+
+	# Overlay top (HBoxContainer, sous le bouton menu)
+	game._plugin_overlay_top = HBoxContainer.new()
+	game._plugin_overlay_top.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	game._plugin_overlay_top.offset_top = roundi(50 * s)
+	game._plugin_overlay_top.offset_bottom = roundi(90 * s)
+	game._plugin_overlay_top.offset_left = roundi(10 * s)
+	game._plugin_overlay_top.offset_right = -roundi(120 * s)
+	game._plugin_overlay_top.alignment = BoxContainer.ALIGNMENT_END
+	game._plugin_overlay_top.visible = false
+	game._plugin_overlay_top.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	game.add_child(game._plugin_overlay_top)
 
 
 static func _build_variable_display(game: Control) -> void:

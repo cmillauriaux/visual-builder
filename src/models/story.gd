@@ -21,8 +21,7 @@ var menu_title: String = ""
 var menu_subtitle: String = ""
 var menu_background: String = ""
 var menu_music: String = ""
-var playfab_title_id: String = ""
-var playfab_enabled: bool = false
+var plugin_settings: Dictionary = {}  # plugin_name -> Dictionary of settings
 var patreon_url: String = ""
 var itchio_url: String = ""
 var game_over_title: String = ""
@@ -116,10 +115,7 @@ func to_dict() -> Dictionary:
 		"menu_subtitle": menu_subtitle,
 		"menu_background": menu_background,
 		"menu_music": menu_music,
-		"playfab": {
-			"title_id": playfab_title_id,
-			"enabled": playfab_enabled,
-		},
+		"plugin_settings": plugin_settings,
 		"links": {
 			"patreon": patreon_url,
 			"itchio": itchio_url,
@@ -173,10 +169,15 @@ static func from_dict(d: Dictionary):
 	story.menu_background = d.get("menu_background", "")
 	story.menu_music = d.get("menu_music", "")
 
-	if d.has("playfab"):
+	if d.has("plugin_settings"):
+		story.plugin_settings = d["plugin_settings"]
+	elif d.has("playfab"):
+		# Rétrocompatibilité : migrer l'ancien format playfab vers plugin_settings
 		var pf = d["playfab"]
-		story.playfab_title_id = pf.get("title_id", "")
-		story.playfab_enabled = pf.get("enabled", false)
+		story.plugin_settings["playfab_analytics"] = {
+			"title_id": pf.get("title_id", ""),
+			"enabled": pf.get("enabled", false),
+		}
 
 	if d.has("links"):
 		var links = d["links"]

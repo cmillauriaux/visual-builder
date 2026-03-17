@@ -456,10 +456,11 @@ func test_on_menu_config_confirmed_updates_story() -> void:
 	_main._nav_ctrl.on_new_story_pressed()
 	_main._nav_ctrl._on_menu_config_confirmed(
 		"Test Menu Title", "Test Subtitle", "bg.png", "music.mp3",
-		"playfab123", true, "https://patreon.com/x", "https://game.itch.io",
+		"https://patreon.com/x", "https://game.itch.io",
 		"Game Over", "Go Sub", "go_bg.png",
 		"To Be Continued", "TBC Sub", "tbc_bg.png",
-		"icon.png", false, "dark"
+		"icon.png", false, "dark",
+		{"playfab_analytics": {"title_id": "playfab123", "enabled": true}}
 	)
 	assert_eq(_main._editor_main._story.menu_title, "Test Menu Title")
 	assert_eq(_main._editor_main._story.menu_subtitle, "Test Subtitle")

@@ -29,6 +29,8 @@ var _dialogue_opacity_slider: HSlider
 var _autosave_enabled_check: CheckButton
 var _ui_scale_option: OptionButton
 var _toolbar_visible_check: CheckButton
+var _plugins_container: VBoxContainer
+var _game_plugin_manager: Node
 
 const AUTO_PLAY_DELAYS := [1.0, 2.0, 3.0, 5.0]
 const AUTO_PLAY_DELAY_LABELS := ["1s", "2s", "3s", "5s"]
@@ -114,6 +116,12 @@ func build_ui() -> void:
 	_typewriter_speed_option = _add_option_row(content, "Vitesse texte", TYPEWRITER_SPEED_LABELS)
 	_autosave_enabled_check = _add_check_row(content, "Auto-save")
 
+	# Section Plugins (remplie dynamiquement par set_game_plugin_manager)
+	content.add_child(HSeparator.new())
+	_add_section_label(content, "Plugins")
+	_plugins_container = VBoxContainer.new()
+	content.add_child(_plugins_container)
+
 	# Bouton Appliquer
 	_apply_button = Button.new()
 	_apply_button.text = "Appliquer"
@@ -167,6 +175,9 @@ func load_from_settings(settings: RefCounted) -> void:
 	# Toolbar
 	_toolbar_visible_check.button_pressed = settings.toolbar_visible
 
+	# Plugin controls
+	_refresh_plugin_controls()
+
 
 func apply_to_settings(settings: RefCounted, path: String = GameSettings.SETTINGS_PATH) -> void:
 	var res_idx = _resolution_option.selected
@@ -195,6 +206,17 @@ func apply_to_settings(settings: RefCounted, path: String = GameSettings.SETTING
 	settings.toolbar_visible = _toolbar_visible_check.button_pressed
 	settings.save_settings(path)
 	settings.apply_settings()
+
+
+func set_game_plugin_manager(manager: Node) -> void:
+	_game_plugin_manager = manager
+	_refresh_plugin_controls()
+
+
+func _refresh_plugin_controls() -> void:
+	if _plugins_container == null or _game_plugin_manager == null:
+		return
+	_game_plugin_manager.inject_options_controls(_plugins_container, _current_settings)
 
 
 func _on_close() -> void:

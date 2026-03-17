@@ -3,7 +3,7 @@ extends GutTest
 var PlayFabAnalyticsServiceScript
 
 func before_each():
-	PlayFabAnalyticsServiceScript = load("res://src/services/playfab_analytics_service.gd")
+	PlayFabAnalyticsServiceScript = load("res://plugins/playfab_analytics/playfab_analytics_service.gd")
 
 func test_configuration():
 	var svc = PlayFabAnalyticsServiceScript.new()

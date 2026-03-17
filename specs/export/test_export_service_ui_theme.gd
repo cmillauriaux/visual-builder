@@ -12,8 +12,8 @@ var _tmp_dst: String
 func before_each() -> void:
 	_service = RefCounted.new()
 	_service.set_script(ExportServiceScript)
-	_tmp_src = "/tmp/test_copy_src_" + str(randi())
-	_tmp_dst = "/tmp/test_copy_dst_" + str(randi())
+	_tmp_src = OS.get_user_data_dir() + "/test_copy_src_" + str(randi())
+	_tmp_dst = OS.get_user_data_dir() + "/test_copy_dst_" + str(randi())
 	DirAccess.make_dir_recursive_absolute(_tmp_src)
 	DirAccess.make_dir_recursive_absolute(_tmp_dst)
 

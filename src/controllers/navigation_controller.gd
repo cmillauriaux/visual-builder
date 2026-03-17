@@ -471,13 +471,11 @@ func on_menu_config_requested() -> void:
 	_menu_config_dialog.popup_centered()
 
 
-func _on_menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_background: String, menu_music: String = "", playfab_title_id: String = "", playfab_enabled: bool = false, patreon_url: String = "", itchio_url: String = "", game_over_title: String = "", game_over_subtitle: String = "", game_over_background: String = "", to_be_continued_title: String = "", to_be_continued_subtitle: String = "", to_be_continued_background: String = "", app_icon: String = "", show_title_banner: bool = true, ui_theme_mode: String = "default") -> void:
+func _on_menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_background: String, menu_music: String = "", patreon_url: String = "", itchio_url: String = "", game_over_title: String = "", game_over_subtitle: String = "", game_over_background: String = "", to_be_continued_title: String = "", to_be_continued_subtitle: String = "", to_be_continued_background: String = "", app_icon: String = "", show_title_banner: bool = true, ui_theme_mode: String = "default", plugin_settings: Dictionary = {}) -> void:
 	_main._editor_main._story.menu_title = menu_title
 	_main._editor_main._story.menu_subtitle = menu_subtitle
 	_main._editor_main._story.menu_background = menu_background
 	_main._editor_main._story.menu_music = menu_music
-	_main._editor_main._story.playfab_title_id = playfab_title_id
-	_main._editor_main._story.playfab_enabled = playfab_enabled
 	_main._editor_main._story.patreon_url = patreon_url
 	_main._editor_main._story.itchio_url = itchio_url
 	_main._editor_main._story.game_over_title = game_over_title
@@ -489,6 +487,7 @@ func _on_menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_b
 	_main._editor_main._story.app_icon = app_icon
 	_main._editor_main._story.show_title_banner = show_title_banner
 	_main._editor_main._story.ui_theme_mode = ui_theme_mode
+	_main._editor_main._story.plugin_settings = plugin_settings
 
 
 func on_variables_changed() -> void:
