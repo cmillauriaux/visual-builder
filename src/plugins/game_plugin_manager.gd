@@ -184,6 +184,43 @@ func dispatch_on_after_choice(ctx: RefCounted, choice_index: int, choice_text: S
 		plugin.on_after_choice(ctx, choice_index, choice_text)
 
 
+# --- Dispatch hooks cycle de vie de la story ---
+
+func dispatch_on_story_started(ctx: RefCounted, story_title: String, story_version: String) -> void:
+	for plugin in _get_active_plugins():
+		plugin.on_story_started(ctx, story_title, story_version)
+
+
+func dispatch_on_story_finished(ctx: RefCounted, reason: String) -> void:
+	for plugin in _get_active_plugins():
+		plugin.on_story_finished(ctx, reason)
+
+
+func dispatch_on_story_saved(ctx: RefCounted, story_title: String, slot_index: int, chapter: String, scene: String, sequence: String) -> void:
+	for plugin in _get_active_plugins():
+		plugin.on_story_saved(ctx, story_title, slot_index, chapter, scene, sequence)
+
+
+func dispatch_on_story_loaded(ctx: RefCounted, story_title: String, slot_index: int) -> void:
+	for plugin in _get_active_plugins():
+		plugin.on_story_loaded(ctx, story_title, slot_index)
+
+
+func dispatch_on_game_quit(ctx: RefCounted, chapter: String, scene: String, sequence: String) -> void:
+	for plugin in _get_active_plugins():
+		plugin.on_game_quit(ctx, chapter, scene, sequence)
+
+
+func dispatch_on_quicksave(ctx: RefCounted, story_title: String, chapter: String) -> void:
+	for plugin in _get_active_plugins():
+		plugin.on_quicksave(ctx, story_title, chapter)
+
+
+func dispatch_on_quickload(ctx: RefCounted, story_title: String) -> void:
+	for plugin in _get_active_plugins():
+		plugin.on_quickload(ctx, story_title)
+
+
 # --- UI injection ---
 
 ## Injecte les boutons toolbar des plugins actifs dans le container.

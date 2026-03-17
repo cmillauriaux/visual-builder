@@ -4,7 +4,7 @@ extends "res://src/plugins/game_plugin.gd"
 ## Lit la configuration depuis story.plugin_settings["playfab_analytics"]
 ## et envoie les événements de télémétrie aux hooks du jeu.
 
-const PlayFabAnalyticsServiceScript = preload("res://src/services/playfab_analytics_service.gd")
+const PlayFabAnalyticsServiceScript = preload("res://plugins/playfab_analytics/playfab_analytics_service.gd")
 const GameContributions = preload("res://src/plugins/game_contributions.gd")
 
 var _service: Node = null
@@ -96,16 +96,69 @@ func on_after_choice(ctx: RefCounted, choice_index: int, choice_text: String) ->
 	})
 
 
-## Méthodes publiques pour que game.gd puisse encore appeler track_event
-## pour les événements spécifiques (story_started, story_saved, etc.)
-func track_event(event_name: String, body: Dictionary = {}) -> void:
-	if _service != null and _service.is_active():
-		_service.track_event(event_name, body)
+func on_story_started(_ctx: RefCounted, story_title: String, story_version: String) -> void:
+	if _service == null or not _service.is_active():
+		return
+	_service.track_event("story_started", {
+		"story_title": story_title,
+		"story_version": story_version,
+	})
 
 
-func flush() -> void:
-	if _service != null:
-		_service.flush()
+func on_story_finished(_ctx: RefCounted, reason: String) -> void:
+	if _service == null or not _service.is_active():
+		return
+	_service.track_event("story_finished", {"reason": reason})
+	_service.flush()
+
+
+func on_story_saved(_ctx: RefCounted, story_title: String, slot_index: int, chapter: String, scene: String, sequence: String) -> void:
+	if _service == null or not _service.is_active():
+		return
+	_service.track_event("story_saved", {
+		"story_title": story_title,
+		"slot_index": slot_index,
+		"chapter": chapter,
+		"scene": scene,
+		"sequence": sequence,
+	})
+
+
+func on_story_loaded(_ctx: RefCounted, story_title: String, slot_index: int) -> void:
+	if _service == null or not _service.is_active():
+		return
+	_service.track_event("story_loaded", {
+		"story_title": story_title,
+		"slot_index": slot_index,
+	})
+
+
+func on_game_quit(_ctx: RefCounted, chapter: String, scene: String, sequence: String) -> void:
+	if _service == null or not _service.is_active():
+		return
+	_service.track_event("game_quit", {
+		"chapter": chapter,
+		"scene": scene,
+		"sequence": sequence,
+	})
+	_service.flush()
+
+
+func on_quicksave(_ctx: RefCounted, story_title: String, chapter: String) -> void:
+	if _service == null or not _service.is_active():
+		return
+	_service.track_event("quicksave", {
+		"story_title": story_title,
+		"chapter": chapter,
+	})
+
+
+func on_quickload(_ctx: RefCounted, story_title: String) -> void:
+	if _service == null or not _service.is_active():
+		return
+	_service.track_event("quickload", {
+		"story_title": story_title,
+	})
 
 
 func get_options_controls() -> Array:

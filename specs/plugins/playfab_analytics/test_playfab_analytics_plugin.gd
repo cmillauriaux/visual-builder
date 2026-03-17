@@ -114,18 +114,6 @@ func test_cleanup_safe_when_no_service():
 	ctx.game_node.queue_free()
 
 
-# --- track_event / flush when not active ---
-
-func test_track_event_safe_when_no_service():
-	_plugin.track_event("test_event", {"key": "value"})
-	assert_null(_plugin.get_service())
-
-
-func test_flush_safe_when_no_service():
-	_plugin.flush()
-	assert_null(_plugin.get_service())
-
-
 # --- Hooks without service ---
 
 func test_on_before_chapter_safe_without_service():
@@ -152,6 +140,55 @@ func test_on_before_sequence_safe_without_service():
 func test_on_after_choice_safe_without_service():
 	var ctx = _create_context()
 	_plugin.on_after_choice(ctx, 0, "test")
+	assert_null(_plugin.get_service())
+	ctx.game_node.queue_free()
+
+
+func test_on_story_started_safe_without_service():
+	var ctx = _create_context()
+	_plugin.on_story_started(ctx, "My Story", "1.0")
+	assert_null(_plugin.get_service())
+	ctx.game_node.queue_free()
+
+
+func test_on_story_finished_safe_without_service():
+	var ctx = _create_context()
+	_plugin.on_story_finished(ctx, "completed")
+	assert_null(_plugin.get_service())
+	ctx.game_node.queue_free()
+
+
+func test_on_story_saved_safe_without_service():
+	var ctx = _create_context()
+	_plugin.on_story_saved(ctx, "My Story", 0, "ch1", "sc1", "seq1")
+	assert_null(_plugin.get_service())
+	ctx.game_node.queue_free()
+
+
+func test_on_story_loaded_safe_without_service():
+	var ctx = _create_context()
+	_plugin.on_story_loaded(ctx, "My Story", 0)
+	assert_null(_plugin.get_service())
+	ctx.game_node.queue_free()
+
+
+func test_on_game_quit_safe_without_service():
+	var ctx = _create_context()
+	_plugin.on_game_quit(ctx, "ch1", "sc1", "seq1")
+	assert_null(_plugin.get_service())
+	ctx.game_node.queue_free()
+
+
+func test_on_quicksave_safe_without_service():
+	var ctx = _create_context()
+	_plugin.on_quicksave(ctx, "My Story", "ch1")
+	assert_null(_plugin.get_service())
+	ctx.game_node.queue_free()
+
+
+func test_on_quickload_safe_without_service():
+	var ctx = _create_context()
+	_plugin.on_quickload(ctx, "My Story")
 	assert_null(_plugin.get_service())
 	ctx.game_node.queue_free()
 

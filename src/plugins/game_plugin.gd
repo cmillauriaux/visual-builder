@@ -83,6 +83,43 @@ func on_after_choice(ctx: RefCounted, choice_index: int, choice_text: String) ->
 	pass
 
 
+# --- Hooks cycle de vie de la story ---
+
+## Appelé quand une nouvelle partie démarre.
+func on_story_started(ctx: RefCounted, story_title: String, story_version: String) -> void:
+	pass
+
+
+## Appelé quand la story se termine (fin narrative ou abandon).
+func on_story_finished(ctx: RefCounted, reason: String) -> void:
+	pass
+
+
+## Appelé quand une partie est sauvegardée dans un slot.
+func on_story_saved(ctx: RefCounted, story_title: String, slot_index: int, chapter: String, scene: String, sequence: String) -> void:
+	pass
+
+
+## Appelé quand une partie est chargée depuis un slot.
+func on_story_loaded(ctx: RefCounted, story_title: String, slot_index: int) -> void:
+	pass
+
+
+## Appelé quand le joueur quitte le jeu (menu principal ou pause).
+func on_game_quit(ctx: RefCounted, chapter: String, scene: String, sequence: String) -> void:
+	pass
+
+
+## Appelé quand une sauvegarde rapide est effectuée.
+func on_quicksave(ctx: RefCounted, story_title: String, chapter: String) -> void:
+	pass
+
+
+## Appelé quand une sauvegarde rapide est restaurée.
+func on_quickload(ctx: RefCounted, story_title: String) -> void:
+	pass
+
+
 # --- Contributions UI ---
 
 ## Retourne les boutons à ajouter dans la toolbar au-dessus du dialogue.
