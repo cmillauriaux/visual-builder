@@ -195,6 +195,12 @@ static func _parse_array(lines: Array, start: int, base_indent: int, target: Arr
 		# Enlever le "- " du début
 		var item_content = stripped.substr(2).strip_edges()
 
+		# Inline dict : - { key: val, key: val }
+		if item_content.begins_with("{") and item_content.ends_with("}"):
+			target.append(_parse_inline_dict(item_content))
+			i += 1
+			continue
+
 		# Déterminer si c'est un dict item ou un scalar
 		var item_kv = _split_key_rest(item_content)
 		if not item_kv.is_empty():

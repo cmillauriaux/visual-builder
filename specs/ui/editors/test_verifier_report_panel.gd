@@ -143,6 +143,31 @@ func test_show_chapter_timings_hidden_when_key_absent():
 	assert_null(timing_title, "Le titre timing ne doit pas exister si la clé est absente")
 
 
+# === Boutons Exporter et Copier ===
+
+func test_export_button_exists():
+	assert_not_null(_panel.get_node_or_null("Header/ExportButton"), "Bouton Exporter doit exister dans le header")
+
+func test_copy_button_exists():
+	assert_not_null(_panel.get_node_or_null("Header/CopyButton"), "Bouton Copier doit exister dans le header")
+
+func test_copy_button_sets_clipboard_after_show_report():
+	if not DisplayServer.has_feature(DisplayServer.FEATURE_CLIPBOARD):
+		pass  # Presse-papier non disponible en headless, test ignore
+		return
+	var report := _make_success_report()
+	_panel.show_report(report)
+	var copy_btn: Button = _panel.get_node("Header/CopyButton")
+	copy_btn.emit_signal("pressed")
+	var clipboard := DisplayServer.clipboard_get()
+	assert_true(clipboard.contains("=== RAPPORT DE VERIFICATION ==="), "Le presse-papier doit contenir le rapport")
+
+func test_copy_button_does_not_crash_without_show_report():
+	var copy_btn: Button = _panel.get_node("Header/CopyButton")
+	copy_btn.emit_signal("pressed")
+	assert_true(true)  # Ne doit pas crasher
+
+
 # === Helpers ===
 
 func _make_success_report() -> Dictionary:

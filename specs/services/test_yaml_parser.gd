@@ -163,6 +163,15 @@ func test_roundtrip_key_with_colon():
 	assert_eq(restored["Titre sans deux-points"], "Titre sans deux-points")
 	assert_eq(restored["Erreur (cible introuvable ou contenu vide)"], "Erreur (cible introuvable ou contenu vide)")
 
+func test_read_array_of_inline_dicts():
+	var yaml = 'connections:\n  - { from: "abc-123", to: "def-456" }\n  - { from: "ghi-789", to: "jkl-012" }'
+	var d = YamlParser.yaml_to_dict(yaml)
+	assert_eq(d["connections"].size(), 2)
+	assert_eq(d["connections"][0]["from"], "abc-123")
+	assert_eq(d["connections"][0]["to"], "def-456")
+	assert_eq(d["connections"][1]["from"], "ghi-789")
+	assert_eq(d["connections"][1]["to"], "jkl-012")
+
 func test_roundtrip_story_yaml():
 	# Reproduit le format exact de story.yaml de la spec
 	var original = {

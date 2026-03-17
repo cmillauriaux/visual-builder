@@ -220,7 +220,7 @@ func remove_sequence(uuid: String) -> void:
 		if _scene_data.sequences[i].uuid == uuid:
 			_scene_data.sequences.remove_at(i)
 			break
-	_scene_data.connections = _scene_data.connections.filter(func(c): return c["from"] != uuid and c["to"] != uuid)
+	_scene_data.connections = _scene_data.connections.filter(func(c): return c.has("from") and c.has("to") and c["from"] != uuid and c["to"] != uuid)
 	if _node_map.has(uuid):
 		_node_map[uuid].queue_free()
 		_node_map.erase(uuid)
@@ -230,7 +230,7 @@ func remove_condition(uuid: String) -> void:
 		if _scene_data.conditions[i].uuid == uuid:
 			_scene_data.conditions.remove_at(i)
 			break
-	_scene_data.connections = _scene_data.connections.filter(func(c): return c["from"] != uuid and c["to"] != uuid)
+	_scene_data.connections = _scene_data.connections.filter(func(c): return c.has("from") and c.has("to") and c["from"] != uuid and c["to"] != uuid)
 	if _node_map.has(uuid):
 		_node_map[uuid].queue_free()
 		_node_map.erase(uuid)
@@ -274,6 +274,8 @@ func _build_connection_type_map() -> void:
 	_choice_connections.clear()
 	# Connexions manuelles = transition (on ignore celles issues de séquences "choices")
 	for conn in _scene_data.connections:
+		if not conn.has("from") or not conn.has("to"):
+			continue
 		if _choice_sequence_uuids.has(conn["from"]):
 			continue
 		_merge_connection_type(conn["from"] + "→" + conn["to"], "transition")

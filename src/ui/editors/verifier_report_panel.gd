@@ -9,6 +9,8 @@ var _status_label: Label
 var _summary_label: Label
 var _report_content: VBoxContainer
 var _scroll: ScrollContainer
+var _formatter := StoryVerifierFormatter.new()
+var _report: Dictionary = {}
 
 
 func _ready() -> void:
@@ -35,6 +37,18 @@ func _build_ui() -> void:
 	_status_label.add_theme_font_size_override("font_size", 16)
 	header.add_child(_status_label)
 
+	var export_btn = Button.new()
+	export_btn.name = "ExportButton"
+	export_btn.text = "Exporter"
+	export_btn.pressed.connect(_on_export_pressed)
+	header.add_child(export_btn)
+
+	var copy_btn = Button.new()
+	copy_btn.name = "CopyButton"
+	copy_btn.text = "Copier"
+	copy_btn.pressed.connect(_on_copy_pressed)
+	header.add_child(copy_btn)
+
 	var close_btn = Button.new()
 	close_btn.name = "CloseButton"
 	close_btn.text = "Fermer"
@@ -57,7 +71,31 @@ func _build_ui() -> void:
 	_scroll.add_child(_report_content)
 
 
+func _on_export_pressed() -> void:
+	var text := _formatter.format(_report)
+	var dialog := FileDialog.new()
+	dialog.file_mode = FileDialog.FILE_MODE_SAVE_FILE
+	dialog.filters = PackedStringArray(["*.txt"])
+	dialog.current_file = "rapport_verification.txt"
+	add_child(dialog)
+	dialog.file_selected.connect(func(path: String):
+		var f := FileAccess.open(path, FileAccess.WRITE)
+		if f:
+			f.store_string(text)
+			f.close()
+		dialog.queue_free()
+	)
+	dialog.canceled.connect(func(): dialog.queue_free())
+	dialog.popup_centered_ratio(0.6)
+
+
+func _on_copy_pressed() -> void:
+	var text := _formatter.format(_report)
+	DisplayServer.clipboard_set(text)
+
+
 func show_report(report: Dictionary) -> void:
+	_report = report
 	clear()
 
 	var success: bool = report.get("success", false)

@@ -148,10 +148,10 @@ Cas ajoutés :
 
 ## Critères d'acceptation
 
-- [ ] Le bouton "Exporter" ouvre une boîte de dialogue de sauvegarde avec filtre `.txt`
-- [ ] Le fichier exporté contient le rapport complet en texte lisible
-- [ ] Le `FileDialog` est libéré (`queue_free`) après confirmation et après annulation
-- [ ] Le bouton "Copier" place le rapport dans le presse-papier système
-- [ ] Cliquer "Copier" ou "Exporter" sans rapport chargé ne produit pas d'erreur
-- [ ] `StoryVerifierFormatter` n'a aucune dépendance UI (pas de Node, pas de Control)
-- [ ] Tous les tests passent
+- [x] Le bouton "Exporter" ouvre une boîte de dialogue de sauvegarde avec filtre `.txt`
+- [x] Le fichier exporté contient le rapport complet en texte lisible
+- [x] Le `FileDialog` est libéré (`queue_free`) après confirmation et après annulation
+- [x] Le bouton "Copier" place le rapport dans le presse-papier système
+- [x] Cliquer "Copier" ou "Exporter" sans rapport chargé ne produit pas d'erreur
+- [x] `StoryVerifierFormatter` n'a aucune dépendance UI (pas de Node, pas de Control)
+- [x] Tous les tests passent

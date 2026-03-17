@@ -153,7 +153,7 @@ func remove_scene(uuid: String) -> void:
 		if _chapter.scenes[i].uuid == uuid:
 			_chapter.scenes.remove_at(i)
 			break
-	_chapter.connections = _chapter.connections.filter(func(c): return c["from"] != uuid and c["to"] != uuid)
+	_chapter.connections = _chapter.connections.filter(func(c): return c.has("from") and c.has("to") and c["from"] != uuid and c["to"] != uuid)
 	if _node_map.has(uuid):
 		_node_map[uuid].queue_free()
 		_node_map.erase(uuid)
@@ -183,6 +183,8 @@ func _build_connection_type_map() -> void:
 	_connection_type_map.clear()
 	# Connexions manuelles = transition
 	for conn in _chapter.connections:
+		if not conn.has("from") or not conn.has("to"):
+			continue
 		_merge_connection_type(conn["from"] + "→" + conn["to"], "transition")
 	# Connexions issues des endings des séquences dans les scènes
 	for scene in _chapter.scenes:
