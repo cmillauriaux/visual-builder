@@ -470,6 +470,8 @@ func _on_generation_completed(image: Image) -> void:
 func _on_generation_failed(error: String) -> void:
 	_client = null
 	_cancel_btn.visible = false
+	_accept_btn.disabled = true
+	_reject_btn.disabled = true
 	_show_error("Erreur : " + error)
 	_regenerate_btn.disabled = false
 	_set_inputs_enabled(true)
@@ -499,6 +501,7 @@ func _on_accept_pressed() -> void:
 
 	GalleryCacheService.clear_dir(dir_path)
 	_reset_to_empty()
+	_show_success("Image remplacée avec succès !")
 
 
 func _on_reject_pressed() -> void:
