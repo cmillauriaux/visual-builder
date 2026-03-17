@@ -454,6 +454,8 @@ func _on_generate_pressed() -> void:
 
 
 func _on_generation_completed(image: Image) -> void:
+	if _client != null:
+		_client.queue_free()
 	_client = null
 	_generated_image = image
 	_result_preview.texture = ImageTexture.create_from_image(image)
@@ -468,6 +470,8 @@ func _on_generation_completed(image: Image) -> void:
 
 
 func _on_generation_failed(error: String) -> void:
+	if _client != null:
+		_client.queue_free()
 	_client = null
 	_cancel_btn.visible = false
 	_accept_btn.disabled = true
