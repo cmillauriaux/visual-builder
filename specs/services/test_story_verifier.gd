@@ -126,6 +126,28 @@ func test_verify_single_sequence_to_be_continued():
 	assert_true(report["success"])
 	assert_eq(report["runs"][0]["ending_reason"], "to_be_continued")
 
+func test_verify_direct_game_over_ending():
+	# ending.type = "game_over" directly (pas enveloppé dans auto_redirect)
+	var story = _build_simple_story()
+	var ending = EndingScript.new()
+	ending.type = "game_over"
+	story.chapters[0].scenes[0].sequences[0].ending = ending
+	var report = _verifier.verify(story)
+	assert_true(report["success"])
+	assert_eq(report["runs"][0]["ending_reason"], "game_over")
+	assert_true(report["runs"][0]["is_valid"])
+
+func test_verify_direct_to_be_continued_ending():
+	# ending.type = "to_be_continued" directement
+	var story = _build_simple_story()
+	var ending = EndingScript.new()
+	ending.type = "to_be_continued"
+	story.chapters[0].scenes[0].sequences[0].ending = ending
+	var report = _verifier.verify(story)
+	assert_true(report["success"])
+	assert_eq(report["runs"][0]["ending_reason"], "to_be_continued")
+	assert_true(report["runs"][0]["is_valid"])
+
 
 # === Linear chain ===
 

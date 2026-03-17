@@ -194,6 +194,8 @@ func _simulate_run(story: RefCounted, global_coverage: Dictionary, fallback_coun
 				chapter = result["chapter"]
 				scene = result["scene"]
 				current_node = result["node"]
+			elif current_node.ending.type in ["game_over", "to_be_continued"]:
+				return _make_run_result(run_index, path, current_node.ending.type)
 			else:
 				return _make_run_result(run_index, path, "no_ending")
 
