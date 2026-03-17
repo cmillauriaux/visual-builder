@@ -7,8 +7,8 @@ class_name StoryVerifier
 
 const MAX_RUNS := 100
 const MAX_STEPS := 10000
-const WORDS_PER_MINUTE := 200.0
-const SECONDS_PER_DIALOGUE_CLICK := 5.0
+const WORDS_PER_MINUTE := 250.0
+const SECONDS_PER_CHOICE := 5.0
 
 # String.split_words() n'existe pas en Godot 4.6.1 — on utilise RegEx a la place.
 # Le regex est compile une seule fois (lazy-init) pour eviter de reconstruire
@@ -440,8 +440,8 @@ func _compute_chapter_timings(runs: Array) -> Array:
 			if not run_totals.has(ch):
 				run_totals[ch] = 0.0
 			var words: int = step.get("word_count", 0)
-			var clicks: int = step.get("dialogue_count", 0)
-			run_totals[ch] += (words / WORDS_PER_MINUTE) * 60.0 + clicks * SECONDS_PER_DIALOGUE_CLICK
+			var is_choice: bool = step.get("type", "") == "choice"
+			run_totals[ch] += (words / WORDS_PER_MINUTE) * 60.0 + (SECONDS_PER_CHOICE if is_choice else 0.0)
 
 		for ch in run_totals:
 			if not chapter_data.has(ch):
