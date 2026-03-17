@@ -415,6 +415,7 @@ func _on_generate_pressed() -> void:
 	if _client != null:
 		_client.cancel()
 		_client.queue_free()
+		_client = null
 
 	_client = Node.new()
 	_client.set_script(ComfyUIClient)
@@ -453,6 +454,7 @@ func _on_generate_pressed() -> void:
 
 
 func _on_generation_completed(image: Image) -> void:
+	_client = null
 	_generated_image = image
 	_result_preview.texture = ImageTexture.create_from_image(image)
 	_dim_label.text = "%d × %d px (même résolution que la source)" % [image.get_width(), image.get_height()]
@@ -466,6 +468,7 @@ func _on_generation_completed(image: Image) -> void:
 
 
 func _on_generation_failed(error: String) -> void:
+	_client = null
 	_cancel_btn.visible = false
 	_show_error("Erreur : " + error)
 	_regenerate_btn.disabled = false
@@ -488,11 +491,13 @@ func _on_accept_pressed() -> void:
 			_show_error("Backup échoué (%s). Source non modifiée." % error_string(err))
 			return
 
+	var dir_path = _source_image_path.get_base_dir()
 	var save_err = _generated_image.save_png(_source_image_path)
 	if save_err != OK:
 		_show_error("Échec de la sauvegarde (%s)." % error_string(save_err))
 		return
 
+	GalleryCacheService.clear_dir(dir_path)
 	_reset_to_empty()
 
 
