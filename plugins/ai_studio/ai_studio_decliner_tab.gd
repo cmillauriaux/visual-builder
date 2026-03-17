@@ -28,6 +28,8 @@ var _cfg_value_label: Label
 var _cfg_hint: Label
 var _steps_slider: HSlider
 var _steps_value_label: Label
+var _megapixels_slider: HSlider
+var _megapixels_value_label: Label
 var _generate_btn: Button
 var _result_preview: TextureRect
 var _status_label: Label
@@ -187,6 +189,29 @@ func build_tab(tab_container: TabContainer) -> void:
 	_steps_value_label.custom_minimum_size.x = 32
 	steps_hbox.add_child(_steps_value_label)
 
+	# Megapixels slider
+	var mp_hbox = HBoxContainer.new()
+	mp_hbox.add_theme_constant_override("separation", 8)
+	vbox.add_child(mp_hbox)
+
+	var mp_label = Label.new()
+	mp_label.text = "Mégapixels :"
+	mp_hbox.add_child(mp_label)
+
+	_megapixels_slider = HSlider.new()
+	_megapixels_slider.min_value = 0.5
+	_megapixels_slider.max_value = 4.0
+	_megapixels_slider.step = 0.5
+	_megapixels_slider.value = 1.0
+	_megapixels_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_megapixels_slider.value_changed.connect(func(val: float): _megapixels_value_label.text = str(snapped(val, 0.5)))
+	mp_hbox.add_child(_megapixels_slider)
+
+	_megapixels_value_label = Label.new()
+	_megapixels_value_label.text = "1.0"
+	_megapixels_value_label.custom_minimum_size.x = 32
+	mp_hbox.add_child(_megapixels_value_label)
+
 	# Generate button
 	_generate_btn = Button.new()
 	_generate_btn.text = "Générer"
@@ -337,7 +362,7 @@ func _on_generate_pressed() -> void:
 	var steps_value = int(_steps_slider.value)
 	var workflow_type = _workflow_option.get_selected_id()
 	var neg_prompt = _neg_input.text.strip_edges()
-	_client.generate(config, _source_image_path, _prompt_input.text, true, cfg_value, steps_value, workflow_type, 0.5, neg_prompt)
+	_client.generate(config, _source_image_path, _prompt_input.text, true, cfg_value, steps_value, workflow_type, 0.5, neg_prompt, 80, "4x-UltraSharp.pth", 512, 0, 0, _megapixels_slider.value)
 
 
 func _on_generation_completed(image: Image) -> void:

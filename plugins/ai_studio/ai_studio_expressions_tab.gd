@@ -46,6 +46,8 @@ var _steps_slider: HSlider
 var _steps_value_label: Label
 var _denoise_slider: HSlider
 var _denoise_value_label: Label
+var _megapixels_slider: HSlider
+var _megapixels_value_label: Label
 var _face_box_slider: HSlider
 var _face_box_value_label: Label
 var _elementary_checkboxes: Array = []
@@ -233,6 +235,29 @@ func build_tab(tab_container: TabContainer) -> void:
 	_denoise_value_label.text = "0.5"
 	_denoise_value_label.custom_minimum_size.x = 32
 	denoise_hbox.add_child(_denoise_value_label)
+
+	# Megapixels slider
+	var mp_hbox = HBoxContainer.new()
+	mp_hbox.add_theme_constant_override("separation", 8)
+	vbox.add_child(mp_hbox)
+
+	var mp_label = Label.new()
+	mp_label.text = "Mégapixels :"
+	mp_hbox.add_child(mp_label)
+
+	_megapixels_slider = HSlider.new()
+	_megapixels_slider.min_value = 0.5
+	_megapixels_slider.max_value = 4.0
+	_megapixels_slider.step = 0.5
+	_megapixels_slider.value = 1.0
+	_megapixels_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_megapixels_slider.value_changed.connect(func(val: float): _megapixels_value_label.text = str(snapped(val, 0.5)))
+	mp_hbox.add_child(_megapixels_slider)
+
+	_megapixels_value_label = Label.new()
+	_megapixels_value_label.text = "1.0"
+	_megapixels_value_label.custom_minimum_size.x = 32
+	mp_hbox.add_child(_megapixels_value_label)
 
 	# Face box size slider
 	var face_box_hbox = HBoxContainer.new()
@@ -653,7 +678,7 @@ func _process_next_expression() -> void:
 	var denoise_value = _denoise_slider.value
 	var face_box_value = int(_face_box_slider.value)
 	var neg_prompt = _neg_input.text.strip_edges()
-	_client.generate(config, _source_image_path, item["prompt"], true, cfg_value, steps_value, ComfyUIClient.WorkflowType.EXPRESSION, denoise_value, neg_prompt, face_box_value)
+	_client.generate(config, _source_image_path, item["prompt"], true, cfg_value, steps_value, ComfyUIClient.WorkflowType.EXPRESSION, denoise_value, neg_prompt, face_box_value, "4x-UltraSharp.pth", 512, 0, 0, _megapixels_slider.value)
 
 
 func _on_item_completed(image: Image) -> void:
@@ -739,6 +764,7 @@ func _set_inputs_enabled(enabled: bool) -> void:
 		_choose_gallery_btn.disabled = not enabled
 	_prefix_input.editable = enabled
 	_denoise_slider.editable = enabled
+	_megapixels_slider.editable = enabled
 	_face_box_slider.editable = enabled
 	_custom_input.editable = enabled
 	_add_custom_btn.disabled = not enabled

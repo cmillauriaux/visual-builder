@@ -26,6 +26,7 @@ var _upscale_model_name: String = "4x-UltraSharp.pth"
 var _upscale_tile_size: int = 512
 var _upscale_target_w: int = 0
 var _upscale_target_h: int = 0
+var _megapixels: float = 1.0
 
 # --- Workflow template (Flux 2 Klein + BiRefNet) ---
 # Reproduit exactement Edit_Image_Transparent_API.json
@@ -673,13 +674,14 @@ func _build_upscale_workflow(filename: String, prompt_text: String, seed: int, d
 	return wf
 
 
-func _build_hires_workflow(filename: String, prompt_text: String, seed: int, cfg: float, steps: int, denoise: float, negative_prompt: String) -> Dictionary:
+func _build_hires_workflow(filename: String, prompt_text: String, seed: int, cfg: float, steps: int, denoise: float, negative_prompt: String, megapixels: float = 1.0) -> Dictionary:
 	var wf = HIRES_WORKFLOW_TEMPLATE.duplicate(true)
 	wf["76"]["inputs"]["image"] = filename
 	wf["75:74"]["inputs"]["text"] = prompt_text
 	wf["75:73"]["inputs"]["noise_seed"] = seed
 	wf["75:63"]["inputs"]["cfg"] = cfg
 	wf["75:62"]["inputs"]["steps"] = steps
+	wf["75:80"]["inputs"]["megapixels"] = megapixels
 	_apply_negative_prompt(wf, negative_prompt)
 	# img2img : partir du latent encodé de l'image source (pas d'un canvas vierge)
 	wf["75:64"]["inputs"]["latent_image"] = ["75:79:78", 0]
@@ -698,19 +700,20 @@ func _build_hires_workflow(filename: String, prompt_text: String, seed: int, cfg
 	return wf
 
 
-func build_workflow(filename: String, prompt_text: String, seed: int, remove_background: bool = true, cfg: float = 1.0, steps: int = 4, workflow_type: int = WorkflowType.CREATION, denoise: float = 0.5, negative_prompt: String = "", face_box_size: int = 80) -> Dictionary:
+func build_workflow(filename: String, prompt_text: String, seed: int, remove_background: bool = true, cfg: float = 1.0, steps: int = 4, workflow_type: int = WorkflowType.CREATION, denoise: float = 0.5, negative_prompt: String = "", face_box_size: int = 80, megapixels: float = 1.0) -> Dictionary:
 	if workflow_type == WorkflowType.UPSCALE:
 		return _build_upscale_workflow(filename, prompt_text, seed, denoise, _upscale_model_name, _upscale_tile_size, _upscale_target_w, _upscale_target_h, negative_prompt)
 	if workflow_type == WorkflowType.HIRES:
-		return _build_hires_workflow(filename, prompt_text, seed, cfg, steps, denoise, negative_prompt)
+		return _build_hires_workflow(filename, prompt_text, seed, cfg, steps, denoise, negative_prompt, megapixels)
 	if workflow_type == WorkflowType.EXPRESSION:
-		return _build_expression_workflow(filename, prompt_text, seed, remove_background, cfg, steps, denoise, negative_prompt, face_box_size)
+		return _build_expression_workflow(filename, prompt_text, seed, remove_background, cfg, steps, denoise, negative_prompt, face_box_size, megapixels)
 	var wf = WORKFLOW_TEMPLATE.duplicate(true)
 	wf["76"]["inputs"]["image"] = filename
 	wf["75:74"]["inputs"]["text"] = prompt_text
 	wf["75:73"]["inputs"]["noise_seed"] = seed
 	wf["75:63"]["inputs"]["cfg"] = cfg
 	wf["75:62"]["inputs"]["steps"] = steps
+	wf["75:80"]["inputs"]["megapixels"] = megapixels
 	_apply_negative_prompt(wf, negative_prompt)
 	if not remove_background:
 		# Pour les backgrounds : sauvegarder directement la sortie du VAEDecode
@@ -719,7 +722,7 @@ func build_workflow(filename: String, prompt_text: String, seed: int, remove_bac
 		wf.erase("100")
 	return wf
 
-func _build_expression_workflow(filename: String, prompt_text: String, seed: int, remove_background: bool, cfg: float, steps: int, denoise: float = 0.5, negative_prompt: String = "", face_box_size: int = 80) -> Dictionary:
+func _build_expression_workflow(filename: String, prompt_text: String, seed: int, remove_background: bool, cfg: float, steps: int, denoise: float = 0.5, negative_prompt: String = "", face_box_size: int = 80, megapixels: float = 1.0) -> Dictionary:
 	var wf = EXPRESSION_WORKFLOW_TEMPLATE.duplicate(true)
 	# Appliquer la taille de la zone visage (dilation + expand)
 	wf["100"]["inputs"]["dilation"] = face_box_size
@@ -729,6 +732,7 @@ func _build_expression_workflow(filename: String, prompt_text: String, seed: int
 	wf["75:73"]["inputs"]["noise_seed"] = seed
 	wf["75:63"]["inputs"]["cfg"] = cfg
 	wf["75:62"]["inputs"]["steps"] = steps
+	wf["75:80"]["inputs"]["megapixels"] = megapixels
 	_apply_negative_prompt(wf, negative_prompt)
 	# img2img : partir de l'image source encodée (pas d'un canvas vierge)
 	# pour préserver les caractéristiques visuelles (couleur des yeux, etc.)
@@ -841,7 +845,7 @@ func parse_history_response(json_str: String, prompt_id: String) -> Dictionary:
 
 # --- Full generation flow ---
 
-func generate(config: RefCounted, source_image_path: String, prompt_text: String, remove_background: bool = true, cfg: float = 1.0, steps: int = 4, workflow_type: int = WorkflowType.CREATION, denoise: float = 0.5, negative_prompt: String = "", face_box_size: int = 80, upscale_model_name: String = "4x-UltraSharp.pth", tile_size: int = 512, target_w: int = 0, target_h: int = 0) -> void:
+func generate(config: RefCounted, source_image_path: String, prompt_text: String, remove_background: bool = true, cfg: float = 1.0, steps: int = 4, workflow_type: int = WorkflowType.CREATION, denoise: float = 0.5, negative_prompt: String = "", face_box_size: int = 80, upscale_model_name: String = "4x-UltraSharp.pth", tile_size: int = 512, target_w: int = 0, target_h: int = 0, megapixels: float = 1.0) -> void:
 	if _generating:
 		generation_failed.emit("Une génération est déjà en cours")
 		return
@@ -860,6 +864,7 @@ func generate(config: RefCounted, source_image_path: String, prompt_text: String
 	_upscale_tile_size = tile_size
 	_upscale_target_w = target_w
 	_upscale_target_h = target_h
+	_megapixels = megapixels
 
 	generation_progress.emit("Chargement de l'image source...")
 
@@ -909,7 +914,7 @@ func _do_upload(filename: String, file_bytes: PackedByteArray, prompt_text: Stri
 
 func _do_prompt(filename: String, prompt_text: String) -> void:
 	var seed = randi()
-	var workflow = build_workflow(filename, prompt_text, seed, _remove_background, _cfg, _steps, _workflow_type, _denoise, _negative_prompt, _face_box_size)
+	var workflow = build_workflow(filename, prompt_text, seed, _remove_background, _cfg, _steps, _workflow_type, _denoise, _negative_prompt, _face_box_size, _megapixels)
 	var payload = JSON.stringify({"prompt": workflow})
 
 	var http = HTTPRequest.new()
