@@ -162,3 +162,42 @@ func test_parse_history_response_execution_error_in_messages():
 	var parsed = client.parse_history_response(json, "id1")
 	assert_eq(parsed["status"], "error")
 	assert_string_contains(parsed["error"], "KSampler")
+
+func test_workflow_type_hires_exists():
+	var client = ComfyUIClientScript.new()
+	# WorkflowType.HIRES doit valoir 3
+	assert_eq(client.WorkflowType.HIRES, 3)
+
+func test_build_workflow_hires_uses_source_as_latent():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("img.png", "high quality", 42, true, 7.0, 25, 3, 0.3, "")
+	# L'image source doit être chargée
+	assert_eq(wf["76"]["inputs"]["image"], "img.png")
+	# Le prompt doit être appliqué
+	assert_eq(wf["75:74"]["inputs"]["text"], "high quality")
+	# Le seed doit être appliqué
+	assert_eq(wf["75:73"]["inputs"]["noise_seed"], 42)
+	# CFG appliqué
+	assert_eq(wf["75:63"]["inputs"]["cfg"], 7.0)
+	# SplitSigmas présent (denoise control)
+	assert_true(wf.has("split_sigmas"))
+	# L'encodage latent de la source est utilisé (img2img)
+	assert_eq(wf["75:64"]["inputs"]["latent_image"], ["75:79:78", 0])
+	# Pas de détection de visage
+	assert_false(wf.has("99"))
+	assert_false(wf.has("100"))
+	# SaveImage pointe directement sur VAEDecode (pas de BiRefNet)
+	assert_eq(wf["9"]["inputs"]["images"], ["75:65", 0])
+
+func test_build_workflow_hires_denoise_controls_split_step():
+	var client = ComfyUIClientScript.new()
+	# denoise=0.3, steps=25 → split_step = max(1, round(25 * (1-0.3))) = max(1, 18) = 18
+	var wf = client.build_workflow("img.png", "", 0, true, 7.0, 25, 3, 0.3, "")
+	assert_eq(wf["split_sigmas"]["inputs"]["step"], 18)
+
+func test_build_workflow_hires_negative_prompt_applied():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("img.png", "sharp", 0, true, 7.0, 25, 3, 0.3, "blurry")
+	# Le negative prompt crée un noeud CLIPTextEncode supplémentaire
+	assert_true(wf.has("75:83"))
+	assert_eq(wf["75:83"]["inputs"]["text"], "blurry")

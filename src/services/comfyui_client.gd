@@ -8,7 +8,7 @@ signal generation_completed(image: Image)
 signal generation_failed(error: String)
 signal generation_progress(status: String)
 
-enum WorkflowType { CREATION = 0, EXPRESSION = 1, UPSCALE = 2 }
+enum WorkflowType { CREATION = 0, EXPRESSION = 1, UPSCALE = 2, HIRES = 3 }
 
 var _generating: bool = false
 var _prompt_id: String = ""
@@ -499,6 +499,151 @@ const UPSCALE_WORKFLOW_TEMPLATE: Dictionary = {
 	}
 }
 
+# --- HiRes Fix workflow template (Flux 2 Klein, img2img full-image, même résolution) ---
+# Identique au workflow Expression SANS les noeuds de détection de visage (99,100,101,102,103,106).
+# La sortie SaveImage pointe directement sur VAEDecode (75:65) — pas de BiRefNet.
+# Paramètres dynamiques : 76.inputs.image, 75:74.inputs.text, 75:73.inputs.noise_seed,
+#                         75:63.inputs.cfg, 75:62.inputs.steps + SplitSigmas calculé
+const HIRES_WORKFLOW_TEMPLATE: Dictionary = {
+	"9": {
+		"class_type": "SaveImage",
+		"inputs": {
+			"filename_prefix": "HiResFix",
+			"images": ["75:65", 0]
+		}
+	},
+	"76": {
+		"class_type": "LoadImage",
+		"inputs": {
+			"image": ""
+		}
+	},
+	"75:61": {
+		"class_type": "KSamplerSelect",
+		"inputs": {
+			"sampler_name": "euler"
+		}
+	},
+	"75:64": {
+		"class_type": "SamplerCustomAdvanced",
+		"inputs": {
+			"noise": ["75:73", 0],
+			"guider": ["75:63", 0],
+			"sampler": ["75:61", 0],
+			"sigmas": ["75:62", 0],
+			"latent_image": ["75:66", 0]
+		}
+	},
+	"75:65": {
+		"class_type": "VAEDecode",
+		"inputs": {
+			"samples": ["75:64", 0],
+			"vae": ["75:72", 0]
+		}
+	},
+	"75:73": {
+		"class_type": "RandomNoise",
+		"inputs": {
+			"noise_seed": 0
+		}
+	},
+	"75:70": {
+		"class_type": "UNETLoader",
+		"inputs": {
+			"unet_name": "flux-2-klein-9b-fp8.safetensors",
+			"weight_dtype": "default"
+		}
+	},
+	"75:71": {
+		"class_type": "CLIPLoader",
+		"inputs": {
+			"clip_name": "qwen_3_8b_fp8mixed.safetensors",
+			"type": "flux2",
+			"device": "default"
+		}
+	},
+	"75:72": {
+		"class_type": "VAELoader",
+		"inputs": {
+			"vae_name": "flux2-vae.safetensors"
+		}
+	},
+	"75:66": {
+		"class_type": "EmptyFlux2LatentImage",
+		"inputs": {
+			"width": ["75:81", 0],
+			"height": ["75:81", 1],
+			"batch_size": 1
+		}
+	},
+	"75:80": {
+		"class_type": "ImageScaleToTotalPixels",
+		"inputs": {
+			"upscale_method": "lanczos",
+			"megapixels": 1,
+			"resolution_steps": 1,
+			"image": ["76", 0]
+		}
+	},
+	"75:63": {
+		"class_type": "CFGGuider",
+		"inputs": {
+			"cfg": 7.0,
+			"model": ["75:70", 0],
+			"positive": ["75:79:77", 0],
+			"negative": ["75:79:76", 0]
+		}
+	},
+	"75:62": {
+		"class_type": "Flux2Scheduler",
+		"inputs": {
+			"steps": 25,
+			"width": ["75:81", 0],
+			"height": ["75:81", 1]
+		}
+	},
+	"75:74": {
+		"class_type": "CLIPTextEncode",
+		"inputs": {
+			"text": "",
+			"clip": ["75:71", 0]
+		}
+	},
+	"75:81": {
+		"class_type": "GetImageSize",
+		"inputs": {
+			"image": ["75:80", 0]
+		}
+	},
+	"75:79:76": {
+		"class_type": "ReferenceLatent",
+		"inputs": {
+			"conditioning": ["75:82", 0],
+			"latent": ["75:79:78", 0]
+		}
+	},
+	"75:79:78": {
+		"class_type": "VAEEncode",
+		"inputs": {
+			"pixels": ["75:80", 0],
+			"vae": ["75:72", 0]
+		}
+	},
+	"75:79:77": {
+		"class_type": "ReferenceLatent",
+		"inputs": {
+			"conditioning": ["75:74", 0],
+			"latent": ["75:79:78", 0]
+		}
+	},
+	"75:82": {
+		"class_type": "ConditioningZeroOut",
+		"inputs": {
+			"conditioning": ["75:74", 0]
+		}
+	}
+}
+
 func is_generating() -> bool:
 	return _generating
 
@@ -528,9 +673,36 @@ func _build_upscale_workflow(filename: String, prompt_text: String, seed: int, d
 	return wf
 
 
+func _build_hires_workflow(filename: String, prompt_text: String, seed: int, cfg: float, steps: int, denoise: float, negative_prompt: String) -> Dictionary:
+	var wf = HIRES_WORKFLOW_TEMPLATE.duplicate(true)
+	wf["76"]["inputs"]["image"] = filename
+	wf["75:74"]["inputs"]["text"] = prompt_text
+	wf["75:73"]["inputs"]["noise_seed"] = seed
+	wf["75:63"]["inputs"]["cfg"] = cfg
+	wf["75:62"]["inputs"]["steps"] = steps
+	_apply_negative_prompt(wf, negative_prompt)
+	# img2img : partir du latent encodé de l'image source (pas d'un canvas vierge)
+	wf["75:64"]["inputs"]["latent_image"] = ["75:79:78", 0]
+	# SplitSigmas : contrôle du denoise (même logique que le workflow Expression)
+	var split_step = max(1, roundi(steps * (1.0 - denoise)))
+	wf["split_sigmas"] = {
+		"class_type": "SplitSigmas",
+		"inputs": {
+			"sigmas": ["75:62", 0],
+			"step": split_step
+		}
+	}
+	wf["75:64"]["inputs"]["sigmas"] = ["split_sigmas", 1]
+	# EmptyFlux2LatentImage n'est pas utilisé (on encode la source)
+	wf.erase("75:66")
+	return wf
+
+
 func build_workflow(filename: String, prompt_text: String, seed: int, remove_background: bool = true, cfg: float = 1.0, steps: int = 4, workflow_type: int = WorkflowType.CREATION, denoise: float = 0.5, negative_prompt: String = "", face_box_size: int = 80) -> Dictionary:
 	if workflow_type == WorkflowType.UPSCALE:
 		return _build_upscale_workflow(filename, prompt_text, seed, denoise, _upscale_model_name, _upscale_tile_size, _upscale_target_w, _upscale_target_h, negative_prompt)
+	if workflow_type == WorkflowType.HIRES:
+		return _build_hires_workflow(filename, prompt_text, seed, cfg, steps, denoise, negative_prompt)
 	if workflow_type == WorkflowType.EXPRESSION:
 		return _build_expression_workflow(filename, prompt_text, seed, remove_background, cfg, steps, denoise, negative_prompt, face_box_size)
 	var wf = WORKFLOW_TEMPLATE.duplicate(true)
