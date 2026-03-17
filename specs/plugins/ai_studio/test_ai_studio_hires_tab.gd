@@ -43,6 +43,7 @@ func test_cancel_generation_safe_when_no_client() -> void:
 	tab._token_input = LineEdit.new()
 	tab._neg_input = TextEdit.new()
 	tab.cancel_generation()  # Ne doit pas lever d'erreur
+	assert_null(tab._client)  # Le client reste null si aucune génération en cours
 	tab._url_input.queue_free()
 	tab._token_input.queue_free()
 	tab._neg_input.queue_free()
