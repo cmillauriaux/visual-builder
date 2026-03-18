@@ -352,12 +352,12 @@ func test_expr_has_face_box_slider():
 	assert_eq(_dialog._expr_tab._face_box_slider.min_value, 10.0)
 	assert_eq(_dialog._expr_tab._face_box_slider.max_value, 200.0)
 	assert_eq(_dialog._expr_tab._face_box_slider.step, 5.0)
-	assert_eq(_dialog._expr_tab._face_box_slider.value, 80.0)
+	assert_eq(_dialog._expr_tab._face_box_slider.value, 10.0)
 
 func test_expr_has_face_box_value_label():
 	assert_not_null(_dialog._expr_tab._face_box_value_label)
 	assert_is(_dialog._expr_tab._face_box_value_label, Label)
-	assert_eq(_dialog._expr_tab._face_box_value_label.text, "80")
+	assert_eq(_dialog._expr_tab._face_box_value_label.text, "10")
 
 func test_expr_has_default_expression_checkboxes():
 	var default_count = AIStudioDialog.ELEMENTARY_EXPRESSIONS.size() + AIStudioDialog.ADVANCED_EXPRESSIONS.size()

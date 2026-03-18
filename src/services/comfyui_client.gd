@@ -8,7 +8,7 @@ signal generation_completed(image: Image)
 signal generation_failed(error: String)
 signal generation_progress(status: String)
 
-enum WorkflowType { CREATION = 0, EXPRESSION = 1, UPSCALE = 2, HIRES = 3 }
+enum WorkflowType { CREATION = 0, EXPRESSION = 1, UPSCALE = 2, HIRES = 3, EXPRESSION_FACE_DETAILER = 4, EXPRESSION_LIVE_PORTRAIT = 5 }
 
 var _generating: bool = false
 var _prompt_id: String = ""
@@ -392,6 +392,121 @@ const EXPRESSION_WORKFLOW_TEMPLATE: Dictionary = {
 	}
 }
 
+# --- FaceDetailer workflow template (Impact Pack FaceDetailer + Flux 2 Klein) ---
+# Détecte le visage, crop à guide_size, génère en img2img, recolle, supprime le fond.
+# Paramètres dynamiques : 76.inputs.image, 75:74.inputs.text, 200.inputs.seed,
+#                         200.inputs.cfg, 200.inputs.steps, 200.inputs.denoise,
+#                         200.inputs.bbox_dilation
+# Prérequis ComfyUI : ComfyUI-Impact-Pack (FaceDetailer, UltralyticsDetectorProvider)
+# Note : FaceDetailer utilise KSampler en interne (euler + scheduler simple, CFG bas)
+
+const FACE_DETAILER_WORKFLOW_TEMPLATE: Dictionary = {
+	"9": {
+		"class_type": "SaveImage",
+		"inputs": {
+			"filename_prefix": "FaceDetailer",
+			"images": ["106", 0]
+		}
+	},
+	"76": {
+		"class_type": "LoadImage",
+		"inputs": {
+			"image": ""
+		}
+	},
+	"99": {
+		"class_type": "UltralyticsDetectorProvider",
+		"inputs": {
+			"model_name": "bbox/face_yolov8m.pt"
+		}
+	},
+	"75:70": {
+		"class_type": "UNETLoader",
+		"inputs": {
+			"unet_name": "flux-2-klein-9b-fp8.safetensors",
+			"weight_dtype": "default"
+		}
+	},
+	"75:71": {
+		"class_type": "CLIPLoader",
+		"inputs": {
+			"clip_name": "qwen_3_8b_fp8mixed.safetensors",
+			"type": "flux2",
+			"device": "default"
+		}
+	},
+	"75:72": {
+		"class_type": "VAELoader",
+		"inputs": {
+			"vae_name": "flux2-vae.safetensors"
+		}
+	},
+	"75:74": {
+		"class_type": "CLIPTextEncode",
+		"inputs": {
+			"text": "",
+			"clip": ["75:71", 0]
+		}
+	},
+	"75:82": {
+		"class_type": "ConditioningZeroOut",
+		"inputs": {
+			"conditioning": ["75:74", 0]
+		}
+	},
+	"200": {
+		"class_type": "FaceDetailer",
+		"inputs": {
+			"image": ["76", 0],
+			"model": ["75:70", 0],
+			"clip": ["75:71", 0],
+			"vae": ["75:72", 0],
+			"guide_size": 512,
+			"guide_size_for": "bbox",
+			"max_size": 1024,
+			"seed": 0,
+			"steps": 4,
+			"cfg": 1.0,
+			"sampler_name": "euler",
+			"scheduler": "simple",
+			"positive": ["75:74", 0],
+			"negative": ["75:82", 0],
+			"denoise": 0.5,
+			"feather": 20,
+			"noise_mask": true,
+			"force_inpaint": true,
+			"bbox_threshold": 0.4,
+			"bbox_dilation": 80,
+			"bbox_crop_factor": 3.0,
+			"sam_detection_hint": "center-1",
+			"sam_dilation": 0,
+			"sam_threshold": 0.93,
+			"sam_bbox_expansion": 0,
+			"sam_mask_hint_threshold": 0.7,
+			"sam_mask_hint_use_negative": "False",
+			"drop_size": 10,
+			"provider": "CPU",
+			"device_id": 0,
+			"bbox_detector": ["99", 0],
+			"wildcard": "",
+			"cycle": 1
+		}
+	},
+	"106": {
+		"class_type": "BiRefNetRMBG",
+		"inputs": {
+			"model": "BiRefNet-general",
+			"mask_blur": 0,
+			"mask_offset": 0,
+			"invert_output": false,
+			"refine_foreground": true,
+			"background": "Alpha",
+			"background_color": "#222222",
+			"image": ["200", 0]
+		}
+	}
+}
+
 # --- Upscale workflow template (ESRGAN + Ultimate SD Upscale + Flux 2 Klein) ---
 # Paramètres dynamiques : 1.inputs.image, 2.inputs.model_name,
 #                         4.inputs.width, 4.inputs.height,
@@ -645,6 +760,119 @@ const HIRES_WORKFLOW_TEMPLATE: Dictionary = {
 	}
 }
 
+# Workflow LivePortrait : morphing d'expression sans diffusion (pas de VAE/UNet).
+# Utilise ExpressionEditor (PHM) du pack ComfyUI-AdvancedLivePortrait.
+# sample_ratio=0 : l'expression vient uniquement des sliders, pas d'un sample.
+const LIVE_PORTRAIT_WORKFLOW_TEMPLATE: Dictionary = {
+	"1": {
+		"class_type": "LoadImage",
+		"inputs": {
+			"image": ""
+		}
+	},
+	"10": {
+		"class_type": "ExpressionEditor",
+		"inputs": {
+			"src_image": ["1", 0],
+			"sample_ratio": 0.0,
+			"sample_parts": "All",
+			"rotate_pitch": 0.0,
+			"rotate_yaw": 0.0,
+			"rotate_roll": 0.0,
+			"blink": 0.0,
+			"eyebrow": 0.0,
+			"wink": 0.0,
+			"pupil_x": 0.0,
+			"pupil_y": 0.0,
+			"aaa": 0.0,
+			"eee": 0.0,
+			"woo": 0.0,
+			"smile": 0.0,
+			"src_ratio": 1.0,
+			"sample_flag": "crop",
+			"crop_factor": 1.7,
+			"onnx_device": "CUDA"
+		}
+	},
+	"20": {
+		"class_type": "BiRefNetRMBG",
+		"inputs": {
+			"image": ["10", 0],
+			"model": "BiRefNet-general",
+			"refine_foreground": true,
+			"background": "Alpha",
+			"background_color": "#222222",
+			"invert_output": false,
+			"mask_blur": 0,
+			"mask_offset": 0
+		}
+	},
+	"9": {
+		"class_type": "SaveImage",
+		"inputs": {
+			"filename_prefix": "LivePortrait",
+			"images": ["20", 0]
+		}
+	}
+}
+
+# Mapping expression → sliders ExpressionEditor (PHM).
+# Plages réelles des sliders ExpressionEditor (PHM) :
+# smile: -0.3 → 1.3 | aaa: -30 → 120 | eee: -20 → 15 | woo: -20 → 15
+# blink: -20 → 5 | eyebrow: -10 → 15 | wink: 0 → 25
+# pupil_x/y: -15 → 15 | rotate_pitch/yaw/roll: -20 → 20
+const LIVE_PORTRAIT_EXPRESSIONS: Dictionary = {
+	# --- Elementary ---
+	"smile": {"smile": 0.5, "aaa": 8, "eee": 2, "woo": 0, "blink": 0, "eyebrow": 3, "wink": 0, "pupil_x": 0, "pupil_y": 0, "rotate_pitch": 0, "rotate_yaw": 0, "rotate_roll": 0, "sample_parts": "All"},
+	"sad": {"smile": -0.2, "aaa": 0, "eee": 0, "woo": 0, "blink": 2, "eyebrow": -5, "wink": 0, "pupil_x": 0, "pupil_y": 3, "rotate_pitch": 3, "rotate_yaw": 0, "rotate_roll": 0, "sample_parts": "All"},
+	"shy": {"smile": 0.15, "aaa": 0, "eee": 0, "woo": 0, "blink": 2.5, "eyebrow": -2, "wink": 0, "pupil_x": 5, "pupil_y": 3, "rotate_pitch": 3, "rotate_yaw": 4, "rotate_roll": 1, "sample_parts": "All"},
+	"grumpy": {"smile": -0.25, "aaa": 0, "eee": 3, "woo": 0, "blink": 1, "eyebrow": -6, "wink": 0, "pupil_x": 0, "pupil_y": 0, "rotate_pitch": 3, "rotate_yaw": 0, "rotate_roll": 0, "sample_parts": "All"},
+	"laughing out loud": {"smile": 1.0, "aaa": 40, "eee": 5, "woo": 0, "blink": 3, "eyebrow": 5, "wink": 0, "pupil_x": 0, "pupil_y": 0, "rotate_pitch": -3, "rotate_yaw": 0, "rotate_roll": 0, "sample_parts": "All"},
+	"angry": {"smile": -0.2, "aaa": 5, "eee": 4, "woo": 0, "blink": 0, "eyebrow": -7, "wink": 0, "pupil_x": 0, "pupil_y": 0, "rotate_pitch": 3, "rotate_yaw": 0, "rotate_roll": 0, "sample_parts": "All"},
+	"surprised": {"smile": 0.0, "aaa": 25, "eee": 0, "woo": 8, "blink": -3, "eyebrow": 8, "wink": 0, "pupil_x": 0, "pupil_y": 0, "rotate_pitch": -3, "rotate_yaw": 0, "rotate_roll": 0, "sample_parts": "All"},
+	"scared": {"smile": -0.1, "aaa": 20, "eee": 0, "woo": 6, "blink": -3, "eyebrow": 7, "wink": 0, "pupil_x": 0, "pupil_y": 0, "rotate_pitch": -2, "rotate_yaw": 0, "rotate_roll": 0, "sample_parts": "All"},
+	"bored": {"smile": -0.05, "aaa": 0, "eee": 0, "woo": 0, "blink": 3, "eyebrow": -3, "wink": 0, "pupil_x": 5, "pupil_y": 3, "rotate_pitch": 3, "rotate_yaw": 3, "rotate_roll": 0, "sample_parts": "All"},
+	"speaking": {"smile": 0.05, "aaa": 15, "eee": 3, "woo": 0, "blink": 0, "eyebrow": 2, "wink": 0, "pupil_x": 0, "pupil_y": 0, "rotate_pitch": 0, "rotate_yaw": 0, "rotate_roll": 0, "sample_parts": "OnlyMouth"},
+	"happy": {"smile": 0.7, "aaa": 15, "eee": 3, "woo": 0, "blink": 1.5, "eyebrow": 4, "wink": 0, "pupil_x": 0, "pupil_y": 0, "rotate_pitch": 0, "rotate_yaw": 0, "rotate_roll": 0, "sample_parts": "All"},
+	"calm": {"smile": 0.1, "aaa": 0, "eee": 0, "woo": 0, "blink": 1.5, "eyebrow": 0, "wink": 0, "pupil_x": 0, "pupil_y": 2, "rotate_pitch": 1, "rotate_yaw": 0, "rotate_roll": 0, "sample_parts": "All"},
+	"crying": {"smile": -0.3, "aaa": 10, "eee": 0, "woo": 0, "blink": 3.5, "eyebrow": -7, "wink": 0, "pupil_x": 0, "pupil_y": 4, "rotate_pitch": 3, "rotate_yaw": 0, "rotate_roll": 0, "sample_parts": "All"},
+	"determined": {"smile": -0.05, "aaa": 0, "eee": 3, "woo": 0, "blink": 0, "eyebrow": -4, "wink": 0, "pupil_x": 0, "pupil_y": 0, "rotate_pitch": -2, "rotate_yaw": 0, "rotate_roll": 0, "sample_parts": "All"},
+	"exhausted": {"smile": -0.1, "aaa": 3, "eee": 0, "woo": 0, "blink": 4, "eyebrow": -4, "wink": 0, "pupil_x": 0, "pupil_y": 4, "rotate_pitch": 4, "rotate_yaw": 0, "rotate_roll": 1, "sample_parts": "All"},
+	"annoyed": {"smile": -0.15, "aaa": 0, "eee": 3, "woo": 0, "blink": 0.5, "eyebrow": -6, "wink": 0, "pupil_x": 4, "pupil_y": 0, "rotate_pitch": 0, "rotate_yaw": 3, "rotate_roll": 0, "sample_parts": "All"},
+	# --- Advanced ---
+	"neutral": {"smile": 0.0, "aaa": 0, "eee": 0, "woo": 0, "blink": 0, "eyebrow": 0, "wink": 0, "pupil_x": 0, "pupil_y": 0, "rotate_pitch": 0, "rotate_yaw": 0, "rotate_roll": 0, "sample_parts": "All"},
+	"worried": {"smile": -0.1, "aaa": 0, "eee": 0, "woo": 0, "blink": 0.5, "eyebrow": 5, "wink": 0, "pupil_x": 3, "pupil_y": 2, "rotate_pitch": 2, "rotate_yaw": 0, "rotate_roll": 0, "sample_parts": "All"},
+	"disgusted": {"smile": -0.2, "aaa": 0, "eee": 5, "woo": 0, "blink": 1.5, "eyebrow": -5, "wink": 0, "pupil_x": 0, "pupil_y": 0, "rotate_pitch": 3, "rotate_yaw": 3, "rotate_roll": 0, "sample_parts": "All"},
+	"confused": {"smile": -0.05, "aaa": 0, "eee": 0, "woo": 3, "blink": 0, "eyebrow": 5, "wink": 0, "pupil_x": 4, "pupil_y": 0, "rotate_pitch": 0, "rotate_yaw": 3, "rotate_roll": 2, "sample_parts": "All"},
+	"proud": {"smile": 0.25, "aaa": 0, "eee": 0, "woo": 0, "blink": 0.5, "eyebrow": 3, "wink": 0, "pupil_x": 0, "pupil_y": 0, "rotate_pitch": -4, "rotate_yaw": 0, "rotate_roll": 0, "sample_parts": "All"},
+	"embarrassed": {"smile": 0.15, "aaa": 0, "eee": 0, "woo": 0, "blink": 2.5, "eyebrow": 2, "wink": 0, "pupil_x": 5, "pupil_y": 4, "rotate_pitch": 3, "rotate_yaw": 4, "rotate_roll": 0, "sample_parts": "All"},
+	"idle": {"smile": 0.0, "aaa": 0, "eee": 0, "woo": 0, "blink": 0.5, "eyebrow": 0, "wink": 0, "pupil_x": 0, "pupil_y": 0, "rotate_pitch": 0, "rotate_yaw": 0, "rotate_roll": 0, "sample_parts": "All"},
+	"thinking": {"smile": 0.0, "aaa": 0, "eee": 0, "woo": 0, "blink": 0.5, "eyebrow": 4, "wink": 0, "pupil_x": 5, "pupil_y": -3, "rotate_pitch": -2, "rotate_yaw": 3, "rotate_roll": 0, "sample_parts": "OnlyEyes"},
+	"listening": {"smile": 0.05, "aaa": 0, "eee": 0, "woo": 0, "blink": 0, "eyebrow": 2, "wink": 0, "pupil_x": 0, "pupil_y": 0, "rotate_pitch": 2, "rotate_yaw": 0, "rotate_roll": 1, "sample_parts": "All"},
+	"cheerful": {"smile": 0.6, "aaa": 12, "eee": 3, "woo": 0, "blink": 0.5, "eyebrow": 4, "wink": 0, "pupil_x": 0, "pupil_y": 0, "rotate_pitch": -2, "rotate_yaw": 0, "rotate_roll": 0, "sample_parts": "All"},
+	"confident": {"smile": 0.25, "aaa": 0, "eee": 0, "woo": 0, "blink": 0.5, "eyebrow": 2, "wink": 0, "pupil_x": 0, "pupil_y": 0, "rotate_pitch": -3, "rotate_yaw": 0, "rotate_roll": 0, "sample_parts": "All"},
+	"playful": {"smile": 0.45, "aaa": 8, "eee": 0, "woo": 0, "blink": 0, "eyebrow": 4, "wink": 10, "pupil_x": 3, "pupil_y": 0, "rotate_pitch": -2, "rotate_yaw": 3, "rotate_roll": 2, "sample_parts": "All"},
+	"curious": {"smile": 0.05, "aaa": 0, "eee": 0, "woo": 3, "blink": 0, "eyebrow": 5, "wink": 0, "pupil_x": 4, "pupil_y": -2, "rotate_pitch": -2, "rotate_yaw": 3, "rotate_roll": 1, "sample_parts": "All"},
+	"warm": {"smile": 0.3, "aaa": 0, "eee": 0, "woo": 0, "blink": 1.5, "eyebrow": 1, "wink": 0, "pupil_x": 0, "pupil_y": 0, "rotate_pitch": 2, "rotate_yaw": 0, "rotate_roll": 0, "sample_parts": "All"},
+	"friendly": {"smile": 0.4, "aaa": 5, "eee": 0, "woo": 0, "blink": 0, "eyebrow": 3, "wink": 0, "pupil_x": 0, "pupil_y": 0, "rotate_pitch": 0, "rotate_yaw": 0, "rotate_roll": 0, "sample_parts": "All"},
+	"joyful": {"smile": 0.8, "aaa": 20, "eee": 3, "woo": 0, "blink": 2, "eyebrow": 5, "wink": 0, "pupil_x": 0, "pupil_y": 0, "rotate_pitch": -2, "rotate_yaw": 0, "rotate_roll": 0, "sample_parts": "All"},
+	"serene": {"smile": 0.15, "aaa": 0, "eee": 0, "woo": 0, "blink": 2, "eyebrow": 0, "wink": 0, "pupil_x": 0, "pupil_y": 2, "rotate_pitch": 2, "rotate_yaw": 0, "rotate_roll": 0, "sample_parts": "All"},
+	"enthusiastic": {"smile": 0.6, "aaa": 18, "eee": 3, "woo": 3, "blink": 0, "eyebrow": 6, "wink": 0, "pupil_x": 0, "pupil_y": 0, "rotate_pitch": -3, "rotate_yaw": 0, "rotate_roll": 0, "sample_parts": "All"},
+	"excited": {"smile": 0.7, "aaa": 20, "eee": 3, "woo": 4, "blink": 0, "eyebrow": 6, "wink": 0, "pupil_x": 0, "pupil_y": 0, "rotate_pitch": -3, "rotate_yaw": 0, "rotate_roll": 0, "sample_parts": "All"},
+	"hopeful": {"smile": 0.2, "aaa": 0, "eee": 0, "woo": 0, "blink": 0, "eyebrow": 4, "wink": 0, "pupil_x": 0, "pupil_y": -3, "rotate_pitch": -3, "rotate_yaw": 0, "rotate_roll": 0, "sample_parts": "All"},
+	"jealous": {"smile": -0.1, "aaa": 0, "eee": 3, "woo": 0, "blink": 1.5, "eyebrow": -4, "wink": 0, "pupil_x": 5, "pupil_y": 0, "rotate_pitch": 0, "rotate_yaw": 3, "rotate_roll": 0, "sample_parts": "All"},
+	"dreamy": {"smile": 0.15, "aaa": 0, "eee": 0, "woo": 0, "blink": 2.5, "eyebrow": 1, "wink": 0, "pupil_x": 4, "pupil_y": -3, "rotate_pitch": -3, "rotate_yaw": 3, "rotate_roll": 1, "sample_parts": "All"},
+	"mischievous": {"smile": 0.4, "aaa": 0, "eee": 3, "woo": 0, "blink": 0, "eyebrow": 3, "wink": 12, "pupil_x": 3, "pupil_y": 0, "rotate_pitch": -2, "rotate_yaw": 3, "rotate_roll": 1, "sample_parts": "All"},
+	"relieved": {"smile": 0.25, "aaa": 8, "eee": 0, "woo": 0, "blink": 2, "eyebrow": 2, "wink": 0, "pupil_x": 0, "pupil_y": 0, "rotate_pitch": 2, "rotate_yaw": 0, "rotate_roll": 0, "sample_parts": "All"},
+	"suspicious": {"smile": -0.1, "aaa": 0, "eee": 2, "woo": 0, "blink": 2, "eyebrow": -3, "wink": 0, "pupil_x": 5, "pupil_y": 0, "rotate_pitch": 0, "rotate_yaw": 3, "rotate_roll": 0, "sample_parts": "OnlyEyes"},
+	"tender": {"smile": 0.2, "aaa": 0, "eee": 0, "woo": 0, "blink": 1.5, "eyebrow": 1, "wink": 0, "pupil_x": 0, "pupil_y": 2, "rotate_pitch": 2, "rotate_yaw": 0, "rotate_roll": 1, "sample_parts": "All"},
+	"desperate": {"smile": -0.25, "aaa": 18, "eee": 0, "woo": 3, "blink": 3, "eyebrow": 7, "wink": 0, "pupil_x": 0, "pupil_y": 3, "rotate_pitch": 3, "rotate_yaw": 0, "rotate_roll": 0, "sample_parts": "All"},
+	"nostalgic": {"smile": 0.1, "aaa": 0, "eee": 0, "woo": 0, "blink": 2, "eyebrow": -1, "wink": 0, "pupil_x": 4, "pupil_y": -2, "rotate_pitch": 2, "rotate_yaw": 3, "rotate_roll": 0, "sample_parts": "All"},
+	"seductive": {"smile": 0.25, "aaa": 0, "eee": 2, "woo": 0, "blink": 2, "eyebrow": 2, "wink": 0, "pupil_x": 0, "pupil_y": 0, "rotate_pitch": 3, "rotate_yaw": 3, "rotate_roll": 1, "sample_parts": "All"},
+	# --- Extras ---
+	"wink": {"smile": 0.3, "aaa": 0, "eee": 0, "woo": 0, "blink": 0, "eyebrow": 2, "wink": 15, "pupil_x": 0, "pupil_y": 0, "rotate_pitch": 0, "rotate_yaw": 0, "rotate_roll": 0, "sample_parts": "All"},
+}
+
 func is_generating() -> bool:
 	return _generating
 
@@ -700,6 +928,21 @@ func _build_hires_workflow(filename: String, prompt_text: String, seed: int, cfg
 	return wf
 
 
+func _build_live_portrait_workflow(filename: String, expression: String, remove_background: bool) -> Dictionary:
+	var wf = LIVE_PORTRAIT_WORKFLOW_TEMPLATE.duplicate(true)
+	wf["1"]["inputs"]["image"] = filename
+	# Appliquer les sliders de l'expression
+	var expr_key = expression.to_lower().strip_edges()
+	var sliders: Dictionary = LIVE_PORTRAIT_EXPRESSIONS.get(expr_key, LIVE_PORTRAIT_EXPRESSIONS["neutral"])
+	for key in sliders:
+		if wf["10"]["inputs"].has(key):
+			wf["10"]["inputs"][key] = sliders[key]
+	if not remove_background:
+		wf["9"]["inputs"]["images"] = ["10", 0]
+		wf.erase("20")
+	return wf
+
+
 func build_workflow(filename: String, prompt_text: String, seed: int, remove_background: bool = true, cfg: float = 1.0, steps: int = 4, workflow_type: int = WorkflowType.CREATION, denoise: float = 0.5, negative_prompt: String = "", face_box_size: int = 80, megapixels: float = 1.0) -> Dictionary:
 	if workflow_type == WorkflowType.UPSCALE:
 		return _build_upscale_workflow(filename, prompt_text, seed, denoise, _upscale_model_name, _upscale_tile_size, _upscale_target_w, _upscale_target_h, negative_prompt)
@@ -707,6 +950,10 @@ func build_workflow(filename: String, prompt_text: String, seed: int, remove_bac
 		return _build_hires_workflow(filename, prompt_text, seed, cfg, steps, denoise, negative_prompt, megapixels)
 	if workflow_type == WorkflowType.EXPRESSION:
 		return _build_expression_workflow(filename, prompt_text, seed, remove_background, cfg, steps, denoise, negative_prompt, face_box_size, megapixels)
+	if workflow_type == WorkflowType.EXPRESSION_FACE_DETAILER:
+		return _build_face_detailer_workflow(filename, prompt_text, seed, cfg, steps, denoise, negative_prompt, face_box_size)
+	if workflow_type == WorkflowType.EXPRESSION_LIVE_PORTRAIT:
+		return _build_live_portrait_workflow(filename, prompt_text, remove_background)
 	var wf = WORKFLOW_TEMPLATE.duplicate(true)
 	wf["76"]["inputs"]["image"] = filename
 	wf["75:74"]["inputs"]["text"] = prompt_text
@@ -727,6 +974,12 @@ func _build_expression_workflow(filename: String, prompt_text: String, seed: int
 	# Appliquer la taille de la zone visage (dilation + expand)
 	wf["100"]["inputs"]["dilation"] = face_box_size
 	wf["101"]["inputs"]["expand"] = face_box_size
+	# Blur proportionnel à face_box_size (référence : kernel=51 sigma=25 pour face_box_size=80)
+	# Plancher minimum : kernel≥21 sigma≥10 pour garantir un fondu suffisant quelle que soit la valeur
+	var blur_kernel: int = max(21, roundi(face_box_size * 51.0 / 80.0)) | 1  # toujours impair
+	var blur_sigma: float = maxf(10.0, face_box_size * 25.0 / 80.0)
+	wf["102"]["inputs"]["kernel_size"] = blur_kernel
+	wf["102"]["inputs"]["sigma"] = blur_sigma
 	wf["76"]["inputs"]["image"] = filename
 	wf["75:74"]["inputs"]["text"] = prompt_text
 	wf["75:73"]["inputs"]["noise_seed"] = seed
@@ -753,6 +1006,28 @@ func _build_expression_workflow(filename: String, prompt_text: String, seed: int
 		wf["9"]["inputs"]["images"] = ["103", 0]
 		wf.erase("106")
 	return wf
+
+func _build_face_detailer_workflow(filename: String, prompt_text: String, seed: int, cfg: float, steps: int, denoise: float, negative_prompt: String, face_box_size: int = 80) -> Dictionary:
+	var wf = FACE_DETAILER_WORKFLOW_TEMPLATE.duplicate(true)
+	wf["76"]["inputs"]["image"] = filename
+	wf["75:74"]["inputs"]["text"] = prompt_text
+	wf["200"]["inputs"]["seed"] = seed
+	wf["200"]["inputs"]["cfg"] = cfg
+	wf["200"]["inputs"]["steps"] = steps
+	wf["200"]["inputs"]["denoise"] = denoise
+	wf["200"]["inputs"]["bbox_dilation"] = face_box_size
+	if negative_prompt.strip_edges() != "":
+		wf["75:83"] = {
+			"class_type": "CLIPTextEncode",
+			"inputs": {
+				"text": negative_prompt,
+				"clip": ["75:71", 0]
+			}
+		}
+		wf["200"]["inputs"]["negative"] = ["75:83", 0]
+		wf.erase("75:82")
+	return wf
+
 
 func _apply_negative_prompt(wf: Dictionary, negative_prompt: String) -> void:
 	if negative_prompt.strip_edges() == "":
@@ -833,14 +1108,23 @@ func parse_history_response(json_str: String, prompt_id: String) -> Dictionary:
 				return {"status": "pending"}
 	if not entry.has("outputs"):
 		return {"status": "error", "error": "Pas de sorties dans l'historique"}
-	# Find the output node with images
+	# Find the output node with images — prefer type "output" over "temp"
 	var outputs = entry["outputs"]
+	var fallback_filename := ""
 	for node_id in outputs:
 		var node_output = outputs[node_id]
 		if node_output is Dictionary and node_output.has("images"):
 			var images = node_output["images"]
 			if images is Array and images.size() > 0:
-				return {"status": "completed", "filename": images[0]["filename"]}
+				var img = images[0]
+				var img_type = img.get("type", "output")
+				print("[ComfyUI] history node=%s filename=%s type=%s" % [node_id, img["filename"], img_type])
+				if img_type == "output":
+					return {"status": "completed", "filename": img["filename"]}
+				elif fallback_filename == "":
+					fallback_filename = img["filename"]
+	if fallback_filename != "":
+		return {"status": "completed", "filename": fallback_filename}
 	return {"status": "error", "error": "Aucune image dans les sorties"}
 
 # --- Full generation flow ---
@@ -915,6 +1199,64 @@ func _do_upload(filename: String, file_bytes: PackedByteArray, prompt_text: Stri
 func _do_prompt(filename: String, prompt_text: String) -> void:
 	var seed = randi()
 	var workflow = build_workflow(filename, prompt_text, seed, _remove_background, _cfg, _steps, _workflow_type, _denoise, _negative_prompt, _face_box_size, _megapixels)
+
+	# --- DEBUG LOGS ---
+	var wt_name = WorkflowType.keys()[_workflow_type] if _workflow_type < WorkflowType.size() else str(_workflow_type)
+	print("[ComfyUI] === PROMPT DEBUG ===")
+	print("[ComfyUI] workflow_type : ", wt_name)
+	print("[ComfyUI] image         : ", filename)
+	print("[ComfyUI] prompt        : ", prompt_text)
+	print("[ComfyUI] seed          : ", seed)
+	print("[ComfyUI] cfg           : ", _cfg)
+	print("[ComfyUI] steps         : ", _steps)
+	print("[ComfyUI] denoise       : ", _denoise)
+	print("[ComfyUI] megapixels    : ", _megapixels, " (ignoré pour FaceDetailer)")
+	print("[ComfyUI] face_box_size : ", _face_box_size)
+	print("[ComfyUI] neg_prompt    : '", _negative_prompt, "'")
+	if _workflow_type == WorkflowType.EXPRESSION_FACE_DETAILER and workflow.has("200"):
+		var fd = workflow["200"]["inputs"]
+		print("[ComfyUI] --- FaceDetailer node ---")
+		print("[ComfyUI]   guide_size      : ", fd.get("guide_size"))
+		print("[ComfyUI]   sampler_name    : ", fd.get("sampler_name"))
+		print("[ComfyUI]   scheduler       : ", fd.get("scheduler"))
+		print("[ComfyUI]   bbox_dilation   : ", fd.get("bbox_dilation"))
+		print("[ComfyUI]   bbox_crop_factor: ", fd.get("bbox_crop_factor"))
+		print("[ComfyUI]   noise_mask      : ", fd.get("noise_mask"))
+		print("[ComfyUI]   force_inpaint   : ", fd.get("force_inpaint"))
+		print("[ComfyUI]   negative node   : ", workflow["200"]["inputs"].get("negative"))
+	if _workflow_type == WorkflowType.EXPRESSION_LIVE_PORTRAIT and workflow.has("10"):
+		var ee = workflow["10"]["inputs"]
+		print("[ComfyUI] --- LivePortrait workflow (pas de diffusion) ---")
+		print("[ComfyUI]   expression      : ", prompt_text)
+		print("[ComfyUI]   smile=%.2f aaa=%.2f eee=%.2f woo=%.2f" % [ee.get("smile", 0), ee.get("aaa", 0), ee.get("eee", 0), ee.get("woo", 0)])
+		print("[ComfyUI]   blink=%.2f eyebrow=%.2f wink=%.2f" % [ee.get("blink", 0), ee.get("eyebrow", 0), ee.get("wink", 0)])
+		print("[ComfyUI]   pupil_x=%.2f pupil_y=%.2f" % [ee.get("pupil_x", 0), ee.get("pupil_y", 0)])
+		print("[ComfyUI]   rotate pitch=%.2f yaw=%.2f roll=%.2f" % [ee.get("rotate_pitch", 0), ee.get("rotate_yaw", 0), ee.get("rotate_roll", 0)])
+		print("[ComfyUI]   sample_ratio=%.1f sample_parts=%s" % [ee.get("sample_ratio", 0), ee.get("sample_parts", "")])
+		print("[ComfyUI]   BiRefNet : ", "oui" if workflow.has("20") else "non (fond conservé)")
+	if _workflow_type == WorkflowType.EXPRESSION:
+		var split_step = max(1, roundi(_steps * (1.0 - _denoise)))
+		var effective_steps = _steps - split_step
+		print("[ComfyUI] --- Expression workflow ---")
+		print("[ComfyUI]   megapixels      : ", workflow["75:80"]["inputs"].get("megapixels"))
+		print("[ComfyUI]   face dilation   : ", workflow["100"]["inputs"].get("dilation"), "  (nœud BboxDetectorCombined_v2)")
+		print("[ComfyUI]   face expand     : ", workflow["101"]["inputs"].get("expand"),    "  (nœud GrowMask)")
+		var log_kernel = max(21, roundi(_face_box_size * 51.0 / 80.0)) | 1
+		var log_sigma  = maxf(10.0, _face_box_size * 25.0 / 80.0)
+		print("[ComfyUI]   mask blur       : kernel=%d sigma=%.1f  (proportionnel à face_box_size=%d)" % [log_kernel, log_sigma, _face_box_size])
+		print("[ComfyUI]   SplitSigmas step: ", split_step, " sur ", _steps, " → ", effective_steps, " step(s) effectif(s) de débruitage")
+		print("[ComfyUI]   (denoise=1.0 → split_step=1 → ", _steps - 1, " steps actifs | denoise=0.5 → ", _steps / 2, " steps actifs)")
+		print("[ComfyUI]   latent_image    : source encodée (VAEEncode 75:79:78) → img2img")
+		print("[ComfyUI]   sigmas utilisés : split_sigmas[1] = sigmas[", split_step, ":] (faible bruit seulement)")
+		var neg_node = workflow.get("75:83")
+		if neg_node:
+			print("[ComfyUI]   negative prompt : '", neg_node["inputs"].get("text"), "' via CLIPTextEncode 75:83")
+		else:
+			print("[ComfyUI]   negative prompt : ConditioningZeroOut (pas de négatif actif)")
+	print("[ComfyUI] full workflow JSON : ", JSON.stringify(workflow))
+	print("[ComfyUI] ====================")
+	# --- FIN DEBUG ---
+
 	var payload = JSON.stringify({"prompt": workflow})
 
 	var http = HTTPRequest.new()
@@ -933,6 +1275,7 @@ func _do_prompt(filename: String, prompt_text: String) -> void:
 		if result != HTTPRequest.RESULT_SUCCESS or code != 200:
 			_generating = false
 			var response_str = body.get_string_from_utf8()
+			print("[ComfyUI] ERREUR prompt (code %d) : %s" % [code, response_str])
 			generation_failed.emit("Erreur prompt (code %d) : %s" % [code, response_str.left(500)])
 			return
 		var response_str = body.get_string_from_utf8()
@@ -998,6 +1341,7 @@ func _stop_polling() -> void:
 		_poll_timer = null
 
 func _do_download(filename: String) -> void:
+	print("[ComfyUI] downloading: %s" % filename)
 	var http = HTTPRequest.new()
 	add_child(http)
 
@@ -1014,6 +1358,7 @@ func _do_download(filename: String) -> void:
 		if result != HTTPRequest.RESULT_SUCCESS or code != 200:
 			generation_failed.emit("Erreur téléchargement (code %d)" % code)
 			return
+		print("[ComfyUI] received %d bytes" % body.size())
 		var image = Image.new()
 		var err = image.load_png_from_buffer(body)
 		if err != OK:

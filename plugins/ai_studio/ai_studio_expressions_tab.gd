@@ -62,6 +62,7 @@ var _cancel_btn: Button
 var _status_label: Label
 var _progress_bar: ProgressBar
 var _results_grid: GridContainer
+var _diffusion_controls: VBoxContainer
 var _save_all_btn: Button
 var _preview_btn: Button
 var _context_menu: PopupMenu
@@ -73,6 +74,7 @@ var _queue: RefCounted = null
 var _generating: bool = false
 var _context_index: int = -1
 
+var _strategy_option: OptionButton = null
 var _image_preview: Control = null
 
 
@@ -110,6 +112,21 @@ func build_tab(tab_container: TabContainer) -> void:
 	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vbox.add_theme_constant_override("separation", 8)
 	scroll.add_child(vbox)
+
+	# Stratégie de génération
+	var strategy_label = Label.new()
+	strategy_label.text = "Stratégie :"
+	vbox.add_child(strategy_label)
+
+	_strategy_option = OptionButton.new()
+	_strategy_option.add_item("Pleine image (actuelle)", 0)
+	_strategy_option.add_item("FaceDetailer — crop visage (Impact Pack)", 1)
+	_strategy_option.add_item("LivePortrait — morphing sans diffusion", 2)
+	_strategy_option.selected = 0
+	_strategy_option.item_selected.connect(_on_strategy_changed)
+	vbox.add_child(_strategy_option)
+
+	vbox.add_child(HSeparator.new())
 
 	# Image source
 	var source_label = Label.new()
@@ -156,10 +173,15 @@ func build_tab(tab_container: TabContainer) -> void:
 	_prefix_input.text_changed.connect(func(_t): _update_generate_button())
 	vbox.add_child(_prefix_input)
 
+	# Conteneur pour les contrôles de diffusion (masqué en mode LivePortrait)
+	_diffusion_controls = VBoxContainer.new()
+	_diffusion_controls.add_theme_constant_override("separation", 8)
+	vbox.add_child(_diffusion_controls)
+
 	# CFG slider
 	var cfg_hbox = HBoxContainer.new()
 	cfg_hbox.add_theme_constant_override("separation", 8)
-	vbox.add_child(cfg_hbox)
+	_diffusion_controls.add_child(cfg_hbox)
 
 	var cfg_label = Label.new()
 	cfg_label.text = "CFG :"
@@ -188,12 +210,12 @@ func build_tab(tab_container: TabContainer) -> void:
 	_cfg_hint.add_theme_font_size_override("font_size", 11)
 	_cfg_hint.add_theme_color_override("font_color", Color(1.0, 0.8, 0.3))
 	_cfg_hint.visible = false
-	vbox.add_child(_cfg_hint)
+	_diffusion_controls.add_child(_cfg_hint)
 
 	# Steps slider
 	var steps_hbox = HBoxContainer.new()
 	steps_hbox.add_theme_constant_override("separation", 8)
-	vbox.add_child(steps_hbox)
+	_diffusion_controls.add_child(steps_hbox)
 
 	var steps_label = Label.new()
 	steps_label.text = "Steps :"
@@ -216,7 +238,7 @@ func build_tab(tab_container: TabContainer) -> void:
 	# Denoise slider
 	var denoise_hbox = HBoxContainer.new()
 	denoise_hbox.add_theme_constant_override("separation", 8)
-	vbox.add_child(denoise_hbox)
+	_diffusion_controls.add_child(denoise_hbox)
 
 	var denoise_label = Label.new()
 	denoise_label.text = "Denoise :"
@@ -226,20 +248,20 @@ func build_tab(tab_container: TabContainer) -> void:
 	_denoise_slider.min_value = 0.1
 	_denoise_slider.max_value = 1.0
 	_denoise_slider.step = 0.05
-	_denoise_slider.value = 0.5
+	_denoise_slider.value = 0.55
 	_denoise_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_denoise_slider.value_changed.connect(func(val: float): _denoise_value_label.text = str(snapped(val, 0.05)))
 	denoise_hbox.add_child(_denoise_slider)
 
 	_denoise_value_label = Label.new()
-	_denoise_value_label.text = "0.5"
+	_denoise_value_label.text = "0.55"
 	_denoise_value_label.custom_minimum_size.x = 32
 	denoise_hbox.add_child(_denoise_value_label)
 
 	# Megapixels slider
 	var mp_hbox = HBoxContainer.new()
 	mp_hbox.add_theme_constant_override("separation", 8)
-	vbox.add_child(mp_hbox)
+	_diffusion_controls.add_child(mp_hbox)
 
 	var mp_label = Label.new()
 	mp_label.text = "Mégapixels :"
@@ -249,20 +271,20 @@ func build_tab(tab_container: TabContainer) -> void:
 	_megapixels_slider.min_value = 0.5
 	_megapixels_slider.max_value = 4.0
 	_megapixels_slider.step = 0.5
-	_megapixels_slider.value = 1.0
+	_megapixels_slider.value = 2.0
 	_megapixels_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_megapixels_slider.value_changed.connect(func(val: float): _megapixels_value_label.text = str(snapped(val, 0.5)))
 	mp_hbox.add_child(_megapixels_slider)
 
 	_megapixels_value_label = Label.new()
-	_megapixels_value_label.text = "1.0"
+	_megapixels_value_label.text = "2.0"
 	_megapixels_value_label.custom_minimum_size.x = 32
 	mp_hbox.add_child(_megapixels_value_label)
 
 	# Face box size slider
 	var face_box_hbox = HBoxContainer.new()
 	face_box_hbox.add_theme_constant_override("separation", 8)
-	vbox.add_child(face_box_hbox)
+	_diffusion_controls.add_child(face_box_hbox)
 
 	var face_box_label = Label.new()
 	face_box_label.text = "Zone visage :"
@@ -272,13 +294,13 @@ func build_tab(tab_container: TabContainer) -> void:
 	_face_box_slider.min_value = 10
 	_face_box_slider.max_value = 200
 	_face_box_slider.step = 5
-	_face_box_slider.value = 80
+	_face_box_slider.value = 10
 	_face_box_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_face_box_slider.value_changed.connect(func(val: float): _face_box_value_label.text = str(int(val)))
 	face_box_hbox.add_child(_face_box_slider)
 
 	_face_box_value_label = Label.new()
-	_face_box_value_label.text = "80"
+	_face_box_value_label.text = "10"
 	_face_box_value_label.custom_minimum_size.x = 32
 	face_box_hbox.add_child(_face_box_value_label)
 
@@ -626,7 +648,8 @@ func _on_generate_pressed() -> void:
 	var prefix = _prefix_input.text.strip_edges()
 
 	_queue = ExpressionQueueService.new()
-	_queue.build_queue(expressions, prefix)
+	var is_live_portrait = _strategy_option.get_selected_id() == 2
+	_queue.build_queue(expressions, prefix, is_live_portrait)
 
 	_generating = true
 	_generate_btn.disabled = true
@@ -673,12 +696,18 @@ func _process_next_expression() -> void:
 	config.set_url(_url_input.text.strip_edges())
 	config.set_token(_token_input.text.strip_edges())
 
+	var strategy_id = _strategy_option.get_selected_id()
+	var workflow_type: int
+	match strategy_id:
+		1: workflow_type = ComfyUIClient.WorkflowType.EXPRESSION_FACE_DETAILER
+		2: workflow_type = ComfyUIClient.WorkflowType.EXPRESSION_LIVE_PORTRAIT
+		_: workflow_type = ComfyUIClient.WorkflowType.EXPRESSION
 	var cfg_value = _cfg_slider.value
 	var steps_value = int(_steps_slider.value)
 	var denoise_value = _denoise_slider.value
 	var face_box_value = int(_face_box_slider.value)
 	var neg_prompt = _neg_input.text.strip_edges()
-	_client.generate(config, _source_image_path, item["prompt"], true, cfg_value, steps_value, ComfyUIClient.WorkflowType.EXPRESSION, denoise_value, neg_prompt, face_box_value, "4x-UltraSharp.pth", 512, 0, 0, _megapixels_slider.value)
+	_client.generate(config, _source_image_path, item["prompt"], true, cfg_value, steps_value, workflow_type, denoise_value, neg_prompt, face_box_value, "4x-UltraSharp.pth", 512, 0, 0, _megapixels_slider.value)
 
 
 func _on_item_completed(image: Image) -> void:
@@ -751,6 +780,11 @@ func _update_status() -> void:
 	_progress_bar.min_value = 0
 	_progress_bar.max_value = total
 	_progress_bar.value = done
+
+
+func _on_strategy_changed(_index: int) -> void:
+	var is_live_portrait = _strategy_option.get_selected_id() == 2
+	_diffusion_controls.visible = not is_live_portrait
 
 
 func _set_inputs_enabled(enabled: bool) -> void:
