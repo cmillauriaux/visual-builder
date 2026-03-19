@@ -20,7 +20,7 @@ class ExportResult:
 
 
 ## Exécute l'exportation pour une story donnée.
-func export_story(story: RefCounted, platform: String, output_path: String, story_path: String, quality: String = "hd") -> ExportResult:
+func export_story(story: RefCounted, platform: String, output_path: String, story_path: String, quality: String = "hd", export_options: Dictionary = {}) -> ExportResult:
 	if story == null:
 		return ExportResult.new(false, output_path, "", "Aucune histoire chargée.")
 
@@ -58,7 +58,16 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 	# 2. Copier le projet (sans .godot, .git, build, .claude, specs)
 	var project_root = ProjectSettings.globalize_path("res://")
 	var excludes = [".godot", ".git", "build", ".claude", "specs", "addons/gut", "stories"]
+
 	_copy_dir_recursive(project_root, abs_temp_project, excludes)
+
+	# Supprimer les dossiers de plugins désactivés à l'export
+	var excluded_plugins := _get_excluded_plugin_folders(export_options)
+	for folder in excluded_plugins:
+		var excluded_path: String = abs_temp_project + "/plugins/" + str(folder)
+		if DirAccess.dir_exists_absolute(excluded_path):
+			_remove_dir_recursive(excluded_path)
+			_append_log(log_path, "→ Plugin exclu de l'export : " + str(folder))
 	
 	# 3. Copier la story dans res://story/ (sans artbook pour éviter les doublons)
 	var abs_story_dir = ProjectSettings.globalize_path(story_path)
@@ -843,3 +852,34 @@ func _cache_bust_web_export(export_dir: String, log_path: String) -> void:
 		f_html.store_string(html)
 		f_html.close()
 	_append_log(log_path, "  index.html mis à jour")
+
+
+## Scanne les plugins et retourne les dossiers à exclure en fonction des export_options.
+func _get_excluded_plugin_folders(export_options: Dictionary) -> Array:
+	var excluded: Array = []
+	for dir_path in ["res://plugins/", "res://game_plugins/"]:
+		var dir := DirAccess.open(dir_path)
+		if dir == null:
+			continue
+		dir.list_dir_begin()
+		var entry := dir.get_next()
+		while entry != "":
+			if dir.current_is_dir() and not entry.begins_with("."):
+				var path := "%s%s/game_plugin.gd" % [dir_path, entry]
+				if FileAccess.file_exists(path):
+					var script = load(path)
+					if script:
+						var instance = script.new()
+						if instance.has_method("get_export_options") and instance.has_method("get_plugin_folder"):
+							var folder: String = instance.get_plugin_folder()
+							if folder == "":
+								folder = entry
+							for opt in instance.get_export_options():
+								var key: String = opt.key
+								# Si l'option est explicitement décochée → exclure
+								if export_options.has(key) and not export_options[key]:
+									excluded.append(folder)
+									break
+			entry = dir.get_next()
+		dir.list_dir_end()
+	return excluded

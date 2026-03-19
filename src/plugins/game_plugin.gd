@@ -146,3 +146,16 @@ func get_options_controls() -> Array:
 ## Le create_control reçoit un Dictionary (plugin_settings du plugin).
 func get_editor_config_controls() -> Array:
 	return []
+
+
+## Retourne les options d'export pour ce plugin.
+## Chaque élément est un GameContributions.ExportOptionDef.
+## Affichées comme cases à cocher dans la fenêtre d'export.
+func get_export_options() -> Array:
+	return []
+
+
+## Retourne le nom du dossier du plugin (sous res://plugins/).
+## Utilisé par le service d'export pour exclure le plugin si l'option est décochée.
+func get_plugin_folder() -> String:
+	return ""

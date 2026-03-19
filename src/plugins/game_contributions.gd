@@ -21,3 +21,12 @@ class GameOverlayPanelDef extends RefCounted:
 class GameOptionsControlDef extends RefCounted:
 	## Callable qui retourne un Control, appelé avec (settings: RefCounted)
 	var create_control: Callable
+
+
+class ExportOptionDef extends RefCounted:
+	## Libellé affiché dans la fenêtre d'export
+	var label: String = ""
+	## Clé unique pour identifier l'option
+	var key: String = ""
+	## Valeur par défaut (cochée ou non)
+	var default_value: bool = true
