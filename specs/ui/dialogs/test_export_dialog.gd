@@ -21,7 +21,7 @@ func test_dialog_is_confirmation_dialog():
 
 
 func test_dialog_has_title():
-	assert_eq(_dialog.title, "Exporter le jeu")
+	assert_eq(_dialog.title, tr("Exporter le jeu"))
 
 
 func test_dialog_has_platform_dropdown():
@@ -46,7 +46,7 @@ func test_dialog_has_path_edit():
 
 func test_dialog_has_browse_button():
 	assert_not_null(_dialog._browse_button)
-	assert_eq(_dialog._browse_button.text, "Parcourir...")
+	assert_eq(_dialog._browse_button.text, tr("Parcourir..."))
 
 
 func test_dialog_has_status_label():
@@ -62,7 +62,7 @@ func test_export_button_disabled_without_story():
 
 func test_status_shows_warning_without_story():
 	_dialog.setup(null)
-	assert_eq(_dialog._status_label.text, "Aucune histoire chargée")
+	assert_eq(_dialog._status_label.text, tr("Aucune histoire chargée"))
 
 
 func test_export_button_disabled_without_path():

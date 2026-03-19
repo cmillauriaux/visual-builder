@@ -18,8 +18,8 @@ var _add_btn: Button
 
 
 func _ready() -> void:
-	title = "Langues de l'histoire"
-	ok_button_text = "Fermer"
+	title = tr("Langues de l'histoire")
+	ok_button_text = tr("Fermer")
 	_build_ui()
 
 
@@ -40,12 +40,12 @@ func get_default_language() -> String:
 func add_language(code: String) -> String:
 	code = code.strip_edges().to_lower()
 	if code == "":
-		return "Le code de langue ne peut pas être vide."
+		return tr("Le code de langue ne peut pas être vide.")
 	if not code.is_valid_identifier() and not _is_valid_lang_code(code):
-		return "Code invalide. Utilisez 2-5 lettres (ex: fr, en, zh_TW)."
+		return tr("Code invalide. Utilisez 2-5 lettres (ex: fr, en, zh_TW).")
 	var langs: Array = _config.get("languages", [])
 	if langs.has(code):
-		return "La langue « %s » est déjà dans la liste." % code
+		return tr("La langue « %s » est déjà dans la liste.") % code
 	langs.append(code)
 	langs.sort()
 	_config["languages"] = langs
@@ -57,7 +57,7 @@ func add_language(code: String) -> String:
 
 func remove_language(code: String) -> String:
 	if code == _config.get("default", ""):
-		return "Impossible de supprimer la langue par défaut (source)."
+		return tr("Impossible de supprimer la langue par défaut (source).")
 	var langs: Array = _config.get("languages", [])
 	langs.erase(code)
 	_config["languages"] = langs
@@ -78,7 +78,7 @@ func _build_ui() -> void:
 	add_child(vbox)
 
 	var desc = Label.new()
-	desc.text = "La langue par défaut est la langue source (texte dans les YAML d'histoire).\nLes autres langues sont les langues cibles à traduire."
+	desc.text = tr("La langue par défaut est la langue source (texte dans les YAML d'histoire).\nLes autres langues sont les langues cibles à traduire.")
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD
 	vbox.add_child(desc)
 
@@ -101,7 +101,7 @@ func _build_ui() -> void:
 	vbox.add_child(add_row)
 
 	var code_label = Label.new()
-	code_label.text = "Code :"
+	code_label.text = tr("Code :")
 	add_row.add_child(code_label)
 
 	_code_edit = LineEdit.new()
@@ -111,7 +111,7 @@ func _build_ui() -> void:
 	add_row.add_child(_code_edit)
 
 	_add_btn = Button.new()
-	_add_btn.text = "+ Ajouter"
+	_add_btn.text = tr("+ Ajouter")
 	_add_btn.pressed.connect(_on_add_pressed)
 	add_row.add_child(_add_btn)
 
@@ -141,7 +141,7 @@ func _create_row(code: String, is_default: bool) -> HBoxContainer:
 	radio.toggle_mode = true
 	radio.button_pressed = is_default
 	radio.text = ""
-	radio.tooltip_text = "Définir comme langue source (défaut)"
+	radio.tooltip_text = tr("Définir comme langue source (défaut)")
 	radio.toggled.connect(_on_default_toggled.bind(code))
 	row.add_child(radio)
 
@@ -159,7 +159,7 @@ func _create_row(code: String, is_default: bool) -> HBoxContainer:
 	var del_btn = Button.new()
 	del_btn.text = "×"
 	del_btn.disabled = is_default
-	del_btn.tooltip_text = "Supprimer cette langue" if not is_default else "Impossible de supprimer la langue source"
+	del_btn.tooltip_text = tr("Supprimer cette langue") if not is_default else tr("Impossible de supprimer la langue source")
 	del_btn.pressed.connect(_on_delete_pressed.bind(code))
 	row.add_child(del_btn)
 

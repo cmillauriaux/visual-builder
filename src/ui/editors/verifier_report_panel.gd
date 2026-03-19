@@ -24,7 +24,7 @@ func _build_ui() -> void:
 	add_child(header)
 
 	var title = Label.new()
-	title.text = "Rapport de verification"
+	title.text = tr("Rapport de verification")
 	title.add_theme_font_size_override("font_size", 18)
 	header.add_child(title)
 
@@ -39,19 +39,19 @@ func _build_ui() -> void:
 
 	var export_btn = Button.new()
 	export_btn.name = "ExportButton"
-	export_btn.text = "Exporter"
+	export_btn.text = tr("Exporter")
 	export_btn.pressed.connect(_on_export_pressed)
 	header.add_child(export_btn)
 
 	var copy_btn = Button.new()
 	copy_btn.name = "CopyButton"
-	copy_btn.text = "Copier"
+	copy_btn.text = tr("Copier")
 	copy_btn.pressed.connect(_on_copy_pressed)
 	header.add_child(copy_btn)
 
 	var close_btn = Button.new()
 	close_btn.name = "CloseButton"
-	close_btn.text = "Fermer"
+	close_btn.text = tr("Fermer")
 	close_btn.pressed.connect(func(): close_requested.emit())
 	header.add_child(close_btn)
 
@@ -99,7 +99,7 @@ func show_report(report: Dictionary) -> void:
 	clear()
 
 	var success: bool = report.get("success", false)
-	_status_label.text = "SUCCES" if success else "ECHEC"
+	_status_label.text = tr("SUCCES") if success else tr("ECHEC")
 	_status_label.add_theme_color_override("font_color", Color.GREEN if success else Color.RED)
 
 	# Summary panel
@@ -112,8 +112,8 @@ func show_report(report: Dictionary) -> void:
 
 	_summary_label = Label.new()
 	_summary_label.name = "SummaryLabel"
-	var result_text := "Succes" if success else "Echec"
-	_summary_label.text = "Resultat : %s\nNoeuds visites : %d / %d\nParcours effectues : %d" % [
+	var result_text := tr("Succes") if success else tr("Echec")
+	_summary_label.text = tr("Resultat : %s\nNoeuds visites : %d / %d\nParcours effectues : %d") % [
 		result_text,
 		report.get("visited_nodes", 0),
 		report.get("all_nodes", 0),
@@ -129,7 +129,7 @@ func show_report(report: Dictionary) -> void:
 	if chapter_timings.size() > 0:
 		var timings_title = Label.new()
 		timings_title.name = "ChapterTimingsTitle"
-		timings_title.text = "-- Duree estimee par chapitre --"
+		timings_title.text = tr("-- Duree estimee par chapitre --")
 		timings_title.add_theme_font_size_override("font_size", 15)
 		timings_title.add_theme_color_override("font_color", Color(0.75, 0.75, 0.75))
 		_report_content.add_child(timings_title)
@@ -145,14 +145,14 @@ func show_report(report: Dictionary) -> void:
 				var sub: Dictionary = timing["continuation"]
 				var min_str := _format_duration(sub.get("min_seconds", 0.0))
 				var max_str := _format_duration(sub.get("max_seconds", 0.0))
-				item.text = "  %s  (Suite)    de %s  a  %s" % [ch_name, min_str, max_str]
+				item.text = tr("  %s  (Suite)    de %s  a  %s") % [ch_name, min_str, max_str]
 				timings_list.add_child(item)
 			if timing.has("game_over"):
 				var item = Label.new()
 				var sub: Dictionary = timing["game_over"]
 				var min_str := _format_duration(sub.get("min_seconds", 0.0))
 				var max_str := _format_duration(sub.get("max_seconds", 0.0))
-				item.text = "  %s  (Game Over)    de %s  a  %s" % [ch_name, min_str, max_str]
+				item.text = tr("  %s  (Game Over)    de %s  a  %s") % [ch_name, min_str, max_str]
 				item.add_theme_color_override("font_color", Color(1.0, 0.5, 0.5))
 				timings_list.add_child(item)
 
@@ -163,7 +163,7 @@ func show_report(report: Dictionary) -> void:
 	if orphans.size() > 0:
 		var orphan_title = Label.new()
 		orphan_title.name = "OrphanTitle"
-		orphan_title.text = "-- Noeuds orphelins (%d) --" % orphans.size()
+		orphan_title.text = tr("-- Noeuds orphelins (%d) --") % orphans.size()
 		orphan_title.add_theme_font_size_override("font_size", 15)
 		orphan_title.add_theme_color_override("font_color", Color.ORANGE)
 		_report_content.add_child(orphan_title)
@@ -186,7 +186,7 @@ func show_report(report: Dictionary) -> void:
 	if runs.size() > 0:
 		var runs_title = Label.new()
 		runs_title.name = "RunsTitle"
-		runs_title.text = "-- Parcours (%d) --" % runs.size()
+		runs_title.text = tr("-- Parcours (%d) --") % runs.size()
 		runs_title.add_theme_font_size_override("font_size", 15)
 		_report_content.add_child(runs_title)
 
@@ -205,17 +205,17 @@ func _add_run_item(parent: VBoxContainer, run: Dictionary) -> void:
 	var color := Color.GREEN if is_valid else Color.RED
 
 	var reason_labels := {
-		"game_over": "Game Over",
-		"to_be_continued": "A suivre...",
-		"error": "Erreur (cible introuvable)",
-		"no_ending": "Pas de terminaison",
-		"loop_detected": "Boucle infinie detectee",
+		"game_over": tr("Game Over"),
+		"to_be_continued": tr("A suivre..."),
+		"error": tr("Erreur (cible introuvable)"),
+		"no_ending": tr("Pas de terminaison"),
+		"loop_detected": tr("Boucle infinie detectee"),
 	}
 	var reason_text: String = reason_labels.get(reason, reason)
 
 	# Run header
 	var header = Label.new()
-	header.text = "Parcours #%d : %s" % [run_index + 1, reason_text]
+	header.text = tr("Parcours #%d : %s") % [run_index + 1, reason_text]
 	header.add_theme_color_override("font_color", color)
 	header.add_theme_font_size_override("font_size", 14)
 	parent.add_child(header)

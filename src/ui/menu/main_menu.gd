@@ -160,7 +160,7 @@ func build_ui() -> void:
 	add_child(_loading_overlay)
 
 	_loading_label = Label.new()
-	_loading_label.text = "Chargement..."
+	_loading_label.text = StoryI18nService.get_ui_string("Chargement...", _last_i18n_dict)
 	_loading_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_loading_label.add_theme_font_size_override("font_size", UIScale.scale(28))
 	_loading_label.add_theme_color_override("font_color", Color.WHITE)
@@ -283,6 +283,7 @@ func apply_ui_translations(i18n_dict: Dictionary) -> void:
 	_patreon_button.text = StoryI18nService.get_ui_string("Patreon", i18n_dict)
 	_itchio_button.text = StoryI18nService.get_ui_string("itch.io", i18n_dict)
 	_quit_button.text = StoryI18nService.get_ui_string("Quitter", i18n_dict)
+	_loading_label.text = StoryI18nService.get_ui_string("Chargement...", i18n_dict)
 	_options_menu.apply_ui_translations(i18n_dict)
 	_update_display()
 
@@ -291,7 +292,7 @@ func set_loading_visible(is_visible: bool) -> void:
 	_menu_content.visible = not is_visible
 	_loading_overlay.visible = is_visible
 	if not is_visible:
-		_loading_label.text = "Chargement..."
+		_loading_label.text = StoryI18nService.get_ui_string("Chargement...", _last_i18n_dict)
 
 
 func update_loading_text(text: String) -> void:

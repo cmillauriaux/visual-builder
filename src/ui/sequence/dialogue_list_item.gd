@@ -29,13 +29,13 @@ func _build_ui() -> void:
 
 	_char_edit = LineEdit.new()
 	_char_edit.text = _dialogue.character
-	_char_edit.placeholder_text = "Personnage"
+	_char_edit.placeholder_text = tr("Personnage")
 	_char_edit.text_changed.connect(_on_character_changed)
 	vbox.add_child(_char_edit)
 
 	_text_edit = LineEdit.new()
 	_text_edit.text = _dialogue.text
-	_text_edit.placeholder_text = "Texte du dialogue"
+	_text_edit.placeholder_text = tr("Texte du dialogue")
 	_text_edit.text_changed.connect(_on_text_changed)
 	vbox.add_child(_text_edit)
 

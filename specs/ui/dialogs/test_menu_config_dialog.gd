@@ -23,7 +23,7 @@ func _make_story(menu_title := "", menu_subtitle := "", menu_background := ""):
 # --- Structure UI ---
 
 func test_title_is_configurer_le_jeu():
-	assert_eq(_dialog.title, "Configurer le jeu")
+	assert_eq(_dialog.title, tr("Configurer le jeu"))
 
 func test_has_tab_container():
 	assert_true(_dialog.has_node("TabContainer"), "Le TabContainer doit exister")
@@ -386,7 +386,7 @@ func test_has_ui_theme_tab() -> void:
 	var tabs = _dialog.get_node("TabContainer")
 	var found = false
 	for i in tabs.get_tab_count():
-		if tabs.get_tab_title(i) == "Thème UI":
+		if tabs.get_tab_title(i) == tr("Thème UI"):
 			found = true
 			break
 	assert_true(found, "TabContainer doit avoir un onglet 'Thème UI'")
@@ -434,7 +434,7 @@ func test_has_plugins_tab() -> void:
 	var tabs = _dialog.get_node("TabContainer")
 	var found = false
 	for i in tabs.get_tab_count():
-		if tabs.get_tab_title(i) == "Plugins":
+		if tabs.get_tab_title(i) == tr("Plugins"):
 			found = true
 			break
 	assert_true(found, "TabContainer doit avoir un onglet 'Plugins'")

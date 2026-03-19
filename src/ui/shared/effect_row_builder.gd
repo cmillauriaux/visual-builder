@@ -17,7 +17,7 @@ static func create_effect_row(
 	# Variable edit
 	var var_edit = LineEdit.new()
 	var_edit.text = effect.variable
-	var_edit.placeholder_text = "Variable..."
+	var_edit.placeholder_text = TranslationServer.translate("Variable...")
 	var_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var_edit.tooltip_text = ", ".join(variable_names) if variable_names.size() > 0 else ""
 	var_edit.text_changed.connect(on_var_changed)
@@ -37,7 +37,7 @@ static func create_effect_row(
 	# Value edit (hidden for delete)
 	var value_edit = LineEdit.new()
 	value_edit.text = effect.value
-	value_edit.placeholder_text = "Valeur..."
+	value_edit.placeholder_text = TranslationServer.translate("Valeur...")
 	value_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	value_edit.visible = effect.operation != "delete"
 	value_edit.text_changed.connect(on_value_changed)

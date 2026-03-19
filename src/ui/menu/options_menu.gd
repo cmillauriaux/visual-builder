@@ -248,6 +248,10 @@ func _on_auto_play_toggled(enabled: bool) -> void:
 func apply_ui_translations(i18n_dict: Dictionary) -> void:
 	for pair in _ui_label_pairs:
 		pair[0].text = StoryI18nService.get_ui_string(pair[1], i18n_dict)
+	# Traduire les items des OptionButtons de vitesse texte
+	if _typewriter_speed_option:
+		for i in range(TYPEWRITER_SPEED_LABELS.size()):
+			_typewriter_speed_option.set_item_text(i, StoryI18nService.get_ui_string(TYPEWRITER_SPEED_LABELS[i], i18n_dict))
 
 
 func _add_section_label(parent: Control, text: String) -> Label:

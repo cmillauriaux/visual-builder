@@ -572,7 +572,7 @@ func _on_auto_advance() -> void:
 
 func _on_auto_play_toggled(active: bool) -> void:
 	if _auto_play_button:
-		_auto_play_button.text = "Auto [ON]" if active else "Auto"
+		_auto_play_button.text = StoryI18nService.get_ui_string("Auto [ON]" if active else "Auto", _i18n)
 		if active:
 			_auto_play_button.add_theme_color_override("font_color", Color(0.2, 0.8, 0.2))
 		else:
@@ -666,10 +666,10 @@ func _update_history_button_text() -> void:
 	if _history_button == null:
 		return
 	if _history_open:
-		_history_button.text = "Histo [ON]"
+		_history_button.text = StoryI18nService.get_ui_string("Histo [ON]", _i18n)
 		_history_button.add_theme_color_override("font_color", Color(0.2, 0.8, 0.8))
 	else:
-		_history_button.text = "Histo (H)"
+		_history_button.text = StoryI18nService.get_ui_string("Histo (H)", _i18n)
 		_history_button.remove_theme_color_override("font_color")
 
 
@@ -713,7 +713,7 @@ func _show_history_panel() -> void:
 	panel.add_child(vbox)
 
 	var title = Label.new()
-	title.text = "Historique"
+	title.text = StoryI18nService.get_ui_string("Historique", _i18n)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", UIScale.scale(18))
 	vbox.add_child(title)
@@ -742,7 +742,7 @@ func _show_history_panel() -> void:
 	scroll.call_deferred("set_v_scroll", 999999)
 
 	var close_btn = Button.new()
-	close_btn.text = "Fermer"
+	close_btn.text = StoryI18nService.get_ui_string("Fermer", _i18n)
 	close_btn.pressed.connect(close_history)
 	vbox.add_child(close_btn)
 

@@ -23,7 +23,7 @@ func _init() -> void:
 	_preview_container.add_child(vbox)
 	
 	var label = Label.new()
-	label.text = "Prévisualisation"
+	label.text = tr("Prévisualisation")
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(label)
 	

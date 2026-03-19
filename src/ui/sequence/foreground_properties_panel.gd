@@ -30,7 +30,7 @@ func _ready() -> void:
 	add_theme_constant_override("separation", 4)
 
 	_title_label = Label.new()
-	_title_label.text = "Propriétés"
+	_title_label.text = tr("Propriétés")
 	_title_label.add_theme_font_size_override("font_size", 12)
 	_title_label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
 	add_child(_title_label)
@@ -39,7 +39,7 @@ func _ready() -> void:
 	var name_row = HBoxContainer.new()
 	add_child(name_row)
 	var name_key_label = Label.new()
-	name_key_label.text = "Nom"
+	name_key_label.text = tr("Nom")
 	name_key_label.custom_minimum_size = Vector2(70, 0)
 	name_row.add_child(name_key_label)
 
@@ -54,7 +54,7 @@ func _ready() -> void:
 	var pos_row = HBoxContainer.new()
 	add_child(pos_row)
 	var pos_label = Label.new()
-	pos_label.text = "Position"
+	pos_label.text = tr("Position")
 	pos_label.custom_minimum_size = Vector2(70, 0)
 	pos_row.add_child(pos_label)
 
@@ -130,7 +130,7 @@ func _ready() -> void:
 	var opacity_row = HBoxContainer.new()
 	add_child(opacity_row)
 	var opacity_label = Label.new()
-	opacity_label.text = "Opacité"
+	opacity_label.text = tr("Opacité")
 	opacity_label.custom_minimum_size = Vector2(70, 0)
 	opacity_row.add_child(opacity_label)
 
@@ -153,13 +153,13 @@ func _ready() -> void:
 	var trans_row = HBoxContainer.new()
 	add_child(trans_row)
 	var trans_label = Label.new()
-	trans_label.text = "Transition"
+	trans_label.text = tr("Transition")
 	trans_label.custom_minimum_size = Vector2(70, 0)
 	trans_row.add_child(trans_label)
 
 	_type_option = OptionButton.new()
 	for i in range(TYPE_LABELS.size()):
-		_type_option.add_item(TYPE_LABELS[i], i)
+		_type_option.add_item(tr(TYPE_LABELS[i]), i)
 	_type_option.item_selected.connect(_on_property_changed)
 	trans_row.add_child(_type_option)
 
@@ -176,7 +176,7 @@ func _ready() -> void:
 func show_for_foreground(fg) -> void:
 	_foreground = fg
 	_updating = true
-	_title_label.text = "Propriétés"
+	_title_label.text = tr("Propriétés")
 	_name_label.text = fg.fg_name if fg.fg_name != "" else fg.image.get_file().get_basename()
 	_pos_x_spin.value = fg.anchor_bg.x
 	_pos_y_spin.value = fg.anchor_bg.y

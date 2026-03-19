@@ -51,7 +51,7 @@ var _current_menu_music: String = ""
 
 
 func _init():
-	title = "Configurer le jeu"
+	title = tr("Configurer le jeu")
 	min_size = Vector2i(450, 450)
 
 	var tabs = TabContainer.new()
@@ -64,16 +64,16 @@ func _init():
 	menu_vbox.add_theme_constant_override("separation", 4)
 
 	var title_lbl = Label.new()
-	title_lbl.text = "Titre du menu"
+	title_lbl.text = tr("Titre du menu")
 	menu_vbox.add_child(title_lbl)
 
 	_menu_title_edit = LineEdit.new()
 	_menu_title_edit.name = "MenuTitleEdit"
-	_menu_title_edit.placeholder_text = "Laissez vide pour utiliser le titre de l'histoire"
+	_menu_title_edit.placeholder_text = tr("Laissez vide pour utiliser le titre de l'histoire")
 	menu_vbox.add_child(_menu_title_edit)
 
 	var subtitle_lbl = Label.new()
-	subtitle_lbl.text = "Sous-titre"
+	subtitle_lbl.text = tr("Sous-titre")
 	menu_vbox.add_child(subtitle_lbl)
 
 	_menu_subtitle_edit = LineEdit.new()
@@ -82,12 +82,12 @@ func _init():
 
 	_show_title_banner_check = CheckButton.new()
 	_show_title_banner_check.name = "ShowTitleBannerCheck"
-	_show_title_banner_check.text = "Afficher le bandeau titre / sous-titre"
+	_show_title_banner_check.text = tr("Afficher le bandeau titre / sous-titre")
 	_show_title_banner_check.button_pressed = true
 	menu_vbox.add_child(_show_title_banner_check)
 
 	var bg_lbl = Label.new()
-	bg_lbl.text = "Image de fond"
+	bg_lbl.text = tr("Image de fond")
 	menu_vbox.add_child(bg_lbl)
 
 	var bg_hbox = HBoxContainer.new()
@@ -101,7 +101,7 @@ func _init():
 
 	_browse_button = Button.new()
 	_browse_button.name = "BrowseButton"
-	_browse_button.text = "Parcourir..."
+	_browse_button.text = tr("Parcourir...")
 	_browse_button.pressed.connect(_on_browse_pressed)
 	bg_hbox.add_child(_browse_button)
 
@@ -121,7 +121,7 @@ func _init():
 	menu_vbox.add_child(_bg_preview)
 
 	var music_lbl = Label.new()
-	music_lbl.text = "Musique du menu"
+	music_lbl.text = tr("Musique du menu")
 	menu_vbox.add_child(music_lbl)
 
 	var music_hbox = HBoxContainer.new()
@@ -129,7 +129,7 @@ func _init():
 
 	_menu_music_label = Label.new()
 	_menu_music_label.name = "MenuMusicLabel"
-	_menu_music_label.text = "Aucune musique"
+	_menu_music_label.text = tr("Aucune musique")
 	_menu_music_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_menu_music_label.clip_text = true
 	_menu_music_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
@@ -137,7 +137,7 @@ func _init():
 
 	var browse_music_btn = Button.new()
 	browse_music_btn.name = "BrowseMusicButton"
-	browse_music_btn.text = "Choisir..."
+	browse_music_btn.text = tr("Choisir...")
 	browse_music_btn.pressed.connect(_on_browse_music_pressed)
 	music_hbox.add_child(browse_music_btn)
 
@@ -154,12 +154,12 @@ func _init():
 	menu_vbox.add_child(icon_sep)
 
 	var icon_lbl = Label.new()
-	icon_lbl.text = "Icône de l'application"
+	icon_lbl.text = tr("Icône de l'application")
 	icon_lbl.add_theme_font_size_override("font_size", 16)
 	menu_vbox.add_child(icon_lbl)
 
 	var icon_info_lbl = Label.new()
-	icon_info_lbl.text = "Image carrée, recommandé : 1024×1024"
+	icon_info_lbl.text = tr("Image carrée, recommandé : 1024×1024")
 	icon_info_lbl.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
 	menu_vbox.add_child(icon_info_lbl)
 
@@ -174,7 +174,7 @@ func _init():
 
 	var icon_browse_btn = Button.new()
 	icon_browse_btn.name = "IconBrowseButton"
-	icon_browse_btn.text = "Parcourir..."
+	icon_browse_btn.text = tr("Parcourir...")
 	icon_browse_btn.pressed.connect(_on_icon_browse_pressed)
 	icon_hbox.add_child(icon_browse_btn)
 
@@ -196,7 +196,7 @@ func _init():
 
 	_app_icon_warning = Label.new()
 	_app_icon_warning.name = "IconWarning"
-	_app_icon_warning.text = "L'image n'est pas carrée — elle sera déformée"
+	_app_icon_warning.text = tr("L'image n'est pas carrée — elle sera déformée")
 	_app_icon_warning.add_theme_color_override("font_color", Color(1, 0.3, 0.3))
 	_app_icon_warning.visible = false
 	menu_vbox.add_child(_app_icon_warning)
@@ -227,7 +227,7 @@ func _init():
 	liens_vbox.add_theme_constant_override("separation", 4)
 
 	var patreon_lbl = Label.new()
-	patreon_lbl.text = "URL Patreon"
+	patreon_lbl.text = tr("URL Patreon")
 	liens_vbox.add_child(patreon_lbl)
 
 	_patreon_url_edit = LineEdit.new()
@@ -236,12 +236,12 @@ func _init():
 	liens_vbox.add_child(_patreon_url_edit)
 
 	var itchio_lbl = Label.new()
-	itchio_lbl.text = "URL itch.io"
+	itchio_lbl.text = tr("URL itch.io")
 	liens_vbox.add_child(itchio_lbl)
 
 	_itchio_url_edit = LineEdit.new()
 	_itchio_url_edit.name = "ItchioUrlEdit"
-	_itchio_url_edit.placeholder_text = "https://votrejeu.itch.io/..."
+	_itchio_url_edit.placeholder_text = tr("https://votrejeu.itch.io/...")
 	liens_vbox.add_child(_itchio_url_edit)
 
 	tabs.add_child(liens_vbox)
@@ -252,7 +252,7 @@ func _init():
 	go_vbox.add_theme_constant_override("separation", 4)
 
 	var go_bg_lbl = Label.new()
-	go_bg_lbl.text = "Image de fond"
+	go_bg_lbl.text = tr("Image de fond")
 	go_vbox.add_child(go_bg_lbl)
 
 	var go_bg_hbox = HBoxContainer.new()
@@ -266,7 +266,7 @@ func _init():
 
 	var go_browse_btn = Button.new()
 	go_browse_btn.name = "GameOverBrowseButton"
-	go_browse_btn.text = "Parcourir..."
+	go_browse_btn.text = tr("Parcourir...")
 	go_browse_btn.pressed.connect(_on_game_over_browse_pressed)
 	go_bg_hbox.add_child(go_browse_btn)
 
@@ -286,7 +286,7 @@ func _init():
 	go_vbox.add_child(_game_over_bg_preview)
 
 	var go_title_lbl = Label.new()
-	go_title_lbl.text = "Titre"
+	go_title_lbl.text = tr("Titre")
 	go_vbox.add_child(go_title_lbl)
 
 	_game_over_title_edit = LineEdit.new()
@@ -295,7 +295,7 @@ func _init():
 	go_vbox.add_child(_game_over_title_edit)
 
 	var go_subtitle_lbl = Label.new()
-	go_subtitle_lbl.text = "Sous-titre"
+	go_subtitle_lbl.text = tr("Sous-titre")
 	go_vbox.add_child(go_subtitle_lbl)
 
 	_game_over_subtitle_edit = LineEdit.new()
@@ -310,7 +310,7 @@ func _init():
 	tbc_vbox.add_theme_constant_override("separation", 4)
 
 	var tbc_bg_lbl = Label.new()
-	tbc_bg_lbl.text = "Image de fond"
+	tbc_bg_lbl.text = tr("Image de fond")
 	tbc_vbox.add_child(tbc_bg_lbl)
 
 	var tbc_bg_hbox = HBoxContainer.new()
@@ -324,7 +324,7 @@ func _init():
 
 	var tbc_browse_btn = Button.new()
 	tbc_browse_btn.name = "ToBeContinuedBrowseButton"
-	tbc_browse_btn.text = "Parcourir..."
+	tbc_browse_btn.text = tr("Parcourir...")
 	tbc_browse_btn.pressed.connect(_on_tbc_browse_pressed)
 	tbc_bg_hbox.add_child(tbc_browse_btn)
 
@@ -344,16 +344,16 @@ func _init():
 	tbc_vbox.add_child(_to_be_continued_bg_preview)
 
 	var tbc_title_lbl = Label.new()
-	tbc_title_lbl.text = "Titre"
+	tbc_title_lbl.text = tr("Titre")
 	tbc_vbox.add_child(tbc_title_lbl)
 
 	_to_be_continued_title_edit = LineEdit.new()
 	_to_be_continued_title_edit.name = "ToBeContinuedTitleEdit"
-	_to_be_continued_title_edit.placeholder_text = "À suivre..."
+	_to_be_continued_title_edit.placeholder_text = tr("À suivre...")
 	tbc_vbox.add_child(_to_be_continued_title_edit)
 
 	var tbc_subtitle_lbl = Label.new()
-	tbc_subtitle_lbl.text = "Sous-titre"
+	tbc_subtitle_lbl.text = tr("Sous-titre")
 	tbc_vbox.add_child(tbc_subtitle_lbl)
 
 	_to_be_continued_subtitle_edit = LineEdit.new()
@@ -374,7 +374,7 @@ func _init():
 
 	_ui_theme_default_btn = Button.new()
 	_ui_theme_default_btn.name = "DefaultBtn"
-	_ui_theme_default_btn.text = "Par défaut"
+	_ui_theme_default_btn.text = tr("Par défaut")
 	_ui_theme_default_btn.toggle_mode = true
 	_ui_theme_default_btn.button_group = bg
 	_ui_theme_default_btn.button_pressed = true
@@ -382,7 +382,7 @@ func _init():
 
 	_ui_theme_custom_btn = Button.new()
 	_ui_theme_custom_btn.name = "CustomBtn"
-	_ui_theme_custom_btn.text = "Personnaliser"
+	_ui_theme_custom_btn.text = tr("Personnaliser")
 	_ui_theme_custom_btn.toggle_mode = true
 	_ui_theme_custom_btn.button_group = bg
 	mode_hbox.add_child(_ui_theme_custom_btn)
@@ -393,10 +393,10 @@ func _init():
 	_ui_theme_default_panel = VBoxContainer.new()
 	_ui_theme_default_panel.name = "DefaultPanel"
 	var default_label = Label.new()
-	default_label.text = "Thème Kenney Adventure (par défaut)"
+	default_label.text = tr("Thème Kenney Adventure (par défaut)")
 	_ui_theme_default_panel.add_child(default_label)
 	var default_desc = Label.new()
-	default_desc.text = "Le jeu utilisera le thème brun aventure intégré."
+	default_desc.text = tr("Le jeu utilisera le thème brun aventure intégré.")
 	default_desc.autowrap_mode = TextServer.AUTOWRAP_WORD
 	_ui_theme_default_panel.add_child(default_desc)
 	ui_theme_vbox.add_child(_ui_theme_default_panel)
@@ -409,7 +409,7 @@ func _init():
 
 	var assets_label = Label.new()
 	assets_label.name = "AssetsCountLabel"
-	assets_label.text = "Assets personnalisés (0 / 8)"
+	assets_label.text = tr("Assets personnalisés (0 / 8)")
 	_ui_theme_custom_panel.add_child(assets_label)
 
 	var scroll = ScrollContainer.new()
@@ -423,7 +423,7 @@ func _init():
 
 	var browse_all_btn = Button.new()
 	browse_all_btn.name = "BrowseAllButton"
-	browse_all_btn.text = "📂 Parcourir…"
+	browse_all_btn.text = tr("📂 Parcourir…")
 	browse_all_btn.pressed.connect(_on_browse_ui_assets_pressed)
 	_ui_theme_custom_panel.add_child(browse_all_btn)
 
@@ -435,12 +435,12 @@ func _init():
 	_ui_theme_custom_btn.toggled.connect(_on_ui_theme_mode_toggled.bind("custom"))
 
 	# Titres des onglets (après ajout des enfants)
-	tabs.set_tab_title(0, "Menu")
-	tabs.set_tab_title(1, "Plugins")
-	tabs.set_tab_title(2, "Liens")
-	tabs.set_tab_title(3, "Game Over")
-	tabs.set_tab_title(4, "À suivre")
-	tabs.set_tab_title(5, "Thème UI")
+	tabs.set_tab_title(0, tr("Menu"))
+	tabs.set_tab_title(1, tr("Plugins"))
+	tabs.set_tab_title(2, tr("Liens"))
+	tabs.set_tab_title(3, tr("Game Over"))
+	tabs.set_tab_title(4, tr("À suivre"))
+	tabs.set_tab_title(5, tr("Thème UI"))
 
 	add_child(tabs)
 	confirmed.connect(_on_confirmed)
@@ -585,7 +585,7 @@ func _update_menu_music_label() -> void:
 		_menu_music_label.text = _current_menu_music.get_file()
 		_menu_music_label.add_theme_color_override("font_color", Color.WHITE)
 	else:
-		_menu_music_label.text = "Aucune musique"
+		_menu_music_label.text = tr("Aucune musique")
 		_menu_music_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
 
 func _update_preview() -> void:
@@ -740,7 +740,7 @@ func _rebuild_plugins_tab() -> void:
 	_game_plugins = _scan_game_plugins()
 	if _game_plugins.is_empty():
 		var lbl = Label.new()
-		lbl.text = "Aucun plugin détecté"
+		lbl.text = tr("Aucun plugin détecté")
 		lbl.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
 		_plugins_container.add_child(lbl)
 		return
@@ -820,7 +820,7 @@ func _refresh_ui_theme_assets_list() -> void:
 	# Mettre à jour le label de comptage
 	var lbl = _ui_theme_custom_panel.get_node_or_null("AssetsCountLabel")
 	if lbl:
-		lbl.text = "Assets personnalisés (%d / %d)" % [count, UI_THEME_ASSETS.size()]
+		lbl.text = tr("Assets personnalisés (%d / %d)") % [count, UI_THEME_ASSETS.size()]
 
 
 func _make_asset_row(filename: String, abs_path: String) -> HBoxContainer:
@@ -847,7 +847,7 @@ func _make_asset_row(filename: String, abs_path: String) -> HBoxContainer:
 	row.add_child(del_btn)
 
 	var replace_btn = Button.new()
-	replace_btn.text = "Remplacer"
+	replace_btn.text = tr("Remplacer")
 	replace_btn.pressed.connect(_on_replace_ui_asset_pressed.bind(filename))
 	row.add_child(replace_btn)
 
@@ -913,8 +913,8 @@ func _import_ui_asset(src_path: String, filename: String) -> void:
 
 func _show_ignored_files_warning(ignored: Array[String]) -> void:
 	var dialog = AcceptDialog.new()
-	dialog.title = "Fichiers ignorés"
-	dialog.dialog_text = "%d fichier(s) ignoré(s) (nom non reconnu) :\n%s" % [
+	dialog.title = tr("Fichiers ignorés")
+	dialog.dialog_text = tr("%d fichier(s) ignoré(s) (nom non reconnu) :\n%s") % [
 		ignored.size(), "\n".join(ignored)
 	]
 	add_child(dialog)

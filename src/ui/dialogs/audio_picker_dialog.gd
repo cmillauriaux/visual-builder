@@ -26,7 +26,7 @@ var _no_story_label: Label
 
 
 func _ready() -> void:
-	title = "Sélectionner un fichier audio"
+	title = tr("Sélectionner un fichier audio")
 	size = Vector2i(600, 400)
 	exclusive = true
 	close_requested.connect(_on_cancel)
@@ -37,9 +37,9 @@ func setup(mode: int, story_base_path: String) -> void:
 	_mode = mode
 	_story_base_path = story_base_path
 	if mode == Mode.MUSIC:
-		title = "Sélectionner une musique"
+		title = tr("Sélectionner une musique")
 	else:
-		title = "Sélectionner un FX audio"
+		title = tr("Sélectionner un FX audio")
 	_reset_selection()
 	_update_story_warning()
 
@@ -50,7 +50,7 @@ func _reset_selection() -> void:
 	if _validate_btn:
 		_validate_btn.disabled = true
 	if _file_path_label:
-		_file_path_label.text = "Aucun fichier sélectionné"
+		_file_path_label.text = tr("Aucun fichier sélectionné")
 
 
 func _update_story_warning() -> void:
@@ -73,7 +73,7 @@ func _build_ui() -> void:
 
 	# Avertissement histoire manquante
 	_no_story_label = Label.new()
-	_no_story_label.text = "Aucune histoire ouverte. Veuillez ouvrir une histoire avant d'importer des fichiers audio."
+	_no_story_label.text = tr("Aucune histoire ouverte. Veuillez ouvrir une histoire avant d'importer des fichiers audio.")
 	_no_story_label.add_theme_color_override("font_color", Color(1.0, 0.6, 0.2))
 	_no_story_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 	_no_story_label.visible = false
@@ -102,12 +102,12 @@ func _build_ui() -> void:
 	hbox.add_child(spacer)
 
 	var cancel_btn = Button.new()
-	cancel_btn.text = "Annuler"
+	cancel_btn.text = tr("Annuler")
 	cancel_btn.pressed.connect(_on_cancel)
 	hbox.add_child(cancel_btn)
 
 	_validate_btn = Button.new()
-	_validate_btn.text = "Valider"
+	_validate_btn.text = tr("Valider")
 	_validate_btn.disabled = true
 	_validate_btn.pressed.connect(_on_validate)
 	hbox.add_child(_validate_btn)
@@ -115,7 +115,7 @@ func _build_ui() -> void:
 
 func _build_file_tab() -> void:
 	var file_tab = VBoxContainer.new()
-	file_tab.name = "Fichier"
+	file_tab.name = tr("Fichier")
 	file_tab.add_theme_constant_override("separation", 12)
 	_tab_container.add_child(file_tab)
 
@@ -132,7 +132,7 @@ func _build_file_tab() -> void:
 	margin.add_child(inner)
 
 	var browse_btn = Button.new()
-	browse_btn.text = "Parcourir le système de fichiers..."
+	browse_btn.text = tr("Parcourir le système de fichiers...")
 	browse_btn.pressed.connect(_on_browse_file)
 	inner.add_child(browse_btn)
 
@@ -141,11 +141,11 @@ func _build_file_tab() -> void:
 	inner.add_child(hbox)
 
 	var prefix = Label.new()
-	prefix.text = "Fichier sélectionné :"
+	prefix.text = tr("Fichier sélectionné :")
 	hbox.add_child(prefix)
 
 	_file_path_label = Label.new()
-	_file_path_label.text = "Aucun fichier sélectionné"
+	_file_path_label.text = tr("Aucun fichier sélectionné")
 	_file_path_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_file_path_label.clip_text = true
 	hbox.add_child(_file_path_label)
@@ -153,7 +153,7 @@ func _build_file_tab() -> void:
 
 func _build_gallery_tab() -> void:
 	var gallery_tab = VBoxContainer.new()
-	gallery_tab.name = "Galerie"
+	gallery_tab.name = tr("Galerie")
 	_tab_container.add_child(gallery_tab)
 
 	var toolbar = HBoxContainer.new()
@@ -165,7 +165,7 @@ func _build_gallery_tab() -> void:
 	toolbar.add_child(spacer)
 
 	var refresh_btn = Button.new()
-	refresh_btn.text = "Rafraîchir"
+	refresh_btn.text = tr("Rafraîchir")
 	refresh_btn.pressed.connect(func():
 		GalleryCacheService.clear_dir(_get_assets_dir())
 		_refresh_gallery()
@@ -182,7 +182,7 @@ func _build_gallery_tab() -> void:
 	scroll.add_child(gallery_inner)
 
 	_empty_label = Label.new()
-	_empty_label.text = "Aucun fichier audio disponible. Importez d'abord un fichier via l'onglet Fichier."
+	_empty_label.text = tr("Aucun fichier audio disponible. Importez d'abord un fichier via l'onglet Fichier.")
 	_empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_empty_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 	_empty_label.visible = false
@@ -203,14 +203,14 @@ func _refresh_gallery() -> void:
 		child.queue_free()
 
 	if _story_base_path == "":
-		_empty_label.text = "Aucune histoire ouverte. Veuillez ouvrir une histoire avant d'utiliser la galerie."
+		_empty_label.text = tr("Aucune histoire ouverte. Veuillez ouvrir une histoire avant d'utiliser la galerie.")
 		_empty_label.visible = true
 		_gallery_list.visible = false
 		return
 
 	var audio_files = _list_gallery_audio()
 	if audio_files.is_empty():
-		_empty_label.text = "Aucun fichier audio disponible. Importez d'abord un fichier via l'onglet Fichier."
+		_empty_label.text = tr("Aucun fichier audio disponible. Importez d'abord un fichier via l'onglet Fichier.")
 		_empty_label.visible = true
 		_gallery_list.visible = false
 	else:
@@ -249,7 +249,7 @@ func _on_browse_file() -> void:
 
 func _on_file_selected_from_dialog(source_path: String) -> void:
 	if _story_base_path == "":
-		_file_path_label.text = "Impossible de copier : aucune histoire ouverte"
+		_file_path_label.text = tr("Impossible de copier : aucune histoire ouverte")
 		return
 	var copied_path = _copy_to_assets(source_path)
 	if copied_path != "":

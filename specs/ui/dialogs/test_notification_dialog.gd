@@ -24,11 +24,11 @@ func test_dialog_exists() -> void:
 
 
 func test_title_is_notifications() -> void:
-	assert_eq(_dialog.title, "Notifications")
+	assert_eq(_dialog.title, tr("Notifications"))
 
 
 func test_ok_button_text() -> void:
-	assert_eq(_dialog.ok_button_text, "Fermer")
+	assert_eq(_dialog.ok_button_text, tr("Fermer"))
 
 
 func test_get_notification_count_no_story() -> void:

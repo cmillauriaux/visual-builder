@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://cteditoruicsv"
+
+[deps]
+
+files=["res://translations/editor_ui.fr.translation", "res://translations/editor_ui.en.translation"]
+
+source_file="res://translations/editor_ui.csv"
+dest_files=["res://translations/editor_ui.fr.translation", "res://translations/editor_ui.en.translation"]
+
+[params]
+
+compress=true
+delimiter=0
+unescape_keys=false
+unescape_translations=true

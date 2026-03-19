@@ -112,9 +112,9 @@ func _apply_data() -> void:
 	# Inheritance styling
 	if _is_inherited:
 		if _inherited_from_index >= 0:
-			_inherited_label.text = "hérité du dialogue #%d" % (_inherited_from_index + 1)
+			_inherited_label.text = tr("hérité du dialogue #%d") % (_inherited_from_index + 1)
 		else:
-			_inherited_label.text = "hérité de la séquence"
+			_inherited_label.text = tr("hérité de la séquence")
 		_inherited_label.visible = true
 		_name_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
 		_color_bar.color = Color("#ffaa00")

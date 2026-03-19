@@ -18,18 +18,18 @@ func test_dialog_exists() -> void:
 
 
 func test_default_title() -> void:
-	assert_eq(_dialog.title, "Sélectionner un fichier audio")
+	assert_eq(_dialog.title, tr("Sélectionner un fichier audio"))
 
 
 func test_setup_music_mode() -> void:
 	_dialog.setup(AudioPickerDialogScript.Mode.MUSIC, "")
-	assert_eq(_dialog.title, "Sélectionner une musique")
+	assert_eq(_dialog.title, tr("Sélectionner une musique"))
 	assert_eq(_dialog._mode, AudioPickerDialogScript.Mode.MUSIC)
 
 
 func test_setup_fx_mode() -> void:
 	_dialog.setup(AudioPickerDialogScript.Mode.FX, "")
-	assert_eq(_dialog.title, "Sélectionner un FX audio")
+	assert_eq(_dialog.title, tr("Sélectionner un FX audio"))
 	assert_eq(_dialog._mode, AudioPickerDialogScript.Mode.FX)
 
 

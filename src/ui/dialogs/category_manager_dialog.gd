@@ -17,7 +17,7 @@ var _close_button: Button
 
 
 func _ready() -> void:
-	title = "Gérer les catégories"
+	title = tr("Gérer les catégories")
 	size = Vector2i(400, 350)
 	exclusive = true
 	close_requested.connect(_on_close)
@@ -54,13 +54,13 @@ func _build_ui() -> void:
 	vbox.add_child(add_hbox)
 
 	_add_input = LineEdit.new()
-	_add_input.placeholder_text = "Nouvelle catégorie..."
+	_add_input.placeholder_text = tr("Nouvelle catégorie...")
 	_add_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_add_input.text_submitted.connect(func(_t): _on_add_pressed())
 	add_hbox.add_child(_add_input)
 
 	_add_button = Button.new()
-	_add_button.text = "Ajouter"
+	_add_button.text = tr("Ajouter")
 	_add_button.pressed.connect(_on_add_pressed)
 	add_hbox.add_child(_add_button)
 
@@ -70,13 +70,13 @@ func _build_ui() -> void:
 	vbox.add_child(action_hbox)
 
 	_rename_button = Button.new()
-	_rename_button.text = "Renommer"
+	_rename_button.text = tr("Renommer")
 	_rename_button.disabled = true
 	_rename_button.pressed.connect(_on_rename_pressed)
 	action_hbox.add_child(_rename_button)
 
 	_remove_button = Button.new()
-	_remove_button.text = "Supprimer"
+	_remove_button.text = tr("Supprimer")
 	_remove_button.disabled = true
 	_remove_button.pressed.connect(_on_remove_pressed)
 	action_hbox.add_child(_remove_button)
@@ -86,7 +86,7 @@ func _build_ui() -> void:
 	action_hbox.add_child(spacer)
 
 	_close_button = Button.new()
-	_close_button.text = "Fermer"
+	_close_button.text = tr("Fermer")
 	_close_button.pressed.connect(_on_close)
 	action_hbox.add_child(_close_button)
 
@@ -123,8 +123,8 @@ func _on_rename_pressed() -> void:
 	var old_name = _item_list.get_item_text(selected[0])
 
 	var rename_dialog = AcceptDialog.new()
-	rename_dialog.title = "Renommer la catégorie"
-	rename_dialog.dialog_text = "Nouveau nom :"
+	rename_dialog.title = tr("Renommer la catégorie")
+	rename_dialog.dialog_text = tr("Nouveau nom :")
 	var input = LineEdit.new()
 	input.text = old_name
 	rename_dialog.add_child(input)
@@ -148,7 +148,7 @@ func _on_remove_pressed() -> void:
 
 	if count > 0:
 		var confirm = ConfirmationDialog.new()
-		confirm.dialog_text = "%d image(s) assignée(s) à « %s ». Supprimer quand même ?" % [count, cat_name]
+		confirm.dialog_text = tr("%d image(s) assignée(s) à « %s ». Supprimer quand même ?") % [count, cat_name]
 		confirm.confirmed.connect(func():
 			_service.remove_category(cat_name)
 			_refresh_list()

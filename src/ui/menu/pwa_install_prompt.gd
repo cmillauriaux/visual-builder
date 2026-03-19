@@ -5,6 +5,11 @@ extends Control
 
 const GameTheme = preload("res://src/ui/themes/game_theme.gd")
 const UIScale = preload("res://src/ui/themes/ui_scale.gd")
+const StoryI18nService = preload("res://src/services/story_i18n_service.gd")
+
+var _i18n_dict: Dictionary = {}
+var _title_label: Label
+var _ok_btn: Button
 
 signal closed(dont_show_again: bool)
 
@@ -39,11 +44,11 @@ func build_ui() -> void:
 	panel.add_child(vbox)
 
 	# Titre
-	var title = Label.new()
-	title.text = "Installer l'application"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", UIScale.scale(24))
-	vbox.add_child(title)
+	_title_label = Label.new()
+	_title_label.text = StoryI18nService.get_ui_string("Installer l'application", _i18n_dict)
+	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_title_label.add_theme_font_size_override("font_size", UIScale.scale(24))
+	vbox.add_child(_title_label)
 
 	# Séparateur
 	vbox.add_child(HSeparator.new())
@@ -63,15 +68,25 @@ func build_ui() -> void:
 
 	# Case à cocher
 	_dont_show_check = CheckButton.new()
-	_dont_show_check.text = "Ne plus afficher ce message"
+	_dont_show_check.text = StoryI18nService.get_ui_string("Ne plus afficher ce message", _i18n_dict)
 	vbox.add_child(_dont_show_check)
 
 	# Bouton Compris
-	var ok_btn = Button.new()
-	ok_btn.text = "Compris"
-	ok_btn.custom_minimum_size = Vector2(0, UIScale.scale(44))
-	ok_btn.pressed.connect(_on_ok_pressed)
-	vbox.add_child(ok_btn)
+	_ok_btn = Button.new()
+	_ok_btn.text = StoryI18nService.get_ui_string("Compris", _i18n_dict)
+	_ok_btn.custom_minimum_size = Vector2(0, UIScale.scale(44))
+	_ok_btn.pressed.connect(_on_ok_pressed)
+	vbox.add_child(_ok_btn)
+
+
+func apply_ui_translations(i18n_dict: Dictionary) -> void:
+	_i18n_dict = i18n_dict
+	if _title_label:
+		_title_label.text = StoryI18nService.get_ui_string("Installer l'application", _i18n_dict)
+	if _dont_show_check:
+		_dont_show_check.text = StoryI18nService.get_ui_string("Ne plus afficher ce message", _i18n_dict)
+	if _ok_btn:
+		_ok_btn.text = StoryI18nService.get_ui_string("Compris", _i18n_dict)
 
 
 ## Affiche la popup si les conditions sont remplies.
@@ -139,9 +154,9 @@ func _update_message() -> void:
 	if msg_node == null:
 		return
 	if _platform == Platform.IOS:
-		msg_node.text = "Pour une meilleure expérience (plein écran, mode hors ligne), installez l'application :\n\n1. Appuyez sur le bouton de partage (⎙)\n2. Sélectionnez « Sur l'écran d'accueil »"
+		msg_node.text = StoryI18nService.get_ui_string("Pour une meilleure expérience (plein écran, mode hors ligne), installez l'application :\n\n1. Appuyez sur le bouton de partage (⎙)\n2. Sélectionnez « Sur l'écran d'accueil »", _i18n_dict)
 	elif _platform == Platform.ANDROID:
-		msg_node.text = "Pour une meilleure expérience (plein écran, mode hors ligne), installez l'application :\n\n1. Ouvrez le menu (⋮) de votre navigateur\n2. Sélectionnez « Installer l'application » ou « Ajouter à l'écran d'accueil »"
+		msg_node.text = StoryI18nService.get_ui_string("Pour une meilleure expérience (plein écran, mode hors ligne), installez l'application :\n\n1. Ouvrez le menu (⋮) de votre navigateur\n2. Sélectionnez « Installer l'application » ou « Ajouter à l'écran d'accueil »", _i18n_dict)
 
 
 func _on_ok_pressed() -> void:

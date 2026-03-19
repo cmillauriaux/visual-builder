@@ -7,6 +7,9 @@ extends Control
 const GameSaveManager = preload("res://src/persistence/game_save_manager.gd")
 const GameTheme = preload("res://src/ui/themes/game_theme.gd")
 const UIScale = preload("res://src/ui/themes/ui_scale.gd")
+const StoryI18nService = preload("res://src/services/story_i18n_service.gd")
+
+var _i18n_dict: Dictionary = {}
 
 signal save_slot_pressed(index: int)
 signal load_slot_pressed(index: int)
@@ -55,7 +58,7 @@ func build_ui() -> void:
 	vbox.add_child(header)
 
 	_title_label = Label.new()
-	_title_label.text = "Sauvegardes"
+	_title_label.text = StoryI18nService.get_ui_string("Sauvegardes", _i18n_dict)
 	_title_label.add_theme_font_size_override("font_size", UIScale.scale(28))
 	_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(_title_label)
@@ -76,7 +79,7 @@ func build_ui() -> void:
 
 	# --- Onglet 0 : Sauvegardes manuelles ---
 	var manual_scroll := ScrollContainer.new()
-	manual_scroll.name = "Sauvegardes"
+	manual_scroll.name = "ManualSaves"
 	manual_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	manual_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_tab_container.add_child(manual_scroll)
@@ -90,7 +93,7 @@ func build_ui() -> void:
 
 	# --- Onglet 1 : Sauvegardes automatiques ---
 	var auto_scroll := ScrollContainer.new()
-	auto_scroll.name = "Automatiques"
+	auto_scroll.name = "AutoSaves"
 	auto_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	auto_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_tab_container.add_child(auto_scroll)
@@ -102,7 +105,7 @@ func build_ui() -> void:
 
 	# --- Onglet 2 : Sauvegarde rapide ---
 	var quick_scroll := ScrollContainer.new()
-	quick_scroll.name = "Rapides"
+	quick_scroll.name = "QuickSaves"
 	quick_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	quick_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_tab_container.add_child(quick_scroll)
@@ -112,6 +115,11 @@ func build_ui() -> void:
 	_quick_content.add_theme_constant_override("separation", 16)
 	quick_scroll.add_child(_quick_content)
 
+	# Appliquer les titres d'onglets (traductibles)
+	_tab_container.set_tab_title(0, StoryI18nService.get_ui_string("Sauvegardes", _i18n_dict))
+	_tab_container.set_tab_title(1, StoryI18nService.get_ui_string("Automatiques", _i18n_dict))
+	_tab_container.set_tab_title(2, StoryI18nService.get_ui_string("Rapides", _i18n_dict))
+
 	# Overlay de confirmation (caché initialement)
 	_confirm_overlay = Control.new()
 	_confirm_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -119,9 +127,13 @@ func build_ui() -> void:
 	add_child(_confirm_overlay)
 
 
+func apply_ui_translations(i18n_dict: Dictionary) -> void:
+	_i18n_dict = i18n_dict
+
+
 func show_as_save_mode() -> void:
 	_mode = Mode.SAVE
-	_title_label.text = "Sauvegarder"
+	_title_label.text = StoryI18nService.get_ui_string("Sauvegarder", _i18n_dict)
 	_tab_container.tabs_visible = false
 	_tab_container.current_tab = 0
 	refresh()
@@ -130,7 +142,7 @@ func show_as_save_mode() -> void:
 
 func show_as_load_mode() -> void:
 	_mode = Mode.LOAD
-	_title_label.text = "Charger"
+	_title_label.text = StoryI18nService.get_ui_string("Charger", _i18n_dict)
 	_tab_container.tabs_visible = true
 	refresh()
 	visible = true
@@ -178,7 +190,7 @@ func _refresh_auto_saves() -> void:
 	var auto_saves := GameSaveManager.list_autosaves()
 	if auto_saves.is_empty():
 		var empty_lbl := Label.new()
-		empty_lbl.text = "Aucune sauvegarde automatique"
+		empty_lbl.text = StoryI18nService.get_ui_string("Aucune sauvegarde automatique", _i18n_dict)
 		empty_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		empty_lbl.add_theme_color_override("font_color", Color("#C4A882"))
 		empty_lbl.add_theme_font_size_override("font_size", UIScale.scale(18))
@@ -203,7 +215,7 @@ func _refresh_quick_saves() -> void:
 		_quick_content.add_child(card)
 	else:
 		var empty_lbl := Label.new()
-		empty_lbl.text = "Aucune sauvegarde rapide"
+		empty_lbl.text = StoryI18nService.get_ui_string("Aucune sauvegarde rapide", _i18n_dict)
 		empty_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		empty_lbl.add_theme_color_override("font_color", Color("#C4A882"))
 		empty_lbl.add_theme_font_size_override("font_size", UIScale.scale(18))
@@ -267,7 +279,7 @@ func _build_autosave_card(entry: Dictionary, display_index: int) -> Control:
 
 	# Bouton Charger — index spécial -(slot_index + 2)
 	var load_btn := Button.new()
-	load_btn.text = "Charger"
+	load_btn.text = StoryI18nService.get_ui_string("Charger", _i18n_dict)
 	load_btn.name = "AutoLoadButton_%d" % display_index
 	load_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var load_index := -(slot_index + 2)
@@ -329,7 +341,7 @@ func _build_quicksave_card(data: Dictionary) -> Control:
 
 	# Bouton Charger
 	var load_btn := Button.new()
-	load_btn.text = "Charger"
+	load_btn.text = StoryI18nService.get_ui_string("Charger", _i18n_dict)
 	load_btn.name = "QuickLoadButton"
 	load_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	load_btn.pressed.connect(func(): load_slot_pressed.emit(-1))
@@ -403,20 +415,20 @@ func _build_slot_card(entry: Dictionary) -> Control:
 
 		if _mode == Mode.SAVE:
 			var save_btn := Button.new()
-			save_btn.text = "Écraser"
+			save_btn.text = StoryI18nService.get_ui_string("Écraser", _i18n_dict)
 			save_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			save_btn.pressed.connect(func(): _on_save_occupied_slot(idx))
 			btn_row.add_child(save_btn)
 		else:
 			var load_btn := Button.new()
-			load_btn.text = "Charger"
+			load_btn.text = StoryI18nService.get_ui_string("Charger", _i18n_dict)
 			load_btn.name = "LoadButton"
 			load_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			load_btn.pressed.connect(func(): load_slot_pressed.emit(idx))
 			btn_row.add_child(load_btn)
 
 		var del_btn := Button.new()
-		del_btn.text = "Supprimer"
+		del_btn.text = StoryI18nService.get_ui_string("Supprimer", _i18n_dict)
 		del_btn.name = "DeleteButton"
 		del_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		del_btn.pressed.connect(func(): _on_delete_slot(idx))
@@ -425,7 +437,7 @@ func _build_slot_card(entry: Dictionary) -> Control:
 	else:
 		# Slot vide
 		var empty_label := Label.new()
-		empty_label.text = "+ Vide"
+		empty_label.text = StoryI18nService.get_ui_string("+ Vide", _i18n_dict)
 		empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		empty_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		empty_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -435,7 +447,7 @@ func _build_slot_card(entry: Dictionary) -> Control:
 
 		if _mode == Mode.SAVE:
 			var save_btn := Button.new()
-			save_btn.text = "Sauvegarder ici"
+			save_btn.text = StoryI18nService.get_ui_string("Sauvegarder ici", _i18n_dict)
 			save_btn.name = "SaveButton"
 			save_btn.pressed.connect(func(): save_slot_pressed.emit(idx))
 			vbox.add_child(save_btn)
@@ -445,7 +457,7 @@ func _build_slot_card(entry: Dictionary) -> Control:
 
 func _on_save_occupied_slot(slot_index: int) -> void:
 	_show_confirm_dialog(
-		"Écraser cette sauvegarde ?",
+		StoryI18nService.get_ui_string("Écraser cette sauvegarde ?", _i18n_dict),
 		func(): _on_confirm_overwrite(slot_index)
 	)
 
@@ -494,14 +506,14 @@ func _show_confirm_dialog(message: String, on_yes: Callable) -> void:
 	vbox.add_child(btn_row)
 
 	var yes_btn := Button.new()
-	yes_btn.text = "Oui"
+	yes_btn.text = StoryI18nService.get_ui_string("Oui", _i18n_dict)
 	yes_btn.name = "ConfirmYesButton"
 	yes_btn.custom_minimum_size = Vector2(UIScale.scale(120), UIScale.scale(44))
 	yes_btn.pressed.connect(on_yes)
 	btn_row.add_child(yes_btn)
 
 	var no_btn := Button.new()
-	no_btn.text = "Non"
+	no_btn.text = StoryI18nService.get_ui_string("Non", _i18n_dict)
 	no_btn.name = "ConfirmNoButton"
 	no_btn.custom_minimum_size = Vector2(UIScale.scale(120), UIScale.scale(44))
 	no_btn.pressed.connect(func(): _confirm_overlay.visible = false)

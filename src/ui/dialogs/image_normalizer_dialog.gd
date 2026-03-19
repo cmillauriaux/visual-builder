@@ -45,7 +45,7 @@ var _image_preview: Control
 func _ready() -> void:
 	size = Vector2i(1000, 700)
 	exclusive = true
-	title = "Normalisation des images"
+	title = tr("Normalisation des images")
 	close_requested.connect(_on_close)
 	_build_ui()
 
@@ -105,7 +105,7 @@ func _build_ui() -> void:
 	bottom_bar.add_child(spacer)
 
 	_close_button = Button.new()
-	_close_button.text = "Fermer"
+	_close_button.text = tr("Fermer")
 	_close_button.pressed.connect(_on_close)
 	bottom_bar.add_child(_close_button)
 
@@ -122,7 +122,7 @@ func _build_phase_1(parent: VBoxContainer) -> void:
 	parent.add_child(_selection_container)
 
 	var title_label = Label.new()
-	title_label.text = "Sélectionner les images à normaliser"
+	title_label.text = tr("Sélectionner les images à normaliser")
 	title_label.add_theme_font_size_override("font_size", 18)
 	_selection_container.add_child(title_label)
 
@@ -132,12 +132,12 @@ func _build_phase_1(parent: VBoxContainer) -> void:
 	_selection_container.add_child(toolbar)
 
 	_select_all_button = Button.new()
-	_select_all_button.text = "Tout sélectionner"
+	_select_all_button.text = tr("Tout sélectionner")
 	_select_all_button.pressed.connect(_on_select_all)
 	toolbar.add_child(_select_all_button)
 
 	_deselect_all_button = Button.new()
-	_deselect_all_button.text = "Tout désélectionner"
+	_deselect_all_button.text = tr("Tout désélectionner")
 	_deselect_all_button.pressed.connect(_on_deselect_all)
 	toolbar.add_child(_deselect_all_button)
 
@@ -146,11 +146,11 @@ func _build_phase_1(parent: VBoxContainer) -> void:
 	toolbar.add_child(toolbar_spacer)
 
 	_selection_count_label = Label.new()
-	_selection_count_label.text = "0 image(s) sélectionnée(s)"
+	_selection_count_label.text = tr("0 image(s) sélectionnée(s)")
 	toolbar.add_child(_selection_count_label)
 
 	_next_button = Button.new()
-	_next_button.text = "Suivant →"
+	_next_button.text = tr("Suivant →")
 	_next_button.disabled = true
 	_next_button.pressed.connect(_on_next_to_reference)
 	toolbar.add_child(_next_button)
@@ -175,12 +175,12 @@ func _build_phase_2(parent: VBoxContainer) -> void:
 	parent.add_child(_reference_container)
 
 	var title_label = Label.new()
-	title_label.text = "Choisir l'image de référence"
+	title_label.text = tr("Choisir l'image de référence")
 	title_label.add_theme_font_size_override("font_size", 18)
 	_reference_container.add_child(title_label)
 
 	_reference_label = Label.new()
-	_reference_label.text = "Cliquez sur l'image de référence"
+	_reference_label.text = tr("Cliquez sur l'image de référence")
 	_reference_container.add_child(_reference_label)
 
 	# Toolbar
@@ -189,7 +189,7 @@ func _build_phase_2(parent: VBoxContainer) -> void:
 	_reference_container.add_child(toolbar)
 
 	_back_to_selection_button = Button.new()
-	_back_to_selection_button.text = "← Retour"
+	_back_to_selection_button.text = tr("← Retour")
 	_back_to_selection_button.pressed.connect(func(): _show_phase(1))
 	toolbar.add_child(_back_to_selection_button)
 
@@ -198,7 +198,7 @@ func _build_phase_2(parent: VBoxContainer) -> void:
 	toolbar.add_child(toolbar_spacer)
 
 	_normalize_button = Button.new()
-	_normalize_button.text = "Normaliser"
+	_normalize_button.text = tr("Normaliser")
 	_normalize_button.disabled = true
 	_normalize_button.pressed.connect(_on_normalize_pressed)
 	toolbar.add_child(_normalize_button)
@@ -223,7 +223,7 @@ func _build_phase_3(parent: VBoxContainer) -> void:
 	parent.add_child(_preview_container)
 
 	var title_label = Label.new()
-	title_label.text = "Aperçu de la normalisation"
+	title_label.text = tr("Aperçu de la normalisation")
 	title_label.add_theme_font_size_override("font_size", 18)
 	_preview_container.add_child(title_label)
 
@@ -233,7 +233,7 @@ func _build_phase_3(parent: VBoxContainer) -> void:
 	_preview_container.add_child(toolbar)
 
 	_back_to_reference_button = Button.new()
-	_back_to_reference_button.text = "← Retour"
+	_back_to_reference_button.text = tr("← Retour")
 	_back_to_reference_button.pressed.connect(_on_back_from_preview)
 	toolbar.add_child(_back_to_reference_button)
 
@@ -242,7 +242,7 @@ func _build_phase_3(parent: VBoxContainer) -> void:
 	toolbar.add_child(toolbar_spacer)
 
 	_apply_button = Button.new()
-	_apply_button.text = "Appliquer"
+	_apply_button.text = tr("Appliquer")
 	_apply_button.pressed.connect(_on_apply_pressed)
 	toolbar.add_child(_apply_button)
 
@@ -324,7 +324,7 @@ func _update_selection_count() -> void:
 	for path in _selection_checkboxes:
 		if _selection_checkboxes[path].button_pressed:
 			count += 1
-	_selection_count_label.text = "%d image(s) sélectionnée(s)" % count
+	_selection_count_label.text = tr("%d image(s) sélectionnée(s)") % count
 	_next_button.disabled = count < 2
 
 
@@ -347,7 +347,7 @@ func _on_next_to_reference() -> void:
 			_selected_paths.append(path)
 	_reference_path = ""
 	_normalize_button.disabled = true
-	_reference_label.text = "Cliquez sur l'image de référence"
+	_reference_label.text = tr("Cliquez sur l'image de référence")
 	_populate_reference_grid()
 	_show_phase(2)
 
@@ -403,7 +403,7 @@ func _add_reference_item(path: String) -> void:
 func _select_reference(path: String) -> void:
 	_reference_path = path
 	_normalize_button.disabled = false
-	_reference_label.text = "Référence : " + path.get_file()
+	_reference_label.text = tr("Référence : %s") % path.get_file()
 
 	# Update visuals
 	var idx = 0
@@ -465,9 +465,9 @@ func _populate_preview_grid() -> void:
 
 		var before_label = Label.new()
 		if path == _reference_path:
-			before_label.text = path.get_file() + " (référence — non modifiée)"
+			before_label.text = tr("%s (référence — non modifiée)") % path.get_file()
 		else:
-			before_label.text = path.get_file() + " — Avant"
+			before_label.text = tr("%s — Avant") % path.get_file()
 		before_label.clip_text = true
 		before_label.custom_minimum_size.x = 128
 		before_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -503,9 +503,9 @@ func _populate_preview_grid() -> void:
 
 		var after_label = Label.new()
 		if path == _reference_path:
-			after_label.text = "(inchangée)"
+			after_label.text = tr("(inchangée)")
 		else:
-			after_label.text = "Après"
+			after_label.text = tr("Après")
 		after_label.clip_text = true
 		after_label.custom_minimum_size.x = 128
 		after_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -552,7 +552,7 @@ func _on_apply_pressed() -> void:
 	_cleanup_temp()
 
 	var info = AcceptDialog.new()
-	info.dialog_text = "%d image(s) normalisée(s) avec succès." % count
+	info.dialog_text = tr("%d image(s) normalisée(s) avec succès.") % count
 	add_child(info)
 	info.popup_centered()
 	info.confirmed.connect(func():

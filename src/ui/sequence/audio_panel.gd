@@ -31,7 +31,7 @@ func _build_ui() -> void:
 
 	# --- Section Musique ---
 	var music_title = Label.new()
-	music_title.text = "Musique"
+	music_title.text = tr("Musique")
 	music_title.add_theme_font_size_override("font_size", 14)
 	add_child(music_title)
 
@@ -40,14 +40,14 @@ func _build_ui() -> void:
 	add_child(music_row)
 
 	_music_label = Label.new()
-	_music_label.text = "Aucune musique"
+	_music_label.text = tr("Aucune musique")
 	_music_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_music_label.clip_text = true
 	_music_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
 	music_row.add_child(_music_label)
 
 	var music_pick_btn = Button.new()
-	music_pick_btn.text = "Choisir..."
+	music_pick_btn.text = tr("Choisir...")
 	music_pick_btn.pressed.connect(_on_music_pick)
 	music_row.add_child(music_pick_btn)
 
@@ -58,7 +58,7 @@ func _build_ui() -> void:
 	music_row.add_child(_music_clear_btn)
 
 	_stop_music_check = CheckBox.new()
-	_stop_music_check.text = "Arrêter la musique"
+	_stop_music_check.text = tr("Arrêter la musique")
 	_stop_music_check.toggled.connect(_on_stop_music_toggled)
 	add_child(_stop_music_check)
 
@@ -66,12 +66,12 @@ func _build_ui() -> void:
 
 	# --- Section FX Audio ---
 	var fx_title = Label.new()
-	fx_title.text = "FX Audio"
+	fx_title.text = tr("FX Audio")
 	fx_title.add_theme_font_size_override("font_size", 14)
 	add_child(fx_title)
 
 	var fx_info = Label.new()
-	fx_info.text = "Joué une fois à l'apparition de la séquence"
+	fx_info.text = tr("Joué une fois à l'apparition de la séquence")
 	fx_info.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
 	fx_info.add_theme_font_size_override("font_size", 11)
 	add_child(fx_info)
@@ -81,14 +81,14 @@ func _build_ui() -> void:
 	add_child(fx_row)
 
 	_fx_label = Label.new()
-	_fx_label.text = "Aucun FX"
+	_fx_label.text = tr("Aucun FX")
 	_fx_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_fx_label.clip_text = true
 	_fx_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
 	fx_row.add_child(_fx_label)
 
 	var fx_pick_btn = Button.new()
-	fx_pick_btn.text = "Choisir..."
+	fx_pick_btn.text = tr("Choisir...")
 	fx_pick_btn.pressed.connect(_on_fx_pick)
 	fx_row.add_child(fx_pick_btn)
 
@@ -116,11 +116,11 @@ func clear() -> void:
 
 func _refresh_ui() -> void:
 	if _sequence == null:
-		_music_label.text = "Aucune musique"
+		_music_label.text = tr("Aucune musique")
 		_music_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
 		_music_clear_btn.disabled = true
 		_stop_music_check.button_pressed = false
-		_fx_label.text = "Aucun FX"
+		_fx_label.text = tr("Aucun FX")
 		_fx_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
 		_fx_clear_btn.disabled = true
 		return
@@ -131,7 +131,7 @@ func _refresh_ui() -> void:
 		_music_label.add_theme_color_override("font_color", Color.WHITE)
 		_music_clear_btn.disabled = false
 	else:
-		_music_label.text = "Aucune musique"
+		_music_label.text = tr("Aucune musique")
 		_music_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
 		_music_clear_btn.disabled = true
 
@@ -145,7 +145,7 @@ func _refresh_ui() -> void:
 		_fx_label.add_theme_color_override("font_color", Color.WHITE)
 		_fx_clear_btn.disabled = false
 	else:
-		_fx_label.text = "Aucun FX"
+		_fx_label.text = tr("Aucun FX")
 		_fx_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
 		_fx_clear_btn.disabled = true
 

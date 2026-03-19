@@ -25,7 +25,7 @@ func _ready() -> void:
 	add_child(header)
 
 	var title = Label.new()
-	title.text = "Calques"
+	title.text = tr("Calques")
 	title.add_theme_font_size_override("font_size", 12)
 	title.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
 	header.add_child(title)
@@ -35,7 +35,7 @@ func _ready() -> void:
 	header.add_child(spacer)
 
 	_add_btn = Button.new()
-	_add_btn.text = "+ Ajouter"
+	_add_btn.text = tr("+ Ajouter")
 	_add_btn.pressed.connect(func(): add_foreground_requested.emit())
 	header.add_child(_add_btn)
 
@@ -56,13 +56,13 @@ func _ready() -> void:
 	add_child(btn_row)
 
 	_paste_btn = Button.new()
-	_paste_btn.text = "Coller"
+	_paste_btn.text = tr("Coller")
 	_paste_btn.pressed.connect(func(): paste_foreground_requested.emit())
 	btn_row.add_child(_paste_btn)
 
 	# Hint
 	var hint = Label.new()
-	hint.text = "Drag vers timeline pour copier"
+	hint.text = tr("Drag vers timeline pour copier")
 	hint.add_theme_font_size_override("font_size", 9)
 	hint.add_theme_color_override("font_color", Color(0.35, 0.35, 0.35))
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

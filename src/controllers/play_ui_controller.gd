@@ -3,6 +3,8 @@ extends Node
 ## Gère les éléments UI spécifiques au mode Play : overlay de dialogue,
 ## machine à écrire, et affichage des choix.
 
+const StoryI18nService = preload("res://src/services/story_i18n_service.gd")
+
 var _main: Control
 
 
@@ -29,7 +31,7 @@ func _on_play_choice_requested(choices: Array) -> void:
 	var container = VBoxContainer.new()
 	container.name = "ChoiceVBox"
 	var title = Label.new()
-	title.text = "Faites votre choix"
+	title.text = "Faites votre choix"  # Fallback — traduit via StoryI18nService dans game mode
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 18)
 	container.add_child(title)
@@ -59,8 +61,9 @@ func _on_play_finished(reason: String) -> void:
 		"error": "Fin de la lecture — Erreur (cible introuvable ou contenu vide)",
 		"stopped": "Lecture arrêtée",
 	}
+	var raw_msg = messages.get(reason, "Fin de la lecture")
 	var dialog = AcceptDialog.new()
-	dialog.dialog_text = messages.get(reason, "Fin de la lecture")
+	dialog.dialog_text = raw_msg  # Traduit via StoryI18nService dans game mode
 	dialog.confirmed.connect(dialog.queue_free)
 	_main.add_child(dialog)
 	if dialog.is_inside_tree():

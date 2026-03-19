@@ -45,7 +45,7 @@ func _ready() -> void:
 func setup(story, story_base_path: String) -> void:
 	_story = story
 	_story_base_path = story_base_path
-	title = "Galerie — " + story.title
+	title = tr("Galerie — %s") % story.title
 	var raw_used = GalleryCleanerService.collect_used_images(story)
 	_used_images = GalleryCleanerService.normalize_paths(raw_used, story_base_path)
 	_category_service = ImageCategoryService.new()
@@ -74,7 +74,7 @@ func _build_ui() -> void:
 	vbox.add_child(filter_hbox)
 
 	var filter_label = Label.new()
-	filter_label.text = "Filtrer :"
+	filter_label.text = tr("Filtrer :")
 	filter_hbox.add_child(filter_label)
 
 	_category_filter_container = HBoxContainer.new()
@@ -86,7 +86,7 @@ func _build_ui() -> void:
 	filter_hbox.add_child(spacer_filt)
 
 	var refresh_btn = Button.new()
-	refresh_btn.text = "Rafraîchir"
+	refresh_btn.text = tr("Rafraîchir")
 	refresh_btn.pressed.connect(func():
 		GalleryCacheService.clear_dir(_story_base_path + "/assets/backgrounds")
 		GalleryCacheService.clear_dir(_story_base_path + "/assets/foregrounds")
@@ -106,12 +106,12 @@ func _build_ui() -> void:
 
 	# --- Section Backgrounds ---
 	_bg_section_label = Label.new()
-	_bg_section_label.text = "Backgrounds"
+	_bg_section_label.text = tr("Backgrounds")
 	_bg_section_label.add_theme_font_size_override("font_size", 18)
 	scroll_inner.add_child(_bg_section_label)
 
 	_bg_empty_label = Label.new()
-	_bg_empty_label.text = "Aucun background disponible."
+	_bg_empty_label.text = tr("Aucun background disponible.")
 	_bg_empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_bg_empty_label.visible = false
 	scroll_inner.add_child(_bg_empty_label)
@@ -122,12 +122,12 @@ func _build_ui() -> void:
 
 	# --- Section Foregrounds ---
 	_fg_section_label = Label.new()
-	_fg_section_label.text = "Foregrounds"
+	_fg_section_label.text = tr("Foregrounds")
 	_fg_section_label.add_theme_font_size_override("font_size", 18)
 	scroll_inner.add_child(_fg_section_label)
 
 	_fg_empty_label = Label.new()
-	_fg_empty_label.text = "Aucun foreground disponible."
+	_fg_empty_label.text = tr("Aucun foreground disponible.")
 	_fg_empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_fg_empty_label.visible = false
 	scroll_inner.add_child(_fg_empty_label)
@@ -146,13 +146,13 @@ func _build_ui() -> void:
 	vbox.add_child(hbox)
 
 	_clean_button = Button.new()
-	_clean_button.text = "Nettoyer la galerie"
+	_clean_button.text = tr("Nettoyer la galerie")
 	_clean_button.disabled = true
 	_clean_button.pressed.connect(_on_clean_pressed)
 	hbox.add_child(_clean_button)
 
 	_normalize_button = Button.new()
-	_normalize_button.text = "Normaliser les images"
+	_normalize_button.text = tr("Normaliser les images")
 	_normalize_button.disabled = true
 	_normalize_button.pressed.connect(_on_normalize_pressed)
 	hbox.add_child(_normalize_button)
@@ -162,7 +162,7 @@ func _build_ui() -> void:
 	hbox.add_child(spacer)
 
 	_close_button = Button.new()
-	_close_button.text = "Fermer"
+	_close_button.text = tr("Fermer")
 	_close_button.pressed.connect(_on_close)
 	hbox.add_child(_close_button)
 
@@ -258,7 +258,7 @@ func _on_clean_pressed() -> void:
 
 	if all_unused.is_empty():
 		var info = AcceptDialog.new()
-		info.dialog_text = "Toutes les images sont utilisées."
+		info.dialog_text = tr("Toutes les images sont utilisées.")
 		add_child(info)
 		info.popup_centered()
 		return
@@ -267,7 +267,7 @@ func _on_clean_pressed() -> void:
 	var size_text = _format_size(total_size)
 
 	var confirm = ConfirmationDialog.new()
-	confirm.dialog_text = "%d fichier(s) — %s" % [all_unused.size(), size_text]
+	confirm.dialog_text = tr("%d fichier(s) — %s") % [all_unused.size(), size_text]
 	confirm.confirmed.connect(func():
 		GalleryCleanerService.delete_files(all_unused)
 		for path in all_unused:
@@ -284,11 +284,11 @@ func _on_clean_pressed() -> void:
 
 func _format_size(bytes: int) -> String:
 	if bytes < 1024:
-		return str(bytes) + " o"
+		return tr("%d o") % bytes
 	elif bytes < 1024 * 1024:
-		return "%.1f Ko" % (bytes / 1024.0)
+		return tr("%.1f Ko") % (bytes / 1024.0)
 	else:
-		return "%.1f Mo" % (bytes / (1024.0 * 1024.0))
+		return tr("%.1f Mo") % (bytes / (1024.0 * 1024.0))
 
 
 func _show_image_preview(path: String) -> void:
@@ -331,8 +331,8 @@ func _show_context_menu(image_path: String, pos: Vector2) -> void:
 
 	var rename_id = 8000
 	var replace_id = 8001
-	_context_menu.add_item("Renommer", rename_id)
-	_context_menu.add_item("Remplacer", replace_id)
+	_context_menu.add_item(tr("Renommer"), rename_id)
+	_context_menu.add_item(tr("Remplacer"), replace_id)
 	var dir_path = image_path.get_base_dir()
 	var sibling_count = _list_images(dir_path).size()
 	if sibling_count <= 1:
@@ -353,7 +353,7 @@ func _show_context_menu(image_path: String, pos: Vector2) -> void:
 			_context_menu.add_separator()
 
 	var manage_id = 9000
-	_context_menu.add_item("Gérer les catégories...", manage_id)
+	_context_menu.add_item(tr("Gérer les catégories..."), manage_id)
 
 	_context_menu.id_pressed.connect(func(id: int):
 		if id == rename_id:
@@ -381,7 +381,7 @@ func _show_context_menu(image_path: String, pos: Vector2) -> void:
 
 func _show_rename_dialog(image_path: String) -> void:
 	var dialog := ConfirmationDialog.new()
-	dialog.title = "Renommer l'image"
+	dialog.title = tr("Renommer l'image")
 
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 8)
@@ -415,7 +415,7 @@ func _show_rename_dialog(image_path: String) -> void:
 			var ext := "." + image_path.get_extension()
 			var new_full_path := image_path.get_base_dir().path_join(trimmed + ext)
 			if FileAccess.file_exists(new_full_path):
-				error_label.text = "Ce nom est déjà utilisé."
+				error_label.text = tr("Ce nom est déjà utilisé.")
 				error_label.visible = true
 				dialog.get_ok_button().disabled = true
 				return
@@ -460,7 +460,7 @@ func _show_replace_dialog(image_path: String) -> void:
 		return
 
 	var dialog = Window.new()
-	dialog.title = "Remplacer l'image"
+	dialog.title = tr("Remplacer l'image")
 	dialog.size = Vector2i(700, 500)
 	dialog.exclusive = true
 	dialog.close_requested.connect(func(): dialog.queue_free())
@@ -478,7 +478,7 @@ func _show_replace_dialog(image_path: String) -> void:
 	margin.add_child(vbox)
 
 	var info_label = Label.new()
-	info_label.text = "Sélectionnez l'image de remplacement pour « %s » :" % image_path.get_file()
+	info_label.text = tr("Sélectionnez l'image de remplacement pour « %s » :") % image_path.get_file()
 	info_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 	vbox.add_child(info_label)
 
@@ -495,7 +495,7 @@ func _show_replace_dialog(image_path: String) -> void:
 	var state := {"path": "", "panel": null}
 
 	var validate_btn = Button.new()
-	validate_btn.text = "Valider"
+	validate_btn.text = tr("Valider")
 	validate_btn.disabled = true
 
 	for path in candidates:
@@ -546,7 +546,7 @@ func _show_replace_dialog(image_path: String) -> void:
 	vbox.add_child(btn_hbox)
 
 	var cancel_btn = Button.new()
-	cancel_btn.text = "Annuler"
+	cancel_btn.text = tr("Annuler")
 	cancel_btn.pressed.connect(func(): dialog.queue_free())
 	btn_hbox.add_child(cancel_btn)
 
@@ -563,7 +563,7 @@ func _show_replace_dialog(image_path: String) -> void:
 
 func _show_replace_confirmation(old_path: String, new_path: String) -> void:
 	var confirm = ConfirmationDialog.new()
-	confirm.dialog_text = "Remplacer « %s » par « %s » ?\nL'image « %s » sera supprimée." % [
+	confirm.dialog_text = tr("Remplacer « %s » par « %s » ?\nL'image « %s » sera supprimée.") % [
 		old_path.get_file(), new_path.get_file(), old_path.get_file()
 	]
 	confirm.confirmed.connect(func():

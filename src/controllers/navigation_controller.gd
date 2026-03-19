@@ -405,7 +405,7 @@ func _on_load_dir_selected(path: String) -> void:
 	var loaded_story = StorySaver.load_story(path)
 	if loaded_story == null:
 		var err_dialog = AcceptDialog.new()
-		err_dialog.dialog_text = "Impossible de charger l'histoire : fichier story.yaml introuvable dans le dossier sélectionné."
+		err_dialog.dialog_text = tr("Impossible de charger l'histoire : fichier story.yaml introuvable dans le dossier sélectionné.")
 		err_dialog.confirmed.connect(err_dialog.queue_free)
 		_main.add_child(err_dialog)
 		err_dialog.popup_centered()
@@ -420,28 +420,28 @@ func on_new_story_pressed() -> void:
 	TextureLoader.base_dir = ""
 	_last_save_path = ""
 	var story = StoryScript.new()
-	story.title = "Mon Histoire"
-	story.author = "Auteur"
-	story.description = "Une histoire de démonstration"
+	story.title = tr("Mon Histoire")
+	story.author = tr("Auteur")
+	story.description = tr("Une histoire de démonstration")
 
 	var chapter = ChapterScript.new()
-	chapter.chapter_name = "Chapitre 1"
+	chapter.chapter_name = tr("Chapitre 1")
 	chapter.position = Vector2(100, 100)
 	story.chapters.append(chapter)
 
 	var scene = SceneDataScript.new()
-	scene.scene_name = "Scène 1"
+	scene.scene_name = tr("Scène 1")
 	scene.position = Vector2(100, 100)
 	chapter.scenes.append(scene)
 
 	var seq = SequenceScript.new()
-	seq.seq_name = "Séquence 1"
+	seq.seq_name = tr("Séquence 1")
 	seq.position = Vector2(100, 100)
 	scene.sequences.append(seq)
 
 	var dlg = DialogueModel.new()
-	dlg.character = "Narrateur"
-	dlg.text = "Bienvenue dans votre nouvelle histoire."
+	dlg.character = tr("Narrateur")
+	dlg.text = tr("Bienvenue dans votre nouvelle histoire.")
 	seq.dialogues.append(dlg)
 
 	_main._undo_redo.clear()
@@ -542,7 +542,7 @@ func _on_new_target_requested(ctype: String, callback: Callable) -> void:
 		"redirect_sequence":
 			if _main._editor_main._current_scene == null:
 				return
-			var name = "Séquence %d" % (_main._editor_main._current_scene.sequences.size() + 1)
+			var name = tr("Séquence %d") % (_main._editor_main._current_scene.sequences.size() + 1)
 			var all_items: Array = []
 			all_items.append_array(_main._editor_main._current_scene.sequences)
 			all_items.append_array(_main._editor_main._current_scene.conditions)
@@ -556,7 +556,7 @@ func _on_new_target_requested(ctype: String, callback: Callable) -> void:
 		"redirect_scene":
 			if _main._editor_main._current_chapter == null:
 				return
-			var name = "Scène %d" % (_main._editor_main._current_chapter.scenes.size() + 1)
+			var name = tr("Scène %d") % (_main._editor_main._current_chapter.scenes.size() + 1)
 			var pos = _main._editor_main.compute_next_position(_main._editor_main._current_chapter.scenes)
 			var cmd = AddSceneCommand.new(_main._editor_main._current_chapter, name, pos)
 			_main._undo_redo.push_and_execute(cmd)
@@ -567,7 +567,7 @@ func _on_new_target_requested(ctype: String, callback: Callable) -> void:
 		"redirect_chapter":
 			if _main._editor_main._story == null:
 				return
-			var name = "Chapitre %d" % (_main._editor_main._story.chapters.size() + 1)
+			var name = tr("Chapitre %d") % (_main._editor_main._story.chapters.size() + 1)
 			var pos = _main._editor_main.compute_next_position(_main._editor_main._story.chapters)
 			var cmd = AddChapterCommand.new(_main._editor_main._story, name, pos)
 			_main._undo_redo.push_and_execute(cmd)

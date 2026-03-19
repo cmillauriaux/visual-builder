@@ -410,7 +410,7 @@ func _create_choice_row(index: int, choice) -> VBoxContainer:
 	container.add_child(header)
 
 	var label = Label.new()
-	label.text = "Choix %d" % (index + 1)
+	label.text = tr("Choix %d") % (index + 1)
 	header.add_child(label)
 
 	var spacer = Control.new()
@@ -425,7 +425,7 @@ func _create_choice_row(index: int, choice) -> VBoxContainer:
 	# Text field
 	var text_edit = LineEdit.new()
 	text_edit.text = choice.text
-	text_edit.placeholder_text = "Texte du choix..."
+	text_edit.placeholder_text = tr("Texte du choix...")
 	text_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	text_edit.text_changed.connect(_on_choice_text_changed.bind(index))
 	container.add_child(text_edit)
@@ -461,7 +461,7 @@ func _create_choice_row(index: int, choice) -> VBoxContainer:
 
 	# Effects section for this choice
 	var effects_label = Label.new()
-	effects_label.text = "Effets sur les variables :"
+	effects_label.text = tr("Effets sur les variables :")
 	container.add_child(effects_label)
 
 	var effects_list = VBoxContainer.new()
@@ -472,7 +472,7 @@ func _create_choice_row(index: int, choice) -> VBoxContainer:
 		effects_list.add_child(effect_row)
 
 	var add_effect_btn = Button.new()
-	add_effect_btn.text = "+ Ajouter un effet"
+	add_effect_btn.text = tr("+ Ajouter un effet")
 	add_effect_btn.pressed.connect(func(): add_choice_effect(index))
 	container.add_child(add_effect_btn)
 

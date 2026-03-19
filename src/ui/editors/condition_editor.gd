@@ -237,7 +237,7 @@ func _create_rule_row(index: int, rule) -> VBoxContainer:
 	container.add_child(header)
 
 	var label = Label.new()
-	label.text = "Règle %d" % (index + 1)
+	label.text = tr("Règle %d") % (index + 1)
 	header.add_child(label)
 
 	var spacer = Control.new()
@@ -254,15 +254,15 @@ func _create_rule_row(index: int, rule) -> VBoxContainer:
 	container.add_child(var_row)
 
 	var var_label = Label.new()
-	var_label.text = "Variable :"
+	var_label.text = tr("Variable :")
 	var_row.add_child(var_label)
 
 	var var_edit = LineEdit.new()
 	var_edit.text = rule.variable
-	var_edit.placeholder_text = "Nom de la variable..."
+	var_edit.placeholder_text = tr("Nom de la variable...")
 	var_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var_edit.name = "VariableEdit"
-	var_edit.tooltip_text = "Variables disponibles : " + ", ".join(_target_helper.variable_names) if _target_helper.variable_names.size() > 0 else ""
+	var_edit.tooltip_text = tr("Variables disponibles : ") + ", ".join(_target_helper.variable_names) if _target_helper.variable_names.size() > 0 else ""
 	var_edit.text_changed.connect(_on_rule_variable_changed.bind(index))
 	var_row.add_child(var_edit)
 
@@ -282,7 +282,7 @@ func _create_rule_row(index: int, rule) -> VBoxContainer:
 
 	var value_edit = LineEdit.new()
 	value_edit.text = rule.value
-	value_edit.placeholder_text = "Valeur..."
+	value_edit.placeholder_text = tr("Valeur...")
 	value_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	value_edit.name = "ValueEdit"
 	# Masquer si exists/not_exists
@@ -324,7 +324,7 @@ func _create_rule_row(index: int, rule) -> VBoxContainer:
 
 	# Effects section for this rule
 	var effects_label = Label.new()
-	effects_label.text = "Effets sur les variables :"
+	effects_label.text = tr("Effets sur les variables :")
 	container.add_child(effects_label)
 
 	var effects_list = VBoxContainer.new()
@@ -336,7 +336,7 @@ func _create_rule_row(index: int, rule) -> VBoxContainer:
 			effects_list.add_child(effect_row)
 
 	var add_effect_btn = Button.new()
-	add_effect_btn.text = "+ Ajouter un effet"
+	add_effect_btn.text = tr("+ Ajouter un effet")
 	add_effect_btn.pressed.connect(func(): add_rule_effect(index))
 	container.add_child(add_effect_btn)
 

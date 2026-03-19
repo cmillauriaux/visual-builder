@@ -11,8 +11,8 @@ var _add_btn: Button
 
 
 func _ready() -> void:
-	title = "Notifications"
-	ok_button_text = "Fermer"
+	title = tr("Notifications")
+	ok_button_text = tr("Fermer")
 	_build_ui()
 
 
@@ -64,12 +64,12 @@ func _build_ui() -> void:
 	add_child(vbox)
 
 	var title_label = Label.new()
-	title_label.text = "Notifications de variables"
+	title_label.text = tr("Notifications de variables")
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(title_label)
 
 	var desc = Label.new()
-	desc.text = "Définissez des patterns glob (ex: *_affinity) pour afficher\nun message quand une variable correspondante est modifiée."
+	desc.text = tr("Définissez des patterns glob (ex: *_affinity) pour afficher\nun message quand une variable correspondante est modifiée.")
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD
 	vbox.add_child(desc)
 
@@ -83,7 +83,7 @@ func _build_ui() -> void:
 	scroll.add_child(_list)
 
 	_add_btn = Button.new()
-	_add_btn.text = "+ Ajouter une notification"
+	_add_btn.text = tr("+ Ajouter une notification")
 	_add_btn.pressed.connect(_on_add_pressed)
 	vbox.add_child(_add_btn)
 
@@ -116,7 +116,7 @@ func _create_row(index: int, notif) -> HBoxContainer:
 
 	var message_edit = LineEdit.new()
 	message_edit.text = notif.message
-	message_edit.placeholder_text = "Le personnage s'en souviendra"
+	message_edit.placeholder_text = tr("Le personnage s'en souviendra")
 	message_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	message_edit.text_changed.connect(_on_message_changed.bind(index))
 	row.add_child(message_edit)

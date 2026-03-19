@@ -24,7 +24,7 @@ func test_is_window():
 
 
 func test_has_title():
-	assert_eq(_dialog.title, "Gérer les catégories")
+	assert_eq(_dialog.title, tr("Gérer les catégories"))
 
 
 func test_is_exclusive():
@@ -43,22 +43,22 @@ func test_has_add_input():
 
 func test_has_add_button():
 	assert_not_null(_dialog._add_button)
-	assert_eq(_dialog._add_button.text, "Ajouter")
+	assert_eq(_dialog._add_button.text, tr("Ajouter"))
 
 
 func test_has_rename_button():
 	assert_not_null(_dialog._rename_button)
-	assert_eq(_dialog._rename_button.text, "Renommer")
+	assert_eq(_dialog._rename_button.text, tr("Renommer"))
 
 
 func test_has_remove_button():
 	assert_not_null(_dialog._remove_button)
-	assert_eq(_dialog._remove_button.text, "Supprimer")
+	assert_eq(_dialog._remove_button.text, tr("Supprimer"))
 
 
 func test_has_close_button():
 	assert_not_null(_dialog._close_button)
-	assert_eq(_dialog._close_button.text, "Fermer")
+	assert_eq(_dialog._close_button.text, tr("Fermer"))
 
 
 # --- État initial ---

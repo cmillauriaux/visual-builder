@@ -443,7 +443,7 @@ func _enter_play_fullscreen() -> void:
 
 	var stop_btn = Button.new()
 	stop_btn.name = "FullscreenStopButton"
-	stop_btn.text = "Stop"
+	stop_btn.text = tr("Stop")
 	stop_btn.visible = true
 	_fullscreen_layer.add_child(stop_btn)
 

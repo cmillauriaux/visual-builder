@@ -19,9 +19,9 @@ var _file_dialog: FileDialog
 
 
 func _init():
-	title = "Exporter le jeu"
+	title = tr("Exporter le jeu")
 	min_size = Vector2i(450, 0)
-	ok_button_text = "Exporter"
+	ok_button_text = tr("Exporter")
 
 	var vbox = VBoxContainer.new()
 	vbox.name = "ContentVBox"
@@ -29,7 +29,7 @@ func _init():
 
 	# Qualité
 	var quality_label = Label.new()
-	quality_label.text = "Qualité"
+	quality_label.text = tr("Qualité")
 	vbox.add_child(quality_label)
 
 	_quality_dropdown = OptionButton.new()
@@ -40,7 +40,7 @@ func _init():
 
 	# Plateforme
 	var platform_label = Label.new()
-	platform_label.text = "Plateforme"
+	platform_label.text = tr("Plateforme")
 	vbox.add_child(platform_label)
 
 	_platform_dropdown = OptionButton.new()
@@ -51,7 +51,7 @@ func _init():
 
 	# Dossier de destination
 	var path_label = Label.new()
-	path_label.text = "Dossier de destination"
+	path_label.text = tr("Dossier de destination")
 	vbox.add_child(path_label)
 
 	var hbox = HBoxContainer.new()
@@ -60,14 +60,14 @@ func _init():
 
 	_path_edit = LineEdit.new()
 	_path_edit.name = "PathEdit"
-	_path_edit.placeholder_text = "Choisir un dossier..."
+	_path_edit.placeholder_text = tr("Choisir un dossier...")
 	_path_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_path_edit.text_changed.connect(_on_path_changed)
 	hbox.add_child(_path_edit)
 
 	_browse_button = Button.new()
 	_browse_button.name = "BrowseButton"
-	_browse_button.text = "Parcourir..."
+	_browse_button.text = tr("Parcourir...")
 	_browse_button.pressed.connect(_on_browse_pressed)
 	hbox.add_child(_browse_button)
 
@@ -87,7 +87,7 @@ func setup(story) -> void:
 	if story == null:
 		_path_edit.text = ""
 		get_ok_button().disabled = true
-		_status_label.text = "Aucune histoire chargée"
+		_status_label.text = tr("Aucune histoire chargée")
 		_status_label.add_theme_color_override("font_color", Color(1.0, 0.6, 0.2))
 		return
 

@@ -366,7 +366,26 @@ func _apply_ui_lang() -> void:
 	_main_menu.apply_ui_translations(_i18n_dict)
 	_pause_menu.apply_ui_translations(_i18n_dict)
 	_pause_options_menu.apply_ui_translations(_i18n_dict)
+	_save_load_menu.apply_ui_translations(_i18n_dict)
+	_chapter_scene_menu.apply_ui_translations(_i18n_dict)
+	_game_over_screen.apply_ui_translations(_i18n_dict)
+	_to_be_continued_screen.apply_ui_translations(_i18n_dict)
 	_play_ctrl.set_i18n(_i18n_dict)
+	# Play buttons bar
+	_quicksave_button.text = StoryI18nService.get_ui_string("Save (F5)", _i18n_dict)
+	_quickload_button.text = StoryI18nService.get_ui_string("Load (F9)", _i18n_dict)
+	_auto_play_button.text = StoryI18nService.get_ui_string("Auto", _i18n_dict)
+	_skip_button.text = StoryI18nService.get_ui_string("Skip (S)", _i18n_dict)
+	_history_button.text = StoryI18nService.get_ui_string("Histo (H)", _i18n_dict)
+	# Quickload confirm
+	_quickload_confirm_label.text = StoryI18nService.get_ui_string("Charger la sauvegarde rapide ?", _i18n_dict)
+	_quickload_yes_btn.text = StoryI18nService.get_ui_string("Oui", _i18n_dict)
+	_quickload_no_btn.text = StoryI18nService.get_ui_string("Non", _i18n_dict)
+	# Loading overlay
+	_loading_overlay_label.text = StoryI18nService.get_ui_string("Chargement...", _i18n_dict)
+	# PWA install prompt
+	if _pwa_install_prompt and _pwa_install_prompt.has_method("apply_ui_translations"):
+		_pwa_install_prompt.apply_ui_translations(_i18n_dict)
 
 
 func _on_options_applied() -> void:
@@ -426,7 +445,7 @@ func _preload_chapter_with_ui(chapter_uuid: String) -> void:
 		return
 	_main_menu.set_loading_visible(true)
 	var progress_cb = func(_name: String, progress: float):
-		_main_menu.update_loading_text("Chargement... %d%%" % int(progress * 100))
+		_main_menu.update_loading_text(StoryI18nService.get_ui_string("Chargement...", _i18n_dict) + " %d%%" % int(progress * 100))
 	_pck_loader.chapter_load_progress.connect(progress_cb)
 	var ok = await _pck_loader.ensure_chapter_loaded(chapter_uuid)
 	_pck_loader.chapter_load_progress.disconnect(progress_cb)

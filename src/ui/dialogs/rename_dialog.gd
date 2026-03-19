@@ -9,14 +9,14 @@ var _name_edit: LineEdit
 var _subtitle_edit: LineEdit
 
 func _init():
-	title = "Renommer"
+	title = tr("Renommer")
 	min_size = Vector2i(350, 0)
 
 	var vbox = VBoxContainer.new()
 	vbox.name = "ContentVBox"
 
 	var name_label = Label.new()
-	name_label.text = "Titre"
+	name_label.text = tr("Titre")
 	vbox.add_child(name_label)
 
 	_name_edit = LineEdit.new()
@@ -24,7 +24,7 @@ func _init():
 	vbox.add_child(_name_edit)
 
 	var subtitle_label = Label.new()
-	subtitle_label.text = "Description (optionnel)"
+	subtitle_label.text = tr("Description (optionnel)")
 	vbox.add_child(subtitle_label)
 
 	_subtitle_edit = LineEdit.new()

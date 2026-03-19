@@ -145,13 +145,13 @@ func _update_tooltip(mouse_pos: Vector2) -> void:
 	var conn_type = _connection_type_map.get(_hovered_key, "transition")
 	match conn_type:
 		"transition":
-			_tooltip_label.text = "Transition automatique"
+			_tooltip_label.text = tr("Transition automatique")
 		"choice":
-			_tooltip_label.text = "Choix du joueur"
+			_tooltip_label.text = tr("Choix du joueur")
 		"condition":
-			_tooltip_label.text = "Condition"
+			_tooltip_label.text = tr("Condition")
 		"both":
-			_tooltip_label.text = "Transition et Choix"
+			_tooltip_label.text = tr("Transition et Choix")
 	_tooltip_panel.position = mouse_pos + Vector2(12.0, 12.0)
 	_tooltip_panel.reset_size()
 	_tooltip_panel.show()
@@ -546,7 +546,7 @@ func _create_needed_terminal_nodes() -> void:
 	var y_offset = 0.0
 	for terminal_type in needed:
 		var uuid = "terminal_" + terminal_type
-		var display_name = TERMINAL_DISPLAY_NAMES.get(terminal_type, terminal_type)
+		var display_name = tr(TERMINAL_DISPLAY_NAMES.get(terminal_type, terminal_type))
 		var pos = Vector2(max_x + 280.0, 100.0 + y_offset)
 		_create_terminal_node(uuid, display_name, pos, terminal_type)
 		y_offset += 80.0

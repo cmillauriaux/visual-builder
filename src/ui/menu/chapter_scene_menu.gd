@@ -6,6 +6,7 @@ extends Control
 
 const GameTheme = preload("res://src/ui/themes/game_theme.gd")
 const UIScale = preload("res://src/ui/themes/ui_scale.gd")
+const StoryI18nService = preload("res://src/services/story_i18n_service.gd")
 
 signal scene_selected(chapter_uuid: String, scene_uuid: String)
 signal close_pressed
@@ -13,6 +14,7 @@ signal close_pressed
 var _title_label: Label
 var _chapters_container: VBoxContainer
 var _close_btn: Button
+var _i18n_dict: Dictionary = {}
 
 
 func build_ui() -> void:
@@ -44,7 +46,7 @@ func build_ui() -> void:
 	vbox.add_child(header)
 
 	_title_label = Label.new()
-	_title_label.text = "Chapitres / Scènes"
+	_title_label.text = StoryI18nService.get_ui_string("Chapitres / Scènes", _i18n_dict)
 	_title_label.add_theme_font_size_override("font_size", UIScale.scale(28))
 	_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(_title_label)
@@ -68,6 +70,11 @@ func build_ui() -> void:
 	_chapters_container.add_theme_constant_override("separation", 20)
 	_chapters_container.name = "ChaptersContainer"
 	scroll.add_child(_chapters_container)
+
+
+func apply_ui_translations(i18n_dict: Dictionary) -> void:
+	_i18n_dict = i18n_dict
+	_title_label.text = StoryI18nService.get_ui_string("Chapitres / Scènes", _i18n_dict)
 
 
 ## Affiche le menu avec les chapitres/scènes de la story.
@@ -108,7 +115,7 @@ func _build_chapter_section(chapter, ch_idx: int, max_chapter_idx: int, max_scen
 
 	# En-tête du chapitre
 	var chap_label := Label.new()
-	chap_label.text = "Chapitre %d — %s" % [ch_idx + 1, chapter.chapter_name]
+	chap_label.text = StoryI18nService.get_ui_string("Chapitre %d — %s", _i18n_dict) % [ch_idx + 1, chapter.chapter_name]
 	chap_label.add_theme_font_size_override("font_size", UIScale.scale(20))
 	chap_label.add_theme_color_override("font_color", Color("#E8D5B5"))
 	chap_label.name = "ChapterHeader"
@@ -159,7 +166,7 @@ func _build_locked_scene(parent: FlowContainer, ch_idx: int, sc_idx: int) -> voi
 	card.add_child(inner)
 
 	var chap_lbl := Label.new()
-	chap_lbl.text = "Chapitre %d" % (ch_idx + 1)
+	chap_lbl.text = StoryI18nService.get_ui_string("Chapitre %d", _i18n_dict) % (ch_idx + 1)
 	chap_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	chap_lbl.add_theme_font_size_override("font_size", UIScale.scale(12))
 	chap_lbl.add_theme_color_override("font_color", Color("#A08060"))

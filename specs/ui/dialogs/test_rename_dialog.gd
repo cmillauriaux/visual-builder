@@ -35,4 +35,4 @@ func test_rename_confirmed_signal():
 	assert_signal_emitted(_dialog, "rename_confirmed")
 
 func test_title_is_renommer():
-	assert_eq(_dialog.title, "Renommer")
+	assert_eq(_dialog.title, tr("Renommer"))

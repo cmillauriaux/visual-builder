@@ -34,6 +34,12 @@ window/stretch/aspect="expand"
 
 enabled=PackedStringArray("res://addons/gut/plugin.cfg")
 
+[internationalization]
+
+locale/translations=PackedStringArray("res://translations/editor_ui.fr.translation", "res://translations/editor_ui.en.translation")
+locale/fallback="fr"
+locale/test="fr"
+
 [rendering]
 
 renderer/rendering_method="gl_compatibility"

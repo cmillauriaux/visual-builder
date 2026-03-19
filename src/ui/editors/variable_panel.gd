@@ -123,7 +123,7 @@ func _create_var_block(index: int, var_def) -> VBoxContainer:
 	var row1 = HBoxContainer.new()
 	var name_edit = LineEdit.new()
 	name_edit.text = var_def.var_name
-	name_edit.placeholder_text = "Nom..."
+	name_edit.placeholder_text = tr("Nom...")
 	name_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name_edit.text_changed.connect(_on_name_changed.bind(index))
 	row1.add_child(name_edit)
@@ -134,7 +134,7 @@ func _create_var_block(index: int, var_def) -> VBoxContainer:
 
 	var value_edit = LineEdit.new()
 	value_edit.text = var_def.initial_value
-	value_edit.placeholder_text = "Valeur initiale..."
+	value_edit.placeholder_text = tr("Valeur initiale...")
 	value_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	value_edit.text_changed.connect(_on_value_changed.bind(index))
 	row1.add_child(value_edit)
@@ -150,12 +150,12 @@ func _create_var_block(index: int, var_def) -> VBoxContainer:
 	row2.add_theme_constant_override("separation", 12)
 
 	var main_cb = CheckBox.new()
-	main_cb.text = "Interface principale"
+	main_cb.text = tr("Interface principale")
 	main_cb.button_pressed = var_def.show_on_main
 	row2.add_child(main_cb)
 
 	var details_cb = CheckBox.new()
-	details_cb.text = "Page de détails"
+	details_cb.text = tr("Page de détails")
 	details_cb.button_pressed = var_def.show_on_details
 	row2.add_child(details_cb)
 	block.add_child(row2)
@@ -167,12 +167,12 @@ func _create_var_block(index: int, var_def) -> VBoxContainer:
 	row3.visible = is_displayed
 
 	var vis_label = Label.new()
-	vis_label.text = "Visibilité :"
+	vis_label.text = tr("Visibilité :")
 	row3.add_child(vis_label)
 
 	var vis_mode = OptionButton.new()
-	vis_mode.add_item("Toujours visible", 0)
-	vis_mode.add_item("Conditionnelle", 1)
+	vis_mode.add_item(tr("Toujours visible"), 0)
+	vis_mode.add_item(tr("Conditionnelle"), 1)
 	vis_mode.selected = 1 if var_def.visibility_mode == "variable" else 0
 	row3.add_child(vis_mode)
 
@@ -214,19 +214,19 @@ func _create_var_block(index: int, var_def) -> VBoxContainer:
 	)
 
 	var img_btn = Button.new()
-	img_btn.text = "Image…"
+	img_btn.text = tr("Image…")
 	img_btn.pressed.connect(_on_image_btn_pressed.bind(index))
 	row4.add_child(img_btn)
 
 	var img_label = Label.new()
-	img_label.text = var_def.image.get_file() if var_def.image != "" else "Aucune image"
+	img_label.text = var_def.image.get_file() if var_def.image != "" else tr("Aucune image")
 	img_label.clip_text = true
 	img_label.custom_minimum_size.x = 80
 	row4.add_child(img_label)
 
 	var desc_edit = LineEdit.new()
 	desc_edit.text = var_def.description
-	desc_edit.placeholder_text = "Description…"
+	desc_edit.placeholder_text = tr("Description…")
 	desc_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	desc_edit.text_changed.connect(func(text): update_description(index, text))
 	row4.add_child(desc_edit)

@@ -50,12 +50,12 @@ func _ready() -> void:
 
 	# Context menu
 	_context_menu = PopupMenu.new()
-	_context_menu.add_item("Dupliquer", 0)
+	_context_menu.add_item(tr("Dupliquer"), 0)
 	_context_menu.add_separator()
-	_context_menu.add_item("Insérer à gauche", 1)
-	_context_menu.add_item("Insérer à droite", 2)
+	_context_menu.add_item(tr("Insérer à gauche"), 1)
+	_context_menu.add_item(tr("Insérer à droite"), 2)
 	_context_menu.add_separator()
-	_context_menu.add_item("Supprimer", 3)
+	_context_menu.add_item(tr("Supprimer"), 3)
 	_context_menu.id_pressed.connect(_on_context_menu_id_pressed)
 	add_child(_context_menu)
 

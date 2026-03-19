@@ -35,16 +35,16 @@ func test_has_two_tabs_by_default():
 	assert_eq(_dialog._tab_container.get_tab_count(), 2)
 
 func test_tab_fichier_exists():
-	assert_eq(_dialog._tab_container.get_tab_title(0), "Fichier")
+	assert_eq(_dialog._tab_container.get_tab_title(0), tr("Fichier"))
 
 func test_tab_galerie_exists():
-	assert_eq(_dialog._tab_container.get_tab_title(1), "Galerie")
+	assert_eq(_dialog._tab_container.get_tab_title(1), tr("Galerie"))
 
 
 func test_has_validate_button():
 	assert_not_null(_dialog._validate_btn)
 	assert_is(_dialog._validate_btn, Button)
-	assert_eq(_dialog._validate_btn.text, "Valider")
+	assert_eq(_dialog._validate_btn.text, tr("Valider"))
 
 func test_has_file_path_label():
 	assert_not_null(_dialog._file_path_label)
@@ -102,7 +102,7 @@ func test_setup_disables_validate_button():
 func test_setup_resets_file_path_label():
 	_dialog._file_path_label.text = "ancien_fichier.png"
 	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
-	assert_string_contains(_dialog._file_path_label.text.to_lower(), "aucun")
+	assert_eq(_dialog._file_path_label.text, tr("Aucun fichier sélectionné"))
 
 func test_setup_stores_mode_background():
 	_dialog.setup(ImagePickerDialog.Mode.BACKGROUND, _test_dir)
@@ -302,7 +302,7 @@ func test_refresh_gallery_empty_message_contains_correct_text():
 	DirAccess.make_dir_recursive_absolute(_test_dir + "/assets/foregrounds")
 	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
 	_dialog._refresh_gallery()
-	assert_string_contains(_dialog._empty_label.text, "Aucune image disponible")
+	assert_eq(_dialog._empty_label.text, tr("Aucune image disponible. Importez d'abord une image via l'onglet Fichier."))
 
 func test_refresh_gallery_adds_items_for_each_image():
 	var dir = _test_dir + "/assets/foregrounds"

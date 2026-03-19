@@ -58,18 +58,18 @@ static func _build_top_bar(main: Control) -> void:
 	main._top_bar_panel.add_child(main._top_bar)
 
 	main._back_button = Button.new()
-	main._back_button.text = "← Retour"
+	main._back_button.text = TranslationServer.translate("← Retour")
 	main._back_button.visible = false
 	main._top_bar.add_child(main._back_button)
 
 	main._undo_button = Button.new()
-	main._undo_button.text = "← Annuler"
+	main._undo_button.text = TranslationServer.translate("← Annuler")
 	main._undo_button.disabled = true
 	main._undo_button.visible = false
 	main._top_bar.add_child(main._undo_button)
 
 	main._redo_button = Button.new()
-	main._redo_button.text = "Rétablir →"
+	main._redo_button.text = TranslationServer.translate("Rétablir →")
 	main._redo_button.disabled = true
 	main._redo_button.visible = false
 	main._top_bar.add_child(main._redo_button)
@@ -84,12 +84,12 @@ static func _build_top_bar(main: Control) -> void:
 	main._top_bar.add_child(spacer)
 
 	main._top_play_button = Button.new()
-	main._top_play_button.text = "▶ Jouer"
+	main._top_play_button.text = TranslationServer.translate("▶ Jouer")
 	main._top_play_button.visible = false
 	main._top_bar.add_child(main._top_play_button)
 
 	main._top_stop_button = Button.new()
-	main._top_stop_button.text = "■ Arrêter"
+	main._top_stop_button.text = TranslationServer.translate("■ Arrêter")
 	main._top_stop_button.visible = false
 	main._top_bar.add_child(main._top_stop_button)
 
@@ -98,39 +98,39 @@ static func _build_top_bar(main: Control) -> void:
 	main._top_bar.add_child(main._create_button)
 
 	main._create_condition_button = Button.new()
-	main._create_condition_button.text = "+ Nouvelle condition"
+	main._create_condition_button.text = TranslationServer.translate("+ Nouvelle condition")
 	main._create_condition_button.visible = false
 	main._top_bar.add_child(main._create_condition_button)
 
 	main._parametres_menu = MenuButton.new()
-	main._parametres_menu.text = "Paramètres"
+	main._parametres_menu.text = TranslationServer.translate("Paramètres")
 	main._parametres_menu.visible = false
 	var parametres_popup = main._parametres_menu.get_popup()
-	parametres_popup.add_item("Variables", 0)
-	parametres_popup.add_item("Menu", 1)
-	parametres_popup.add_item("Galerie", 2)
-	parametres_popup.add_item("Notifications", 3)
+	parametres_popup.add_item(TranslationServer.translate("Variables"), 0)
+	parametres_popup.add_item(TranslationServer.translate("Menu"), 1)
+	parametres_popup.add_item(TranslationServer.translate("Galerie"), 2)
+	parametres_popup.add_item(TranslationServer.translate("Notifications"), 3)
 	parametres_popup.add_separator()
-	parametres_popup.add_item("Langues", 4)
+	parametres_popup.add_item(TranslationServer.translate("Langues"), 4)
 	main._top_bar.add_child(main._parametres_menu)
 
 	main._histoire_menu = MenuButton.new()
-	main._histoire_menu.text = "Histoire"
+	main._histoire_menu.text = TranslationServer.translate("Histoire")
 	main._histoire_menu.visible = false
 	var histoire_popup = main._histoire_menu.get_popup()
 	var cmd_ctrl = "Cmd" if OS.get_name() == "macOS" else "Ctrl"
-	histoire_popup.add_item("Nouvelle histoire", 0)
-	histoire_popup.add_item("Charger", 1)
+	histoire_popup.add_item(TranslationServer.translate("Nouvelle histoire"), 0)
+	histoire_popup.add_item(TranslationServer.translate("Charger"), 1)
 	histoire_popup.add_separator()
-	histoire_popup.add_item("Sauvegarder (%s+S)" % cmd_ctrl, 2)
-	histoire_popup.add_item("Sauvegarder sous...", 3)
+	histoire_popup.add_item(TranslationServer.translate("Sauvegarder (%s+S)") % cmd_ctrl, 2)
+	histoire_popup.add_item(TranslationServer.translate("Sauvegarder sous..."), 3)
 	histoire_popup.add_separator()
-	histoire_popup.add_item("Exporter", 4)
+	histoire_popup.add_item(TranslationServer.translate("Exporter"), 4)
 	histoire_popup.add_separator()
-	histoire_popup.add_item("Vérifier l'histoire", 5)
+	histoire_popup.add_item(TranslationServer.translate("Vérifier l'histoire"), 5)
 	histoire_popup.add_separator()
-	histoire_popup.add_item("Traductions — Regénérer les clés", 6)
-	histoire_popup.add_item("Traductions — Vérifier", 7)
+	histoire_popup.add_item(TranslationServer.translate("Traductions — Regénérer les clés"), 6)
+	histoire_popup.add_item(TranslationServer.translate("Traductions — Vérifier"), 7)
 	main._top_bar.add_child(main._histoire_menu)
 
 	# Variable panel popup
@@ -199,7 +199,7 @@ static func _build_sequence_editor(main: Control) -> void:
 	main._sequence_editor_panel.add_child(main._sequence_toolbar)
 
 	main._import_bg_button = Button.new()
-	main._import_bg_button.text = "Importer background"
+	main._import_bg_button.text = TranslationServer.translate("Importer background")
 	main._sequence_toolbar.add_child(main._import_bg_button)
 
 	main._add_fg_button = Button.new()
@@ -207,7 +207,7 @@ static func _build_sequence_editor(main: Control) -> void:
 	main._sequence_toolbar.add_child(main._add_fg_button)
 
 	main._grid_toggle = Button.new()
-	main._grid_toggle.text = "Grille"
+	main._grid_toggle.text = TranslationServer.translate("Grille")
 	main._grid_toggle.toggle_mode = true
 	main._sequence_toolbar.add_child(main._grid_toggle)
 
@@ -217,7 +217,7 @@ static func _build_sequence_editor(main: Control) -> void:
 	main._sequence_toolbar.add_child(main._snap_toggle)
 
 	main._normalize_fg_button = Button.new()
-	main._normalize_fg_button.text = "Normaliser"
+	main._normalize_fg_button.text = TranslationServer.translate("Normaliser")
 	main._sequence_toolbar.add_child(main._normalize_fg_button)
 
 	var toolbar_spacer = Control.new()
@@ -274,7 +274,7 @@ static func _build_sequence_editor(main: Control) -> void:
 
 	# Tab 0: Terminaison
 	var terminaison_tab = VBoxContainer.new()
-	terminaison_tab.name = "Terminaison"
+	terminaison_tab.name = TranslationServer.translate("Terminaison")
 	main._tab_container.add_child(terminaison_tab)
 
 	main._ending_editor = EndingEditorScene.instantiate()
@@ -282,7 +282,7 @@ static func _build_sequence_editor(main: Control) -> void:
 
 	# Tab 1: Musique
 	var musique_scroll = ScrollContainer.new()
-	musique_scroll.name = "Musique"
+	musique_scroll.name = TranslationServer.translate("Musique")
 	musique_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	main._tab_container.add_child(musique_scroll)
 
@@ -300,7 +300,7 @@ static func _build_sequence_editor(main: Control) -> void:
 
 	# Tab 3: Paramètres / Transitions (Séquence)
 	main._sequence_transition_panel = VBoxContainer.new()
-	main._sequence_transition_panel.name = "Paramètres"
+	main._sequence_transition_panel.name = TranslationServer.translate("Paramètres")
 	main._tab_container.add_child(main._sequence_transition_panel)
 	_build_sequence_transition_tab(main)
 
@@ -321,14 +321,14 @@ static func _build_sequence_transition_tab(main: Control) -> void:
 
 	# --- Titre de la séquence ---
 	var title_sec = Label.new()
-	title_sec.text = "Titre de séquence"
+	title_sec.text = TranslationServer.translate("Titre de séquence")
 	title_sec.add_theme_font_size_override("font_size", 16)
 	container.add_child(title_sec)
 
 	var title_hbox = HBoxContainer.new()
 	container.add_child(title_hbox)
 	var title_label = Label.new()
-	title_label.text = "Titre :"
+	title_label.text = TranslationServer.translate("Titre :")
 	title_label.custom_minimum_size = Vector2(80, 0)
 	title_hbox.add_child(title_label)
 	main._seq_title_edit = LineEdit.new()
@@ -338,7 +338,7 @@ static func _build_sequence_transition_tab(main: Control) -> void:
 	var sub_hbox = HBoxContainer.new()
 	container.add_child(sub_hbox)
 	var sub_label = Label.new()
-	sub_label.text = "Sous-titre :"
+	sub_label.text = TranslationServer.translate("Sous-titre :")
 	sub_label.custom_minimum_size = Vector2(80, 0)
 	sub_hbox.add_child(sub_label)
 	main._seq_subtitle_edit = LineEdit.new()
@@ -348,37 +348,37 @@ static func _build_sequence_transition_tab(main: Control) -> void:
 	var color_hbox = HBoxContainer.new()
 	container.add_child(color_hbox)
 	var color_label = Label.new()
-	color_label.text = "Fond :"
+	color_label.text = TranslationServer.translate("Fond :")
 	color_label.custom_minimum_size = Vector2(80, 0)
 	color_hbox.add_child(color_label)
 	main._seq_bg_color_picker = ColorPickerButton.new()
-	main._seq_bg_color_picker.text = "Couleur"
+	main._seq_bg_color_picker.text = TranslationServer.translate("Couleur")
 	main._seq_bg_color_picker.custom_minimum_size = Vector2(100, 0)
 	color_hbox.add_child(main._seq_bg_color_picker)
 
 	container.add_child(HSeparator.new())
 
 	var in_title = Label.new()
-	in_title.text = "Transition d'entrée"
+	in_title.text = TranslationServer.translate("Transition d'entrée")
 	in_title.add_theme_font_size_override("font_size", 16)
 	container.add_child(in_title)
 
 	var in_type_hbox = HBoxContainer.new()
 	container.add_child(in_type_hbox)
 	var in_type_label = Label.new()
-	in_type_label.text = "Type :"
+	in_type_label.text = TranslationServer.translate("Type :")
 	in_type_label.custom_minimum_size = Vector2(80, 0)
 	in_type_hbox.add_child(in_type_label)
 	main._seq_trans_in_type = OptionButton.new()
-	main._seq_trans_in_type.add_item("Aucune", 0)
-	main._seq_trans_in_type.add_item("Fondu", 1)
-	main._seq_trans_in_type.add_item("Pixellisation", 2)
+	main._seq_trans_in_type.add_item(TranslationServer.translate("Aucune"), 0)
+	main._seq_trans_in_type.add_item(TranslationServer.translate("Fondu"), 1)
+	main._seq_trans_in_type.add_item(TranslationServer.translate("Pixellisation"), 2)
 	in_type_hbox.add_child(main._seq_trans_in_type)
 
 	var in_dur_hbox = HBoxContainer.new()
 	container.add_child(in_dur_hbox)
 	var in_dur_label = Label.new()
-	in_dur_label.text = "Durée :"
+	in_dur_label.text = TranslationServer.translate("Durée :")
 	in_dur_label.custom_minimum_size = Vector2(80, 0)
 	in_dur_hbox.add_child(in_dur_label)
 	main._seq_trans_in_dur = SpinBox.new()
@@ -392,26 +392,26 @@ static func _build_sequence_transition_tab(main: Control) -> void:
 	container.add_child(HSeparator.new())
 
 	var out_title = Label.new()
-	out_title.text = "Transition de sortie"
+	out_title.text = TranslationServer.translate("Transition de sortie")
 	out_title.add_theme_font_size_override("font_size", 16)
 	container.add_child(out_title)
 
 	var out_type_hbox = HBoxContainer.new()
 	container.add_child(out_type_hbox)
 	var out_type_label = Label.new()
-	out_type_label.text = "Type :"
+	out_type_label.text = TranslationServer.translate("Type :")
 	out_type_label.custom_minimum_size = Vector2(80, 0)
 	out_type_hbox.add_child(out_type_label)
 	main._seq_trans_out_type = OptionButton.new()
-	main._seq_trans_out_type.add_item("Aucune", 0)
-	main._seq_trans_out_type.add_item("Fondu", 1)
-	main._seq_trans_out_type.add_item("Pixellisation", 2)
+	main._seq_trans_out_type.add_item(TranslationServer.translate("Aucune"), 0)
+	main._seq_trans_out_type.add_item(TranslationServer.translate("Fondu"), 1)
+	main._seq_trans_out_type.add_item(TranslationServer.translate("Pixellisation"), 2)
 	out_type_hbox.add_child(main._seq_trans_out_type)
 
 	var out_dur_hbox = HBoxContainer.new()
 	container.add_child(out_dur_hbox)
 	var out_dur_label = Label.new()
-	out_dur_label.text = "Durée :"
+	out_dur_label.text = TranslationServer.translate("Durée :")
 	out_dur_label.custom_minimum_size = Vector2(80, 0)
 	out_dur_hbox.add_child(out_dur_label)
 	main._seq_trans_out_dur = SpinBox.new()
@@ -575,7 +575,7 @@ static func _build_welcome_screen(main: Control) -> void:
 	main._welcome_screen.add_child(title)
 
 	var subtitle = Label.new()
-	subtitle.text = "Éditeur de Visual Novel pour Godot 4"
+	subtitle.text = TranslationServer.translate("Éditeur de Visual Novel pour Godot 4")
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	subtitle.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
 	main._welcome_screen.add_child(subtitle)
@@ -589,11 +589,11 @@ static func _build_welcome_screen(main: Control) -> void:
 	main._welcome_screen.add_child(btn_vbox)
 
 	main._new_story_button = Button.new()
-	main._new_story_button.text = "Créer une nouvelle histoire"
+	main._new_story_button.text = TranslationServer.translate("Créer une nouvelle histoire")
 	main._new_story_button.custom_minimum_size = Vector2(250, 40)
 	btn_vbox.add_child(main._new_story_button)
 
 	main._load_story_button = Button.new()
-	main._load_story_button.text = "Charger une histoire existante"
+	main._load_story_button.text = TranslationServer.translate("Charger une histoire existante")
 	main._load_story_button.custom_minimum_size = Vector2(250, 40)
 	btn_vbox.add_child(main._load_story_button)

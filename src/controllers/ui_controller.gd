@@ -90,12 +90,12 @@ func refresh_undo_redo_buttons() -> void:
 	var cmd_ctrl = "Cmd" if OS.get_name() == "macOS" else "Ctrl"
 	
 	if _main._undo_redo.can_undo():
-		_main._undo_button.tooltip_text = "Annuler : %s (%s+Z)" % [_main._undo_redo.get_undo_label(), cmd_ctrl]
+		_main._undo_button.tooltip_text = tr("Annuler : %s (%s+Z)") % [_main._undo_redo.get_undo_label(), cmd_ctrl]
 	else:
 		_main._undo_button.tooltip_text = ""
 		
 	if _main._undo_redo.can_redo():
-		_main._redo_button.tooltip_text = "Rétablir : %s (%s+Y / %s+Maj+Z)" % [_main._undo_redo.get_redo_label(), cmd_ctrl, cmd_ctrl]
+		_main._redo_button.tooltip_text = tr("Rétablir : %s (%s+Y / %s+Maj+Z)") % [_main._undo_redo.get_redo_label(), cmd_ctrl, cmd_ctrl]
 	else:
 		_main._redo_button.tooltip_text = ""
 
@@ -128,7 +128,7 @@ func enter_fullscreen() -> void:
 	_main._play_overlay.visible = true
 
 	var fs_stop = Button.new()
-	fs_stop.text = "■ Stop"
+	fs_stop.text = tr("■ Stop")
 	fs_stop.pressed.connect(_main._play_ctrl.on_stop_pressed)
 	fs_stop.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 	fs_stop.offset_left = -80; fs_stop.offset_right = -10; fs_stop.offset_top = 10; fs_stop.offset_bottom = 40

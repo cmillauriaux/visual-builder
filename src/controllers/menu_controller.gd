@@ -66,11 +66,8 @@ func _on_export_requested(platform: String, output_path: String, quality: String
 
 func _show_export_result(output_path: String, log_path: String) -> void:
 	var dialog = AcceptDialog.new()
-	dialog.title = "Export terminé"
-	dialog.dialog_text = "Le jeu a été exporté dans :
-%s
-
-Log : %s" % [output_path, log_path]
+	dialog.title = tr("Export terminé")
+	dialog.dialog_text = tr("Le jeu a été exporté dans :\n%s\n\nLog : %s") % [output_path, log_path]
 	dialog.confirmed.connect(dialog.queue_free)
 	_main.add_child(dialog)
 	dialog.popup_centered()
@@ -78,10 +75,8 @@ Log : %s" % [output_path, log_path]
 
 func _show_export_error(log_path: String, reason: String) -> void:
 	var dialog = AcceptDialog.new()
-	dialog.title = "Erreur d'export"
-	dialog.dialog_text = reason + "
-
-Log : " + log_path
+	dialog.title = tr("Erreur d'export")
+	dialog.dialog_text = reason + "\n\n" + tr("Log : %s") % log_path
 	dialog.confirmed.connect(dialog.queue_free)
 	_main.add_child(dialog)
 	dialog.popup_centered()
@@ -116,8 +111,8 @@ func on_languages_pressed() -> void:
 	var base_path = _main._get_story_base_path()
 	if base_path == "":
 		var warn = AcceptDialog.new()
-		warn.title = "Sauvegarde requise"
-		warn.dialog_text = "Veuillez sauvegarder l'histoire avant de gérer les langues."
+		warn.title = tr("Sauvegarde requise")
+		warn.dialog_text = tr("Veuillez sauvegarder l'histoire avant de gérer les langues.")
 		warn.confirmed.connect(warn.queue_free)
 		_main.add_child(warn)
 		warn.popup_centered()

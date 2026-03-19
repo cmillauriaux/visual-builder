@@ -85,7 +85,7 @@ func _ready() -> void:
 
 	_prev_btn = Button.new()
 	_prev_btn.name = "PrevBtn"
-	_prev_btn.text = "◀ Précédent"
+	_prev_btn.text = tr("◀ Précédent")
 	_prev_btn.pressed.connect(_on_prev_pressed)
 	_nav_bar.add_child(_prev_btn)
 
@@ -97,7 +97,7 @@ func _ready() -> void:
 
 	_next_btn = Button.new()
 	_next_btn.name = "NextBtn"
-	_next_btn.text = "Suivant ▶"
+	_next_btn.text = tr("Suivant ▶")
 	_next_btn.pressed.connect(_on_next_pressed)
 	_nav_bar.add_child(_next_btn)
 
@@ -108,13 +108,13 @@ func _ready() -> void:
 
 	_regenerate_btn = Button.new()
 	_regenerate_btn.name = "RegenerateBtn"
-	_regenerate_btn.text = "Regénérer"
+	_regenerate_btn.text = tr("Regénérer")
 	_regenerate_btn.pressed.connect(_on_regenerate_pressed)
 	_nav_bar.add_child(_regenerate_btn)
 
 	_delete_btn = Button.new()
 	_delete_btn.name = "DeleteBtn"
-	_delete_btn.text = "Supprimer"
+	_delete_btn.text = tr("Supprimer")
 	_delete_btn.pressed.connect(_on_delete_pressed)
 	_nav_bar.add_child(_delete_btn)
 
@@ -198,7 +198,7 @@ func _on_regenerate_pressed() -> void:
 	var original_index = item["index"]
 	_regenerating = true
 	_texture_rect.texture = null
-	_filename_label.text = item["filename"] + " — En cours..."
+	_filename_label.text = item["filename"] + tr(" — En cours...")
 	_regenerate_btn.disabled = true
 	_delete_btn.disabled = true
 	regenerate_requested.emit(original_index)

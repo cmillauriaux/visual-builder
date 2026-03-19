@@ -53,7 +53,7 @@ func test_dialog_is_exclusive():
 
 
 func test_dialog_title():
-	assert_eq(_dialog.title, "Normalisation des images")
+	assert_eq(_dialog.title, tr("Normalisation des images"))
 
 
 # --- Phase 1: Selection ---
@@ -85,7 +85,7 @@ func test_displays_both_bg_and_fg():
 func test_selection_count_label_initial():
 	_create_test_image(_test_dir + "/assets/backgrounds/bg1.png")
 	_dialog.setup(_test_dir)
-	assert_eq(_dialog._selection_count_label.text, "0 image(s) sélectionnée(s)")
+	assert_eq(_dialog._selection_count_label.text, tr("%d image(s) sélectionnée(s)") % 0)
 
 
 func test_next_button_disabled_when_less_than_2_selected():
@@ -127,12 +127,12 @@ func test_selection_count_label_updates():
 	_create_test_image(_test_dir + "/assets/backgrounds/bg2.png")
 	_dialog.setup(_test_dir)
 	_dialog._on_select_all()
-	assert_eq(_dialog._selection_count_label.text, "2 image(s) sélectionnée(s)")
+	assert_eq(_dialog._selection_count_label.text, tr("%d image(s) sélectionnée(s)") % 2)
 
 
 func test_close_button_exists():
 	assert_not_null(_dialog._close_button)
-	assert_eq(_dialog._close_button.text, "Fermer")
+	assert_eq(_dialog._close_button.text, tr("Fermer"))
 
 
 # --- Phase 2: Reference selection ---
@@ -244,7 +244,7 @@ func test_phase_3_shows_before_after_for_each_image():
 
 func test_apply_button_exists():
 	assert_not_null(_dialog._apply_button)
-	assert_eq(_dialog._apply_button.text, "Appliquer")
+	assert_eq(_dialog._apply_button.text, tr("Appliquer"))
 
 
 func test_back_from_preview_cleans_temp():

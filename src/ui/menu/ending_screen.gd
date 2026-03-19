@@ -6,6 +6,9 @@ extends Control
 const TextureLoader = preload("res://src/ui/shared/texture_loader.gd")
 const GameTheme = preload("res://src/ui/themes/game_theme.gd")
 const UIScale = preload("res://src/ui/themes/ui_scale.gd")
+const StoryI18nService = preload("res://src/services/story_i18n_service.gd")
+
+var _i18n_dict: Dictionary = {}
 
 signal back_to_menu_pressed
 signal load_last_autosave_pressed
@@ -65,26 +68,40 @@ func build_ui(default_title: String = "") -> void:
 	spacer.custom_minimum_size.y = UIScale.scale(60)
 	vbox.add_child(spacer)
 
-	_load_autosave_button = _create_button("Charger la dernière sauvegarde")
+	_load_autosave_button = _create_button(StoryI18nService.get_ui_string("Charger la dernière sauvegarde", _i18n_dict))
 	_load_autosave_button.pressed.connect(func(): load_last_autosave_pressed.emit())
 	_load_autosave_button.visible = false
 	vbox.add_child(_load_autosave_button)
 
-	_patreon_button = _create_button("Patreon")
+	_patreon_button = _create_button(StoryI18nService.get_ui_string("Patreon", _i18n_dict))
 	_patreon_button.pressed.connect(_on_patreon_pressed)
 	GameTheme.apply_link_style(_patreon_button, Color("#FF424D"))
 	_patreon_button.visible = false
 	vbox.add_child(_patreon_button)
 
-	_itchio_button = _create_button("itch.io")
+	_itchio_button = _create_button(StoryI18nService.get_ui_string("itch.io", _i18n_dict))
 	_itchio_button.pressed.connect(_on_itchio_pressed)
 	GameTheme.apply_link_style(_itchio_button, Color("#FA5C5C"))
 	_itchio_button.visible = false
 	vbox.add_child(_itchio_button)
 
-	_back_button = _create_button("Retour au menu principal")
+	_back_button = _create_button(StoryI18nService.get_ui_string("Retour au menu principal", _i18n_dict))
 	_back_button.pressed.connect(func(): back_to_menu_pressed.emit())
 	vbox.add_child(_back_button)
+
+
+func apply_ui_translations(i18n_dict: Dictionary) -> void:
+	_i18n_dict = i18n_dict
+	if _load_autosave_button:
+		_load_autosave_button.text = StoryI18nService.get_ui_string("Charger la dernière sauvegarde", _i18n_dict)
+	if _patreon_button:
+		_patreon_button.text = StoryI18nService.get_ui_string("Patreon", _i18n_dict)
+	if _itchio_button:
+		_itchio_button.text = StoryI18nService.get_ui_string("itch.io", _i18n_dict)
+	if _back_button:
+		_back_button.text = StoryI18nService.get_ui_string("Retour au menu principal", _i18n_dict)
+	if _title_label and _title_label.text == _default_title:
+		_title_label.text = StoryI18nService.get_ui_string(_default_title, _i18n_dict)
 
 
 func setup(title: String, subtitle: String, background: String, base_path: String, patreon_url: String, itchio_url: String) -> void:

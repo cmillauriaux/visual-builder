@@ -112,11 +112,11 @@ func _update_tooltip(mouse_pos: Vector2) -> void:
 	var conn_type = _connection_type_map.get(_hovered_key, "transition")
 	match conn_type:
 		"transition":
-			_tooltip_label.text = "Transition automatique"
+			_tooltip_label.text = tr("Transition automatique")
 		"choice":
-			_tooltip_label.text = "Choix du joueur"
+			_tooltip_label.text = tr("Choix du joueur")
 		"both":
-			_tooltip_label.text = "Transition et Choix"
+			_tooltip_label.text = tr("Transition et Choix")
 	_tooltip_panel.position = mouse_pos + Vector2(12.0, 12.0)
 	_tooltip_panel.reset_size()
 	_tooltip_panel.show()

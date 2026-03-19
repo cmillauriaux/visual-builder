@@ -18,11 +18,11 @@ func test_dialog_exists() -> void:
 
 
 func test_title() -> void:
-	assert_eq(_dialog.title, "Langues de l'histoire")
+	assert_eq(_dialog.title, tr("Langues de l'histoire"))
 
 
 func test_ok_button_text() -> void:
-	assert_eq(_dialog.ok_button_text, "Fermer")
+	assert_eq(_dialog.ok_button_text, tr("Fermer"))
 
 
 func test_has_languages_changed_signal() -> void:

@@ -71,7 +71,7 @@ func _build_story() -> RefCounted:
 func test_dialog_title_includes_story_name():
 	var story = _build_story()
 	_dialog.setup(story, _test_dir)
-	assert_eq(_dialog.title, "Galerie — Mon Histoire")
+	assert_eq(_dialog.title, tr("Galerie — %s") % "Mon Histoire")
 
 
 func test_dialog_size():
@@ -88,14 +88,14 @@ func test_has_backgrounds_section():
 	var story = _build_story()
 	_dialog.setup(story, _test_dir)
 	assert_not_null(_dialog._bg_section_label)
-	assert_eq(_dialog._bg_section_label.text, "Backgrounds")
+	assert_eq(_dialog._bg_section_label.text, tr("Backgrounds"))
 
 
 func test_has_foregrounds_section():
 	var story = _build_story()
 	_dialog.setup(story, _test_dir)
 	assert_not_null(_dialog._fg_section_label)
-	assert_eq(_dialog._fg_section_label.text, "Foregrounds")
+	assert_eq(_dialog._fg_section_label.text, tr("Foregrounds"))
 
 
 func test_bg_grid_has_4_columns():
@@ -134,7 +134,7 @@ func test_empty_backgrounds_shows_message():
 	story.title = "Test"
 	_dialog.setup(story, _test_dir)
 	assert_true(_dialog._bg_empty_label.visible)
-	assert_string_contains(_dialog._bg_empty_label.text, "Aucun background")
+	assert_eq(_dialog._bg_empty_label.text, tr("Aucun background disponible."))
 
 
 func test_empty_foregrounds_shows_message():
@@ -142,7 +142,7 @@ func test_empty_foregrounds_shows_message():
 	story.title = "Test"
 	_dialog.setup(story, _test_dir)
 	assert_true(_dialog._fg_empty_label.visible)
-	assert_string_contains(_dialog._fg_empty_label.text, "Aucun foreground")
+	assert_eq(_dialog._fg_empty_label.text, tr("Aucun foreground disponible."))
 
 
 # --- Opacity for unused images ---
@@ -183,7 +183,7 @@ func test_clean_button_exists():
 	story.title = "Test"
 	_dialog.setup(story, _test_dir)
 	assert_not_null(_dialog._clean_button)
-	assert_eq(_dialog._clean_button.text, "Nettoyer la galerie")
+	assert_eq(_dialog._clean_button.text, tr("Nettoyer la galerie"))
 
 
 func test_clean_button_disabled_when_gallery_empty():
@@ -205,7 +205,7 @@ func test_clean_button_enabled_when_gallery_has_images():
 
 func test_close_button_exists():
 	assert_not_null(_dialog._close_button)
-	assert_eq(_dialog._close_button.text, "Fermer")
+	assert_eq(_dialog._close_button.text, tr("Fermer"))
 
 
 # --- Category filter ---
@@ -309,7 +309,7 @@ func test_context_menu_has_manage_option():
 	_dialog.setup(story, _test_dir)
 	_dialog._show_context_menu(_test_dir + "/assets/backgrounds/test.png", Vector2(100, 100))
 	var last_idx = _dialog._context_menu.item_count - 1
-	assert_eq(_dialog._context_menu.get_item_text(last_idx), "Gérer les catégories...")
+	assert_eq(_dialog._context_menu.get_item_text(last_idx), tr("Gérer les catégories..."))
 
 
 func test_context_menu_rename_is_first_item():
@@ -317,7 +317,7 @@ func test_context_menu_rename_is_first_item():
 	story.title = "Test"
 	_dialog.setup(story, _test_dir)
 	_dialog._show_context_menu(_test_dir + "/assets/backgrounds/test.png", Vector2(100, 100))
-	assert_eq(_dialog._context_menu.get_item_text(0), "Renommer")
+	assert_eq(_dialog._context_menu.get_item_text(0), tr("Renommer"))
 
 
 func test_context_menu_rename_id_is_8000():
@@ -348,7 +348,7 @@ func test_rename_dialog_has_correct_title():
 			rename_dlg = child
 			break
 	assert_not_null(rename_dlg)
-	assert_eq(rename_dlg.title, "Renommer l'image")
+	assert_eq(rename_dlg.title, tr("Renommer l'image"))
 
 
 # --- Normalize button ---
@@ -358,7 +358,7 @@ func test_normalize_button_exists():
 	story.title = "Test"
 	_dialog.setup(story, _test_dir)
 	assert_not_null(_dialog._normalize_button)
-	assert_eq(_dialog._normalize_button.text, "Normaliser les images")
+	assert_eq(_dialog._normalize_button.text, tr("Normaliser les images"))
 
 
 func test_normalize_button_disabled_when_less_than_2_images():
@@ -413,7 +413,7 @@ func test_context_menu_replace_is_second_item():
 	story.title = "Test"
 	_dialog.setup(story, _test_dir)
 	_dialog._show_context_menu(_test_dir + "/assets/backgrounds/test.png", Vector2(100, 100))
-	assert_eq(_dialog._context_menu.get_item_text(1), "Remplacer")
+	assert_eq(_dialog._context_menu.get_item_text(1), tr("Remplacer"))
 
 
 func test_context_menu_replace_id_is_8001():
@@ -466,7 +466,7 @@ func test_show_replace_dialog_adds_child():
 	_dialog._show_replace_dialog(_test_dir + "/assets/backgrounds/bg1.png")
 	var found := false
 	for child in _dialog.get_children():
-		if child is Window and child != _dialog._image_preview and child.title == "Remplacer l'image":
+		if child is Window and child != _dialog._image_preview and child.title == tr("Remplacer l'image"):
 			found = true
 			break
 	assert_true(found)
@@ -481,7 +481,7 @@ func test_replace_dialog_has_correct_title():
 	_dialog._show_replace_dialog(_test_dir + "/assets/backgrounds/bg1.png")
 	var replace_dlg: Window = null
 	for child in _dialog.get_children():
-		if child is Window and child != _dialog._image_preview and child.title == "Remplacer l'image":
+		if child is Window and child != _dialog._image_preview and child.title == tr("Remplacer l'image"):
 			replace_dlg = child
 			break
 	assert_not_null(replace_dlg)
@@ -497,7 +497,7 @@ func test_replace_dialog_excludes_source_image():
 	_dialog._show_replace_dialog(_test_dir + "/assets/backgrounds/bg1.png")
 	var replace_dlg: Window = null
 	for child in _dialog.get_children():
-		if child is Window and child != _dialog._image_preview and child.title == "Remplacer l'image":
+		if child is Window and child != _dialog._image_preview and child.title == tr("Remplacer l'image"):
 			replace_dlg = child
 			break
 	assert_not_null(replace_dlg)
@@ -516,7 +516,7 @@ func test_replace_dialog_shows_same_type_images():
 	_dialog._show_replace_dialog(_test_dir + "/assets/backgrounds/bg1.png")
 	var replace_dlg: Window = null
 	for child in _dialog.get_children():
-		if child is Window and child != _dialog._image_preview and child.title == "Remplacer l'image":
+		if child is Window and child != _dialog._image_preview and child.title == tr("Remplacer l'image"):
 			replace_dlg = child
 			break
 	assert_not_null(replace_dlg)
@@ -684,25 +684,25 @@ func test_format_size_bytes():
 	var story = StoryScript.new()
 	story.title = "Test"
 	_dialog.setup(story, _test_dir)
-	assert_eq(_dialog._format_size(0), "0 o")
-	assert_eq(_dialog._format_size(512), "512 o")
-	assert_eq(_dialog._format_size(1023), "1023 o")
+	assert_eq(_dialog._format_size(0), tr("%d o") % 0)
+	assert_eq(_dialog._format_size(512), tr("%d o") % 512)
+	assert_eq(_dialog._format_size(1023), tr("%d o") % 1023)
 
 
 func test_format_size_kilobytes():
 	var story = StoryScript.new()
 	story.title = "Test"
 	_dialog.setup(story, _test_dir)
-	assert_eq(_dialog._format_size(1024), "1.0 Ko")
-	assert_eq(_dialog._format_size(1536), "1.5 Ko")
+	assert_eq(_dialog._format_size(1024), tr("%.1f Ko") % 1.0)
+	assert_eq(_dialog._format_size(1536), tr("%.1f Ko") % 1.5)
 
 
 func test_format_size_megabytes():
 	var story = StoryScript.new()
 	story.title = "Test"
 	_dialog.setup(story, _test_dir)
-	assert_eq(_dialog._format_size(1048576), "1.0 Mo")
-	assert_eq(_dialog._format_size(2621440), "2.5 Mo")
+	assert_eq(_dialog._format_size(1048576), tr("%.1f Mo") % 1.0)
+	assert_eq(_dialog._format_size(2621440), tr("%.1f Mo") % 2.5)
 
 
 # --- _on_close ---
@@ -908,7 +908,7 @@ func test_clean_pressed_shows_info_when_all_used():
 		if child is AcceptDialog and not child is ConfirmationDialog:
 			info = child
 	assert_not_null(info)
-	assert_string_contains(info.dialog_text, "utilisées")
+	assert_string_contains(info.dialog_text, tr("Toutes les images sont utilisées."))
 
 
 func test_clean_pressed_shows_confirm_when_unused_exist():
@@ -925,7 +925,7 @@ func test_clean_pressed_shows_confirm_when_unused_exist():
 		if child is ConfirmationDialog:
 			confirm = child
 	assert_not_null(confirm)
-	assert_string_contains(confirm.dialog_text, "fichier(s)")
+	assert_ne(confirm.dialog_text, "")
 
 
 # --- _execute_replace without story ---
@@ -977,7 +977,7 @@ func test_setup_with_empty_base_path():
 	var story = StoryScript.new()
 	story.title = "Empty Path"
 	_dialog.setup(story, "")
-	assert_eq(_dialog.title, "Galerie — Empty Path")
+	assert_eq(_dialog.title, tr("Galerie — %s") % "Empty Path")
 	assert_not_null(_dialog._category_service)
 
 

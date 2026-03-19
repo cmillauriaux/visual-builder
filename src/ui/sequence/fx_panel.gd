@@ -20,22 +20,22 @@ func _build_ui() -> void:
 	add_child(header)
 
 	var title = Label.new()
-	title.text = "Effets visuels (FX)"
+	title.text = tr("Effets visuels (FX)")
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(title)
 
 	_add_button = MenuButton.new()
-	_add_button.text = "+ Ajouter FX"
+	_add_button.text = tr("+ Ajouter FX")
 	header.add_child(_add_button)
 
 	var popup = _add_button.get_popup()
-	popup.add_item("Fondu (fade in)", 0)
-	popup.add_item("Tremblement (screen shake)", 1)
-	popup.add_item("Clignement (eyes blink)", 2)
-	popup.add_item("Flash", 3)
-	popup.add_item("Zoom", 4)
-	popup.add_item("Vignette", 5)
-	popup.add_item("Désaturation", 6)
+	popup.add_item(tr("Fondu (fade in)"), 0)
+	popup.add_item(tr("Tremblement (screen shake)"), 1)
+	popup.add_item(tr("Clignement (eyes blink)"), 2)
+	popup.add_item(tr("Flash"), 3)
+	popup.add_item(tr("Zoom"), 4)
+	popup.add_item(tr("Vignette"), 5)
+	popup.add_item(tr("Désaturation"), 6)
 	popup.id_pressed.connect(_on_add_fx_type_selected)
 
 	_fx_list_container = VBoxContainer.new()
@@ -82,7 +82,7 @@ func _build_fx_row(fx, index: int) -> HBoxContainer:
 
 	# Duration
 	var dur_label = Label.new()
-	dur_label.text = "Durée:"
+	dur_label.text = tr("Durée:")
 	row.add_child(dur_label)
 
 	var dur_spin = SpinBox.new()
@@ -96,7 +96,7 @@ func _build_fx_row(fx, index: int) -> HBoxContainer:
 
 	# Intensity
 	var int_label = Label.new()
-	int_label.text = "Intensité:"
+	int_label.text = tr("Intensité:")
 	row.add_child(int_label)
 
 	var int_spin = SpinBox.new()
@@ -111,7 +111,7 @@ func _build_fx_row(fx, index: int) -> HBoxContainer:
 	# Color picker (only for flash)
 	if fx.fx_type == "flash":
 		var color_label = Label.new()
-		color_label.text = "Couleur:"
+		color_label.text = tr("Couleur:")
 		row.add_child(color_label)
 
 		var color_btn = ColorPickerButton.new()
@@ -134,19 +134,19 @@ func _build_fx_row(fx, index: int) -> HBoxContainer:
 func _get_fx_label(fx_type: String) -> String:
 	match fx_type:
 		"screen_shake":
-			return "Tremblement"
+			return tr("Tremblement")
 		"fade_in":
-			return "Fondu"
+			return tr("Fondu")
 		"eyes_blink":
-			return "Clignement"
+			return tr("Clignement")
 		"flash":
-			return "Flash"
+			return tr("Flash")
 		"zoom":
-			return "Zoom"
+			return tr("Zoom")
 		"vignette":
-			return "Vignette"
+			return tr("Vignette")
 		"desaturation":
-			return "Désaturation"
+			return tr("Désaturation")
 		_:
 			return fx_type
 

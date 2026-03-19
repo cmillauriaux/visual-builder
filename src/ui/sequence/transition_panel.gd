@@ -23,17 +23,17 @@ func _ready() -> void:
 
 	# Type (fondu)
 	var type_label = Label.new()
-	type_label.text = "Fondu :"
+	type_label.text = tr("Fondu :")
 	row.add_child(type_label)
 	_type_option = OptionButton.new()
 	for i in range(TYPE_LABELS.size()):
-		_type_option.add_item(TYPE_LABELS[i], i)
+		_type_option.add_item(tr(TYPE_LABELS[i]), i)
 	_type_option.item_selected.connect(_on_type_selected)
 	row.add_child(_type_option)
 
 	# Duration (temps de fondu)
 	var dur_label = Label.new()
-	dur_label.text = "Durée :"
+	dur_label.text = tr("Durée :")
 	row.add_child(dur_label)
 	_duration_spin = SpinBox.new()
 	_duration_spin.min_value = 0.1
@@ -46,7 +46,7 @@ func _ready() -> void:
 
 	# Z-Index
 	var z_label = Label.new()
-	z_label.text = "Z-Index :"
+	z_label.text = tr("Z-Index :")
 	row.add_child(z_label)
 	_z_order_spin = SpinBox.new()
 	_z_order_spin.min_value = -100
@@ -58,11 +58,11 @@ func _ready() -> void:
 
 	# Flip
 	var flip_label = Label.new()
-	flip_label.text = "Flip :"
+	flip_label.text = tr("Flip :")
 	row.add_child(flip_label)
 	_flip_option = OptionButton.new()
 	for i in range(FLIP_LABELS.size()):
-		_flip_option.add_item(FLIP_LABELS[i], i)
+		_flip_option.add_item(tr(FLIP_LABELS[i]), i)
 	_flip_option.item_selected.connect(_on_flip_selected)
 	row.add_child(_flip_option)
 
