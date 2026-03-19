@@ -10,9 +10,14 @@ var _items: Array = []
 var _hbox: HBoxContainer
 var _add_btn: PanelContainer
 var _selected_index: int = -1
+var _context_menu: PopupMenu
+var _context_target_index: int = -1
 
 signal dialogue_clicked(index: int)
 signal dialogue_delete_requested(index: int)
+signal dialogue_duplicate_requested(index: int)
+signal dialogue_insert_before_requested(index: int)
+signal dialogue_insert_after_requested(index: int)
 signal add_dialogue_requested()
 signal foreground_dropped_on_dialogue(fg_data, target_index: int)
 
@@ -43,6 +48,17 @@ func _ready() -> void:
 	_add_btn.add_child(add_label)
 	_add_btn.gui_input.connect(_on_add_btn_input)
 
+	# Context menu
+	_context_menu = PopupMenu.new()
+	_context_menu.add_item("Dupliquer", 0)
+	_context_menu.add_separator()
+	_context_menu.add_item("Insérer à gauche", 1)
+	_context_menu.add_item("Insérer à droite", 2)
+	_context_menu.add_separator()
+	_context_menu.add_item("Supprimer", 3)
+	_context_menu.id_pressed.connect(_on_context_menu_id_pressed)
+	add_child(_context_menu)
+
 
 func setup(seq_editor) -> void:
 	_seq_editor = seq_editor
@@ -72,6 +88,7 @@ func rebuild() -> void:
 		_items.append(item)
 
 		item.item_clicked.connect(_on_item_clicked)
+		item.item_right_clicked.connect(_on_item_right_clicked)
 
 	# Re-add the "+" button at the end
 	if _add_btn.get_parent():
@@ -106,6 +123,28 @@ func _clear_items() -> void:
 func _on_item_clicked(index: int) -> void:
 	select_item(index)
 	dialogue_clicked.emit(index)
+
+
+func _on_item_right_clicked(index: int, global_pos: Vector2) -> void:
+	_context_target_index = index
+	select_item(index)
+	dialogue_clicked.emit(index)
+	_context_menu.position = Vector2i(global_pos)
+	_context_menu.popup()
+
+
+func _on_context_menu_id_pressed(id: int) -> void:
+	if _context_target_index < 0:
+		return
+	match id:
+		0:  # Dupliquer
+			dialogue_duplicate_requested.emit(_context_target_index)
+		1:  # Insérer à gauche
+			dialogue_insert_before_requested.emit(_context_target_index)
+		2:  # Insérer à droite
+			dialogue_insert_after_requested.emit(_context_target_index)
+		3:  # Supprimer
+			dialogue_delete_requested.emit(_context_target_index)
 
 
 func _on_add_btn_input(event: InputEvent) -> void:

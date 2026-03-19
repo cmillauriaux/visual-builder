@@ -274,6 +274,10 @@ func _connect_signals() -> void:
 	# Timeline
 	_dialogue_timeline.dialogue_clicked.connect(_on_timeline_dialogue_clicked)
 	_dialogue_timeline.add_dialogue_requested.connect(_seq_ui_ctrl.on_add_dialogue_pressed)
+	_dialogue_timeline.dialogue_duplicate_requested.connect(_seq_ui_ctrl.on_duplicate_dialogue)
+	_dialogue_timeline.dialogue_insert_before_requested.connect(_seq_ui_ctrl.on_insert_dialogue_before)
+	_dialogue_timeline.dialogue_insert_after_requested.connect(_seq_ui_ctrl.on_insert_dialogue_after)
+	_dialogue_timeline.dialogue_delete_requested.connect(_seq_ui_ctrl.on_delete_dialogue)
 	_dialogue_timeline.foreground_dropped_on_dialogue.connect(_on_foreground_dropped_on_dialogue)
 
 	# Dialogue edit section
@@ -318,6 +322,7 @@ func _connect_signals() -> void:
 	_visual_editor.foreground_replace_with_new_requested.connect(_seq_ui_ctrl.on_foreground_replace_with_new_requested)
 	_visual_editor.inherited_foreground_edit_confirmed.connect(_on_inherited_fg_edit_confirmed)
 	_visual_editor.foreground_modified.connect(_seq_ui_ctrl.on_foreground_modified)
+	_visual_editor.foreground_modified.connect(func(_uuid: String = ""): _rebuild_dialogue_list())
 	_fx_panel.fx_changed.connect(_on_fx_changed)
 	_audio_panel.audio_changed.connect(_on_audio_changed)
 

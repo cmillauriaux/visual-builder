@@ -797,6 +797,72 @@ func test_propagate_fg_changes_mixed_delta_and_absolute():
 	assert_true(fg1.flip_h)
 
 
+# --- Duplicate dialogue ---
+
+func test_duplicate_dialogue_inserts_after():
+	_add_dialogue("Alice", "Bonjour")
+	_add_dialogue("Bob", "Salut")
+	_editor.load_sequence(_sequence)
+	var new_idx = _editor.duplicate_dialogue(0)
+	assert_eq(new_idx, 1)
+	assert_eq(_sequence.dialogues.size(), 3)
+	assert_eq(_sequence.dialogues[1].character, "Alice")
+	assert_eq(_sequence.dialogues[1].text, "Bonjour")
+	assert_eq(_sequence.dialogues[2].character, "Bob")
+
+
+func test_duplicate_dialogue_copies_foregrounds():
+	var dlg = _add_dialogue("Alice", "Bonjour")
+	var fg = Foreground.new()
+	fg.fg_name = "perso"
+	fg.image = "perso.png"
+	fg.scale = 1.5
+	dlg.foregrounds.append(fg)
+	_editor.load_sequence(_sequence)
+	var new_idx = _editor.duplicate_dialogue(0)
+	var dup = _sequence.dialogues[new_idx]
+	assert_eq(dup.foregrounds.size(), 1)
+	assert_eq(dup.foregrounds[0].fg_name, "perso")
+	assert_eq(dup.foregrounds[0].image, "perso.png")
+	assert_almost_eq(dup.foregrounds[0].scale, 1.5, 0.01)
+	# UUID must be different
+	assert_ne(dup.foregrounds[0].uuid, fg.uuid)
+
+
+func test_duplicate_dialogue_copies_inherited_foregrounds():
+	var dlg0 = _add_dialogue("Alice", "Bonjour")
+	var fg = Foreground.new()
+	fg.fg_name = "perso"
+	fg.image = "perso.png"
+	dlg0.foregrounds.append(fg)
+	_add_dialogue("Bob", "Salut")  # Inherits from Alice
+	_editor.load_sequence(_sequence)
+	var new_idx = _editor.duplicate_dialogue(1)
+	var dup = _sequence.dialogues[new_idx]
+	# Should have copied the inherited foreground
+	assert_eq(dup.foregrounds.size(), 1)
+	assert_eq(dup.foregrounds[0].fg_name, "perso")
+
+
+func test_duplicate_dialogue_new_uuid():
+	_add_dialogue("Alice", "Bonjour")
+	_editor.load_sequence(_sequence)
+	var original_uuid = _sequence.dialogues[0].uuid
+	_editor.duplicate_dialogue(0)
+	assert_ne(_sequence.dialogues[1].uuid, original_uuid)
+
+
+func test_duplicate_dialogue_invalid_index_returns_minus_one():
+	_editor.load_sequence(_sequence)
+	assert_eq(_editor.duplicate_dialogue(5), -1)
+	assert_eq(_editor.duplicate_dialogue(-1), -1)
+
+
+func test_duplicate_dialogue_null_sequence_returns_minus_one():
+	_editor.load_sequence(null)
+	assert_eq(_editor.duplicate_dialogue(0), -1)
+
+
 # --- Helper ---
 
 func _add_dialogue(character: String, text: String):

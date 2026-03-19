@@ -20,6 +20,7 @@ var _character_label: Label
 var _text_label: Label
 
 signal item_clicked(index: int)
+signal item_right_clicked(index: int, global_pos: Vector2)
 
 func setup(index: int, dialogue, is_inherited: bool, fg_count: int, bg_path: String = "", foregrounds: Array = []) -> void:
 	_dialogue_index = index
@@ -169,8 +170,11 @@ func _create_selected_style() -> StyleBoxFlat:
 
 
 func _on_gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		item_clicked.emit(_dialogue_index)
+	if event is InputEventMouseButton and event.pressed:
+		if event.button_index == MOUSE_BUTTON_LEFT:
+			item_clicked.emit(_dialogue_index)
+		elif event.button_index == MOUSE_BUTTON_RIGHT:
+			item_right_clicked.emit(_dialogue_index, get_global_mouse_position())
 
 
 func get_dialogue_index() -> int:

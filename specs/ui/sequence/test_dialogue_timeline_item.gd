@@ -157,6 +157,15 @@ func test_item_clicked_signal_emitted() -> void:
 	assert_signal_emitted_with_parameters(_item, "item_clicked", [2])
 
 
+# --- Right-click signal ---
+
+func test_item_right_clicked_signal_emitted() -> void:
+	_item = _create_item(2, false, 0)
+	watch_signals(_item)
+	_item.item_right_clicked.emit(2, Vector2(100, 200))
+	assert_signal_emitted_with_parameters(_item, "item_right_clicked", [2, Vector2(100, 200)])
+
+
 # --- Minimum size ---
 
 func test_minimum_width() -> void:

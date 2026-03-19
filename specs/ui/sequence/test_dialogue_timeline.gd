@@ -143,6 +143,64 @@ func test_add_dialogue_requested_signal_exists() -> void:
 	assert_signal_emitted(_timeline, "add_dialogue_requested")
 
 
+# --- Context menu ---
+
+func test_context_menu_exists() -> void:
+	assert_not_null(_timeline._context_menu)
+
+
+func test_context_menu_has_four_actions() -> void:
+	# Dupliquer, separator, Insérer à gauche, Insérer à droite, separator, Supprimer
+	var item_count = 0
+	for i in range(_timeline._context_menu.item_count):
+		if not _timeline._context_menu.is_item_separator(i):
+			item_count += 1
+	assert_eq(item_count, 4)
+
+
+func test_right_click_emits_duplicate_signal() -> void:
+	_mock_editor.sequence = _create_sequence_with_dialogues(3)
+	_timeline.setup(_mock_editor)
+	watch_signals(_timeline)
+	_timeline._on_item_right_clicked(1, Vector2(100, 100))
+	_timeline._on_context_menu_id_pressed(0)  # Dupliquer
+	assert_signal_emitted_with_parameters(_timeline, "dialogue_duplicate_requested", [1])
+
+
+func test_right_click_emits_insert_before_signal() -> void:
+	_mock_editor.sequence = _create_sequence_with_dialogues(3)
+	_timeline.setup(_mock_editor)
+	watch_signals(_timeline)
+	_timeline._on_item_right_clicked(1, Vector2(100, 100))
+	_timeline._on_context_menu_id_pressed(1)  # Insérer à gauche
+	assert_signal_emitted_with_parameters(_timeline, "dialogue_insert_before_requested", [1])
+
+
+func test_right_click_emits_insert_after_signal() -> void:
+	_mock_editor.sequence = _create_sequence_with_dialogues(3)
+	_timeline.setup(_mock_editor)
+	watch_signals(_timeline)
+	_timeline._on_item_right_clicked(2, Vector2(100, 100))
+	_timeline._on_context_menu_id_pressed(2)  # Insérer à droite
+	assert_signal_emitted_with_parameters(_timeline, "dialogue_insert_after_requested", [2])
+
+
+func test_right_click_emits_delete_signal() -> void:
+	_mock_editor.sequence = _create_sequence_with_dialogues(3)
+	_timeline.setup(_mock_editor)
+	watch_signals(_timeline)
+	_timeline._on_item_right_clicked(0, Vector2(100, 100))
+	_timeline._on_context_menu_id_pressed(3)  # Supprimer
+	assert_signal_emitted_with_parameters(_timeline, "dialogue_delete_requested", [0])
+
+
+func test_right_click_selects_item() -> void:
+	_mock_editor.sequence = _create_sequence_with_dialogues(3)
+	_timeline.setup(_mock_editor)
+	_timeline._on_item_right_clicked(2, Vector2(100, 100))
+	assert_eq(_timeline._selected_index, 2)
+
+
 # --- Rebuild preserves selection ---
 
 func test_rebuild_preserves_selection() -> void:

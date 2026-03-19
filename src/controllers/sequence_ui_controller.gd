@@ -40,6 +40,8 @@ func on_import_bg_pressed() -> void:
 func _on_bg_file_selected(path: String) -> void:
 	_main._sequence_editor_ctrl.set_background(path)
 	_main._visual_editor.set_background(path)
+	_main._rebuild_dialogue_list()
+	EventBus.story_modified.emit()
 
 
 func on_normalize_foregrounds_pressed() -> void:
@@ -67,6 +69,8 @@ func _on_fg_file_selected(path: String) -> void:
 		return
 	_main._sequence_editor_ctrl.add_foreground_to_current(path.get_file().get_basename(), path)
 	_main.update_preview_for_dialogue(idx)
+	_main._rebuild_dialogue_list()
+	EventBus.story_modified.emit()
 
 
 func on_foreground_replace_requested(uuid: String) -> void:
@@ -79,6 +83,8 @@ func _on_replace_fg_selected(path: String, uuid: String) -> void:
 		var cmd = ReplaceForegroundImageCommand.new(fg, path)
 		_main._undo_redo.push_and_execute(cmd)
 		_main._visual_editor._update_foreground_visuals()
+		_main._rebuild_dialogue_list()
+		EventBus.story_modified.emit()
 
 
 func on_foreground_replace_with_new_requested(uuid: String) -> void:
@@ -95,6 +101,8 @@ func _on_replace_with_new_fg_selected(path: String, uuid: String) -> void:
 		var cmd = ReplaceWithNewForegroundCommand.new(dialogue, template_fg, path, inherited)
 		_main._undo_redo.push_and_execute(cmd)
 		_main.update_preview_for_dialogue(idx)
+		_main._rebuild_dialogue_list()
+		EventBus.story_modified.emit()
 
 
 func _open_image_picker(mode: int, on_selected: Callable) -> void:
@@ -149,6 +157,37 @@ func on_add_dialogue_pressed() -> void:
 	_main._undo_redo.push_and_execute(cmd)
 	_main._rebuild_dialogue_list()
 	_main._on_dialogue_selected(index)
+
+
+func on_duplicate_dialogue(index: int) -> void:
+	var new_idx = _main._sequence_editor_ctrl.duplicate_dialogue(index)
+	if new_idx >= 0:
+		_main._rebuild_dialogue_list()
+		_main._on_dialogue_selected(new_idx)
+		EventBus.story_modified.emit()
+
+
+func on_insert_dialogue_before(index: int) -> void:
+	var seq = _main._sequence_editor_ctrl.get_sequence()
+	if seq == null:
+		return
+	var cmd = AddDialogueCommand.new(seq, "", "", index)
+	_main._undo_redo.push_and_execute(cmd)
+	_main._rebuild_dialogue_list()
+	_main._on_dialogue_selected(index)
+	EventBus.story_modified.emit()
+
+
+func on_insert_dialogue_after(index: int) -> void:
+	var seq = _main._sequence_editor_ctrl.get_sequence()
+	if seq == null:
+		return
+	var insert_idx = index + 1
+	var cmd = AddDialogueCommand.new(seq, "", "", insert_idx)
+	_main._undo_redo.push_and_execute(cmd)
+	_main._rebuild_dialogue_list()
+	_main._on_dialogue_selected(insert_idx)
+	EventBus.story_modified.emit()
 
 
 func on_delete_dialogue(index: int) -> void:

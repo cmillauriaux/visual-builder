@@ -256,6 +256,23 @@ func move_dialogue(from_index: int, to_index: int) -> void:
 	_sequence.dialogues.remove_at(from_index)
 	_sequence.dialogues.insert(to_index, dlg)
 
+func duplicate_dialogue(index: int) -> int:
+	if _sequence == null or index < 0 or index >= _sequence.dialogues.size():
+		return -1
+	var src = _sequence.dialogues[index]
+	var dlg = DialogueScript.new()
+	dlg.character = src.character
+	dlg.text = src.text
+	# Deep copy foregrounds
+	for fg in get_effective_foregrounds(index):
+		var copy = _copy_foreground(fg)
+		copy.uuid = ForegroundScript.new().uuid  # New UUID
+		dlg.foregrounds.append(copy)
+	var insert_idx = index + 1
+	_sequence.dialogues.insert(insert_idx, dlg)
+	return insert_idx
+
+
 func modify_dialogue(index: int, character: String, text: String) -> void:
 	if _sequence == null or index < 0 or index >= _sequence.dialogues.size():
 		return
