@@ -23,6 +23,7 @@ const PwaInstallPromptScript = preload("res://src/ui/menu/pwa_install_prompt.gd"
 const GamePluginManagerScript = preload("res://src/plugins/game_plugin_manager.gd")
 const GamePluginContextScript = preload("res://src/plugins/game_plugin_context.gd")
 const LocaleDetector = preload("res://src/services/locale_detector.gd")
+const ScreenshotServiceScript = preload("res://src/services/screenshot_service.gd")
 
 ## Chemin vers la story à charger automatiquement.
 ## Si vide, affiche le sélecteur. Peut pointer vers res:// ou user://.
@@ -120,6 +121,9 @@ var _plugin_overlay_top: HBoxContainer
 # PCK chapter loader
 var _pck_loader: RefCounted
 
+# Screenshot service (miniatures basse résolution pour les sauvegardes)
+var _screenshot_service: Node
+
 # State
 var _current_story = null
 var _current_story_path: String = ""
@@ -148,6 +152,12 @@ func _ready() -> void:
 	add_child(_game_plugin_manager)
 	_game_plugin_manager.load_enabled_states(_settings)
 	_game_plugin_manager.scan_and_load_plugins()
+
+	# Initialiser le service de screenshot basse résolution
+	_screenshot_service = Node.new()
+	_screenshot_service.set_script(ScreenshotServiceScript)
+	add_child(_screenshot_service)
+	_screenshot_service.setup(get_viewport())
 
 	# Configurer le contrôleur de jeu avec les réglages
 	_story_play_ctrl.setup(null, _settings.autosave_enabled)
@@ -473,7 +483,7 @@ func _on_game_over_load_autosave() -> void:
 
 func _on_menu_button_pressed() -> void:
 	# Capturer le screenshot avant d'afficher le menu (sans overlay)
-	_pending_screenshot = get_viewport().get_texture().get_image()
+	_pending_screenshot = _screenshot_service.capture()
 	_hide_play_ui_for_menu()
 	get_tree().paused = true
 	_pause_menu.show_menu()
@@ -736,11 +746,8 @@ func _on_save_slot(slot_index: int) -> void:
 func _on_autosave_triggered() -> void:
 	if _current_story == null:
 		return
-	# Capture le screenshot immédiatement (rapide, copie mémoire)
-	# En mode headless, get_texture().get_image() plante — on passe null
-	var screenshot: Image = null
-	if DisplayServer.get_name() != "headless":
-		screenshot = get_viewport().get_texture().get_image()
+	# Capture miniature basse résolution (< 1ms via SubViewport 320×180)
+	var screenshot: Image = _screenshot_service.capture()
 	var state := _collect_game_state()
 	_update_cached_progression(state)
 	# Écriture JSON + encodage PNG en tâche de fond pour ne pas bloquer le gameplay
@@ -1041,7 +1048,7 @@ func _can_quicksave() -> bool:
 func _on_quicksave() -> void:
 	if not _can_quicksave():
 		return
-	var screenshot := get_viewport().get_texture().get_image()
+	var screenshot: Image = _screenshot_service.capture()
 	var state := _collect_game_state()
 	var ok := GameSaveManager.quicksave(state, screenshot)
 	if ok:
