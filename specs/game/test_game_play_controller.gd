@@ -297,3 +297,37 @@ func test_choice_buttons_have_cyclic_focus() -> void:
 	assert_eq(first_btn.get_node(first_btn.focus_neighbor_top), last_btn, "first btn top should resolve to last btn")
 	assert_eq(last_btn.get_node(last_btn.focus_neighbor_bottom), first_btn, "last btn bottom should resolve to first btn")
 	_game._play_ctrl._hide_choice_overlay()
+
+
+# --- Transition out skipped for choices ending ---
+
+const EndingScript = preload("res://src/models/ending.gd")
+
+func test_handle_play_stopped_skips_transition_out_when_choices_ending() -> void:
+	var seq = _create_sequence_with_dialogue("Alice", "Hello")
+	seq.transition_out_type = "fade"
+	seq.transition_out_duration = 1.0
+	var ending = EndingScript.new()
+	ending.type = "choices"
+	var c = ChoiceScript.new()
+	c.text = "Go"
+	ending.choices.append(c)
+	seq.ending = ending
+	_game._play_ctrl._current_playing_sequence = seq
+	_game._play_ctrl._handle_play_stopped()
+	# Le fx_player ne doit PAS avoir de noeud TransFadeOutOverlay
+	var fx = _game._sequence_fx_player
+	assert_false(fx.is_playing(), "fx player should NOT be playing transition for choices ending")
+
+
+func test_handle_play_stopped_plays_transition_out_for_auto_redirect() -> void:
+	var seq = _create_sequence_with_dialogue("Alice", "Hello")
+	seq.transition_out_type = "fade"
+	seq.transition_out_duration = 0.5
+	var ending = EndingScript.new()
+	ending.type = "auto_redirect"
+	seq.ending = ending
+	_game._play_ctrl._current_playing_sequence = seq
+	_game._play_ctrl._handle_play_stopped()
+	var fx = _game._sequence_fx_player
+	assert_true(fx.is_playing(), "fx player SHOULD play transition for auto_redirect ending")

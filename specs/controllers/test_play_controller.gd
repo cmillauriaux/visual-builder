@@ -234,3 +234,45 @@ func test_prepare_opening_visuals_no_dialogues_does_nothing() -> void:
 	# Foregrounds should remain unchanged since there are no dialogues
 	assert_eq(seq.foregrounds.size(), 1)
 	assert_eq(seq.foregrounds[0].fg_name, "old_fg")
+
+
+# --- Transition out skipped for choices ending ---
+
+const EndingScript = preload("res://src/models/ending.gd")
+const ChoiceScript = preload("res://src/models/choice.gd")
+
+func test_handle_play_stopped_skips_transition_out_when_choices_ending() -> void:
+	var seq = SequenceScript.new()
+	var dlg = DialogueScript.new()
+	dlg.character = "Alice"
+	dlg.text = "Test"
+	seq.dialogues.append(dlg)
+	seq.transition_out_type = "fade"
+	seq.transition_out_duration = 1.0
+	var ending = EndingScript.new()
+	ending.type = "choices"
+	var c = ChoiceScript.new()
+	c.text = "Go"
+	ending.choices.append(c)
+	seq.ending = ending
+	_main._play_ctrl._current_playing_sequence = seq
+	_main._play_ctrl._handle_play_stopped()
+	var fx = _main._sequence_fx_player
+	assert_false(fx.is_playing(), "fx player should NOT be playing transition for choices ending")
+
+
+func test_handle_play_stopped_plays_transition_out_for_auto_redirect() -> void:
+	var seq = SequenceScript.new()
+	var dlg = DialogueScript.new()
+	dlg.character = "Alice"
+	dlg.text = "Test"
+	seq.dialogues.append(dlg)
+	seq.transition_out_type = "fade"
+	seq.transition_out_duration = 0.5
+	var ending = EndingScript.new()
+	ending.type = "auto_redirect"
+	seq.ending = ending
+	_main._play_ctrl._current_playing_sequence = seq
+	_main._play_ctrl._handle_play_stopped()
+	var fx = _main._sequence_fx_player
+	assert_true(fx.is_playing(), "fx player SHOULD play transition for auto_redirect ending")

@@ -489,7 +489,10 @@ func _handle_play_stopped() -> void:
 		_play_overlay.get_parent().remove_child(_play_overlay)
 	
 	var seq = _current_playing_sequence
-	if seq and seq.transition_out_type != "none" and not _user_stopped:
+	# Ne pas jouer la transition de sortie si l'ending est un choix :
+	# le background/foreground doit rester visible derrière les boutons de choix.
+	var has_choices_ending = seq != null and seq.ending != null and seq.ending.type == "choices"
+	if seq and seq.transition_out_type != "none" and not _user_stopped and not has_choices_ending:
 		_sequence_fx_player.fx_finished.connect(_on_trans_out_finished, CONNECT_ONE_SHOT)
 		_sequence_fx_player.play_transition(seq.transition_out_type, seq.transition_out_duration, false, _visual_editor._fx_container)
 	else:
