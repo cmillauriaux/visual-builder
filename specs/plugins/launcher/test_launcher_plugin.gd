@@ -285,11 +285,52 @@ func test_editor_config_creates_control():
 func test_editor_config_default_values():
 	var ctrls = _plugin.get_editor_config_controls()
 	var ctrl = ctrls[0].create_control.call({})
-	var values = LauncherPluginScript.read_editor_config(ctrl)
+	var values = _plugin.read_editor_config(ctrl)
 	assert_false(values["studio_logo_enabled"])
 	assert_true(values["engine_logo_enabled"])
 	assert_false(values["disclaimer_enabled"])
 	assert_false(values["free_text_enabled"])
+	ctrl.queue_free()
+
+
+func test_editor_config_studio_logo_has_browse_and_clear():
+	var ctrls = _plugin.get_editor_config_controls()
+	var ctrl = ctrls[0].create_control.call({})
+	# The studio logo section should have: CheckButton then HBoxContainer
+	# HBoxContainer contains: LineEdit (read-only) + Browse button + Clear button
+	var studio_hbox: HBoxContainer = null
+	for child in ctrl.get_children():
+		if child is HBoxContainer:
+			studio_hbox = child
+			break
+	assert_not_null(studio_hbox, "Should have an HBoxContainer for studio logo path")
+	assert_eq(studio_hbox.get_child_count(), 3)
+	var path_edit = studio_hbox.get_child(0)
+	assert_true(path_edit is LineEdit)
+	assert_false(path_edit.editable, "Path edit should be read-only")
+	var browse_btn = studio_hbox.get_child(1)
+	assert_true(browse_btn is Button)
+	assert_eq(browse_btn.name, "StudioLogoBrowseBtn")
+	var clear_btn = studio_hbox.get_child(2)
+	assert_true(clear_btn is Button)
+	assert_eq(clear_btn.name, "StudioLogoClearBtn")
+	ctrl.queue_free()
+
+
+func test_editor_config_clear_button_clears_path():
+	var ctrls = _plugin.get_editor_config_controls()
+	var ctrl = ctrls[0].create_control.call({"studio_logo_path": "logo.png"})
+	var path_edit: LineEdit = ctrl.get_meta("_studio_path_edit")
+	assert_eq(path_edit.text, "logo.png")
+	# Find and press the clear button
+	var studio_hbox: HBoxContainer = null
+	for child in ctrl.get_children():
+		if child is HBoxContainer:
+			studio_hbox = child
+			break
+	var clear_btn: Button = studio_hbox.get_child(2)
+	clear_btn.pressed.emit()
+	assert_eq(path_edit.text, "")
 	ctrl.queue_free()
 
 
@@ -305,7 +346,7 @@ func test_editor_config_reads_existing_values():
 	}
 	var ctrls = _plugin.get_editor_config_controls()
 	var ctrl = ctrls[0].create_control.call(existing)
-	var values = LauncherPluginScript.read_editor_config(ctrl)
+	var values = _plugin.read_editor_config(ctrl)
 	assert_true(values["studio_logo_enabled"])
 	assert_eq(values["studio_logo_path"], "logo.png")
 	assert_false(values["engine_logo_enabled"])
@@ -317,8 +358,14 @@ func test_editor_config_reads_existing_values():
 
 
 func test_read_editor_config_null_returns_empty():
-	var values = LauncherPluginScript.read_editor_config(null)
+	var values = _plugin.read_editor_config(null)
 	assert_eq(values, {})
+
+
+func test_has_method_read_editor_config():
+	# Vérifie que has_method détecte read_editor_config sur l'instance
+	# (c'est le chemin d'appel réel dans menu_config_dialog._collect_plugin_settings)
+	assert_true(_plugin.has_method("read_editor_config"), "has_method must detect read_editor_config on instance")
 
 
 # --- Export options ---

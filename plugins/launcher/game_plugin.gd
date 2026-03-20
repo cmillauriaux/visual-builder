@@ -33,14 +33,20 @@ func get_plugin_folder() -> String:
 
 
 func on_game_ready(ctx: RefCounted) -> void:
+	print("[Launcher] on_game_ready called")
 	if ctx == null or ctx.game_node == null:
+		print("[Launcher] ctx or game_node is null, aborting")
 		return
 	_game_node = ctx.game_node
 	var config := _get_config(ctx)
+	print("[Launcher] config: ", config)
 	var steps := _build_steps(config, ctx)
+	print("[Launcher] steps count: ", steps.size(), " steps: ", steps)
 	if steps.is_empty():
+		print("[Launcher] no steps, skipping")
 		return
 	_play_generation += 1
+	print("[Launcher] starting sequence, generation=", _play_generation)
 	await _play_sequence(steps, _play_generation)
 
 
@@ -363,11 +369,30 @@ func _create_editor_config(current_settings) -> Control:
 	studio_check.button_pressed = ps.get("studio_logo_enabled", false)
 	vbox.add_child(studio_check)
 
+	var studio_path_hbox := HBoxContainer.new()
+	studio_path_hbox.add_theme_constant_override("separation", 4)
+
 	var studio_path_edit := LineEdit.new()
 	studio_path_edit.name = "StudioLogoPathEdit"
 	studio_path_edit.placeholder_text = "Chemin vers l'image du logo"
 	studio_path_edit.text = ps.get("studio_logo_path", "")
-	vbox.add_child(studio_path_edit)
+	studio_path_edit.editable = false
+	studio_path_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	studio_path_hbox.add_child(studio_path_edit)
+
+	var browse_btn := Button.new()
+	browse_btn.name = "StudioLogoBrowseBtn"
+	browse_btn.text = "Parcourir..."
+	browse_btn.pressed.connect(func(): _on_studio_logo_browse(vbox, studio_path_edit))
+	studio_path_hbox.add_child(browse_btn)
+
+	var clear_btn := Button.new()
+	clear_btn.name = "StudioLogoClearBtn"
+	clear_btn.text = "×"
+	clear_btn.pressed.connect(func(): studio_path_edit.text = "")
+	studio_path_hbox.add_child(clear_btn)
+
+	vbox.add_child(studio_path_hbox)
 
 	# --- Section Logo Moteur ---
 	var engine_check := CheckButton.new()
@@ -416,7 +441,7 @@ func _create_editor_config(current_settings) -> Control:
 
 
 ## Lit les valeurs actuelles des contrôles éditeur et retourne un Dictionary.
-static func read_editor_config(control: Control) -> Dictionary:
+func read_editor_config(control: Control) -> Dictionary:
 	if control == null:
 		return {}
 	return {
@@ -432,6 +457,27 @@ static func read_editor_config(control: Control) -> Dictionary:
 		"free_text_content": control.get_meta("_free_text_edit").text if control.has_meta("_free_text_edit") else "",
 		"free_text_duration": 3.0,
 	}
+
+
+func _on_studio_logo_browse(root_control: Control, path_edit: LineEdit) -> void:
+	var story_base_path: String = root_control.get_meta("_story_base_path", "")
+	var story = root_control.get_meta("_story", null)
+	var ImagePickerDialog = load("res://src/ui/dialogs/image_picker_dialog.gd")
+	if ImagePickerDialog == null:
+		push_warning("ImagePickerDialog not available (exported build)")
+		return
+	var picker = Window.new()
+	picker.set_script(ImagePickerDialog)
+	root_control.add_child(picker)
+	picker.setup(ImagePickerDialog.Mode.BACKGROUND, story_base_path, story)
+	picker.image_selected.connect(func(path: String):
+		if story_base_path != "":
+			var prefix = story_base_path + "/"
+			if path.begins_with(prefix):
+				path = path.substr(prefix.length())
+		path_edit.text = path
+	)
+	picker.popup_centered()
 
 
 func get_export_options() -> Array:

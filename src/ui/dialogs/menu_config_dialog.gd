@@ -757,6 +757,8 @@ func _rebuild_plugins_tab() -> void:
 			var ps: Dictionary = _story.plugin_settings.get(pname, {}) if _story else {}
 			var ctrl: Control = def.create_control.call(ps)
 			if ctrl != null:
+				ctrl.set_meta("_story_base_path", _story_base_path)
+				ctrl.set_meta("_story", _story)
 				_plugins_container.add_child(ctrl)
 				_plugin_controls[pname] = ctrl
 				if _story and ctrl.has_meta("populate_chapters"):
@@ -766,6 +768,7 @@ func _rebuild_plugins_tab() -> void:
 
 func _scan_game_plugins() -> Array:
 	var plugins: Array = []
+	var paths: Array = []
 	for dir_path in ["res://plugins/", "res://game_plugins/"]:
 		var dir := DirAccess.open(dir_path)
 		if dir == null:
@@ -775,14 +778,27 @@ func _scan_game_plugins() -> Array:
 		while entry != "":
 			if dir.current_is_dir() and not entry.begins_with("."):
 				var path := "%s%s/game_plugin.gd" % [dir_path, entry]
-				if FileAccess.file_exists(path):
-					var script = load(path)
-					if script:
-						var instance = script.new()
-						if instance.has_method("get_plugin_name") and instance.get_plugin_name() != "":
-							plugins.append(instance)
+				if ResourceLoader.exists(path):
+					paths.append(path)
 			entry = dir.get_next()
 		dir.list_dir_end()
+	# Fallback : charger depuis le registre si DirAccess n'a rien trouvé
+	if paths.is_empty():
+		const REGISTRY_PATH = "res://plugins/_registry.json"
+		if FileAccess.file_exists(REGISTRY_PATH):
+			var file := FileAccess.open(REGISTRY_PATH, FileAccess.READ)
+			if file:
+				var parsed = JSON.parse_string(file.get_as_text())
+				file.close()
+				if parsed is Array:
+					paths = parsed
+	for path in paths:
+		if ResourceLoader.exists(path):
+			var script = load(path)
+			if script:
+				var instance = script.new()
+				if instance.has_method("get_plugin_name") and instance.get_plugin_name() != "":
+					plugins.append(instance)
 	return plugins
 
 

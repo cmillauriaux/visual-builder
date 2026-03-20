@@ -236,7 +236,7 @@ func test_editor_config_reads_values():
 	var defs = _plugin.get_editor_config_controls()
 	var ps = {"title_id": "MY_TITLE", "enabled": true}
 	var ctrl = defs[0].create_control.call(ps)
-	var values = PlayFabPluginScript.read_editor_config(ctrl)
+	var values = _plugin.read_editor_config(ctrl)
 	assert_eq(values["title_id"], "MY_TITLE")
 	assert_eq(values["enabled"], true)
 	ctrl.queue_free()
@@ -245,7 +245,7 @@ func test_editor_config_reads_values():
 func test_editor_config_empty_by_default():
 	var defs = _plugin.get_editor_config_controls()
 	var ctrl = defs[0].create_control.call({})
-	var values = PlayFabPluginScript.read_editor_config(ctrl)
+	var values = _plugin.read_editor_config(ctrl)
 	assert_eq(values["title_id"], "")
 	assert_eq(values["enabled"], false)
 	ctrl.queue_free()

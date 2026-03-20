@@ -238,6 +238,67 @@ func test_scan_nonexistent_directory_does_not_crash():
 	assert_eq(_manager.get_plugin_count(), 0)
 
 
+func test_scan_finds_plugins_in_plugins_dir():
+	_manager.scan_and_load_plugins(["res://plugins/"])
+	assert_gt(_manager.get_plugin_count(), 0, "Should find at least one plugin in res://plugins/")
+
+
+func test_scan_does_not_duplicate_plugins():
+	_manager.scan_and_load_plugins(["res://plugins/"])
+	var count_first = _manager.get_plugin_count()
+	# Simuler un 2e scan (les doublons doivent être ignorés)
+	_manager.scan_and_load_plugins(["res://plugins/"])
+	assert_eq(_manager.get_plugin_count(), count_first, "Should not duplicate plugins on re-scan")
+
+
+func test_load_registry_with_valid_file():
+	# Créer un fichier registre temporaire avec un plugin connu
+	var reg_path = GamePluginManagerScript.PLUGIN_REGISTRY_PATH
+	var reg_abs = ProjectSettings.globalize_path(reg_path)
+	# Backup si existant
+	var had_registry = FileAccess.file_exists(reg_path)
+	var backup = ""
+	if had_registry:
+		backup = FileAccess.get_file_as_string(reg_path)
+	# Écrire un registre test
+	var f = FileAccess.open(reg_path, FileAccess.WRITE)
+	f.store_string(JSON.stringify(["res://plugins/launcher/game_plugin.gd"]))
+	f.close()
+	# Charger depuis le registre (simuler un export où DirAccess échoue)
+	_manager.scan_and_load_plugins(["res://nonexistent_dir_xyz/"])
+	assert_gt(_manager.get_plugin_count(), 0, "Should load plugins from registry when DirAccess fails")
+	var found_launcher = false
+	for plugin in _manager.get_plugins():
+		if plugin.get_plugin_name() == "launcher":
+			found_launcher = true
+	assert_true(found_launcher, "Launcher plugin should be loaded from registry")
+	# Restaurer
+	if had_registry:
+		f = FileAccess.open(reg_path, FileAccess.WRITE)
+		f.store_string(backup)
+		f.close()
+	else:
+		DirAccess.remove_absolute(reg_abs)
+
+
+func test_load_registry_missing_file_returns_empty():
+	# Scanner un dossier inexistant sans registre → 0 plugins
+	var reg_path = GamePluginManagerScript.PLUGIN_REGISTRY_PATH
+	var reg_abs = ProjectSettings.globalize_path(reg_path)
+	var had_registry = FileAccess.file_exists(reg_path)
+	var backup = ""
+	if had_registry:
+		backup = FileAccess.get_file_as_string(reg_path)
+		DirAccess.remove_absolute(reg_abs)
+	_manager.scan_and_load_plugins(["res://nonexistent_dir_xyz/"])
+	assert_eq(_manager.get_plugin_count(), 0)
+	# Restaurer
+	if had_registry:
+		var f = FileAccess.open(reg_path, FileAccess.WRITE)
+		f.store_string(backup)
+		f.close()
+
+
 # --- Tests UI injection ---
 
 func test_inject_toolbar_buttons_null_container():

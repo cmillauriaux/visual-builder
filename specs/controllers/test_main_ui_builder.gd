@@ -108,7 +108,7 @@ func test_builds_parametres_menu() -> void:
 	assert_eq(_main._parametres_menu.text, "Paramètres")
 	var popup = _main._parametres_menu.get_popup()
 	assert_eq(popup.get_item_text(popup.get_item_index(0)), "Variables")
-	assert_eq(popup.get_item_text(popup.get_item_index(1)), "Menu")
+	assert_eq(popup.get_item_text(popup.get_item_index(1)), "Configurer le jeu")
 	assert_eq(popup.get_item_text(popup.get_item_index(2)), "Galerie")
 	assert_eq(popup.get_item_text(popup.get_item_index(3)), "Notifications")
 

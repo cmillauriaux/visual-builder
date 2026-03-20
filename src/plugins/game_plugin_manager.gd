@@ -66,27 +66,48 @@ func save_enabled_states(settings: RefCounted) -> void:
 	settings.game_plugins_enabled = _enabled_states.duplicate()
 
 
+## Chemin du registre de plugins (généré par l'export service).
+const PLUGIN_REGISTRY_PATH = "res://plugins/_registry.json"
+
+
 ## Scanne les répertoires pour trouver et charger les plugins in-game.
+## Si le scan DirAccess échoue (exports PCK), charge depuis le registre.
 func scan_and_load_plugins(dirs: Array = ["res://plugins/", "res://game_plugins/"]) -> void:
+	var found_paths: Array = []
 	for dir_path in dirs:
-		_scan_directory(dir_path)
+		found_paths.append_array(_scan_directory(dir_path))
+
+	print("[GamePluginManager] scan found: ", found_paths.size(), " paths via DirAccess")
+	if found_paths.is_empty():
+		# Fallback : charger depuis le registre (exports PCK)
+		found_paths = _load_registry()
+		print("[GamePluginManager] registry fallback: ", found_paths.size(), " paths: ", found_paths)
+
+	for path in found_paths:
+		_try_load_plugin(path)
+	print("[GamePluginManager] total plugins loaded: ", _plugins.size())
 
 
-func _scan_directory(plugins_dir: String) -> void:
+## Scanne un répertoire et retourne les chemins des plugins trouvés.
+func _scan_directory(plugins_dir: String) -> Array:
+	var paths: Array = []
 	var dir := DirAccess.open(plugins_dir)
 	if dir == null:
-		return
+		return paths
 	dir.list_dir_begin()
 	var entry := dir.get_next()
 	while entry != "":
 		if dir.current_is_dir() and not entry.begins_with("."):
-			_try_load_plugin("%s%s/game_plugin.gd" % [plugins_dir, entry])
+			var path := "%s%s/game_plugin.gd" % [plugins_dir, entry]
+			if ResourceLoader.exists(path):
+				paths.append(path)
 		entry = dir.get_next()
 	dir.list_dir_end()
+	return paths
 
 
 func _try_load_plugin(path: String) -> void:
-	if not FileAccess.file_exists(path):
+	if not ResourceLoader.exists(path):
 		return
 	var loaded = load(path)
 	if loaded == null:
@@ -99,7 +120,26 @@ func _try_load_plugin(path: String) -> void:
 	if pname == "":
 		push_warning("GamePluginManager: plugin at %s returned empty name, skipping" % path)
 		return
+	# Éviter les doublons
+	for existing in _plugins:
+		if existing.get_plugin_name() == pname:
+			return
 	register_plugin(instance)
+
+
+## Charge la liste des chemins de plugins depuis le registre JSON.
+func _load_registry() -> Array:
+	if not FileAccess.file_exists(PLUGIN_REGISTRY_PATH):
+		return []
+	var file := FileAccess.open(PLUGIN_REGISTRY_PATH, FileAccess.READ)
+	if file == null:
+		return []
+	var content := file.get_as_text()
+	file.close()
+	var parsed = JSON.parse_string(content)
+	if parsed is Array:
+		return parsed
+	return []
 
 
 ## Retourne les plugins actifs (actifs = enregistrés + activés).

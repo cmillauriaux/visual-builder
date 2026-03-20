@@ -68,7 +68,11 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 		if DirAccess.dir_exists_absolute(excluded_path):
 			_remove_dir_recursive(excluded_path)
 			_append_log(log_path, "→ Plugin exclu de l'export : " + str(folder))
-	
+
+	# Générer le registre des plugins restants (nécessaire car DirAccess
+	# ne peut pas lister les répertoires dans un PCK exporté)
+	_generate_plugin_registry(abs_temp_project, log_path)
+
 	# 3. Copier la story dans res://story/ (sans artbook pour éviter les doublons)
 	var abs_story_dir = ProjectSettings.globalize_path(story_path)
 	var abs_temp_story = abs_temp_project + "/story"
@@ -852,6 +856,49 @@ func _cache_bust_web_export(export_dir: String, log_path: String) -> void:
 		f_html.store_string(html)
 		f_html.close()
 	_append_log(log_path, "  index.html mis à jour")
+
+
+## Génère un registre JSON listant les plugins présents dans le projet temporaire.
+## Ce registre est lu par GamePluginManager au runtime quand DirAccess ne fonctionne pas (exports PCK).
+func _generate_plugin_registry(abs_temp_project: String, log_path: String) -> void:
+	var plugin_paths: Array = []
+	var plugins_dir := abs_temp_project + "/plugins"
+	if not DirAccess.dir_exists_absolute(plugins_dir):
+		return
+	var dir := DirAccess.open(plugins_dir)
+	if dir == null:
+		return
+	dir.list_dir_begin()
+	var entry := dir.get_next()
+	while entry != "":
+		if dir.current_is_dir() and not entry.begins_with("."):
+			var gd_path := plugins_dir + "/" + entry + "/game_plugin.gd"
+			if FileAccess.file_exists(gd_path):
+				plugin_paths.append("res://plugins/" + entry + "/game_plugin.gd")
+		entry = dir.get_next()
+	dir.list_dir_end()
+	# Faire de même pour game_plugins/
+	var game_plugins_dir := abs_temp_project + "/game_plugins"
+	if DirAccess.dir_exists_absolute(game_plugins_dir):
+		var dir2 := DirAccess.open(game_plugins_dir)
+		if dir2:
+			dir2.list_dir_begin()
+			var entry2 := dir2.get_next()
+			while entry2 != "":
+				if dir2.current_is_dir() and not entry2.begins_with("."):
+					var gd_path2 := game_plugins_dir + "/" + entry2 + "/game_plugin.gd"
+					if FileAccess.file_exists(gd_path2):
+						plugin_paths.append("res://game_plugins/" + entry2 + "/game_plugin.gd")
+				entry2 = dir2.get_next()
+			dir2.list_dir_end()
+	if plugin_paths.is_empty():
+		return
+	var registry_path := plugins_dir + "/_registry.json"
+	var file := FileAccess.open(registry_path, FileAccess.WRITE)
+	if file:
+		file.store_string(JSON.stringify(plugin_paths))
+		file.close()
+		_append_log(log_path, "→ Registre plugins généré : %d plugin(s) [%s]" % [plugin_paths.size(), ", ".join(plugin_paths)])
 
 
 ## Scanne les plugins et retourne les dossiers à exclure en fonction des export_options.

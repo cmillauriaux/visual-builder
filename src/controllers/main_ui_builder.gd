@@ -107,7 +107,7 @@ static func _build_top_bar(main: Control) -> void:
 	main._parametres_menu.visible = false
 	var parametres_popup = main._parametres_menu.get_popup()
 	parametres_popup.add_item(TranslationServer.translate("Variables"), 0)
-	parametres_popup.add_item(TranslationServer.translate("Menu"), 1)
+	parametres_popup.add_item(TranslationServer.translate("Configurer le jeu"), 1)
 	parametres_popup.add_item(TranslationServer.translate("Galerie"), 2)
 	parametres_popup.add_item(TranslationServer.translate("Notifications"), 3)
 	parametres_popup.add_separator()

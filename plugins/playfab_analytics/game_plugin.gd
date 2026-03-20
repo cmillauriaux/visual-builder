@@ -226,7 +226,7 @@ func _create_editor_config(current_settings) -> Control:
 
 
 ## Lit les valeurs actuelles des contrôles éditeur et retourne un Dictionary.
-static func read_editor_config(control: Control) -> Dictionary:
+func read_editor_config(control: Control) -> Dictionary:
 	if control == null:
 		return {}
 	var title_edit = control.get_meta("_title_edit", null)

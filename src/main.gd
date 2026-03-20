@@ -166,6 +166,7 @@ func _ready() -> void:
 	update_view()
 
 
+
 func _setup_controllers() -> void:
 	_play_ctrl = Node.new()
 	_play_ctrl.set_script(PlayControllerScript)
