@@ -34,7 +34,7 @@ launcher:
 
 ### Séquence de lancement
 
-1. Quand la story démarre (`on_story_started`), le plugin crée un overlay plein écran noir
+1. Quand le jeu est prêt (`on_game_ready`, avant l'affichage du menu principal), le plugin crée un overlay plein écran noir
 2. Les étapes activées sont jouées dans l'ordre : logo studio → logo moteur → disclaimer → texte libre
 3. Chaque étape s'affiche avec un fade-in de 0.3s, reste visible pendant la durée configurée, puis fait un fade-out de 0.3s
 4. Après la dernière étape, l'overlay est supprimé et le jeu continue normalement
@@ -59,7 +59,7 @@ Le plugin fournit des contrôles dans le dialogue de configuration du jeu (ongle
 - [ ] Le plugin s'enregistre avec le nom `"launcher"`
 - [ ] Le plugin est configurable (`is_configurable() == true`)
 - [ ] Par défaut seul le logo moteur est activé
-- [ ] `on_story_started` déclenche la séquence de lancement
+- [ ] `on_game_ready` déclenche la séquence de lancement (avant le menu principal)
 - [ ] Chaque étape peut être activée/désactivée indépendamment
 - [ ] Le logo studio affiche l'image configurée sur fond noir
 - [ ] Le logo moteur affiche le texte « Made with Godot Engine »

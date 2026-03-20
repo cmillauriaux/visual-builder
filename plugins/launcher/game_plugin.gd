@@ -1,6 +1,6 @@
 extends "res://src/plugins/game_plugin.gd"
 
-## Plugin Launcher : affiche une séquence d'écrans de lancement avant la story.
+## Plugin Launcher : affiche une séquence d'écrans de lancement avant le menu.
 ## Étapes configurables : logo studio, logo moteur, disclaimer, texte libre.
 ## Configuration lue depuis story.plugin_settings["launcher"].
 
@@ -32,7 +32,7 @@ func get_plugin_folder() -> String:
 	return "launcher"
 
 
-func on_story_started(ctx: RefCounted, _story_title: String, _story_version: String) -> void:
+func on_game_ready(ctx: RefCounted) -> void:
 	if ctx == null or ctx.game_node == null:
 		return
 	_game_node = ctx.game_node
