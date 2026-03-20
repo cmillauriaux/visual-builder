@@ -3,7 +3,7 @@ extends ConfirmationDialog
 ## Dialogue d'export d'une story en jeu standalone.
 ## Demande la plateforme cible et le dossier de destination.
 
-signal export_requested(platform: String, output_path: String, quality: String)
+signal export_requested(platform: String, output_path: String, quality: String, export_options: Dictionary)
 
 const PLATFORMS = ["Web (HTML5)", "macOS", "Linux", "Windows", "Android"]
 const PLATFORM_IDS = ["web", "macos", "linux", "windows", "android"]
@@ -16,6 +16,8 @@ var _path_edit: LineEdit
 var _browse_button: Button
 var _status_label: Label
 var _file_dialog: FileDialog
+var _export_options_container: VBoxContainer
+var _export_option_checks: Dictionary = {}  # key -> CheckBox
 
 
 func _init():
@@ -71,6 +73,13 @@ func _init():
 	_browse_button.pressed.connect(_on_browse_pressed)
 	hbox.add_child(_browse_button)
 
+	# Options d'export des plugins
+	_export_options_container = VBoxContainer.new()
+	_export_options_container.name = "ExportOptionsContainer"
+	_export_options_container.add_theme_constant_override("separation", 4)
+	_export_options_container.visible = false
+	vbox.add_child(_export_options_container)
+
 	# Status
 	_status_label = Label.new()
 	_status_label.name = "StatusLabel"
@@ -94,6 +103,7 @@ func setup(story) -> void:
 	get_ok_button().disabled = (_path_edit.text == "")
 	_status_label.text = ""
 	_status_label.remove_theme_color_override("font_color")
+	_populate_export_options()
 
 
 func get_selected_quality() -> String:
@@ -134,5 +144,61 @@ func _on_dir_selected(dir: String) -> void:
 	get_ok_button().disabled = false
 
 
+func get_export_options() -> Dictionary:
+	var result: Dictionary = {}
+	for key in _export_option_checks:
+		result[key] = _export_option_checks[key].button_pressed
+	return result
+
+
 func _on_confirmed() -> void:
-	export_requested.emit(get_selected_platform(), get_output_path(), get_selected_quality())
+	export_requested.emit(get_selected_platform(), get_output_path(), get_selected_quality(), get_export_options())
+
+
+func _populate_export_options() -> void:
+	for child in _export_options_container.get_children():
+		child.queue_free()
+	_export_option_checks.clear()
+
+	var plugins := _scan_game_plugins()
+	var has_options := false
+	for plugin in plugins:
+		if not plugin.has_method("get_export_options"):
+			continue
+		for opt in plugin.get_export_options():
+			if not has_options:
+				var sep := HSeparator.new()
+				_export_options_container.add_child(sep)
+				var title_lbl := Label.new()
+				title_lbl.text = "Options"
+				_export_options_container.add_child(title_lbl)
+				has_options = true
+			var check := CheckBox.new()
+			check.text = opt.label
+			check.button_pressed = opt.default_value
+			_export_options_container.add_child(check)
+			_export_option_checks[opt.key] = check
+
+	_export_options_container.visible = has_options
+
+
+func _scan_game_plugins() -> Array:
+	var plugins: Array = []
+	for dir_path in ["res://plugins/", "res://game_plugins/"]:
+		var dir := DirAccess.open(dir_path)
+		if dir == null:
+			continue
+		dir.list_dir_begin()
+		var entry := dir.get_next()
+		while entry != "":
+			if dir.current_is_dir() and not entry.begins_with("."):
+				var path := "%s%s/game_plugin.gd" % [dir_path, entry]
+				if FileAccess.file_exists(path):
+					var script = load(path)
+					if script:
+						var instance = script.new()
+						if instance.has_method("get_plugin_name") and instance.get_plugin_name() != "":
+							plugins.append(instance)
+			entry = dir.get_next()
+		dir.list_dir_end()
+	return plugins
