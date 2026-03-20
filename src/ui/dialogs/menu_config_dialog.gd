@@ -759,6 +759,8 @@ func _rebuild_plugins_tab() -> void:
 			if ctrl != null:
 				_plugins_container.add_child(ctrl)
 				_plugin_controls[pname] = ctrl
+				if _story and ctrl.has_meta("populate_chapters"):
+					ctrl.get_meta("populate_chapters").call(_story.chapters)
 		_plugins_container.add_child(HSeparator.new())
 
 

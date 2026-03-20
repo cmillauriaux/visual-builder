@@ -517,32 +517,42 @@ func _create_editor_config(plugin_settings: Dictionary) -> Control:
 	for code_data in codes:
 		add_code_row.call(code_data)
 
-	add_btn.pressed.connect(func(): add_code_row.call({}))
+	# Fonction pour peupler les dropdowns d'une seule ligne
+	var populate_row := func(row: HBoxContainer, chapters: Array):
+		var from_dd: OptionButton = row.get_node_or_null("FromChapter")
+		var to_dd: OptionButton = row.get_node_or_null("ToChapter")
+		if from_dd == null or to_dd == null:
+			return
+		from_dd.clear()
+		to_dd.clear()
+		var uuids: Array = []
+		for ch in chapters:
+			from_dd.add_item(ch.chapter_name if ch.chapter_name != "" else ch.uuid)
+			to_dd.add_item(ch.chapter_name if ch.chapter_name != "" else ch.uuid)
+			uuids.append(ch.uuid)
+		from_dd.set_meta("uuids", uuids)
+		to_dd.set_meta("uuids", uuids)
+		# Sélectionner les valeurs sauvegardées
+		var from_uuid: String = row.get_meta("from_chapter_uuid") if row.has_meta("from_chapter_uuid") else ""
+		var to_uuid: String = row.get_meta("to_chapter_uuid") if row.has_meta("to_chapter_uuid") else ""
+		for i in range(uuids.size()):
+			if uuids[i] == from_uuid:
+				from_dd.selected = i
+			if uuids[i] == to_uuid:
+				to_dd.selected = i
+
+	add_btn.pressed.connect(func():
+		add_code_row.call({})
+		if vbox.has_meta("_chapters_cache"):
+			var last_row = codes_container.get_child(codes_container.get_child_count() - 1)
+			populate_row.call(last_row, vbox.get_meta("_chapters_cache"))
+	)
 
 	# Stocker une callback pour peupler les dropdowns quand la story est disponible
 	vbox.set_meta("populate_chapters", func(chapters: Array):
+		vbox.set_meta("_chapters_cache", chapters)
 		for row in codes_container.get_children():
-			var from_dd: OptionButton = row.get_node_or_null("FromChapter")
-			var to_dd: OptionButton = row.get_node_or_null("ToChapter")
-			if from_dd == null or to_dd == null:
-				continue
-			from_dd.clear()
-			to_dd.clear()
-			var uuids: Array = []
-			for ch in chapters:
-				from_dd.add_item(ch.chapter_name if ch.chapter_name != "" else ch.uuid)
-				to_dd.add_item(ch.chapter_name if ch.chapter_name != "" else ch.uuid)
-				uuids.append(ch.uuid)
-			from_dd.set_meta("uuids", uuids)
-			to_dd.set_meta("uuids", uuids)
-			# Sélectionner les valeurs sauvegardées
-			var from_uuid: String = row.get_meta("from_chapter_uuid")
-			var to_uuid: String = row.get_meta("to_chapter_uuid")
-			for i in range(uuids.size()):
-				if uuids[i] == from_uuid:
-					from_dd.selected = i
-				if uuids[i] == to_uuid:
-					to_dd.selected = i
+			populate_row.call(row, chapters)
 	)
 
 	return vbox
