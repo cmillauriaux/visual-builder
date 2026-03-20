@@ -252,6 +252,10 @@ func apply_ui_translations(i18n_dict: Dictionary) -> void:
 	if _typewriter_speed_option:
 		for i in range(TYPEWRITER_SPEED_LABELS.size()):
 			_typewriter_speed_option.set_item_text(i, StoryI18nService.get_ui_string(TYPEWRITER_SPEED_LABELS[i], i18n_dict))
+	# Traduire les items des OptionButtons d'échelle UI
+	if _ui_scale_option:
+		for i in range(GameSettings.UI_SCALE_LABELS.size()):
+			_ui_scale_option.set_item_text(i, StoryI18nService.get_ui_string(GameSettings.UI_SCALE_LABELS[i], i18n_dict))
 
 
 func _add_section_label(parent: Control, text: String) -> Label:

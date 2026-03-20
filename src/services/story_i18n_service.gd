@@ -15,12 +15,9 @@ const UI_STRINGS: Array[String] = [
 	# Sélecteur d'histoires
 	"Sélectionnez une histoire",
 	"Aucune histoire trouvée",
-	"Fonctionnalité à venir",
 	# Overlay de choix
 	"Faites votre choix",
 	# Messages de fin de partie
-	"Fin — Game Over",
-	"Fin — À suivre...",
 	"Fin (aucune terminaison configurée)",
 	"Erreur (cible introuvable ou contenu vide)",
 	"Lecture arrêtée",
@@ -67,6 +64,10 @@ const UI_STRINGS: Array[String] = [
 	"Normal",
 	"Rapide",
 	"Instantané",
+	# Échelle UI
+	"Petit",
+	"Moyen",
+	"Gros",
 	# Boutons de jeu (barre play)
 	"Save (F5)",
 	"Load (F9)",
