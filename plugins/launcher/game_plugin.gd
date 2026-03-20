@@ -140,12 +140,12 @@ func _play_sequence(steps: Array, generation: int) -> void:
 		_clear_overlay_content()
 		var content := _create_step_content(step)
 		if content != null:
+			content.modulate.a = 0.0
 			_overlay.add_child(content)
-		# Fade in
-		_overlay.modulate.a = 0.0
-		var fade_in := _game_node.get_tree().create_tween()
-		fade_in.tween_property(_overlay, "modulate:a", 1.0, 0.3)
-		await fade_in.finished
+			# Fade in le contenu (l'overlay noir reste opaque)
+			var fade_in := _game_node.get_tree().create_tween()
+			fade_in.tween_property(content, "modulate:a", 1.0, 0.3)
+			await fade_in.finished
 		if generation != _play_generation:
 			break
 		# Attendre la durée ou un input utilisateur
@@ -153,10 +153,11 @@ func _play_sequence(steps: Array, generation: int) -> void:
 		var skipped := await _wait_or_skip(duration, generation)
 		if generation != _play_generation:
 			break
-		# Fade out
-		var fade_out := _game_node.get_tree().create_tween()
-		fade_out.tween_property(_overlay, "modulate:a", 0.0, 0.3)
-		await fade_out.finished
+		# Fade out le contenu
+		if content != null:
+			var fade_out := _game_node.get_tree().create_tween()
+			fade_out.tween_property(content, "modulate:a", 0.0, 0.3)
+			await fade_out.finished
 		if generation != _play_generation:
 			break
 
@@ -308,37 +309,29 @@ func _create_engine_logo_content() -> Control:
 
 
 func _create_disclaimer_content(step: Dictionary) -> Control:
-	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-
 	var label := Label.new()
+	label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	label.text = step.get("text", "DISCLAIMER")
 	label.add_theme_font_size_override("font_size", 48)
 	label.add_theme_color_override("font_color", Color(1, 0, 0))
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	center.add_child(label)
-
-	return center
+	return label
 
 
 func _create_free_text_content(step: Dictionary) -> Control:
-	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-
 	var label := Label.new()
+	label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	label.text = step.get("text", "")
 	label.add_theme_font_size_override("font_size", 24)
 	label.add_theme_color_override("font_color", Color.WHITE)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	center.add_child(label)
-
-	return center
+	return label
 
 
 # --- Configuration éditeur ---

@@ -156,7 +156,7 @@ func _get_active_plugins() -> Array:
 
 func dispatch_on_game_ready(ctx: RefCounted) -> void:
 	for plugin in _get_active_plugins():
-		plugin.on_game_ready(ctx)
+		await plugin.on_game_ready(ctx)
 
 
 func dispatch_on_game_cleanup(ctx: RefCounted) -> void:

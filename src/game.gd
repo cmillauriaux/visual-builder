@@ -329,7 +329,7 @@ func _load_story_and_show_menu(path: String) -> void:
 	_reload_i18n()
 	_load_max_progression()
 	_apply_game_ui_theme(story)
-	_setup_game_plugins()
+	await _setup_game_plugins()
 	_show_main_menu(_current_story)
 	_pwa_install_prompt.show_if_needed(_settings.pwa_prompt_dismissed)
 
@@ -988,7 +988,7 @@ func _setup_game_plugins() -> void:
 	_game_plugin_manager.inject_toolbar_buttons(_plugin_toolbar, ctx)
 	_game_plugin_manager.inject_overlay_panels(
 		_plugin_overlay_left, _plugin_overlay_right, _plugin_overlay_top, ctx)
-	_game_plugin_manager.dispatch_on_game_ready(ctx)
+	await _game_plugin_manager.dispatch_on_game_ready(ctx)
 
 
 func _on_plugin_chapter_entered(_chapter_name: String, _chapter_uuid: String) -> void:

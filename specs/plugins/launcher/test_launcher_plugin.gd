@@ -181,21 +181,23 @@ func test_create_disclaimer_content():
 	var step := {"text": "MY DISCLAIMER"}
 	var content = _plugin._create_disclaimer_content(step)
 	assert_not_null(content)
-	assert_true(content is CenterContainer)
-	var label = content.get_child(0)
-	assert_true(label is Label)
+	assert_true(content is Label)
+	var label := content as Label
 	assert_eq(label.text, "MY DISCLAIMER")
 	# Vérifier la couleur rouge
 	var font_color = label.get_theme_color("font_color")
 	assert_eq(font_color, Color(1, 0, 0))
+	# Vérifier l'alignement centré (horizontal et vertical)
+	assert_eq(label.horizontal_alignment, HORIZONTAL_ALIGNMENT_CENTER)
+	assert_eq(label.vertical_alignment, VERTICAL_ALIGNMENT_CENTER)
 	content.queue_free()
 
 
 func test_create_disclaimer_default_text():
 	var step := {}
 	var content = _plugin._create_disclaimer_content(step)
-	var label = content.get_child(0)
-	assert_eq(label.text, "DISCLAIMER")
+	assert_true(content is Label)
+	assert_eq((content as Label).text, "DISCLAIMER")
 	content.queue_free()
 
 
@@ -203,13 +205,15 @@ func test_create_free_text_content():
 	var step := {"text": "Mon texte libre"}
 	var content = _plugin._create_free_text_content(step)
 	assert_not_null(content)
-	assert_true(content is CenterContainer)
-	var label = content.get_child(0)
-	assert_true(label is Label)
+	assert_true(content is Label)
+	var label := content as Label
 	assert_eq(label.text, "Mon texte libre")
 	# Vérifier la couleur blanche
 	var font_color = label.get_theme_color("font_color")
 	assert_eq(font_color, Color.WHITE)
+	# Vérifier l'alignement centré (horizontal et vertical)
+	assert_eq(label.horizontal_alignment, HORIZONTAL_ALIGNMENT_CENTER)
+	assert_eq(label.vertical_alignment, VERTICAL_ALIGNMENT_CENTER)
 	content.queue_free()
 
 
