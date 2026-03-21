@@ -290,6 +290,10 @@ func on_choice_display_requested(choices) -> void:
 		var idx = i
 		var choice_text = display_choices[i].text
 		btn.pressed.connect(func(): _on_choice_selected(idx, choice_text))
+		btn.gui_input.connect(func(event: InputEvent):
+			if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_SPACE:
+				btn.accept_event()
+		)
 		vbox.add_child(btn)
 		buttons.append(btn)
 	_choice_panel.add_child(vbox)

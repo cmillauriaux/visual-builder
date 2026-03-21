@@ -40,6 +40,10 @@ func _on_play_choice_requested(choices: Array) -> void:
 		btn.text = choices[i].text
 		var idx = i
 		btn.pressed.connect(func(): _on_play_choice_selected(idx))
+		btn.gui_input.connect(func(event: InputEvent):
+			if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_SPACE:
+				btn.accept_event()
+		)
 		container.add_child(btn)
 	_main._choice_panel.add_child(container)
 	_main._choice_overlay.visible = true
