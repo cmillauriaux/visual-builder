@@ -317,6 +317,7 @@ func _load_story_and_show_menu(path: String) -> void:
 		
 	_current_story = story
 	_current_story_path = path
+	_setup_loading_overlay_image(_current_story)
 
 	# Initialiser le chargeur de PCK chapitres (pour les exports avec split PCK)
 	_pck_loader = PckChapterLoaderScript.new()
@@ -807,6 +808,7 @@ func _on_load_slot(slot_index: int) -> void:
 			return
 		_current_story = story
 		_current_story_path = target_path
+		_setup_loading_overlay_image(_current_story)
 		_reload_i18n()
 	# Précharger le PCK du chapitre sauvegardé si nécessaire
 	var saved_chapter_uuid: String = save_data.get("chapter_uuid", "")
@@ -1056,6 +1058,15 @@ func _on_chapter_loading_finished() -> void:
 			remove_meta("_loading_mounting_cb")
 
 
+func _setup_loading_overlay_image(story) -> void:
+	if _loading_overlay_bg == null:
+		return
+	if story == null or story.menu_background.is_empty():
+		_loading_overlay_bg.texture = null
+		return
+	_loading_overlay_bg.texture = TextureLoader.load_texture(story.menu_background)
+
+
 func _on_analytics_story_finished(reason: String) -> void:
 	if _game_plugin_manager:
 		var ctx = _build_game_plugin_context()
@@ -1122,6 +1133,7 @@ func _do_quickload() -> void:
 			return
 		_current_story = story
 		_current_story_path = target_path
+		_setup_loading_overlay_image(_current_story)
 		_reload_i18n()
 	if _game_plugin_manager:
 		var ctx = _build_game_plugin_context()
