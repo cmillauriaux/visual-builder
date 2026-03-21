@@ -307,6 +307,23 @@ func _load_texture(path: String):
 
 ## UUIDs dont l'opacité est gérée par une transition en cours (ne pas écraser)
 var _transitioning_uuids: Array = []
+## Tweens actifs par UUID — permet de les tuer lors d'un changement de dialogue rapide
+var _fg_tweens: Dictionary = {}
+
+func register_fg_tween(uuid: String, tween: Tween) -> void:
+	_fg_tweens[uuid] = tween
+
+## Tue tous les tweens de foreground actifs, vide _transitioning_uuids,
+## et invalide le cache visuel des nœuds concernés pour forcer le recalcul.
+func kill_all_fg_tweens() -> void:
+	for uuid in _fg_tweens.keys():
+		var t = _fg_tweens[uuid]
+		if is_instance_valid(t):
+			t.kill()
+		if _fg_visual_map.has(uuid) and is_instance_valid(_fg_visual_map[uuid]):
+			_fg_visual_map[uuid].remove_meta("fg_image")
+	_fg_tweens.clear()
+	_transitioning_uuids.clear()
 
 func _update_foreground_visuals() -> void:
 	if _fg_container == null:
@@ -788,7 +805,7 @@ func load_sequence(sequence) -> void:
 	_auto_fit_enabled = true
 	_selected_fg_uuids.clear()
 	_hidden_fg_uuids.clear()
-	_transitioning_uuids.clear()
+	kill_all_fg_tweens()
 	_dragging_fg = false
 	_resizing_fg = false
 	_is_inherited_mode = false

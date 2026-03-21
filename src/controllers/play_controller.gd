@@ -216,7 +216,8 @@ func _apply_visual_transitions(index: int, transitions: Array) -> void:
 					"z_order": t["z_order"],
 				})
 
-	# Phase 2 : Mettre à jour les visuels (nouvel état)
+	# Phase 2 : Tuer les tweens précédents puis mettre à jour les visuels
+	_visual_editor.kill_all_fg_tweens()
 	_main.update_preview_for_dialogue(index)
 
 	# Phase 3 : Positionner les clones et appliquer les transitions
@@ -238,7 +239,8 @@ func _apply_visual_transitions(index: int, transitions: Array) -> void:
 				var tween = _foreground_transition.apply_tween_fade_in(target, duration)
 				if tween:
 					_visual_editor._transitioning_uuids.append(uuid)
-					tween.finished.connect(func(): _visual_editor._transitioning_uuids.erase(uuid))
+					_visual_editor.register_fg_tween(uuid, tween)
+					tween.finished.connect(func(): _visual_editor._transitioning_uuids.erase(uuid); _visual_editor._fg_tweens.erase(uuid))
 			_foreground_transition.apply_tween_fade_out(clone, duration, true)
 
 		elif action == "replace_instant":
@@ -258,7 +260,8 @@ func _apply_visual_transitions(index: int, transitions: Array) -> void:
 		if tween:
 			var uuid = entry["uuid"]
 			_visual_editor._transitioning_uuids.append(uuid)
-			tween.finished.connect(func(): _visual_editor._transitioning_uuids.erase(uuid))
+			_visual_editor.register_fg_tween(uuid, tween)
+			tween.finished.connect(func(): _visual_editor._transitioning_uuids.erase(uuid); _visual_editor._fg_tweens.erase(uuid))
 
 	# Phase 4 : fade_in pur (nouveau FG sans prédécesseur)
 	for t in transitions:
@@ -270,7 +273,8 @@ func _apply_visual_transitions(index: int, transitions: Array) -> void:
 			if tween:
 				var uuid = t["uuid"]
 				_visual_editor._transitioning_uuids.append(uuid)
-				tween.finished.connect(func(): _visual_editor._transitioning_uuids.erase(uuid))
+				_visual_editor.register_fg_tween(uuid, tween)
+				tween.finished.connect(func(): _visual_editor._transitioning_uuids.erase(uuid); _visual_editor._fg_tweens.erase(uuid))
 
 	_main.highlight_dialogue_in_list(index)
 

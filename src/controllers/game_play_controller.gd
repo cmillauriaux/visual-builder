@@ -416,7 +416,8 @@ func on_play_dialogue_changed(index: int) -> void:
 					"z_order": t["z_order"],
 				})
 
-	# Phase 2 : Mettre à jour les visuels
+	# Phase 2 : Tuer les tweens précédents puis mettre à jour les visuels
+	_visual_editor.kill_all_fg_tweens()
 	_update_preview(index)
 
 	# Phase 3 : Positionner les clones et appliquer les transitions
@@ -441,7 +442,8 @@ func on_play_dialogue_changed(index: int) -> void:
 				var tween = _foreground_transition.apply_tween_fade_in(target, duration)
 				if tween:
 					_visual_editor._transitioning_uuids.append(uuid)
-					tween.finished.connect(func(): _visual_editor._transitioning_uuids.erase(uuid))
+					_visual_editor.register_fg_tween(uuid, tween)
+					tween.finished.connect(func(): _visual_editor._transitioning_uuids.erase(uuid); _visual_editor._fg_tweens.erase(uuid))
 			_foreground_transition.apply_tween_fade_out(clone, duration, true)
 
 		elif action == "replace_instant":
@@ -463,7 +465,8 @@ func on_play_dialogue_changed(index: int) -> void:
 		if tween:
 			var uuid = entry["uuid"]
 			_visual_editor._transitioning_uuids.append(uuid)
-			tween.finished.connect(func(): _visual_editor._transitioning_uuids.erase(uuid))
+			_visual_editor.register_fg_tween(uuid, tween)
+			tween.finished.connect(func(): _visual_editor._transitioning_uuids.erase(uuid); _visual_editor._fg_tweens.erase(uuid))
 
 	# Phase 4 : fade_in pur (nouveau FG sans prédécesseur)
 	for t in transitions:
@@ -475,7 +478,8 @@ func on_play_dialogue_changed(index: int) -> void:
 			if tween:
 				var uuid = t["uuid"]
 				_visual_editor._transitioning_uuids.append(uuid)
-				tween.finished.connect(func(): _visual_editor._transitioning_uuids.erase(uuid))
+				_visual_editor.register_fg_tween(uuid, tween)
+				tween.finished.connect(func(): _visual_editor._transitioning_uuids.erase(uuid); _visual_editor._fg_tweens.erase(uuid))
 
 
 func on_play_stopped() -> void:
@@ -799,6 +803,8 @@ func _create_fade_out_clone(source: Control, z_order: int = 0) -> TextureRect:
 	clone.texture = tex_node.texture
 	clone.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	clone.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	clone.flip_h = tex_node.flip_h
+	clone.flip_v = tex_node.flip_v
 	clone.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	clone.position = source.position
 	clone.size = source.size
