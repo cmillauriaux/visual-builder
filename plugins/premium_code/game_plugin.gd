@@ -215,8 +215,9 @@ func _show_code_popup(ctx: RefCounted) -> void:
 	# Overlay sombre plein écran
 	var overlay := ColorRect.new()
 	overlay.color = Color(0, 0, 0, 0.7)
-	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	overlay.z_index = 4096  # UI_OVERLAY_Z — au-dessus de tout le contenu de jeu
 
 	# Panneau central
 	var center := CenterContainer.new()
@@ -310,6 +311,7 @@ func _show_code_popup(ctx: RefCounted) -> void:
 	overlay.process_mode = Node.PROCESS_MODE_ALWAYS
 
 	ctx.game_node.add_child(overlay)
+	overlay.move_to_front()
 	_popup = overlay
 
 	# Figer le jeu tant que le popup est actif
