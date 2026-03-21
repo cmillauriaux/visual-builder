@@ -52,6 +52,7 @@ static func _build_play_overlay(game: Control) -> void:
 	var s := UIScale.get_scale()
 	game._play_overlay = PanelContainer.new()
 	game._play_overlay.visible = false
+	game._play_overlay.z_index = SequenceVisualEditorScript.UI_OVERLAY_Z
 	game._play_overlay.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	game._play_overlay.offset_top = -roundi(150 * s)
 	game._play_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -108,6 +109,7 @@ static func _build_play_overlay(game: Control) -> void:
 	# Choice overlay (centré via CenterContainer)
 	game._choice_overlay = CenterContainer.new()
 	game._choice_overlay.visible = false
+	game._choice_overlay.z_index = SequenceVisualEditorScript.UI_OVERLAY_Z
 	game._choice_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	game._choice_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 
@@ -141,6 +143,7 @@ static func _build_play_buttons_bar(game: Control) -> void:
 	var s := UIScale.get_scale()
 	game._play_buttons_bar = HBoxContainer.new()
 	game._play_buttons_bar.visible = false
+	game._play_buttons_bar.z_index = SequenceVisualEditorScript.UI_OVERLAY_Z
 	game._play_buttons_bar.alignment = BoxContainer.ALIGNMENT_END
 	game._play_buttons_bar.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	game._play_buttons_bar.offset_top = -roundi(188 * s)
@@ -251,6 +254,7 @@ static func _build_quickload_confirm(game: Control) -> void:
 static func _build_menu_button(game: Control) -> void:
 	var s := UIScale.get_scale()
 	game._menu_button = Button.new()
+	game._menu_button.z_index = SequenceVisualEditorScript.UI_OVERLAY_Z
 	game._menu_button.text = "☰ Menu"
 	game._menu_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 	game._menu_button.offset_left = -roundi(100 * s)
