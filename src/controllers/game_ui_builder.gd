@@ -187,10 +187,16 @@ static func _build_loading_overlay(game: Control) -> void:
 	game._loading_overlay.z_index = 90
 	game.add_child(game._loading_overlay)
 
-	var bg := ColorRect.new()
-	bg.color = Color(0, 0, 0, 0.7)
+	var bg := TextureRect.new()
+	bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	game._loading_overlay_bg = bg
 	game._loading_overlay.add_child(bg)
+
+	var scrim := ColorRect.new()
+	scrim.color = Color(0, 0, 0, 0.7)
+	scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	game._loading_overlay.add_child(scrim)
 
 	var center := CenterContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

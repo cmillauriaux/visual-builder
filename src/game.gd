@@ -104,6 +104,7 @@ var _pwa_install_prompt: Control
 # UI — Loading overlay (chargement PCK entre chapitres)
 var _loading_overlay: Control
 var _loading_overlay_label: Label
+var _loading_overlay_bg: TextureRect
 
 # UI — Quickload confirmation
 var _quickload_confirm_overlay: Control
