@@ -182,25 +182,26 @@ static func _build_toast_overlay(game: Control) -> void:
 static func _build_loading_overlay(game: Control) -> void:
 	game._loading_overlay = Control.new()
 	game._loading_overlay.visible = false
-	game._loading_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	game._loading_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	game._loading_overlay.z_index = 90
 	game.add_child(game._loading_overlay)
+	game._loading_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 	var bg := TextureRect.new()
 	bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	game._loading_overlay_bg = bg
 	game._loading_overlay.add_child(bg)
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 	var scrim := ColorRect.new()
 	scrim.color = Color(0, 0, 0, 0.7)
-	scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	game._loading_overlay.add_child(scrim)
+	scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	game._loading_overlay.add_child(center)
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 	game._loading_overlay_label = Label.new()
 	game._loading_overlay_label.text = "Chargement..."
