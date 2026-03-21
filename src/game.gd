@@ -1030,6 +1030,7 @@ func _on_plugin_choice_made(_seq_uuid: String, choice_index: int, choice_text: S
 
 
 func _on_chapter_loading_started(chapter_name: String) -> void:
+	_loading_overlay.move_to_front()
 	_loading_overlay.visible = true
 	_loading_overlay_label.text = StoryI18nService.get_ui_string("Téléchargement...", _i18n_dict)
 	if _pck_loader:

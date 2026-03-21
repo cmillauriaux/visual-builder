@@ -183,7 +183,7 @@ static func _build_loading_overlay(game: Control) -> void:
 	game._loading_overlay = Control.new()
 	game._loading_overlay.visible = false
 	game._loading_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	game._loading_overlay.z_index = 90
+	game._loading_overlay.z_index = SequenceVisualEditorScript.UI_OVERLAY_Z
 	game.add_child(game._loading_overlay)
 	game._loading_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
