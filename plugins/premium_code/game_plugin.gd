@@ -242,6 +242,7 @@ func _show_code_popup(ctx: RefCounted) -> void:
 	msg_label.text = _get_purchase_message()
 	msg_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 	msg_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	msg_label.add_theme_color_override("font_color", Color.WHITE)
 	vbox.add_child(msg_label)
 
 	# Champ de saisie
@@ -278,6 +279,7 @@ func _show_code_popup(ctx: RefCounted) -> void:
 	var back_btn := Button.new()
 	back_btn.text = "Retour au menu"
 	back_btn.pressed.connect(func():
+		overlay.get_tree().paused = false
 		overlay.queue_free()
 		_popup = null
 		if ctx.game_node != null and ctx.game_node.has_method("_on_return_to_menu"):
@@ -294,6 +296,7 @@ func _show_code_popup(ctx: RefCounted) -> void:
 			return
 		if _is_code_valid(code):
 			_add_validated_code(code)
+			overlay.get_tree().paused = false
 			overlay.queue_free()
 			_popup = null
 		else:
@@ -303,8 +306,15 @@ func _show_code_popup(ctx: RefCounted) -> void:
 	validate_btn.pressed.connect(on_validate)
 	code_input.text_submitted.connect(func(_t): on_validate.call())
 
+	# L'overlay continue de fonctionner même quand le jeu est en pause
+	overlay.process_mode = Node.PROCESS_MODE_ALWAYS
+
 	ctx.game_node.add_child(overlay)
 	_popup = overlay
+
+	# Figer le jeu tant que le popup est actif
+	overlay.get_tree().paused = true
+
 	code_input.grab_focus()
 
 
