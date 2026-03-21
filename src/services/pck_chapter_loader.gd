@@ -7,7 +7,8 @@ extends RefCounted
 class_name PckChapterLoader
 
 signal chapter_load_started(chapter_name: String)
-signal chapter_load_progress(chapter_name: String, progress: float)
+signal chapter_download_progress(chapter_name: String, progress: float)
+signal chapter_mounting_started(chapter_name: String)
 signal chapter_loaded(chapter_uuid: String)
 
 var _manifest: Dictionary = {}
@@ -52,6 +53,17 @@ func is_chapter_loaded(uuid: String) -> bool:
 	return _loaded_chapters.get(uuid, false)
 
 
+## Parse une entrée PCK du manifest (rétrocompatible).
+## Accepte String (ancien format) ou Dictionary {"file": ..., "size": ...} (nouveau).
+## Retourne {"file": String, "size": int} (size = 0 si inconnu).
+static func _parse_pck_entry(entry) -> Dictionary:
+	if entry is String:
+		return {"file": entry, "size": 0}
+	elif entry is Dictionary:
+		return {"file": entry.get("file", ""), "size": entry.get("size", 0)}
+	return {"file": "", "size": 0}
+
+
 ## Assure que le PCK du chapitre est chargé. Retourne true si OK.
 ## Sur le web, cette méthode est asynchrone (await).
 func ensure_chapter_loaded(chapter_uuid: String) -> bool:
@@ -70,32 +82,49 @@ func ensure_chapter_loaded(chapter_uuid: String) -> bool:
 	var chapter_name: String = chapter_info.get("name", "")
 
 	# Support multi-part : "pcks" (array) ou ancien format "pck" (string)
-	var pck_filenames: Array = []
+	var pck_entries: Array = []  # Array of {"file": String, "size": int}
 	if chapter_info.has("pcks"):
-		pck_filenames = chapter_info.get("pcks", [])
+		for entry in chapter_info.get("pcks", []):
+			var parsed = _parse_pck_entry(entry)
+			if parsed["file"] != "":
+				pck_entries.append(parsed)
 	elif chapter_info.has("pck"):
 		var single: String = chapter_info.get("pck", "")
 		if single != "":
-			pck_filenames = [single]
+			pck_entries = [{"file": single, "size": 0}]
 
-	if pck_filenames.is_empty():
+	if pck_entries.is_empty():
 		return true
 
 	chapter_load_started.emit(chapter_name)
 
 	var all_success := true
 
-	if OS.get_name() == "Web" and pck_filenames.size() > 1:
-		all_success = await _load_pcks_web_parallel(pck_filenames, chapter_name)
+	if OS.get_name() == "Web" and pck_entries.size() > 1:
+		all_success = await _load_pcks_web_parallel(pck_entries, chapter_name)
 	else:
-		for i in range(pck_filenames.size()):
-			var pck_filename: String = pck_filenames[i]
-			var part_progress_base := float(i) / float(pck_filenames.size())
-			var part_progress_scale := 1.0 / float(pck_filenames.size())
+		# Taille totale connue pour le calcul de progression
+		var total_known_size := 0
+		for entry in pck_entries:
+			total_known_size += entry["size"]
+		var cumulated_size := 0
+
+		for i in range(pck_entries.size()):
+			var entry: Dictionary = pck_entries[i]
+			var pck_filename: String = entry["file"]
+			var pck_size: int = entry["size"]
+			var progress_base: float
+			var progress_scale: float
+			if total_known_size > 0:
+				progress_base = float(cumulated_size) / float(total_known_size)
+				progress_scale = float(pck_size) / float(total_known_size)
+			else:
+				progress_base = float(i) / float(pck_entries.size())
+				progress_scale = 1.0 / float(pck_entries.size())
 
 			var success := false
 			if OS.get_name() == "Web":
-				success = await _load_pck_web(pck_filename, chapter_name, part_progress_base, part_progress_scale)
+				success = await _load_pck_web(pck_filename, chapter_name, pck_size, progress_base, progress_scale)
 			else:
 				success = _load_pck_desktop(pck_filename)
 
@@ -103,6 +132,7 @@ func ensure_chapter_loaded(chapter_uuid: String) -> bool:
 				push_error("PckChapterLoader: failed to load %s" % pck_filename)
 				all_success = false
 				break
+			cumulated_size += pck_size
 
 	if all_success:
 		_loaded_chapters[chapter_uuid] = true
@@ -126,12 +156,17 @@ func _load_pck_desktop(pck_filename: String) -> bool:
 ## Le téléchargement est le goulot d'étranglement (~30s par fichier via HTTPRequest),
 ## donc on lance toutes les requêtes simultanément pour que le temps total ≈ max(durées)
 ## au lieu de sum(durées).
-func _load_pcks_web_parallel(pck_filenames: Array, chapter_name: String) -> bool:
+func _load_pcks_web_parallel(pck_entries: Array, chapter_name: String) -> bool:
 	var t_start := Time.get_ticks_msec()
-	print("PCK PARALLEL: starting %d downloads at %d ms" % [pck_filenames.size(), t_start])
+	print("PCK PARALLEL: starting %d downloads at %d ms" % [pck_entries.size(), t_start])
 
-	var base_url = JavaScriptBridge.eval("window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1)")
-	var count := pck_filenames.size()
+	var base_url = JavaScriptBridge.eval("window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1)")  # noqa: eval
+	var count := pck_entries.size()
+
+	# Calculer la taille totale connue (depuis le manifest)
+	var total_known_size := 0
+	for entry in pck_entries:
+		total_known_size += entry["size"]
 
 	# Lancer toutes les requêtes HTTP simultanément
 	var http_nodes: Array[HTTPRequest] = []
@@ -139,7 +174,7 @@ func _load_pcks_web_parallel(pck_filenames: Array, chapter_name: String) -> bool
 	results.resize(count)
 
 	for i in range(count):
-		var pck_filename: String = pck_filenames[i]
+		var pck_filename: String = pck_entries[i]["file"]
 		var http := HTTPRequest.new()
 		_scene_tree.root.add_child(http)
 		http_nodes.append(http)
@@ -162,27 +197,31 @@ func _load_pcks_web_parallel(pck_filenames: Array, chapter_name: String) -> bool
 			return false
 		print("PCK PARALLEL: [%s] request fired at %d ms" % [pck_filename, Time.get_ticks_msec()])
 
-	# Timer de progression agrégée
+	# Timer de progression agrégée basée sur les tailles du manifest
 	var progress_timer := Timer.new()
 	progress_timer.wait_time = 0.1
 	progress_timer.autostart = true
 	_scene_tree.root.add_child(progress_timer)
 	progress_timer.timeout.connect(func():
 		var total_downloaded := 0
-		var total_size := 0
 		for h in http_nodes:
 			if is_instance_valid(h):
-				var bs = h.get_body_size()
-				if bs > 0:
-					total_size += bs
-					total_downloaded += h.get_downloaded_bytes()
-		if total_size > 0:
-			chapter_load_progress.emit(chapter_name, float(total_downloaded) / float(total_size))
+				total_downloaded += h.get_downloaded_bytes()
+		if total_known_size > 0:
+			chapter_download_progress.emit(chapter_name, clampf(float(total_downloaded) / float(total_known_size), 0.0, 1.0))
+		else:
+			# Fallback : utiliser get_body_size() du serveur (ancien comportement)
+			var fallback_size := 0
+			for h in http_nodes:
+				if is_instance_valid(h):
+					var bs = h.get_body_size()
+					if bs > 0:
+						fallback_size += bs
+			if fallback_size > 0:
+				chapter_download_progress.emit(chapter_name, float(total_downloaded) / float(fallback_size))
 	)
 
 	# Attendre que tous les téléchargements soient terminés
-	# On poll via un Timer court au lieu d'await sur chaque signal individuel
-	# pour éviter les race conditions (signal déjà émis avant l'await)
 	while true:
 		var all_done := true
 		for i in range(count):
@@ -191,7 +230,6 @@ func _load_pcks_web_parallel(pck_filenames: Array, chapter_name: String) -> bool
 				break
 		if all_done:
 			break
-		# Attendre la prochaine frame
 		await _scene_tree.process_frame
 
 	progress_timer.stop()
@@ -204,9 +242,11 @@ func _load_pcks_web_parallel(pck_filenames: Array, chapter_name: String) -> bool
 
 	print("PCK PARALLEL: all downloads done at %d ms (total download: %d ms)" % [Time.get_ticks_msec(), Time.get_ticks_msec() - t_start])
 
-	# Monter les PCK séquentiellement (l'ordre peut compter pour les overrides)
+	# Phase montage
+	chapter_mounting_started.emit(chapter_name)
+
 	for i in range(count):
-		var pck_filename: String = pck_filenames[i]
+		var pck_filename: String = pck_entries[i]["file"]
 		var result: Array = results[i]
 		var response_code: int = result[1]
 		var body: PackedByteArray = result[3]
@@ -233,19 +273,18 @@ func _load_pcks_web_parallel(pck_filenames: Array, chapter_name: String) -> bool
 			push_error("PckChapterLoader: failed to load resource pack %s" % local_path)
 			return false
 
-	chapter_load_progress.emit(chapter_name, 1.0)
 	print("PCK PARALLEL: total time: %d ms" % [Time.get_ticks_msec() - t_start])
 	return true
 
 
-func _load_pck_web(pck_filename: String, chapter_name: String, progress_base: float = 0.0, progress_scale: float = 1.0) -> bool:
+func _load_pck_web(pck_filename: String, chapter_name: String, known_size: int, progress_base: float = 0.0, progress_scale: float = 1.0) -> bool:
 	# Sur le web, télécharger le PCK via HTTPRequest puis le charger
 	print("PCK TIMING [%s] _load_pck_web START at %d ms" % [pck_filename, Time.get_ticks_msec()])
 	var http = HTTPRequest.new()
 	_scene_tree.root.add_child(http)
 
 	# Construire l'URL absolue à partir de l'URL de la page courante
-	var base_url = JavaScriptBridge.eval("window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1)")
+	var base_url = JavaScriptBridge.eval("window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1)")  # noqa: eval
 	var url = str(base_url) + pck_filename
 
 	var err = http.request(url)
@@ -255,8 +294,7 @@ func _load_pck_web(pck_filename: String, chapter_name: String, progress_base: fl
 		http.queue_free()
 		return false
 
-	# Suivre la progression via un Timer (pas de boucle while pour éviter
-	# une race condition avec le signal request_completed)
+	# Suivre la progression via un Timer
 	var progress_timer := Timer.new()
 	progress_timer.wait_time = 0.1
 	progress_timer.autostart = true
@@ -264,14 +302,14 @@ func _load_pck_web(pck_filename: String, chapter_name: String, progress_base: fl
 	progress_timer.timeout.connect(func():
 		if not is_instance_valid(http):
 			return
-		var body_size = http.get_body_size()
 		var downloaded = http.get_downloaded_bytes()
-		if body_size > 0:
-			var p = float(downloaded) / float(body_size)
-			chapter_load_progress.emit(chapter_name, progress_base + p * progress_scale)
+		var ref_size = known_size if known_size > 0 else http.get_body_size()
+		if ref_size > 0:
+			var p = clampf(float(downloaded) / float(ref_size), 0.0, 1.0)
+			chapter_download_progress.emit(chapter_name, progress_base + p * progress_scale)
 	)
 
-	# Attendre la fin du téléchargement (await direct, pas de polling)
+	# Attendre la fin du téléchargement
 	var t_wait_start := Time.get_ticks_msec()
 	var result = await http.request_completed
 	print("PCK TIMING [%s] await request_completed at %d ms (waited %d ms)" % [pck_filename, Time.get_ticks_msec(), Time.get_ticks_msec() - t_wait_start])
@@ -287,7 +325,9 @@ func _load_pck_web(pck_filename: String, chapter_name: String, progress_base: fl
 		push_error("PckChapterLoader: failed to download %s (HTTP %d)" % [pck_filename, response_code])
 		return false
 
-	# Écrire dans user:// pour que load_resource_pack puisse y accéder
+	# Phase montage
+	chapter_mounting_started.emit(chapter_name)
+
 	var local_path = "user://" + pck_filename
 	var t0 := Time.get_ticks_msec()
 	var f = FileAccess.open(local_path, FileAccess.WRITE)
@@ -299,8 +339,6 @@ func _load_pck_web(pck_filename: String, chapter_name: String, progress_base: fl
 	print("PCK TIMING [%s] store_buffer+close: %d ms (abs: %d ms)" % [pck_filename, Time.get_ticks_msec() - t0, Time.get_ticks_msec()])
 
 	var t1 := Time.get_ticks_msec()
-	chapter_load_progress.emit(chapter_name, progress_base + progress_scale)
-
 	var success := ProjectSettings.load_resource_pack(local_path)
 	print("PCK TIMING [%s] load_resource_pack: %d ms (abs: %d ms)" % [pck_filename, Time.get_ticks_msec() - t1, Time.get_ticks_msec()])
 	print("PCK TIMING [%s] _load_pck_web END at %d ms" % [pck_filename, Time.get_ticks_msec()])

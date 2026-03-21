@@ -154,6 +154,113 @@ parent.add_child(debug_rect)
 
 **Important** : toujours retirer le code debug (auto-load, print, ColorRect) après le diagnostic.
 
+## Test d'export : exporter, lancer et vérifier une story
+
+Pour vérifier qu'un fix fonctionne en conditions réelles d'export, il faut reproduire le pipeline complet : copier le projet dans un dossier temporaire, y placer la story, importer, exporter, puis lancer le résultat.
+
+**Note** : en release macOS, `print()` n'apparaît PAS dans stdout. Il faut soit utiliser les logs Godot (`user://logs/godot.log`), soit écrire dans un fichier (`user://debug.log`) avec `FileAccess`, soit tester en web (les `print()` apparaissent dans la console du navigateur).
+
+### Procédure manuelle (bash)
+
+```bash
+GODOT=${GODOT_PATH:-$(command -v godot || echo "/Applications/Godot-4.6.1.app/Contents/MacOS/Godot")}
+PROJECT="$(pwd)"
+STORY="$PROJECT/stories/epreuve-du-heros"  # ou toute story avec plugin_settings
+TEMP="/tmp/vb_test_export"
+OUTPUT="/tmp/vb_test_output"
+
+# 1. Préparer le dossier temporaire
+rm -rf "$TEMP" "$OUTPUT"
+mkdir -p "$TEMP/project" "$OUTPUT"
+
+# 2. Copier le projet (sans .godot, .git, build, etc.)
+rsync -a --exclude='.godot' --exclude='.git' --exclude='build' \
+  --exclude='.claude' --exclude='specs' --exclude='addons/gut' \
+  --exclude='stories' "$PROJECT/" "$TEMP/project/"
+
+# 3. Copier la story dans res://story/
+rsync -a --exclude='artbook' "$STORY/" "$TEMP/project/story/"
+
+# 4. Configurer project.godot (main scene = game.tscn)
+sed -i '' 's|run/main_scene="res://src/main.tscn"|run/main_scene="res://src/game.tscn"|' "$TEMP/project/project.godot"
+sed -i '' 's|\[application\]|[application]\nconfig/story_path="res://story"|' "$TEMP/project/project.godot"
+# Supprimer la section [editor_plugins] (non nécessaire en export)
+python3 -c "
+import re
+with open('$TEMP/project/project.godot', 'r') as f:
+    content = f.read()
+content = re.sub(r'\[editor_plugins\].*?(?=\[|\Z)', '', content, flags=re.DOTALL)
+with open('$TEMP/project/project.godot', 'w') as f:
+    f.write(content)
+"
+
+# 5. Créer override.cfg
+cat > "$TEMP/project/override.cfg" << 'EOF'
+[application]
+config/story_path="res://story"
+EOF
+
+# 6. Copier les presets et ajouter *.yaml au include_filter
+cp "$PROJECT/export_presets.cfg" "$TEMP/project/"
+python3 -c "
+content = open('$TEMP/project/export_presets.cfg').read()
+content = content.replace('include_filter=\"\"', 'include_filter=\"*.yaml,*.json\"')
+open('$TEMP/project/export_presets.cfg', 'w').write(content)
+"
+
+# 7. Importer les ressources
+"$GODOT" --path "$TEMP/project" --headless --import
+
+# 8. Exporter
+# macOS :
+"$GODOT" --path "$TEMP/project" --headless --export-release "macOS" "$OUTPUT/game.zip"
+cd "$OUTPUT" && unzip -q game.zip -d app/
+
+# Web :
+# "$GODOT" --path "$TEMP/project" --headless --export-release "Web" "$OUTPUT/index.html"
+```
+
+### Lancer l'export macOS
+
+```bash
+# Trouver et lancer le binaire
+APP_PATH="$(find "$OUTPUT/app" -name '*.app' -type d | head -1)"
+BINARY="$APP_PATH/Contents/MacOS/$(ls "$APP_PATH/Contents/MacOS/" | head -1)"
+"$BINARY" &
+GAME_PID=$!
+
+# Prendre des screenshots à intervalles
+sleep 3 && screencapture -x /tmp/export_screen1.png
+sleep 3 && screencapture -x /tmp/export_screen2.png
+
+# Lire le log (les print() n'apparaissent pas en stdout pour macOS release)
+cat "$HOME/Library/Application Support/Godot/app_userdata/$(ls "$HOME/Library/Application Support/Godot/app_userdata/" | grep -i "game\|project" | tail -1)/logs/godot.log"
+
+kill $GAME_PID
+```
+
+### Lancer l'export Web
+
+```bash
+# Servir les fichiers localement
+cd "$OUTPUT" && python3 -m http.server 8099 &
+
+# Ouvrir dans Chrome, puis vérifier la console développeur (F12 > Console)
+# Les print() GDScript apparaissent dans la console du navigateur
+
+# Avec le MCP chrome-devtools, on peut aussi :
+# 1. mcp__chrome-devtools__new_page url=http://localhost:8099/index.html
+# 2. mcp__chrome-devtools__take_screenshot
+# 3. mcp__chrome-devtools__list_console_messages
+```
+
+### Nettoyage
+
+```bash
+rm -rf /tmp/vb_test_export /tmp/vb_test_output
+kill $(lsof -ti:8099) 2>/dev/null  # tuer le serveur web
+```
+
 ## Project Structure
 
 - `project.godot` — Main engine configuration

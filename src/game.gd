@@ -444,11 +444,15 @@ func _preload_chapter_with_ui(chapter_uuid: String) -> void:
 	if _pck_loader.is_chapter_loaded(chapter_uuid):
 		return
 	_main_menu.set_loading_visible(true)
-	var progress_cb = func(_name: String, progress: float):
-		_main_menu.update_loading_text(StoryI18nService.get_ui_string("Chargement...", _i18n_dict) + " %d%%" % int(progress * 100))
-	_pck_loader.chapter_load_progress.connect(progress_cb)
+	var download_cb = func(_name: String, progress: float):
+		_main_menu.update_loading_text(StoryI18nService.get_ui_string("Téléchargement...", _i18n_dict) + " %d%%" % int(progress * 100))
+	var mounting_cb = func(_name: String):
+		_main_menu.update_loading_text(StoryI18nService.get_ui_string("Chargement...", _i18n_dict))
+	_pck_loader.chapter_download_progress.connect(download_cb)
+	_pck_loader.chapter_mounting_started.connect(mounting_cb)
 	var ok = await _pck_loader.ensure_chapter_loaded(chapter_uuid)
-	_pck_loader.chapter_load_progress.disconnect(progress_cb)
+	_pck_loader.chapter_download_progress.disconnect(download_cb)
+	_pck_loader.chapter_mounting_started.disconnect(mounting_cb)
 	_main_menu.set_loading_visible(false)
 	if not ok:
 		push_warning("PckChapterLoader: failed to preload chapter %s" % chapter_uuid)
@@ -1024,22 +1028,31 @@ func _on_plugin_choice_made(_seq_uuid: String, choice_index: int, choice_text: S
 
 func _on_chapter_loading_started(chapter_name: String) -> void:
 	_loading_overlay.visible = true
-	_loading_overlay_label.text = StoryI18nService.get_ui_string("Chargement...", _i18n_dict)
+	_loading_overlay_label.text = StoryI18nService.get_ui_string("Téléchargement...", _i18n_dict)
 	if _pck_loader:
-		var progress_cb = func(_n: String, progress: float):
-			_loading_overlay_label.text = StoryI18nService.get_ui_string("Chargement...", _i18n_dict) + " %d%%" % int(progress * 100)
-		_pck_loader.chapter_load_progress.connect(progress_cb)
-		# Stocker la callback pour la déconnecter plus tard
-		set_meta("_loading_progress_cb", progress_cb)
+		var download_cb = func(_n: String, progress: float):
+			_loading_overlay_label.text = StoryI18nService.get_ui_string("Téléchargement...", _i18n_dict) + " %d%%" % int(progress * 100)
+		var mounting_cb = func(_n: String):
+			_loading_overlay_label.text = StoryI18nService.get_ui_string("Chargement...", _i18n_dict)
+		_pck_loader.chapter_download_progress.connect(download_cb)
+		_pck_loader.chapter_mounting_started.connect(mounting_cb)
+		set_meta("_loading_download_cb", download_cb)
+		set_meta("_loading_mounting_cb", mounting_cb)
 
 
 func _on_chapter_loading_finished() -> void:
 	_loading_overlay.visible = false
-	if _pck_loader and has_meta("_loading_progress_cb"):
-		var cb = get_meta("_loading_progress_cb")
-		if _pck_loader.chapter_load_progress.is_connected(cb):
-			_pck_loader.chapter_load_progress.disconnect(cb)
-		remove_meta("_loading_progress_cb")
+	if _pck_loader:
+		if has_meta("_loading_download_cb"):
+			var cb = get_meta("_loading_download_cb")
+			if _pck_loader.chapter_download_progress.is_connected(cb):
+				_pck_loader.chapter_download_progress.disconnect(cb)
+			remove_meta("_loading_download_cb")
+		if has_meta("_loading_mounting_cb"):
+			var cb = get_meta("_loading_mounting_cb")
+			if _pck_loader.chapter_mounting_started.is_connected(cb):
+				_pck_loader.chapter_mounting_started.disconnect(cb)
+			remove_meta("_loading_mounting_cb")
 
 
 func _on_analytics_story_finished(reason: String) -> void:

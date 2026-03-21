@@ -33,20 +33,14 @@ func get_plugin_folder() -> String:
 
 
 func on_game_ready(ctx: RefCounted) -> void:
-	print("[Launcher] on_game_ready called")
 	if ctx == null or ctx.game_node == null:
-		print("[Launcher] ctx or game_node is null, aborting")
 		return
 	_game_node = ctx.game_node
 	var config := _get_config(ctx)
-	print("[Launcher] config: ", config)
 	var steps := _build_steps(config, ctx)
-	print("[Launcher] steps count: ", steps.size(), " steps: ", steps)
 	if steps.is_empty():
-		print("[Launcher] no steps, skipping")
 		return
 	_play_generation += 1
-	print("[Launcher] starting sequence, generation=", _play_generation)
 	await _play_sequence(steps, _play_generation)
 
 
@@ -245,13 +239,7 @@ func _create_studio_logo_content(step: Dictionary) -> Control:
 
 	var logo_path: String = step.get("path", "")
 	if logo_path != "" and (FileAccess.file_exists(logo_path) or ResourceLoader.exists(logo_path)):
-		var tex: Texture2D = null
-		if logo_path.begins_with("res://"):
-			tex = load(logo_path)
-		else:
-			var img := Image.load_from_file(logo_path)
-			if img != null:
-				tex = ImageTexture.create_from_image(img)
+		var tex := _load_image_as_texture(logo_path)
 		if tex != null:
 			var tex_rect := TextureRect.new()
 			tex_rect.texture = tex
@@ -270,6 +258,24 @@ func _create_studio_logo_content(step: Dictionary) -> Control:
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	center.add_child(label)
 	return center
+
+
+## Charge une image depuis n'importe quel chemin (res://, user://, filesystem).
+## Pour les chemins res:// : utilise load() (ressource importée dans le PCK).
+## Pour les chemins filesystem : utilise Image.load_from_file() (PNG/JPG bruts).
+func _load_image_as_texture(path: String) -> Texture2D:
+	# Chemins res:// ou user:// : passer par le ResourceLoader (ressources importées)
+	if path.begins_with("res://") or path.begins_with("user://"):
+		if ResourceLoader.exists(path):
+			var res = load(path)
+			if res is Texture2D:
+				return res
+		return null
+	# Chemins filesystem : charger le PNG/JPG brut directement
+	var img := Image.load_from_file(path)
+	if img != null:
+		return ImageTexture.create_from_image(img)
+	return null
 
 
 func _create_engine_logo_content() -> Control:

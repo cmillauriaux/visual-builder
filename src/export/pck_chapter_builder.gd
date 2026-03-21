@@ -117,9 +117,15 @@ func _init():
 						file_count += 1
 
 			packer.flush()
-			pck_filenames.append(pck_filename)
+			# Mesurer la taille réelle du fichier PCK créé
+			var pck_file_size := 0
+			var pck_fa = FileAccess.open(pck_path, FileAccess.READ)
+			if pck_fa:
+				pck_file_size = pck_fa.get_length()
+				pck_fa.close()
+			pck_filenames.append({"file": pck_filename, "size": pck_file_size})
 			total_pck_count += 1
-			print("    %s (%d files, %.1f Mo)" % [pck_filename, file_count, chunk_size / 1048576.0])
+			print("    %s (%d files, %.1f Mo content, %.1f Mo PCK)" % [pck_filename, file_count, chunk_size / 1048576.0, pck_file_size / 1048576.0])
 
 		manifest["chapters"][uuid] = {
 			"pcks": pck_filenames,

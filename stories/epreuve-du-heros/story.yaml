@@ -27,3 +27,13 @@ entry_point: "e3298e3f-fc76-4c8f-891c-8e6ba1013fc4"
 menu_title: "L'Épreuve du Héros"
 menu_subtitle: "Un voyage vers la gloire"
 menu_background: ""
+plugin_settings:
+  launcher:
+    studio_logo_enabled: true
+    studio_logo_path: "assets/icons/test_logo.png"
+    studio_logo_duration: 3.0
+    engine_logo_enabled: true
+    engine_logo_duration: 2.0
+    disclaimer_enabled: true
+    disclaimer_text: "Ce jeu est une fiction. Toute ressemblance avec des faits réels serait purement fortuite."
+    disclaimer_duration: 3.0
