@@ -52,6 +52,7 @@ func update_editor_mode() -> void:
 			"sequences": new_mode = EditorState.Mode.SEQUENCE_VIEW
 			"sequence_edit": new_mode = EditorState.Mode.SEQUENCE_EDIT
 			"condition_edit": new_mode = EditorState.Mode.CONDITION_EDIT
+			"map": new_mode = EditorState.Mode.MAP_VIEW
 	
 	if new_mode != _current_mode:
 		_current_mode = new_mode
@@ -62,6 +63,17 @@ func update_editor_mode() -> void:
 			"sequence": _main._editor_main._current_sequence,
 			"condition": _main._editor_main._current_condition
 		})
+
+
+# --- Map ---
+
+func on_map_pressed() -> void:
+	if _main._editor_main.get_current_level() == "map":
+		_main._editor_main.navigate_back()
+	else:
+		_main._editor_main.navigate_to_map()
+	update_editor_mode()
+	_main.refresh_current_view()
 
 
 # --- Create ---

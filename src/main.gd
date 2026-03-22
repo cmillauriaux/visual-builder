@@ -49,6 +49,7 @@ var _back_button: Button
 var _undo_button: Button
 var _redo_button: Button
 var _breadcrumb: HBoxContainer
+var _map_button: Button
 var _top_play_button: Button
 var _top_stop_button: Button
 var _create_button: Button
@@ -65,6 +66,7 @@ var _chapter_plugin_toolbar: HBoxContainer
 var _scene_graph_view: GraphEdit
 var _scene_plugin_toolbar: HBoxContainer
 var _sequence_graph_view: GraphEdit
+var _map_view: Control
 
 # UI — Sequence editor
 var _sequence_editor_panel: VBoxContainer
@@ -166,7 +168,6 @@ func _ready() -> void:
 	update_view()
 
 
-
 func _setup_controllers() -> void:
 	_play_ctrl = Node.new()
 	_play_ctrl.set_script(PlayControllerScript)
@@ -242,6 +243,13 @@ func _connect_signals() -> void:
 	# Welcome Screen
 	_new_story_button.pressed.connect(_nav_ctrl.on_new_story_pressed)
 	_load_story_button.pressed.connect(_nav_ctrl.on_load_pressed)
+
+	# Top bar Map
+	_map_button.pressed.connect(_nav_ctrl.on_map_pressed)
+	_map_view.sequence_clicked.connect(_on_map_sequence_clicked)
+	_map_view.condition_clicked.connect(_on_map_condition_clicked)
+	_map_view.scene_clicked.connect(_on_map_scene_clicked)
+	_map_view.chapter_clicked.connect(_on_map_chapter_clicked)
 
 	# Top bar Play
 	_top_play_button.pressed.connect(_play_ctrl.on_top_play_pressed)
@@ -615,6 +623,8 @@ func refresh_current_view() -> void:
 		_scene_graph_view.load_chapter(_editor_main._current_chapter)
 	elif level == "sequences":
 		_sequence_graph_view.load_scene(_editor_main._current_scene)
+	elif level == "map":
+		_map_view.load_story(_editor_main._story)
 	update_editor_mode()
 
 
@@ -628,6 +638,35 @@ func update_editor_mode() -> void:
 
 func _on_editor_mode_changed(_mode: int, _context: Dictionary) -> void:
 	_refresh_undo_redo_buttons()
+
+
+# --- Map navigation ---
+
+func _on_map_sequence_clicked(chapter_uuid: String, scene_uuid: String, seq_uuid: String) -> void:
+	_editor_main.navigate_from_map(chapter_uuid, scene_uuid, seq_uuid, false)
+	_nav_ctrl.update_editor_mode()
+	if _editor_main._current_sequence:
+		load_sequence_editors(_editor_main._current_sequence)
+	refresh_current_view()
+
+
+func _on_map_condition_clicked(chapter_uuid: String, scene_uuid: String, cond_uuid: String) -> void:
+	_editor_main.navigate_from_map(chapter_uuid, scene_uuid, cond_uuid, true)
+	_nav_ctrl.update_editor_mode()
+	refresh_current_view()
+
+
+func _on_map_scene_clicked(chapter_uuid: String, scene_uuid: String) -> void:
+	_editor_main.navigate_to_chapter(chapter_uuid)
+	_editor_main.navigate_to_scene(scene_uuid)
+	_nav_ctrl.update_editor_mode()
+	refresh_current_view()
+
+
+func _on_map_chapter_clicked(chapter_uuid: String) -> void:
+	_editor_main.navigate_to_chapter(chapter_uuid)
+	_nav_ctrl.update_editor_mode()
+	refresh_current_view()
 
 
 func _on_play_started(_mode: String) -> void:

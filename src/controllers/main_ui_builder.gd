@@ -25,6 +25,7 @@ const VariablePanelScene = preload("res://src/ui/editors/variable_panel.tscn")
 const VerifierReportPanelScript = preload("res://src/ui/editors/verifier_report_panel.gd")
 const VariableSidebarScript = preload("res://src/ui/play/variable_sidebar.gd")
 const VariableDetailsOverlayScript = preload("res://src/ui/play/variable_details_overlay.gd")
+const StoryMapViewScript = preload("res://src/views/story_map_view.gd")
 
 const MainTheme = preload("res://src/ui/themes/editor_main.tres")
 
@@ -82,6 +83,12 @@ static func _build_top_bar(main: Control) -> void:
 	var spacer = Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	main._top_bar.add_child(spacer)
+
+	main._map_button = Button.new()
+	main._map_button.text = TranslationServer.translate("🗺 Map")
+	main._map_button.visible = false
+	main._map_button.toggle_mode = true
+	main._top_bar.add_child(main._map_button)
 
 	main._top_play_button = Button.new()
 	main._top_play_button.text = TranslationServer.translate("▶ Jouer")
@@ -185,6 +192,13 @@ static func _build_content_area(main: Control) -> void:
 	main._sequence_graph_view.set_anchors_preset(Control.PRESET_FULL_RECT)
 	main._sequence_graph_view.visible = false
 	main._content_area.add_child(main._sequence_graph_view)
+
+	# Story Map View
+	main._map_view = GraphEdit.new()
+	main._map_view.set_script(StoryMapViewScript)
+	main._map_view.set_anchors_preset(Control.PRESET_FULL_RECT)
+	main._map_view.visible = false
+	main._content_area.add_child(main._map_view)
 
 
 static func _build_sequence_editor(main: Control) -> void:

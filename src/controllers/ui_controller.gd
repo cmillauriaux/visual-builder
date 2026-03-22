@@ -55,6 +55,7 @@ func _on_editor_mode_changed(mode: int, context: Dictionary) -> void:
 	_main._sequence_graph_view.visible = (mode == EditorState.Mode.SEQUENCE_VIEW)
 	_main._sequence_editor_panel.visible = (mode == EditorState.Mode.SEQUENCE_EDIT or mode == EditorState.Mode.PLAY_MODE)
 	_main._condition_editor_panel.visible = (mode == EditorState.Mode.CONDITION_EDIT)
+	_main._map_view.visible = (mode == EditorState.Mode.MAP_VIEW)
 	_main._welcome_screen.visible = (mode == EditorState.Mode.NONE)
 	_main._top_bar_panel.visible = (mode != EditorState.Mode.NONE)
 	
@@ -72,6 +73,8 @@ func _on_editor_mode_changed(mode: int, context: Dictionary) -> void:
 	_main._breadcrumb.set_path(_main._editor_main.get_breadcrumb_path())
 	_main._breadcrumb.visible = (mode != EditorState.Mode.NONE)
 	
+	_main._map_button.visible = (mode != EditorState.Mode.NONE)
+	_main._map_button.button_pressed = (mode == EditorState.Mode.MAP_VIEW)
 	_main._top_play_button.visible = (mode in [EditorState.Mode.CHAPTER_VIEW, EditorState.Mode.SCENE_VIEW, EditorState.Mode.SEQUENCE_VIEW])
 	_main._top_stop_button.visible = (mode == EditorState.Mode.PLAY_MODE)
 	

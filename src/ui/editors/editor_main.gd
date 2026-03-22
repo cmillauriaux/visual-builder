@@ -12,6 +12,11 @@ var _current_scene = null
 var _current_sequence = null
 var _current_condition = null
 
+# Contexte sauvegardé avant ouverture de la map
+var _pre_map_level: String = "chapters"
+var _pre_map_chapter = null
+var _pre_map_scene = null
+
 func get_current_level() -> String:
 	return _current_level
 
@@ -61,7 +66,41 @@ func navigate_to_condition(condition_uuid: String) -> void:
 		_current_condition = cond
 		_current_sequence = null
 
+func navigate_to_map() -> void:
+	_pre_map_level = _current_level
+	_pre_map_chapter = _current_chapter
+	_pre_map_scene = _current_scene
+	_current_level = "map"
+
+
+## Navigation directe depuis la map vers une séquence ou condition spécifique.
+func navigate_from_map(chapter_uuid: String, scene_uuid: String, item_uuid: String, is_condition: bool) -> void:
+	_current_chapter = _story.find_chapter(chapter_uuid)
+	if _current_chapter == null:
+		return
+	_current_scene = _current_chapter.find_scene(scene_uuid)
+	if _current_scene == null:
+		return
+	if is_condition:
+		var cond = _current_scene.find_condition(item_uuid)
+		if cond:
+			_current_condition = cond
+			_current_sequence = null
+			_current_level = "condition_edit"
+	else:
+		var seq = _current_scene.find_sequence(item_uuid)
+		if seq:
+			_current_sequence = seq
+			_current_condition = null
+			_current_level = "sequence_edit"
+
+
 func navigate_back() -> void:
+	if _current_level == "map":
+		_current_level = _pre_map_level
+		_current_chapter = _pre_map_chapter
+		_current_scene = _pre_map_scene
+		return
 	if _current_level == "condition_edit":
 		_current_level = "sequences"
 		_current_condition = null

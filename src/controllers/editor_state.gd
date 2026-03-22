@@ -10,5 +10,6 @@ enum Mode {
 	SEQUENCE_VIEW,   # Vue graphe des séquences
 	SEQUENCE_EDIT,   # Édition d'une séquence (Visual + Dialogues)
 	CONDITION_EDIT,  # Édition d'une condition
+	MAP_VIEW,        # Vue map globale de la story
 	PLAY_MODE        # Mode test de jeu
 }
