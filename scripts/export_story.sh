@@ -331,21 +331,23 @@ else
     fi
 fi
 
-# 7. Importer les ressources (nécessaire avant le script de réécriture)
+# 7. Modifier project.godot AVANT l'import (pour que .godot/project.binary ait le bon main_scene)
+info "Configuration de project.godot..."
+run_logged "$SED_BIN" -i.bak 's|run/main_scene="res://src/main.tscn"|run/main_scene="res://src/game.tscn"|' "$TEMP_PROJECT/project.godot"
+# Échapper & pour éviter son interprétation spéciale dans le remplacement sed
+ESCAPED_GAME_NAME="${GAME_NAME//&/\\&}"
+run_logged "$SED_BIN" -i.bak "s|config/name=\"[^\"]*\"|config/name=\"$ESCAPED_GAME_NAME\"|" "$TEMP_PROJECT/project.godot"
+# Désactiver le plugin GUT pour l'export
+run_logged "$SED_BIN" -i.bak '/\[editor_plugins\]/,/^$/d' "$TEMP_PROJECT/project.godot"
+
+# 8. Importer les ressources (nécessaire avant le script de réécriture)
 info "Import des ressources..."
 run_logged "$GODOT_BIN" --headless --path "$TEMP_PROJECT" --import || true
 
-# 7b. Réécrire les chemins images via Godot headless
+# 8b. Réécrire les chemins images via Godot headless
 info "Réécriture des chemins images..."
 run_logged "$GODOT_BIN" --headless --path "$TEMP_PROJECT" --script res://src/export/rewrite_runner.gd || \
     error "Échec de la réécriture des chemins"
-
-# 8. Modifier project.godot
-info "Configuration de project.godot..."
-run_logged "$SED_BIN" -i.bak 's|run/main_scene="res://src/main.tscn"|run/main_scene="res://src/game.tscn"|' "$TEMP_PROJECT/project.godot"
-run_logged "$SED_BIN" -i.bak "s|config/name=\"[^\"]*\"|config/name=\"$GAME_NAME\"|" "$TEMP_PROJECT/project.godot"
-# Désactiver le plugin GUT pour l'export
-run_logged "$SED_BIN" -i.bak '/\[editor_plugins\]/,/^$/d' "$TEMP_PROJECT/project.godot"
 
 # Activer les formats de compression texture requis selon la plateforme
 case "$PLATFORM" in
@@ -374,7 +376,7 @@ case "$PLATFORM" in
         ;;
 esac
 
-# 9. Modifier game.tscn pour définir story_path
+# 9. Modifier game.tscn pour définir story_path (après import pour que le .bak soit propre)
 info "Configuration de game.tscn..."
 run_logged "$SED_BIN" -i.bak '/^script = ExtResource/a story_path = "res://story"' "$TEMP_PROJECT/src/game.tscn"
 

@@ -264,9 +264,9 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 			f_log.store_string(line)
 		f_log.close()
 
-	# 9b. Découper en PCK par chapitre (web, windows, macos)
-	if platform in ["web", "windows", "macos"] and exit_code == 0 and FileAccess.file_exists(export_file):
-		_split_pck_by_chapter(abs_temp_project, export_file.get_base_dir(), godot_bin, log_path, preset_name, export_file, platform == "web")
+	# 9b. Découper en PCK par chapitre (web uniquement — inutile sur desktop)
+	if platform == "web" and exit_code == 0 and FileAccess.file_exists(export_file):
+		_split_pck_by_chapter(abs_temp_project, export_file.get_base_dir(), godot_bin, log_path, preset_name, export_file, true)
 
 	# 9c. Cache-bust : hasher et renommer les fichiers engine (web uniquement)
 	if platform == "web" and exit_code == 0 and FileAccess.file_exists(export_file):
