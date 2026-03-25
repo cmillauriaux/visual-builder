@@ -139,3 +139,91 @@ func test_touch_updates_updated_at():
 	_editor.open_story(story)
 	story.touch()
 	assert_ne(story.updated_at, "2000-01-01T00:00:00Z", "updated_at doit changer après touch()")
+
+# --- Guard clause tests ---
+
+func test_navigate_to_chapter_without_story():
+	_editor.navigate_to_chapter("fake-uuid")
+	assert_eq(_editor.get_current_level(), "none", "Level stays none when story is null")
+	assert_null(_editor._current_chapter)
+
+func test_navigate_to_scene_without_chapter():
+	var story = StoryScript.new()
+	_editor.open_story(story)
+	_editor.navigate_to_scene("fake-uuid")
+	assert_eq(_editor.get_current_level(), "chapters", "Level stays chapters when chapter is null")
+	assert_null(_editor._current_scene)
+
+func test_navigate_to_sequence_without_scene():
+	var story = StoryScript.new()
+	_editor.open_story(story)
+	_editor.navigate_to_sequence("fake-uuid")
+	assert_eq(_editor.get_current_level(), "chapters", "Level stays chapters when scene is null")
+	assert_null(_editor._current_sequence)
+
+# --- Condition navigation ---
+
+func test_navigate_to_condition():
+	var ConditionScript = load("res://src/models/condition.gd")
+	var data = _setup_full_hierarchy()
+	var cond = ConditionScript.new()
+	cond.condition_name = "Condition 1"
+	data["scene"].conditions.append(cond)
+	_editor.navigate_to_condition(cond.uuid)
+	assert_eq(_editor.get_current_level(), "condition_edit")
+	assert_eq(_editor._current_condition.condition_name, "Condition 1")
+	assert_null(_editor._current_sequence, "Sequence is cleared when navigating to condition")
+
+func test_navigate_back_from_condition_edit():
+	var ConditionScript = load("res://src/models/condition.gd")
+	var data = _setup_full_hierarchy()
+	var cond = ConditionScript.new()
+	cond.condition_name = "Condition 1"
+	data["scene"].conditions.append(cond)
+	_editor.navigate_to_condition(cond.uuid)
+	_editor.navigate_back()
+	assert_eq(_editor.get_current_level(), "sequences")
+	assert_null(_editor._current_condition)
+
+# --- Map navigation ---
+
+func test_navigate_to_map_and_back():
+	var data = _setup_full_hierarchy()
+	_editor.navigate_to_map()
+	assert_eq(_editor.get_current_level(), "map")
+	_editor.navigate_back()
+	assert_eq(_editor.get_current_level(), "sequences", "Back from map restores previous level")
+	assert_eq(_editor._current_chapter.chapter_name, "Chapitre 1", "Back from map restores chapter")
+	assert_eq(_editor._current_scene.scene_name, "Scène A", "Back from map restores scene")
+
+# --- Utility functions ---
+
+func test_get_create_button_label():
+	var story = StoryScript.new()
+	story.title = "Test"
+	_editor.open_story(story)
+	assert_eq(_editor.get_create_button_label(), "+ Nouveau chapitre")
+	assert_true(_editor.is_create_button_visible())
+
+	var ch = ChapterScript.new()
+	ch.chapter_name = "Ch1"
+	story.chapters.append(ch)
+	_editor.navigate_to_chapter(ch.uuid)
+	assert_eq(_editor.get_create_button_label(), "+ Nouvelle scène")
+	assert_true(_editor.is_create_button_visible())
+
+	var scene = SceneDataScript.new()
+	scene.scene_name = "S1"
+	ch.scenes.append(scene)
+	_editor.navigate_to_scene(scene.uuid)
+	assert_eq(_editor.get_create_button_label(), "+ Nouvelle séquence")
+	assert_true(_editor.is_create_button_visible())
+
+func test_compute_next_position():
+	assert_eq(_editor.compute_next_position([]), Vector2(100, 100), "Empty array returns default position")
+	var items = [
+		{"position": Vector2(100, 50)},
+		{"position": Vector2(400, 200)},
+		{"position": Vector2(250, 100)},
+	]
+	assert_eq(_editor.compute_next_position(items), Vector2(700, 100), "Returns max_x + 300")

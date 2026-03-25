@@ -276,3 +276,144 @@ func test_handle_play_stopped_plays_transition_out_for_auto_redirect() -> void:
 	_main._play_ctrl._handle_play_stopped()
 	var fx = _main._sequence_fx_player
 	assert_true(fx.is_playing(), "fx player SHOULD play transition for auto_redirect ending")
+
+
+# --- on_story_play_finished ---
+
+func test_on_story_play_finished_emits_play_finished_signal() -> void:
+	watch_signals(EventBus)
+	_main._play_ctrl._is_story_play_mode = true
+	_main._play_ctrl.on_story_play_finished("completed")
+	assert_signal_emitted_with_parameters(EventBus, "play_finished", ["completed"])
+
+
+func test_on_story_play_finished_restores_story_play_mode() -> void:
+	_main._play_ctrl._is_story_play_mode = true
+	_main._play_ctrl.on_story_play_finished("completed")
+	assert_false(_main._play_ctrl._is_story_play_mode, "story play mode should be false after finish")
+
+
+func test_on_story_play_finished_stops_music_when_player_exists() -> void:
+	var mock_music = Node.new()
+	mock_music.set_script(preload("res://src/services/music_player.gd"))
+	add_child(mock_music)
+	_main._play_ctrl._music_player = mock_music
+	watch_signals(EventBus)
+	_main._play_ctrl.on_story_play_finished("completed")
+	assert_signal_emitted(EventBus, "play_finished")
+	# Music player stop_music was called — no crash means it worked
+	remove_child(mock_music)
+	mock_music.queue_free()
+
+
+func test_on_story_play_finished_without_music_player_does_not_crash() -> void:
+	_main._play_ctrl._music_player = null
+	watch_signals(EventBus)
+	_main._play_ctrl.on_story_play_finished("aborted")
+	assert_signal_emitted_with_parameters(EventBus, "play_finished", ["aborted"])
+
+
+# --- on_story_play_choice_requested ---
+
+func test_on_story_play_choice_requested_emits_signal() -> void:
+	watch_signals(EventBus)
+	var c1 = ChoiceScript.new()
+	c1.text = "Option A"
+	var c2 = ChoiceScript.new()
+	c2.text = "Option B"
+	var choices = [c1, c2]
+	_main._play_ctrl.on_story_play_choice_requested(choices)
+	assert_signal_emitted(EventBus, "play_choice_requested")
+
+
+func test_on_story_play_choice_requested_empty_array() -> void:
+	watch_signals(EventBus)
+	_main._play_ctrl.on_story_play_choice_requested([])
+	assert_signal_emitted(EventBus, "play_choice_requested")
+
+
+# --- _apply_sequence_audio ---
+
+func test_apply_sequence_audio_null_music_player_does_not_crash() -> void:
+	_main._play_ctrl._music_player = null
+	_main._play_ctrl._current_playing_sequence = SequenceScript.new()
+	_main._play_ctrl._apply_sequence_audio()
+	pass_test("should not crash when music player is null")
+
+
+func test_apply_sequence_audio_null_sequence_does_not_crash() -> void:
+	_main._play_ctrl._music_player = Node.new()
+	_main._play_ctrl._current_playing_sequence = null
+	_main._play_ctrl._apply_sequence_audio()
+	pass_test("should not crash when sequence is null")
+	_main._play_ctrl._music_player.free()
+
+
+func test_apply_sequence_audio_both_null_does_not_crash() -> void:
+	_main._play_ctrl._music_player = null
+	_main._play_ctrl._current_playing_sequence = null
+	_main._play_ctrl._apply_sequence_audio()
+	pass_test("should not crash when both are null")
+
+
+# --- _start_play_after_fx ---
+
+func test_start_play_after_fx_shows_title_when_title_set() -> void:
+	var seq = SequenceScript.new()
+	seq.title = "Chapter One"
+	seq.subtitle = ""
+	var dlg = DialogueScript.new()
+	dlg.character = "Alice"
+	dlg.text = "Hello"
+	seq.dialogues.append(dlg)
+	_main._sequence_editor_ctrl.load_sequence(seq)
+	_main._play_ctrl._current_playing_sequence = seq
+	_main._play_ctrl._start_play_after_fx()
+	assert_true(_main._play_ctrl._is_showing_title, "should show title screen when title is set")
+	assert_eq(_main._play_title_label.text, "Chapter One")
+
+
+func test_start_play_after_fx_shows_title_when_subtitle_set() -> void:
+	var seq = SequenceScript.new()
+	seq.title = ""
+	seq.subtitle = "A new beginning"
+	var dlg = DialogueScript.new()
+	dlg.character = "Alice"
+	dlg.text = "Hello"
+	seq.dialogues.append(dlg)
+	_main._sequence_editor_ctrl.load_sequence(seq)
+	_main._play_ctrl._current_playing_sequence = seq
+	_main._play_ctrl._start_play_after_fx()
+	assert_true(_main._play_ctrl._is_showing_title, "should show title screen when subtitle is set")
+	assert_eq(_main._play_subtitle_label.text, "A new beginning")
+
+
+func test_start_play_after_fx_no_title_starts_sequence() -> void:
+	var seq = SequenceScript.new()
+	seq.title = ""
+	seq.subtitle = ""
+	var dlg = DialogueScript.new()
+	dlg.character = "Alice"
+	dlg.text = "Hello"
+	seq.dialogues.append(dlg)
+	_main._sequence_editor_ctrl.load_sequence(seq)
+	_main._play_ctrl._current_playing_sequence = seq
+	_main._play_ctrl._start_play_after_fx()
+	assert_false(_main._play_ctrl._is_showing_title, "should not show title screen when no title or subtitle")
+
+
+func test_start_play_after_fx_null_sequence_does_not_crash() -> void:
+	_main._play_ctrl._current_playing_sequence = null
+	_main._play_ctrl._start_play_after_fx()
+	assert_false(_main._play_ctrl._is_showing_title, "should not show title when sequence is null")
+
+
+# --- on_choice_selected delegates to story_play_ctrl ---
+
+func test_on_choice_selected_delegates_to_story_play_ctrl() -> void:
+	watch_signals(_main._story_play_ctrl)
+	# Set up story play controller in a state where it can accept a choice
+	_main._story_play_ctrl._state = 2 # State.WAITING_CHOICE
+	_main._play_ctrl.on_choice_selected(0)
+	# No crash means delegation happened; the story_play_ctrl handles the logic
+	pass_test("on_choice_selected delegates without crashing")

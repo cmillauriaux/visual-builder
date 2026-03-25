@@ -42,7 +42,8 @@ func test_show_for_foreground_makes_visible() -> void:
 
 func test_show_for_foreground_populates_title() -> void:
 	_panel.show_for_foreground(_foreground)
-	assert_string_contains(_panel._title_label.text, "Hero")
+	assert_string_contains(_panel._title_label.text, "Propri")
+	assert_eq(_panel._name_label.text, "Hero")
 
 
 func test_show_for_foreground_populates_position() -> void:

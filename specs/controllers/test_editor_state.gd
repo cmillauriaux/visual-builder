@@ -27,8 +27,12 @@ func test_mode_condition_edit_exists():
 	assert_eq(EditorStateScript.Mode.CONDITION_EDIT, 5)
 
 
+func test_mode_map_view_exists():
+	assert_eq(EditorStateScript.Mode.MAP_VIEW, 6)
+
+
 func test_mode_play_mode_exists():
-	assert_eq(EditorStateScript.Mode.PLAY_MODE, 6)
+	assert_eq(EditorStateScript.Mode.PLAY_MODE, 7)
 
 
 func test_all_modes_are_distinct():
@@ -39,6 +43,7 @@ func test_all_modes_are_distinct():
 		EditorStateScript.Mode.SEQUENCE_VIEW,
 		EditorStateScript.Mode.SEQUENCE_EDIT,
 		EditorStateScript.Mode.CONDITION_EDIT,
+		EditorStateScript.Mode.MAP_VIEW,
 		EditorStateScript.Mode.PLAY_MODE,
 	]
 	# Check uniqueness

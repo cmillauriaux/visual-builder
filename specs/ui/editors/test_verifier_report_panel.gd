@@ -153,7 +153,7 @@ func test_copy_button_exists():
 
 func test_copy_button_sets_clipboard_after_show_report():
 	if not DisplayServer.has_feature(DisplayServer.FEATURE_CLIPBOARD):
-		pass  # Presse-papier non disponible en headless, test ignore
+		pending("Presse-papier non disponible en headless")
 		return
 	var report := _make_success_report()
 	_panel.show_report(report)

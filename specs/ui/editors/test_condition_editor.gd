@@ -211,3 +211,146 @@ func test_default_nouveau_callback_updates_model():
 	_editor._on_default_target_changed(0)
 	assert_eq(received[0]["ctype"], "redirect_sequence")
 	assert_eq(_condition.default_consequence.target, "new-uuid")
+
+# --- Effects API tests ---
+
+var VariableEffectScript = load("res://src/models/variable_effect.gd")
+
+func test_add_rule_effect():
+	_editor.load_condition(_condition)
+	_make_targets()
+	_editor.add_rule()
+	_editor.add_rule_effect(0)
+	var rule = _condition.rules[0]
+	assert_eq(rule.consequence.effects.size(), 1)
+	assert_eq(rule.consequence.effects[0].operation, "set")
+
+func test_add_rule_effect_invalid_index():
+	_editor.load_condition(_condition)
+	_editor.add_rule_effect(99)
+	assert_true(true, "No crash on invalid index")
+
+func test_add_rule_effect_emits_signal():
+	_editor.load_condition(_condition)
+	_make_targets()
+	_editor.add_rule()
+	watch_signals(_editor)
+	_editor.add_rule_effect(0)
+	assert_signal_emitted(_editor, "condition_changed")
+
+func test_remove_rule_effect():
+	_editor.load_condition(_condition)
+	_make_targets()
+	_editor.add_rule()
+	_editor.add_rule_effect(0)
+	assert_eq(_condition.rules[0].consequence.effects.size(), 1)
+	_editor.remove_rule_effect(0, 0)
+	assert_eq(_condition.rules[0].consequence.effects.size(), 0)
+
+func test_remove_rule_effect_invalid():
+	_editor.load_condition(_condition)
+	_make_targets()
+	_editor.add_rule()
+	_editor.remove_rule_effect(99, 0)
+	_editor.remove_rule_effect(0, 99)
+	assert_true(true, "No crash on invalid indices")
+
+func test_update_rule_effect_variable():
+	_editor.load_condition(_condition)
+	_make_targets()
+	_editor.add_rule()
+	_editor.add_rule_effect(0)
+	_editor.update_rule_effect(0, 0, "variable", "my_var")
+	assert_eq(_condition.rules[0].consequence.effects[0].variable, "my_var")
+
+func test_update_rule_effect_operation():
+	_editor.load_condition(_condition)
+	_make_targets()
+	_editor.add_rule()
+	_editor.add_rule_effect(0)
+	_editor.update_rule_effect(0, 0, "operation", "add")
+	assert_eq(_condition.rules[0].consequence.effects[0].operation, "add")
+
+func test_update_rule_effect_value():
+	_editor.load_condition(_condition)
+	_make_targets()
+	_editor.add_rule()
+	_editor.add_rule_effect(0)
+	_editor.update_rule_effect(0, 0, "value", "42")
+	assert_eq(_condition.rules[0].consequence.effects[0].value, "42")
+
+func test_update_rule_effect_invalid():
+	_editor.load_condition(_condition)
+	_make_targets()
+	_editor.add_rule()
+	_editor.update_rule_effect(99, 0, "variable", "x")
+	_editor.update_rule_effect(0, 99, "variable", "x")
+	assert_true(true, "No crash on invalid indices")
+
+func test_add_default_effect():
+	_editor.load_condition(_condition)
+	_make_targets()
+	_condition.default_consequence = ConsequenceScript.new()
+	_editor.add_default_effect()
+	assert_eq(_condition.default_consequence.effects.size(), 1)
+	assert_eq(_condition.default_consequence.effects[0].operation, "set")
+
+func test_add_default_effect_creates_consequence():
+	_editor.load_condition(_condition)
+	_make_targets()
+	_condition.default_consequence = null
+	_editor.add_default_effect()
+	assert_not_null(_condition.default_consequence)
+	assert_eq(_condition.default_consequence.effects.size(), 1)
+
+func test_remove_default_effect():
+	_editor.load_condition(_condition)
+	_make_targets()
+	_condition.default_consequence = ConsequenceScript.new()
+	_editor.add_default_effect()
+	assert_eq(_condition.default_consequence.effects.size(), 1)
+	_editor.remove_default_effect(0)
+	assert_eq(_condition.default_consequence.effects.size(), 0)
+
+func test_remove_default_effect_invalid():
+	_editor.load_condition(_condition)
+	_make_targets()
+	_editor.remove_default_effect(99)
+	assert_true(true, "No crash on invalid index")
+
+func test_update_default_effect_variable():
+	_editor.load_condition(_condition)
+	_make_targets()
+	_condition.default_consequence = ConsequenceScript.new()
+	_editor.add_default_effect()
+	_editor.update_default_effect(0, "variable", "hp")
+	assert_eq(_condition.default_consequence.effects[0].variable, "hp")
+
+func test_update_default_effect_operation():
+	_editor.load_condition(_condition)
+	_make_targets()
+	_condition.default_consequence = ConsequenceScript.new()
+	_editor.add_default_effect()
+	_editor.update_default_effect(0, "operation", "subtract")
+	assert_eq(_condition.default_consequence.effects[0].operation, "subtract")
+
+func test_update_default_effect_value():
+	_editor.load_condition(_condition)
+	_make_targets()
+	_condition.default_consequence = ConsequenceScript.new()
+	_editor.add_default_effect()
+	_editor.update_default_effect(0, "value", "100")
+	assert_eq(_condition.default_consequence.effects[0].value, "100")
+
+func test_get_available_conditions():
+	var conditions = [{"uuid": "c1", "name": "Cond1"}, {"uuid": "c2", "name": "Cond2"}]
+	_editor.set_available_targets(
+		[{"uuid": "s1", "name": "Seq1"}],
+		[{"uuid": "sc1", "name": "Scene1"}],
+		[{"uuid": "ch1", "name": "Chapter1"}],
+		conditions
+	)
+	var result = _editor.get_available_conditions()
+	assert_eq(result.size(), 2)
+	assert_eq(result[0]["uuid"], "c1")
+	assert_eq(result[1]["name"], "Cond2")

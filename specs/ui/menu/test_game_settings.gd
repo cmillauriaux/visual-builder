@@ -87,3 +87,72 @@ func test_save_all_settings_fields():
 	assert_false(loaded.toolbar_visible)
 	assert_eq(loaded.ui_scale_mode, 2)
 	DirAccess.remove_absolute(path)
+
+
+func test_save_and_load_game_plugins_enabled():
+	var path = "user://test_settings_plugins.cfg"
+	var settings = GameSettingsScript.new()
+	settings.game_plugins_enabled = {"lora_plugin": true, "voice_plugin": false}
+	settings.save_settings(path)
+	var loaded = GameSettingsScript.new()
+	loaded.load_settings(path)
+	assert_eq(loaded.game_plugins_enabled.get("lora_plugin"), true)
+	assert_eq(loaded.game_plugins_enabled.get("voice_plugin"), false)
+	DirAccess.remove_absolute(path)
+
+
+func test_save_and_load_pwa_prompt_dismissed():
+	var path = "user://test_settings_pwa.cfg"
+	var settings = GameSettingsScript.new()
+	settings.pwa_prompt_dismissed = true
+	settings.save_settings(path)
+	var loaded = GameSettingsScript.new()
+	loaded.load_settings(path)
+	assert_true(loaded.pwa_prompt_dismissed)
+	DirAccess.remove_absolute(path)
+
+
+func test_is_mobile_browser_returns_false_on_non_web():
+	# On desktop (non-Web), _is_mobile_browser should always return false
+	assert_false(GameSettingsScript._is_mobile_browser())
+
+
+func test_apply_settings_does_not_crash():
+	var settings = GameSettingsScript.new()
+	settings.language = "fr"  # Éviter set_locale("") qui provoque une erreur engine
+	settings.apply_settings()
+	assert_true(true, "apply_settings ne doit pas crasher")
+
+
+func test_apply_settings_fullscreen():
+	var settings = GameSettingsScript.new()
+	settings.fullscreen = true
+	settings.language = "en"
+	settings.apply_settings()
+	# Remettre en mode fenêtré après le test
+	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+	assert_true(true, "apply_settings fullscreen ne doit pas crasher")
+
+
+func test_save_empty_plugins_does_not_write_key():
+	var path = "user://test_settings_empty_plugins.cfg"
+	var settings = GameSettingsScript.new()
+	# game_plugins_enabled est {} par défaut → ne doit pas écrire la clé
+	settings.save_settings(path)
+	var cfg = ConfigFile.new()
+	cfg.load(path)
+	assert_false(cfg.has_section_key("plugins", "enabled_states"),
+		"plugins.enabled_states ne doit pas être écrit si vide")
+	DirAccess.remove_absolute(path)
+
+
+func test_load_settings_with_non_dict_plugins_json():
+	var path = "user://test_settings_non_dict_plugins.cfg"
+	var cfg = ConfigFile.new()
+	cfg.set_value("plugins", "enabled_states", "[1,2,3]")
+	cfg.save(path)
+	var settings = GameSettingsScript.new()
+	settings.load_settings(path)
+	assert_true(settings.game_plugins_enabled.is_empty(),
+		"JSON non-dict ne doit pas écraser game_plugins_enabled")
+	DirAccess.remove_absolute(path)

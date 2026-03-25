@@ -143,6 +143,20 @@ func test_step_condition():
 	assert_true(text.contains("    [Condition] Condition courage"), "Etape condition incorrecte")
 
 
+func test_format_duration_seconds_only():
+	# Timing avec valeur < 60s pour couvrir le format "X sec"
+	var report := _make_success_report()
+	report["chapter_timings"] = [
+		{
+			"chapter_name": "Chapitre court",
+			"continuation": {"min_seconds": 30.0, "max_seconds": 45.0},
+		},
+	]
+	var text: String = _formatter.format(report)
+	assert_true(text.contains("30 sec"), "Duration < 60s doit afficher en secondes")
+	assert_true(text.contains("45 sec"), "Duration < 60s doit afficher en secondes")
+
+
 # === Helpers ===
 
 func _make_success_report() -> Dictionary:

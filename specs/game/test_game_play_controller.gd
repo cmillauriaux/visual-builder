@@ -331,3 +331,173 @@ func test_handle_play_stopped_plays_transition_out_for_auto_redirect() -> void:
 	_game._play_ctrl._handle_play_stopped()
 	var fx = _game._sequence_fx_player
 	assert_true(fx.is_playing(), "fx player SHOULD play transition for auto_redirect ending")
+
+
+# --- set_i18n ---
+
+func test_set_i18n_stores_dictionary() -> void:
+	var dict = {"hello": "bonjour"}
+	_game._play_ctrl.set_i18n(dict)
+	assert_eq(_game._play_ctrl._i18n, dict, "i18n dictionary should be stored")
+
+
+# --- set_typewriter_speed ---
+
+func test_set_typewriter_speed_updates_timer() -> void:
+	_game._play_ctrl.set_typewriter_speed(0.05)
+	assert_eq(_game._play_ctrl._typewriter_speed, 0.05, "typewriter speed should be updated")
+	assert_eq(_game._typewriter_timer.wait_time, 0.05, "timer wait_time should match speed")
+
+
+func test_set_typewriter_speed_zero_does_not_change_timer() -> void:
+	var original_wait = _game._typewriter_timer.wait_time
+	_game._play_ctrl.set_typewriter_speed(0.0)
+	assert_eq(_game._play_ctrl._typewriter_speed, 0.0, "speed var should be zero")
+	assert_eq(_game._typewriter_timer.wait_time, original_wait, "timer should not change for zero speed")
+
+
+# --- set_dialogue_opacity ---
+
+func test_set_dialogue_opacity_updates_overlay() -> void:
+	_game._play_ctrl.set_dialogue_opacity(0.5)
+	assert_eq(_game._play_ctrl._dialogue_opacity, 0.5, "opacity var should be updated")
+	assert_eq(_game._play_overlay.self_modulate.a, 0.5, "play overlay alpha should match")
+
+
+# --- set_toolbar_visible ---
+
+func test_set_toolbar_visible_stores_value() -> void:
+	_game._play_ctrl.set_toolbar_visible(false)
+	assert_false(_game._play_ctrl._toolbar_visible, "toolbar_visible should be false")
+	_game._play_ctrl.set_toolbar_visible(true)
+	assert_true(_game._play_ctrl._toolbar_visible, "toolbar_visible should be true")
+
+
+# --- is_scene_available (static, pure logic) ---
+
+func test_is_scene_available_returns_false_when_no_progression() -> void:
+	assert_false(
+		GamePlayControllerScript.is_scene_available(0, 0, -1, -1),
+		"should return false when max_ch_idx is negative"
+	)
+
+
+func test_is_scene_available_same_chapter_within_range() -> void:
+	assert_true(
+		GamePlayControllerScript.is_scene_available(1, 2, 1, 3),
+		"scene within same chapter range should be available"
+	)
+
+
+func test_is_scene_available_same_chapter_beyond_range() -> void:
+	assert_false(
+		GamePlayControllerScript.is_scene_available(1, 4, 1, 3),
+		"scene beyond max in same chapter should not be available"
+	)
+
+
+func test_is_scene_available_earlier_chapter() -> void:
+	assert_true(
+		GamePlayControllerScript.is_scene_available(0, 99, 1, 0),
+		"any scene in earlier chapter should be available"
+	)
+
+
+func test_is_scene_available_later_chapter() -> void:
+	assert_false(
+		GamePlayControllerScript.is_scene_available(2, 0, 1, 5),
+		"scene in later chapter should not be available"
+	)
+
+
+# --- format_history_entry (static, pure logic) ---
+
+func test_format_history_entry_with_character_and_text() -> void:
+	assert_eq(
+		GamePlayControllerScript.format_history_entry("Alice", "Hello"),
+		"Alice : Hello"
+	)
+
+
+func test_format_history_entry_empty_character() -> void:
+	assert_eq(
+		GamePlayControllerScript.format_history_entry("", "Narration text"),
+		"Narration text"
+	)
+
+
+func test_format_history_entry_both_empty() -> void:
+	assert_eq(
+		GamePlayControllerScript.format_history_entry("", ""),
+		""
+	)
+
+
+# --- add_history_entry / reset_history ---
+
+func test_add_history_entry_appends_to_history() -> void:
+	_game._play_ctrl.reset_history()
+	_game._play_ctrl.add_history_entry("Bob", "Salut")
+	_game._play_ctrl.add_history_entry("Alice", "Hey")
+	var hist = _game._play_ctrl._dialogue_history
+	assert_eq(hist.size(), 2, "should have 2 entries")
+	assert_eq(hist[0]["character"], "Bob")
+	assert_eq(hist[1]["text"], "Hey")
+
+
+func test_reset_history_clears_entries() -> void:
+	_game._play_ctrl.add_history_entry("Test", "Entry")
+	_game._play_ctrl.reset_history()
+	assert_eq(_game._play_ctrl._dialogue_history.size(), 0, "history should be empty after reset")
+
+
+# --- set_skip_progression ---
+
+func test_set_skip_progression_stores_indices() -> void:
+	_game._play_ctrl.set_skip_progression(3, 7)
+	assert_eq(_game._play_ctrl._skip_max_chapter_index, 3)
+	assert_eq(_game._play_ctrl._skip_max_scene_index, 7)
+
+
+# --- set_auto_play_delay ---
+
+func test_set_auto_play_delay_updates_manager() -> void:
+	_game._play_ctrl.set_auto_play_delay(5.0)
+	var mgr = _game._play_ctrl.get_auto_play_manager()
+	assert_eq(mgr.delay, 5.0, "auto play delay should be updated")
+
+
+# --- toggle_auto_play ---
+
+func test_toggle_auto_play_toggles_manager() -> void:
+	var mgr = _game._play_ctrl.get_auto_play_manager()
+	assert_false(mgr.enabled, "auto play should start disabled")
+	_game._play_ctrl.toggle_auto_play()
+	assert_true(mgr.enabled, "auto play should be enabled after toggle")
+	_game._play_ctrl.toggle_auto_play()
+	assert_false(mgr.enabled, "auto play should be disabled after second toggle")
+
+
+# --- on_play_finished with _user_stopped guard ---
+
+func test_on_play_finished_returns_early_when_user_stopped() -> void:
+	_game._play_ctrl._user_stopped = true
+	# Should not crash or show dialog — just return
+	_game._play_ctrl.on_play_finished("completed")
+	_game._play_ctrl._user_stopped = false
+	pass_test("on_play_finished should return early when user_stopped is true")
+
+
+# --- set_auto_play_enabled ---
+
+func test_set_auto_play_enabled_toggles_on() -> void:
+	var mgr = _game._play_ctrl.get_auto_play_manager()
+	assert_false(mgr.enabled, "should start disabled")
+	_game._play_ctrl.set_auto_play_enabled(true)
+	assert_true(mgr.enabled, "should be enabled after set_auto_play_enabled(true)")
+
+
+func test_set_auto_play_enabled_no_change_when_already_matching() -> void:
+	var mgr = _game._play_ctrl.get_auto_play_manager()
+	_game._play_ctrl.set_auto_play_enabled(false)
+	assert_false(mgr.enabled, "should remain disabled when already disabled")

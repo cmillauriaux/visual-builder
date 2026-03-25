@@ -237,3 +237,98 @@ func test_get_current_source_image_background_empty() -> void:
 	var ImagePickerDialogScript = load("res://src/ui/dialogs/image_picker_dialog.gd")
 	var result = _ctrl._get_current_source_image(ImagePickerDialogScript.Mode.BACKGROUND)
 	assert_eq(result, "")
+
+
+# --- on_duplicate_dialogue ---
+
+func test_duplicate_dialogue() -> void:
+	var SequenceScript = load("res://src/models/sequence.gd")
+	var DialogueScript = load("res://src/models/dialogue.gd")
+	var seq = SequenceScript.new()
+	var dlg0 = DialogueScript.new()
+	dlg0.character = "Alice"
+	dlg0.text = "Hello"
+	var dlg1 = DialogueScript.new()
+	dlg1.character = "Bob"
+	dlg1.text = "World"
+	seq.dialogues.append(dlg0)
+	seq.dialogues.append(dlg1)
+	_main._sequence_editor_ctrl.load_sequence(seq)
+	_ctrl.on_duplicate_dialogue(0)
+	assert_eq(seq.dialogues.size(), 3)
+	assert_eq(seq.dialogues[1].character, "Alice")
+	assert_eq(seq.dialogues[1].text, "Hello")
+	# The duplicate should be a different object with a new identity
+	assert_ne(seq.dialogues[1], dlg0)
+
+
+func test_duplicate_dialogue_invalid_index() -> void:
+	var SequenceScript = load("res://src/models/sequence.gd")
+	var seq = SequenceScript.new()
+	_main._sequence_editor_ctrl.load_sequence(seq)
+	_ctrl.on_duplicate_dialogue(-1)
+	_ctrl.on_duplicate_dialogue(999)
+	assert_eq(seq.dialogues.size(), 0)
+	pass_test("on_duplicate_dialogue with invalid index should not crash")
+
+
+# --- on_insert_dialogue_before ---
+
+func test_insert_dialogue_before() -> void:
+	var SequenceScript = load("res://src/models/sequence.gd")
+	var DialogueScript = load("res://src/models/dialogue.gd")
+	var seq = SequenceScript.new()
+	var dlg0 = DialogueScript.new()
+	dlg0.character = "Alice"
+	dlg0.text = "First"
+	var dlg1 = DialogueScript.new()
+	dlg1.character = "Bob"
+	dlg1.text = "Second"
+	seq.dialogues.append(dlg0)
+	seq.dialogues.append(dlg1)
+	_main._sequence_editor_ctrl.load_sequence(seq)
+	_ctrl.on_insert_dialogue_before(1)
+	assert_eq(seq.dialogues.size(), 3)
+	# The inserted dialogue should be at index 1 (before "Bob")
+	assert_eq(seq.dialogues[1].character, "")
+	assert_eq(seq.dialogues[1].text, "")
+	# Original dialogues shifted
+	assert_eq(seq.dialogues[0].character, "Alice")
+	assert_eq(seq.dialogues[2].character, "Bob")
+
+
+func test_insert_dialogue_before_invalid_index() -> void:
+	# No sequence loaded → early return, no crash
+	_ctrl.on_insert_dialogue_before(0)
+	pass_test("on_insert_dialogue_before with null sequence should not crash")
+
+
+# --- on_insert_dialogue_after ---
+
+func test_insert_dialogue_after() -> void:
+	var SequenceScript = load("res://src/models/sequence.gd")
+	var DialogueScript = load("res://src/models/dialogue.gd")
+	var seq = SequenceScript.new()
+	var dlg0 = DialogueScript.new()
+	dlg0.character = "Alice"
+	dlg0.text = "First"
+	var dlg1 = DialogueScript.new()
+	dlg1.character = "Bob"
+	dlg1.text = "Second"
+	seq.dialogues.append(dlg0)
+	seq.dialogues.append(dlg1)
+	_main._sequence_editor_ctrl.load_sequence(seq)
+	_ctrl.on_insert_dialogue_after(0)
+	assert_eq(seq.dialogues.size(), 3)
+	# The inserted dialogue should be at index 1 (after "Alice")
+	assert_eq(seq.dialogues[1].character, "")
+	assert_eq(seq.dialogues[1].text, "")
+	# Original dialogues preserved in order
+	assert_eq(seq.dialogues[0].character, "Alice")
+	assert_eq(seq.dialogues[2].character, "Bob")
+
+
+func test_insert_dialogue_after_invalid_index() -> void:
+	# No sequence loaded → early return, no crash
+	_ctrl.on_insert_dialogue_after(0)
+	pass_test("on_insert_dialogue_after with null sequence should not crash")

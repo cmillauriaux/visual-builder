@@ -465,8 +465,9 @@ func _compute_chapter_timings(runs: Array) -> Array:
 			if not run_totals.has(ch):
 				run_totals[ch] = 0.0
 			var words: int = step.get("word_count", 0)
+			var dialogues: int = step.get("dialogue_count", 0)
 			var is_choice: bool = step.get("type", "") == "choice"
-			run_totals[ch] += (words / WORDS_PER_MINUTE) * 60.0 + (SECONDS_PER_CHOICE if is_choice else 0.0)
+			run_totals[ch] += (words / WORDS_PER_MINUTE) * 60.0 + dialogues * SECONDS_PER_CHOICE + (SECONDS_PER_CHOICE if is_choice else 0.0)
 
 		for ch in run_totals:
 			if not chapter_data.has(ch):

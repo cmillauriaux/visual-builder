@@ -405,3 +405,37 @@ func test_chapter_graph_ending_connections():
 			found = true
 			break
 	assert_true(found, "Chapter ending connection should exist")
+
+# === Choice text / add handlers tests ===
+
+func test_on_choice_text_changed_updates_model():
+	_editor.load_sequence(_sequence)
+	_editor.set_ending_type("choices")
+	_editor.add_choice("Original", "game_over", "")
+	_editor._on_choice_text_changed("Updated", 0)
+	assert_eq(_sequence.ending.choices[0].text, "Updated")
+
+func test_on_choice_text_changed_invalid_index_no_crash():
+	_editor.load_sequence(_sequence)
+	_editor.set_ending_type("choices")
+	_editor.add_choice("A", "game_over", "")
+	# Should not crash with out-of-range index
+	_editor._on_choice_text_changed("Bad", 99)
+	assert_eq(_sequence.ending.choices[0].text, "A")
+
+func test_on_add_redirect_effect_delegates():
+	_editor.load_sequence(_sequence)
+	_editor.set_ending_type("auto_redirect")
+	_editor.set_auto_consequence("redirect_sequence", "s1")
+	var before = _sequence.ending.auto_consequence.effects.size()
+	_editor._on_add_redirect_effect_pressed()
+	assert_eq(_sequence.ending.auto_consequence.effects.size(), before + 1)
+
+func test_on_add_choice_pressed_creates_choice():
+	_editor.load_sequence(_sequence)
+	_editor.set_ending_type("choices")
+	assert_eq(_sequence.ending.choices.size(), 0)
+	_editor._on_add_choice_pressed()
+	assert_eq(_sequence.ending.choices.size(), 1)
+	assert_eq(_sequence.ending.choices[0].text, "")
+	assert_eq(_sequence.ending.choices[0].consequence.type, "redirect_sequence")

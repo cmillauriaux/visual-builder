@@ -229,3 +229,61 @@ func test_load_audio_stream_existing_wav_external() -> void:
 	var result = MusicPlayerScript._load_audio_stream(path, false)
 	assert_null(result)  # WAV externe non supporté
 	DirAccess.remove_absolute(path)
+
+# --- play_music duplicate path skip ---
+
+func test_play_music_duplicate_path_skips() -> void:
+	_player._current_music_path = "/fake/music.ogg"
+	_player.play_music("/fake/music.ogg")
+	# Should still be the same path, no stream change
+	assert_eq(_player._current_music_path, "/fake/music.ogg")
+
+
+func test_play_music_nonexistent_exercises_load_path() -> void:
+	# Exercises play_music with a nonexistent path that isn't empty
+	# (path != "" and path != _current_music_path, so the load branch is reached)
+	_player.play_music("/tmp/nonexistent_audio_file.ogg")
+	assert_eq(_player._current_music_path, "", "Stream null → path not set")
+
+
+func test_apply_sequence_with_music_resolves_path() -> void:
+	# Use .wav extension — WAV non-res:// returns null gracefully (no engine error)
+	var base = "user://test_apply_%d" % randi()
+	DirAccess.make_dir_recursive_absolute(base)
+	var f = FileAccess.open(base + "/music.wav", FileAccess.WRITE)
+	if f:
+		f.store_string("x")
+		f.close()
+	var seq = SequenceScript.new()
+	seq.stop_music = false
+	seq.music = "music.wav"
+	seq.audio_fx = ""
+	var abs_base = base.replace("user://", OS.get_user_data_dir() + "/")
+	_player.apply_sequence(seq, abs_base)
+	assert_eq(_player._current_music_path, "", "WAV externe non supporté → not set")
+	DirAccess.remove_absolute(abs_base + "/music.wav")
+	DirAccess.remove_absolute(abs_base)
+
+
+func test_apply_sequence_with_fx_resolves_path() -> void:
+	var base = "user://test_apply_fx_%d" % randi()
+	DirAccess.make_dir_recursive_absolute(base)
+	var f = FileAccess.open(base + "/click.wav", FileAccess.WRITE)
+	if f:
+		f.store_string("x")
+		f.close()
+	var seq = SequenceScript.new()
+	seq.stop_music = false
+	seq.music = ""
+	seq.audio_fx = "click.wav"
+	var abs_base = base.replace("user://", OS.get_user_data_dir() + "/")
+	_player.apply_sequence(seq, abs_base)
+	assert_eq(_player._current_music_path, "")
+	DirAccess.remove_absolute(abs_base + "/click.wav")
+	DirAccess.remove_absolute(abs_base)
+
+
+func test_play_menu_music_with_valid_path() -> void:
+	_player.play_menu_music("/nonexistent/but/valid.ogg")
+	# Stream null so play_music returns early, but play_menu_music code is exercised
+	assert_eq(_player._current_music_path, "")

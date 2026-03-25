@@ -64,3 +64,53 @@ func test_get_dialogue_count():
 	_editor.add_dialogue("A", "1")
 	_editor.add_dialogue("B", "2")
 	assert_eq(_editor.get_dialogue_count(), 2)
+
+func test_get_dialogue_count_null_sequence():
+	# Without loading sequence, count should be 0
+	var fresh_editor = Control.new()
+	fresh_editor.set_script(DialogueEditor)
+	add_child_autofree(fresh_editor)
+	assert_eq(fresh_editor.get_dialogue_count(), 0)
+
+func test_add_dialogue_null_sequence():
+	var fresh_editor = Control.new()
+	fresh_editor.set_script(DialogueEditor)
+	add_child_autofree(fresh_editor)
+	fresh_editor.add_dialogue("Hero", "Hello")
+	assert_eq(fresh_editor.get_dialogue_count(), 0)
+
+func test_modify_dialogue_invalid_index():
+	_editor.load_sequence(_sequence)
+	_editor.add_dialogue("A", "Text")
+	_editor.modify_dialogue(-1, "X", "Y")
+	_editor.modify_dialogue(99, "X", "Y")
+	assert_eq(_sequence.dialogues[0].character, "A")
+
+func test_remove_dialogue_invalid_index():
+	_editor.load_sequence(_sequence)
+	_editor.add_dialogue("A", "Text")
+	_editor.remove_dialogue(-1)
+	_editor.remove_dialogue(99)
+	assert_eq(_sequence.dialogues.size(), 1)
+
+func test_move_dialogue_null_sequence():
+	var fresh_editor = Control.new()
+	fresh_editor.set_script(DialogueEditor)
+	add_child_autofree(fresh_editor)
+	fresh_editor.move_dialogue(0, 1)
+	assert_true(true)
+
+func test_move_dialogue_invalid_from_index():
+	_editor.load_sequence(_sequence)
+	_editor.add_dialogue("A", "1")
+	_editor.move_dialogue(-1, 0)
+	_editor.move_dialogue(99, 0)
+	assert_eq(_sequence.dialogues[0].character, "A")
+
+func test_move_dialogue_invalid_to_index():
+	_editor.load_sequence(_sequence)
+	_editor.add_dialogue("A", "1")
+	_editor.add_dialogue("B", "2")
+	_editor.move_dialogue(0, -1)
+	_editor.move_dialogue(0, 99)
+	assert_eq(_sequence.dialogues[0].character, "A")
