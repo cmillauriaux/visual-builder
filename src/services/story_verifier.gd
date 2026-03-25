@@ -26,12 +26,16 @@ func verify(story: RefCounted) -> Dictionary:
 
 	var visited_nodes := {}  # uuid -> true
 	var global_coverage := {}  # sequence_uuid -> {choice_index: true} — partage entre runs
-	var fallback_counters := {}  # sequence_uuid -> int — cycle quand tous les choix sont couverts
+	var game_over_choices := {}  # sequence_uuid -> {choice_index: true} — choix menant a game_over
 	var runs := []
 
 	for run_index in range(MAX_RUNS):
-		var run_result := _simulate_run(story, global_coverage, fallback_counters, run_index)
+		var run_result := _simulate_run(story, global_coverage, game_over_choices, run_index)
 		runs.append(run_result)
+
+		# Enregistrer les choix menant a game_over pour les eviter dans les runs suivants
+		if run_result["ending_reason"] == "game_over":
+			_record_game_over_choice(run_result["path"], game_over_choices)
 
 		# Marquer les noeuds visites
 		for step in run_result["path"]:
@@ -47,8 +51,6 @@ func verify(story: RefCounted) -> Dictionary:
 
 		var has_untried := _has_untried_choices(global_coverage, story)
 		if all_visited and not has_untried:
-			break
-		if not has_untried and run_index > 0:
 			break
 
 	# Construire la liste des orphelins
@@ -86,7 +88,7 @@ func _empty_report() -> Dictionary:
 	}
 
 
-func _simulate_run(story: RefCounted, global_coverage: Dictionary, fallback_counters: Dictionary, run_index: int) -> Dictionary:
+func _simulate_run(story: RefCounted, global_coverage: Dictionary, game_over_choices: Dictionary, run_index: int) -> Dictionary:
 	var variables := {}
 	_init_variables(story, variables)
 	var path := []
@@ -173,7 +175,7 @@ func _simulate_run(story: RefCounted, global_coverage: Dictionary, fallback_coun
 			elif current_node.ending.type == "choices":
 				if current_node.ending.choices.size() == 0:
 					return _make_run_result(run_index, path, "no_ending")
-				var choice_index := _pick_choice(node_uuid, current_node.ending.choices.size(), local_history, global_coverage, fallback_counters)
+				var choice_index := _pick_choice(node_uuid, current_node.ending.choices.size(), local_history, global_coverage, game_over_choices, run_index)
 				var choice = current_node.ending.choices[choice_index]
 				path.append({
 					"uuid": node_uuid,
@@ -359,13 +361,14 @@ func _serialize_full_history(local_history: Dictionary) -> String:
 	return ";".join(parts)
 
 
-func _pick_choice(sequence_uuid: String, num_choices: int, local_history: Dictionary, global_coverage: Dictionary, fallback_counters: Dictionary) -> int:
+func _pick_choice(sequence_uuid: String, num_choices: int, local_history: Dictionary, global_coverage: Dictionary, game_over_choices: Dictionary, run_index: int) -> int:
 	if not local_history.has(sequence_uuid):
 		local_history[sequence_uuid] = {}
 	if not global_coverage.has(sequence_uuid):
 		global_coverage[sequence_uuid] = {}
 	var local_tried: Dictionary = local_history[sequence_uuid]
 	var globally_covered: Dictionary = global_coverage[sequence_uuid]
+	var go_set: Dictionary = game_over_choices.get(sequence_uuid, {})
 
 	if local_tried.is_empty():
 		# Premiere visite dans ce run : priorite aux choix non couverts globalement
@@ -374,11 +377,21 @@ func _pick_choice(sequence_uuid: String, num_choices: int, local_history: Dictio
 				local_tried[i] = true
 				globally_covered[i] = true
 				return i
-		# Tous les choix deja couverts globalement : cycler pour explorer les chemins imbriques
-		if not fallback_counters.has(sequence_uuid):
-			fallback_counters[sequence_uuid] = 0
-		var fb: int = fallback_counters[sequence_uuid] % num_choices
-		fallback_counters[sequence_uuid] += 1
+		# Tous les choix deja couverts globalement : cycler en evitant les game_over connus
+		var safe_choices := []
+		for i in range(num_choices):
+			if not go_set.has(i):
+				safe_choices.append(i)
+		if safe_choices.size() > 0:
+			# Distribution pseudo-aleatoire deterministe basee sur (run_index, sequence)
+			# pour decorrreler les choix entre sequences ayant le meme nombre d'options.
+			# Le multiplicateur de Fibonacci (2654435761) assure une bonne distribution.
+			var seed_val: int = run_index * 2654435761 + abs(sequence_uuid.hash())
+			var fb: int = abs(seed_val >> 8) % safe_choices.size()
+			local_tried[safe_choices[fb]] = true
+			return safe_choices[fb]
+		# Tous les choix menent a game_over : cycler normalement
+		var fb: int = run_index % num_choices
 		local_tried[fb] = true
 		return fb
 	else:
@@ -390,6 +403,18 @@ func _pick_choice(sequence_uuid: String, num_choices: int, local_history: Dictio
 				return i
 		# Tous les choix tentes dans ce run → 0 (loop detection prendra le relais)
 		return 0
+
+
+func _record_game_over_choice(path: Array, game_over_choices: Dictionary) -> void:
+	# Trouver le dernier choix dans le parcours — c'est celui qui a engage le run vers game_over
+	for i in range(path.size() - 1, -1, -1):
+		if path[i]["type"] == "choice":
+			var uuid: String = path[i]["uuid"]
+			var ci: int = path[i]["choice_index"]
+			if not game_over_choices.has(uuid):
+				game_over_choices[uuid] = {}
+			game_over_choices[uuid][ci] = true
+			return
 
 
 func _has_untried_choices(choice_history: Dictionary, story: RefCounted) -> bool:

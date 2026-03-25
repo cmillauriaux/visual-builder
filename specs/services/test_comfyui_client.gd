@@ -201,3 +201,37 @@ func test_build_workflow_hires_negative_prompt_applied():
 	# Le negative prompt crée un noeud CLIPTextEncode supplémentaire
 	assert_true(wf.has("75:83"))
 	assert_eq(wf["75:83"]["inputs"]["text"], "blurry")
+
+func test_build_workflow_creation_no_lora_keeps_original_connections():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("t.png", "p", 1, true, 1.0, 4, 0, 0.5, "", 80, 1.0, [])
+	assert_false(wf.has("lora_0"))
+	assert_eq(wf["75:63"]["inputs"]["model"], ["75:70", 0])
+	assert_eq(wf["75:74"]["inputs"]["clip"], ["75:71", 0])
+
+func test_build_workflow_creation_single_lora_injects_node_and_rewires():
+	var client = ComfyUIClientScript.new()
+	var loras = [{"name": "test.safetensors", "strength": 0.8}]
+	var wf = client.build_workflow("t.png", "p", 1, true, 1.0, 4, 0, 0.5, "", 80, 1.0, loras)
+	assert_true(wf.has("lora_0"))
+	assert_eq(wf["lora_0"]["class_type"], "LoraLoader")
+	assert_eq(wf["lora_0"]["inputs"]["lora_name"], "test.safetensors")
+	assert_eq(wf["lora_0"]["inputs"]["strength_model"], 0.8)
+	assert_eq(wf["lora_0"]["inputs"]["model"], ["75:70", 0])
+	assert_eq(wf["lora_0"]["inputs"]["clip"], ["75:71", 0])
+	assert_eq(wf["75:63"]["inputs"]["model"], ["lora_0", 0])
+	assert_eq(wf["75:74"]["inputs"]["clip"], ["lora_0", 1])
+
+func test_build_workflow_creation_multiple_loras_chain_correctly():
+	var client = ComfyUIClientScript.new()
+	var loras = [
+		{"name": "a.safetensors", "strength": 1.0},
+		{"name": "b.safetensors", "strength": 0.5},
+	]
+	var wf = client.build_workflow("t.png", "p", 1, true, 1.0, 4, 0, 0.5, "", 80, 1.0, loras)
+	assert_true(wf.has("lora_0"))
+	assert_true(wf.has("lora_1"))
+	assert_eq(wf["lora_1"]["inputs"]["model"], ["lora_0", 0])
+	assert_eq(wf["lora_1"]["inputs"]["clip"], ["lora_0", 1])
+	assert_eq(wf["75:63"]["inputs"]["model"], ["lora_1", 0])
+	assert_eq(wf["75:74"]["inputs"]["clip"], ["lora_1", 1])

@@ -1,5 +1,9 @@
 extends RefCounted
 
+const AVAILABLE_LORAS = [
+	{"file": "Flux Klein - NSFW v2.safetensors", "label": "NSFW"},
+]
+
 const ComfyUIClient = preload("res://src/services/comfyui_client.gd")
 const ComfyUIConfig = preload("res://src/services/comfyui_config.gd")
 const ImageFileDialog = preload("res://src/ui/shared/image_file_dialog.gd")
@@ -42,6 +46,7 @@ var _regenerate_btn: Button
 var _client: Node = null
 var _source_image_path: String = ""
 var _generated_image: Image = null
+var _lora_widgets: Array = []
 
 
 func initialize(
@@ -212,6 +217,40 @@ func build_tab(tab_container: TabContainer) -> void:
 	_megapixels_value_label.custom_minimum_size.x = 32
 	mp_hbox.add_child(_megapixels_value_label)
 
+	# LORAs
+	vbox.add_child(HSeparator.new())
+	var lora_label = Label.new()
+	lora_label.text = "LORAs :"
+	vbox.add_child(lora_label)
+	_lora_widgets = []
+	for lora_def in AVAILABLE_LORAS:
+		var row = HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		vbox.add_child(row)
+		var cb = CheckBox.new()
+		cb.text = lora_def["label"]
+		cb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(cb)
+		var slider = HSlider.new()
+		slider.min_value = 0.0
+		slider.max_value = 2.0
+		slider.step = 0.1
+		slider.value = 1.0
+		slider.custom_minimum_size.x = 120
+		slider.visible = false
+		row.add_child(slider)
+		var val_label = Label.new()
+		val_label.text = "1.0"
+		val_label.custom_minimum_size.x = 28
+		val_label.visible = false
+		row.add_child(val_label)
+		slider.value_changed.connect(func(v: float): val_label.text = str(snapped(v, 0.1)))
+		cb.toggled.connect(func(on: bool):
+			slider.visible = on
+			val_label.visible = on
+		)
+		_lora_widgets.append({"checkbox": cb, "slider": slider, "file": lora_def["file"]})
+
 	# Generate button
 	_generate_btn = Button.new()
 	_generate_btn.text = "Générer"
@@ -299,6 +338,14 @@ func cancel_generation() -> void:
 # Private logic
 # ========================================================
 
+func _get_selected_loras() -> Array:
+	var result = []
+	for w in _lora_widgets:
+		if w["checkbox"].button_pressed:
+			result.append({"name": w["file"], "strength": w["slider"].value})
+	return result
+
+
 func _update_generate_button() -> void:
 	if _generate_btn == null:
 		return
@@ -362,7 +409,7 @@ func _on_generate_pressed() -> void:
 	var steps_value = int(_steps_slider.value)
 	var workflow_type = _workflow_option.get_selected_id()
 	var neg_prompt = _neg_input.text.strip_edges()
-	_client.generate(config, _source_image_path, _prompt_input.text, true, cfg_value, steps_value, workflow_type, 0.5, neg_prompt, 80, "4x-UltraSharp.pth", 512, 0, 0, _megapixels_slider.value)
+	_client.generate(config, _source_image_path, _prompt_input.text, true, cfg_value, steps_value, workflow_type, 0.5, neg_prompt, 80, "4x-UltraSharp.pth", 512, 0, 0, _megapixels_slider.value, _get_selected_loras())
 
 
 func _on_generation_completed(image: Image) -> void:

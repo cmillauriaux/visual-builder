@@ -27,6 +27,7 @@ var _upscale_tile_size: int = 512
 var _upscale_target_w: int = 0
 var _upscale_target_h: int = 0
 var _megapixels: float = 1.0
+var _loras: Array = []
 
 # --- Workflow template (Flux 2 Klein + BiRefNet) ---
 # Reproduit exactement Edit_Image_Transparent_API.json
@@ -943,7 +944,31 @@ func _build_live_portrait_workflow(filename: String, expression: String, remove_
 	return wf
 
 
-func build_workflow(filename: String, prompt_text: String, seed: int, remove_background: bool = true, cfg: float = 1.0, steps: int = 4, workflow_type: int = WorkflowType.CREATION, denoise: float = 0.5, negative_prompt: String = "", face_box_size: int = 80, megapixels: float = 1.0) -> Dictionary:
+func _inject_loras(wf: Dictionary, loras: Array) -> void:
+	if loras.is_empty():
+		return
+	var last_node_id = ""
+	for i in range(loras.size()):
+		var lora = loras[i]
+		var node_id = "lora_%d" % i
+		var model_in = ["75:70", 0] if i == 0 else [last_node_id, 0]
+		var clip_in = ["75:71", 0] if i == 0 else [last_node_id, 1]
+		wf[node_id] = {
+			"class_type": "LoraLoader",
+			"inputs": {
+				"model": model_in,
+				"clip": clip_in,
+				"lora_name": lora["name"],
+				"strength_model": lora["strength"],
+				"strength_clip": lora["strength"]
+			}
+		}
+		last_node_id = node_id
+	wf["75:63"]["inputs"]["model"] = [last_node_id, 0]
+	wf["75:74"]["inputs"]["clip"] = [last_node_id, 1]
+
+
+func build_workflow(filename: String, prompt_text: String, seed: int, remove_background: bool = true, cfg: float = 1.0, steps: int = 4, workflow_type: int = WorkflowType.CREATION, denoise: float = 0.5, negative_prompt: String = "", face_box_size: int = 80, megapixels: float = 1.0, loras: Array = []) -> Dictionary:
 	if workflow_type == WorkflowType.UPSCALE:
 		return _build_upscale_workflow(filename, prompt_text, seed, denoise, _upscale_model_name, _upscale_tile_size, _upscale_target_w, _upscale_target_h, negative_prompt)
 	if workflow_type == WorkflowType.HIRES:
@@ -962,6 +987,7 @@ func build_workflow(filename: String, prompt_text: String, seed: int, remove_bac
 	wf["75:62"]["inputs"]["steps"] = steps
 	wf["75:80"]["inputs"]["megapixels"] = megapixels
 	_apply_negative_prompt(wf, negative_prompt)
+	_inject_loras(wf, loras)
 	if not remove_background:
 		# Pour les backgrounds : sauvegarder directement la sortie du VAEDecode
 		# sans passer par BiRefNetRMBG (pas de suppression de fond)
@@ -1129,7 +1155,7 @@ func parse_history_response(json_str: String, prompt_id: String) -> Dictionary:
 
 # --- Full generation flow ---
 
-func generate(config: RefCounted, source_image_path: String, prompt_text: String, remove_background: bool = true, cfg: float = 1.0, steps: int = 4, workflow_type: int = WorkflowType.CREATION, denoise: float = 0.5, negative_prompt: String = "", face_box_size: int = 80, upscale_model_name: String = "4x-UltraSharp.pth", tile_size: int = 512, target_w: int = 0, target_h: int = 0, megapixels: float = 1.0) -> void:
+func generate(config: RefCounted, source_image_path: String, prompt_text: String, remove_background: bool = true, cfg: float = 1.0, steps: int = 4, workflow_type: int = WorkflowType.CREATION, denoise: float = 0.5, negative_prompt: String = "", face_box_size: int = 80, upscale_model_name: String = "4x-UltraSharp.pth", tile_size: int = 512, target_w: int = 0, target_h: int = 0, megapixels: float = 1.0, loras: Array = []) -> void:
 	if _generating:
 		generation_failed.emit("Une génération est déjà en cours")
 		return
@@ -1149,6 +1175,7 @@ func generate(config: RefCounted, source_image_path: String, prompt_text: String
 	_upscale_target_w = target_w
 	_upscale_target_h = target_h
 	_megapixels = megapixels
+	_loras = loras
 
 	generation_progress.emit("Chargement de l'image source...")
 
@@ -1198,7 +1225,7 @@ func _do_upload(filename: String, file_bytes: PackedByteArray, prompt_text: Stri
 
 func _do_prompt(filename: String, prompt_text: String) -> void:
 	var seed = randi()
-	var workflow = build_workflow(filename, prompt_text, seed, _remove_background, _cfg, _steps, _workflow_type, _denoise, _negative_prompt, _face_box_size, _megapixels)
+	var workflow = build_workflow(filename, prompt_text, seed, _remove_background, _cfg, _steps, _workflow_type, _denoise, _negative_prompt, _face_box_size, _megapixels, _loras)
 
 	# --- DEBUG LOGS ---
 	var wt_name = WorkflowType.keys()[_workflow_type] if _workflow_type < WorkflowType.size() else str(_workflow_type)
