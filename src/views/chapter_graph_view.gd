@@ -20,6 +20,15 @@ var _story = null
 var _node_map: Dictionary = {}  # uuid → GraphNode
 var _connection_type_map: Dictionary = {}  # "from→to" → "transition"|"choice"|"both"
 
+## Index O(1) pour les couleurs de connexions (optimisation perf)
+var _outgoing_index: Dictionary = {}  # uuid → {has_transition: bool, has_choice: bool}
+var _incoming_index: Dictionary = {}  # uuid → {has_transition: bool, has_choice: bool}
+
+## Cache des courbes bezier en espace canvas (optimisation perf)
+var _bezier_cache: Dictionary = {}           # key → PackedVector2Array (canvas space)
+var _cached_node_positions: Dictionary = {}  # uuid → Vector2 (position_offset)
+var _last_mouse_pos: Vector2 = Vector2(INF, INF)
+
 var _tooltip_panel: PanelContainer
 var _tooltip_label: Label
 var _hovered_key: String = ""
@@ -42,7 +51,44 @@ func _process(_delta: float) -> void:
 	if not is_visible_in_tree() or _connection_type_map.is_empty():
 		return
 	var mouse_pos = get_local_mouse_position()
+	_rebuild_bezier_cache_if_stale()
+	# Pas de recalcul si la souris n'a pas bougé
+	if mouse_pos == _last_mouse_pos:
+		if _hovered_key != "" and _tooltip_panel:
+			_tooltip_panel.position = mouse_pos + Vector2(12.0, 12.0)
+		return
+	_last_mouse_pos = mouse_pos
+	# Comparaison en espace canvas pour exploiter le cache
+	var mouse_canvas = mouse_pos / zoom + scroll_offset
+	var threshold_canvas = TOOLTIP_HOVER_THRESHOLD / zoom
 	var new_hovered = ""
+	for key in _bezier_cache:
+		for p in _bezier_cache[key]:
+			if mouse_canvas.distance_to(p) <= threshold_canvas:
+				new_hovered = key
+				break
+		if new_hovered != "":
+			break
+	if new_hovered != _hovered_key:
+		_hovered_key = new_hovered
+		_update_tooltip(mouse_pos)
+	elif _hovered_key != "" and _tooltip_panel:
+		_tooltip_panel.position = mouse_pos + Vector2(12.0, 12.0)
+
+func _rebuild_bezier_cache_if_stale() -> void:
+	# Détecte si un nœud a bougé
+	var positions_changed = false
+	for uuid in _node_map:
+		if _cached_node_positions.get(uuid) != _node_map[uuid].position_offset:
+			positions_changed = true
+			break
+	if not positions_changed and _bezier_cache.size() == _connection_type_map.size():
+		return
+	# Reconstruit le cache en espace canvas
+	_bezier_cache.clear()
+	_cached_node_positions.clear()
+	for uuid in _node_map:
+		_cached_node_positions[uuid] = _node_map[uuid].position_offset
 	for key in _connection_type_map:
 		var parts = key.split("→")
 		if parts.size() != 2:
@@ -51,16 +97,9 @@ func _process(_delta: float) -> void:
 		var to_node = _node_map.get(parts[1])
 		if not from_node or not to_node:
 			continue
-		var from_pos = _canvas_to_screen(from_node.position_offset + from_node.get_output_port_position(0))
-		var to_pos = _canvas_to_screen(to_node.position_offset + to_node.get_input_port_position(0))
-		if _is_near_bezier(mouse_pos, from_pos, to_pos):
-			new_hovered = key
-			break
-	if new_hovered != _hovered_key:
-		_hovered_key = new_hovered
-		_update_tooltip(mouse_pos)
-	elif _hovered_key != "" and _tooltip_panel:
-		_tooltip_panel.position = mouse_pos + Vector2(12.0, 12.0)
+		var from_canvas = from_node.position_offset + from_node.get_output_port_position(0)
+		var to_canvas = to_node.position_offset + to_node.get_input_port_position(0)
+		_bezier_cache[key] = _get_connection_line(from_canvas, to_canvas)
 
 func _canvas_to_screen(canvas_pos: Vector2) -> Vector2:
 	return (canvas_pos - scroll_offset) * zoom
@@ -171,6 +210,7 @@ func add_story_connection(from_uuid: String, to_uuid: String) -> void:
 	_story.connections.append({"from": from_uuid, "to": to_uuid})
 	var key = from_uuid + "→" + to_uuid
 	_merge_connection_type(key, "transition")
+	_rebuild_color_indices()
 	_connect_nodes(from_uuid, to_uuid)
 	_update_node_colors()
 
@@ -180,6 +220,8 @@ func remove_story_connection(from_uuid: String, to_uuid: String) -> void:
 	)
 	var key = from_uuid + "→" + to_uuid
 	_connection_type_map.erase(key)
+	_bezier_cache.erase(key)
+	_rebuild_color_indices()
 	disconnect_node(from_uuid, 0, to_uuid, 0)
 	_update_node_colors()
 
@@ -201,6 +243,8 @@ func sync_positions_to_model() -> void:
 
 func _build_connection_type_map() -> void:
 	_connection_type_map.clear()
+	_bezier_cache.clear()
+	_last_mouse_pos = Vector2(INF, INF)
 	# Connexions manuelles = transition
 	for conn in _story.connections:
 		if not conn.has("from") or not conn.has("to"):
@@ -225,6 +269,7 @@ func _build_connection_type_map() -> void:
 						_merge_connection_type(chapter.uuid + "→" + rule.consequence.target, "transition")
 				if cond.default_consequence and cond.default_consequence.type == "redirect_chapter" and cond.default_consequence.target != "":
 					_merge_connection_type(chapter.uuid + "→" + cond.default_consequence.target, "transition")
+	_rebuild_color_indices()
 
 func _merge_connection_type(key: String, new_type: String) -> void:
 	if not _connection_type_map.has(key):
@@ -244,16 +289,31 @@ func _update_node_colors() -> void:
 		node.set_slot_color_right(0, _compute_outgoing_color(uuid))
 		node.set_slot_color_left(0, _compute_incoming_color(uuid))
 
-func _compute_outgoing_color(uuid: String) -> Color:
-	var has_transition = false
-	var has_choice = false
+func _rebuild_color_indices() -> void:
+	_outgoing_index.clear()
+	_incoming_index.clear()
 	for key in _connection_type_map:
-		if key.begins_with(uuid + "→"):
-			var t = _connection_type_map[key]
-			if t == "transition" or t == "both":
-				has_transition = true
-			if t == "choice" or t == "both":
-				has_choice = true
+		var parts = key.split("→")
+		if parts.size() != 2:
+			continue
+		var from_uuid = parts[0]
+		var to_uuid = parts[1]
+		var t = _connection_type_map[key]
+		if not _outgoing_index.has(from_uuid):
+			_outgoing_index[from_uuid] = {"has_transition": false, "has_choice": false}
+		if not _incoming_index.has(to_uuid):
+			_incoming_index[to_uuid] = {"has_transition": false, "has_choice": false}
+		if t == "transition" or t == "both":
+			_outgoing_index[from_uuid]["has_transition"] = true
+			_incoming_index[to_uuid]["has_transition"] = true
+		if t == "choice" or t == "both":
+			_outgoing_index[from_uuid]["has_choice"] = true
+			_incoming_index[to_uuid]["has_choice"] = true
+
+func _compute_outgoing_color(uuid: String) -> Color:
+	var entry = _outgoing_index.get(uuid, {})
+	var has_transition = entry.get("has_transition", false)
+	var has_choice = entry.get("has_choice", false)
 	if has_transition and has_choice:
 		return COLOR_BOTH
 	if has_choice:
@@ -261,15 +321,9 @@ func _compute_outgoing_color(uuid: String) -> Color:
 	return COLOR_TRANSITION
 
 func _compute_incoming_color(uuid: String) -> Color:
-	var has_transition = false
-	var has_choice = false
-	for key in _connection_type_map:
-		if key.ends_with("→" + uuid):
-			var t = _connection_type_map[key]
-			if t == "transition" or t == "both":
-				has_transition = true
-			if t == "choice" or t == "both":
-				has_choice = true
+	var entry = _incoming_index.get(uuid, {})
+	var has_transition = entry.get("has_transition", false)
+	var has_choice = entry.get("has_choice", false)
 	if has_transition and has_choice:
 		return COLOR_BOTH
 	if has_choice:
@@ -316,4 +370,9 @@ func _clear_nodes() -> void:
 			_node_map[uuid].queue_free()
 	_node_map.clear()
 	_connection_type_map.clear()
+	_outgoing_index.clear()
+	_incoming_index.clear()
+	_bezier_cache.clear()
+	_cached_node_positions.clear()
+	_last_mouse_pos = Vector2(INF, INF)
 	clear_connections()
