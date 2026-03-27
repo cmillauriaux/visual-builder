@@ -130,12 +130,15 @@ func test_compute_incoming_color():
 	_story.chapters.append(ch2)
 	_view.load_story(_story)
 	_view._connection_type_map[ch1.uuid + "→" + ch2.uuid] = "transition"
+	_view._rebuild_color_indices()
 	var color = _view._compute_incoming_color(ch2.uuid)
 	assert_eq(color, _view.COLOR_TRANSITION)
 	_view._connection_type_map[ch1.uuid + "→" + ch2.uuid] = "choice"
+	_view._rebuild_color_indices()
 	color = _view._compute_incoming_color(ch2.uuid)
 	assert_eq(color, _view.COLOR_CHOICE)
 	_view._connection_type_map[ch1.uuid + "→" + ch2.uuid] = "both"
+	_view._rebuild_color_indices()
 	color = _view._compute_incoming_color(ch2.uuid)
 	assert_eq(color, _view.COLOR_BOTH)
 
@@ -351,3 +354,205 @@ func test_entry_point_switch():
 	assert_eq(_story.entry_point_uuid, ch1.uuid)
 	_view._on_entry_point_toggled(ch2.uuid, true)
 	assert_eq(_story.entry_point_uuid, ch2.uuid)
+
+
+# === Tests optimisation : index couleurs O(1) ===
+
+func test_rebuild_color_indices_populates_outgoing_index():
+	var ch1 = ChapterScript.new()
+	var ch2 = ChapterScript.new()
+	_story.chapters.append(ch1)
+	_story.chapters.append(ch2)
+	_story.connections.append({"from": ch1.uuid, "to": ch2.uuid})
+	_view.load_story(_story)
+	assert_true(_view._outgoing_index.has(ch1.uuid))
+	assert_true(_view._outgoing_index[ch1.uuid].get("has_transition", false))
+	assert_false(_view._outgoing_index[ch1.uuid].get("has_choice", false))
+
+
+func test_rebuild_color_indices_populates_incoming_index():
+	var ch1 = ChapterScript.new()
+	var ch2 = ChapterScript.new()
+	_story.chapters.append(ch1)
+	_story.chapters.append(ch2)
+	_story.connections.append({"from": ch1.uuid, "to": ch2.uuid})
+	_view.load_story(_story)
+	assert_true(_view._incoming_index.has(ch2.uuid))
+	assert_true(_view._incoming_index[ch2.uuid].get("has_transition", false))
+	assert_false(_view._incoming_index[ch2.uuid].get("has_choice", false))
+
+
+func test_color_index_handles_both_type():
+	var ch1 = ChapterScript.new()
+	var ch2 = ChapterScript.new()
+	_story.chapters.append(ch1)
+	_story.chapters.append(ch2)
+	_view.load_story(_story)
+	# Simuler un type "both" dans la map
+	_view._connection_type_map[ch1.uuid + "→" + ch2.uuid] = "both"
+	_view._rebuild_color_indices()
+	assert_true(_view._outgoing_index[ch1.uuid].get("has_transition", false))
+	assert_true(_view._outgoing_index[ch1.uuid].get("has_choice", false))
+	assert_true(_view._incoming_index[ch2.uuid].get("has_transition", false))
+	assert_true(_view._incoming_index[ch2.uuid].get("has_choice", false))
+
+
+func test_color_index_cleared_on_clear_graph():
+	var ch1 = ChapterScript.new()
+	var ch2 = ChapterScript.new()
+	_story.chapters.append(ch1)
+	_story.chapters.append(ch2)
+	_story.connections.append({"from": ch1.uuid, "to": ch2.uuid})
+	_view.load_story(_story)
+	assert_false(_view._outgoing_index.is_empty())
+	_view.clear_graph()
+	assert_true(_view._outgoing_index.is_empty())
+	assert_true(_view._incoming_index.is_empty())
+
+
+func test_color_index_updated_on_add_connection():
+	var ch1 = ChapterScript.new()
+	var ch2 = ChapterScript.new()
+	_story.chapters.append(ch1)
+	_story.chapters.append(ch2)
+	_view.load_story(_story)
+	assert_false(_view._outgoing_index.has(ch1.uuid))
+	_view.add_story_connection(ch1.uuid, ch2.uuid)
+	assert_true(_view._outgoing_index.has(ch1.uuid))
+
+
+func test_color_index_updated_on_remove_connection():
+	var ch1 = ChapterScript.new()
+	var ch2 = ChapterScript.new()
+	_story.chapters.append(ch1)
+	_story.chapters.append(ch2)
+	_story.connections.append({"from": ch1.uuid, "to": ch2.uuid})
+	_view.load_story(_story)
+	assert_true(_view._outgoing_index.has(ch1.uuid))
+	_view.remove_story_connection(ch1.uuid, ch2.uuid)
+	# L'index est reconstruit : ch1 n'a plus de connexion sortante
+	assert_false(_view._outgoing_index.has(ch1.uuid))
+
+
+func test_compute_outgoing_color_choice_via_index():
+	var ch1 = ChapterScript.new()
+	var ch2 = ChapterScript.new()
+	_story.chapters.append(ch1)
+	_story.chapters.append(ch2)
+	_view.load_story(_story)
+	_view._connection_type_map[ch1.uuid + "→" + ch2.uuid] = "choice"
+	_view._rebuild_color_indices()
+	assert_eq(_view._compute_outgoing_color(ch1.uuid), _view.COLOR_CHOICE)
+
+
+func test_compute_outgoing_color_both_via_index():
+	var ch1 = ChapterScript.new()
+	var ch2 = ChapterScript.new()
+	_story.chapters.append(ch1)
+	_story.chapters.append(ch2)
+	_view.load_story(_story)
+	_view._connection_type_map[ch1.uuid + "→" + ch2.uuid] = "both"
+	_view._rebuild_color_indices()
+	assert_eq(_view._compute_outgoing_color(ch1.uuid), _view.COLOR_BOTH)
+
+
+func test_compute_outgoing_color_no_connection_returns_transition():
+	var ch1 = ChapterScript.new()
+	_story.chapters.append(ch1)
+	_view.load_story(_story)
+	# Pas de connexion → couleur par défaut
+	assert_eq(_view._compute_outgoing_color(ch1.uuid), _view.COLOR_TRANSITION)
+
+
+# === Tests optimisation : cache bezier ===
+
+func test_bezier_cache_empty_initially():
+	_view.load_story(_story)
+	assert_true(_view._bezier_cache.is_empty())
+
+
+func test_bezier_cache_populated_after_rebuild():
+	var ch1 = ChapterScript.new()
+	var ch2 = ChapterScript.new()
+	_story.chapters.append(ch1)
+	_story.chapters.append(ch2)
+	_story.connections.append({"from": ch1.uuid, "to": ch2.uuid})
+	_view.load_story(_story)
+	# Le cache doit être vide jusqu'à ce que rebuild soit appelé
+	assert_true(_view._bezier_cache.is_empty())
+	_view._rebuild_bezier_cache_if_stale()
+	# Après rebuild, une entrée par connexion
+	assert_eq(_view._bezier_cache.size(), _view._connection_type_map.size())
+
+
+func test_bezier_cache_has_points_per_connection():
+	var ch1 = ChapterScript.new()
+	var ch2 = ChapterScript.new()
+	_story.chapters.append(ch1)
+	_story.chapters.append(ch2)
+	_story.connections.append({"from": ch1.uuid, "to": ch2.uuid})
+	_view.load_story(_story)
+	_view._rebuild_bezier_cache_if_stale()
+	var key = ch1.uuid + "→" + ch2.uuid
+	assert_true(_view._bezier_cache.has(key))
+	assert_gt(_view._bezier_cache[key].size(), 0)
+
+
+func test_bezier_cache_cleared_on_clear_graph():
+	var ch1 = ChapterScript.new()
+	var ch2 = ChapterScript.new()
+	_story.chapters.append(ch1)
+	_story.chapters.append(ch2)
+	_story.connections.append({"from": ch1.uuid, "to": ch2.uuid})
+	_view.load_story(_story)
+	_view._rebuild_bezier_cache_if_stale()
+	assert_false(_view._bezier_cache.is_empty())
+	_view.clear_graph()
+	assert_true(_view._bezier_cache.is_empty())
+
+
+func test_bezier_cache_entry_removed_on_remove_connection():
+	var ch1 = ChapterScript.new()
+	var ch2 = ChapterScript.new()
+	_story.chapters.append(ch1)
+	_story.chapters.append(ch2)
+	_story.connections.append({"from": ch1.uuid, "to": ch2.uuid})
+	_view.load_story(_story)
+	_view._rebuild_bezier_cache_if_stale()
+	var key = ch1.uuid + "→" + ch2.uuid
+	assert_true(_view._bezier_cache.has(key))
+	_view.remove_story_connection(ch1.uuid, ch2.uuid)
+	assert_false(_view._bezier_cache.has(key))
+
+
+func test_bezier_cache_rebuilt_on_node_position_change():
+	var ch1 = ChapterScript.new()
+	var ch2 = ChapterScript.new()
+	_story.chapters.append(ch1)
+	_story.chapters.append(ch2)
+	_story.connections.append({"from": ch1.uuid, "to": ch2.uuid})
+	_view.load_story(_story)
+	_view._rebuild_bezier_cache_if_stale()
+	var key = ch1.uuid + "→" + ch2.uuid
+	var old_points = _view._bezier_cache[key].duplicate()
+	# Simuler un déplacement de nœud
+	_view._node_map[ch1.uuid].position_offset = Vector2(500, 500)
+	_view._rebuild_bezier_cache_if_stale()
+	var new_points = _view._bezier_cache[key]
+	# Les points doivent avoir changé
+	assert_ne(old_points[0], new_points[0])
+
+
+func test_rebuild_bezier_cache_not_stale_when_same():
+	var ch1 = ChapterScript.new()
+	var ch2 = ChapterScript.new()
+	_story.chapters.append(ch1)
+	_story.chapters.append(ch2)
+	_story.connections.append({"from": ch1.uuid, "to": ch2.uuid})
+	_view.load_story(_story)
+	_view._rebuild_bezier_cache_if_stale()
+	var key = ch1.uuid + "→" + ch2.uuid
+	var points_ref = _view._bezier_cache[key]
+	# Appel répété sans changement → même référence de tableau
+	_view._rebuild_bezier_cache_if_stale()
+	assert_eq(_view._bezier_cache[key], points_ref)
