@@ -365,7 +365,7 @@ func _play_dialogue_voice(dlg) -> void:
 func _resolve_voice_path(rel_path: String) -> String:
 	if rel_path.begins_with("/") or rel_path.begins_with("res://") or rel_path.begins_with("user://"):
 		return rel_path
-	var base_path := _main._get_story_base_path() if _main.has_method("_get_story_base_path") else ""
+	var base_path: String = _main._get_story_base_path() if _main.has_method("_get_story_base_path") else ""
 	if base_path != "":
 		return base_path + "/" + rel_path
 	return rel_path
