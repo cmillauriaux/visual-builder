@@ -8,6 +8,9 @@ const EndingScript = preload("res://src/models/ending.gd")
 const ConsequenceScript = preload("res://src/models/consequence.gd")
 const ChoiceScript = preload("res://src/models/choice.gd")
 const VariableEffectScript = preload("res://src/models/variable_effect.gd")
+
+const CHOICE_NATURE_TYPES = ChoiceScript.NATURE_TYPES
+const CHOICE_NATURE_LABELS = ChoiceScript.NATURE_LABELS
 const ConsequenceTargetHelperScript = preload("res://src/ui/shared/consequence_target_helper.gd")
 const EffectRowBuilderScript = preload("res://src/ui/shared/effect_row_builder.gd")
 const EditorState = preload("res://src/controllers/editor_state.gd")
@@ -430,6 +433,22 @@ func _create_choice_row(index: int, choice) -> VBoxContainer:
 	text_edit.text_changed.connect(_on_choice_text_changed.bind(index))
 	container.add_child(text_edit)
 
+	# Nature row (walkthrough)
+	var nature_row = HBoxContainer.new()
+	container.add_child(nature_row)
+	var nature_label = Label.new()
+	nature_label.text = tr("Nature :")
+	nature_row.add_child(nature_label)
+	var nature_dropdown = OptionButton.new()
+	for lbl in CHOICE_NATURE_LABELS:
+		nature_dropdown.add_item(lbl)
+	var nature_idx = CHOICE_NATURE_TYPES.find(choice.nature)
+	if nature_idx < 0:
+		nature_idx = 0
+	nature_dropdown.selected = nature_idx
+	nature_dropdown.item_selected.connect(_on_choice_nature_changed.bind(index))
+	nature_row.add_child(nature_dropdown)
+
 	# Type + target row
 	var type_row = HBoxContainer.new()
 	container.add_child(type_row)
@@ -491,6 +510,14 @@ func _on_choice_text_changed(new_text: String, index: int) -> void:
 	if index < 0 or index >= _sequence.ending.choices.size():
 		return
 	_sequence.ending.choices[index].text = new_text
+	_notify_change()
+
+func _on_choice_nature_changed(nature_index: int, choice_index: int) -> void:
+	if _sequence == null or _sequence.ending == null:
+		return
+	if choice_index < 0 or choice_index >= _sequence.ending.choices.size():
+		return
+	_sequence.ending.choices[choice_index].nature = CHOICE_NATURE_TYPES[nature_index]
 	_notify_change()
 
 func _on_choice_type_changed(type_index: int, choice_index: int) -> void:

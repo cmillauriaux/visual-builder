@@ -294,6 +294,8 @@ func on_choice_display_requested(choices) -> void:
 			if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_SPACE:
 				btn.accept_event()
 		)
+		if _game_plugin_manager:
+			_game_plugin_manager.pipeline_style_choice_button(_plugin_ctx, btn, display_choices[i], i)
 		vbox.add_child(btn)
 		buttons.append(btn)
 	_choice_panel.add_child(vbox)

@@ -51,6 +51,9 @@ var _resize_start_scale: float = 1.0
 var _is_inherited_mode: bool = false
 var _inherited_from_index: int = -1
 
+## Preview mode — disables foreground interaction during play
+var _is_preview_mode: bool = false
+
 ## Backward-compatible accessor — returns last selected UUID or "".
 var _selected_fg_uuid: String:
 	get:
@@ -166,12 +169,17 @@ func _ready() -> void:
 	add_child(_inherit_confirm_dialog)
 
 	EventBus.play_started.connect(_on_play_started)
+	EventBus.play_stopped.connect(_on_play_stopped)
 
 	resized.connect(_on_resized)
 	_apply_transform()
 
 func _on_play_started(_mode: String) -> void:
+	_is_preview_mode = true
 	_deselect_foreground()
+
+func _on_play_stopped() -> void:
+	_is_preview_mode = false
 
 # --- Auto-fit ---
 
@@ -557,6 +565,8 @@ func _deselect_foreground() -> void:
 		_update_foreground_visuals()
 
 func _on_fg_gui_input(event: InputEvent, uuid: String) -> void:
+	if _is_preview_mode:
+		return
 	# Ne pas démarrer le drag si on est en train de resize
 	if _resizing_fg:
 		return
@@ -609,6 +619,8 @@ func _on_fg_gui_input(event: InputEvent, uuid: String) -> void:
 		accept_event()
 
 func _on_resize_handle_input(event: InputEvent, uuid: String) -> void:
+	if _is_preview_mode:
+		return
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
 		if mb.button_index == MOUSE_BUTTON_LEFT:

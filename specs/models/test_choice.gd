@@ -55,3 +55,71 @@ func test_from_dict_without_conditions():
 	}
 	var c = Choice.from_dict(d)
 	assert_eq(c.conditions, {}, "conditions doit être {} même si absent du dict")
+
+
+# --- Tests nature ---
+
+func test_default_nature_is_empty():
+	var c = Choice.new()
+	assert_eq(c.nature, "", "nature doit être vide par défaut")
+
+
+func test_to_dict_without_nature():
+	var c = Choice.new()
+	c.text = "Test"
+	c.consequence = preload("res://src/models/consequence.gd").new()
+	c.consequence.type = "game_over"
+	var d = c.to_dict()
+	assert_false(d.has("nature"), "nature ne doit pas être inclus dans le dict si vide")
+
+
+func test_to_dict_with_nature():
+	var c = Choice.new()
+	c.text = "Test"
+	c.nature = "positive"
+	c.consequence = preload("res://src/models/consequence.gd").new()
+	c.consequence.type = "game_over"
+	var d = c.to_dict()
+	assert_true(d.has("nature"), "nature doit être inclus dans le dict si non vide")
+	assert_eq(d["nature"], "positive")
+
+
+func test_from_dict_with_nature():
+	var d = {
+		"text": "Aider le villageois",
+		"consequence": {"type": "redirect_sequence", "target": "seq-005"},
+		"conditions": {},
+		"nature": "positive"
+	}
+	var c = Choice.from_dict(d)
+	assert_eq(c.nature, "positive")
+
+
+func test_from_dict_without_nature():
+	var d = {
+		"text": "Test",
+		"consequence": {"type": "game_over"},
+	}
+	var c = Choice.from_dict(d)
+	assert_eq(c.nature, "", "nature doit être vide si absent du dict")
+
+
+func test_nature_constants():
+	assert_eq(Choice.NATURE_TYPES.size(), 4)
+	assert_eq(Choice.NATURE_LABELS.size(), 4)
+	assert_true(Choice.NATURE_TYPES.has(""))
+	assert_true(Choice.NATURE_TYPES.has("positive"))
+	assert_true(Choice.NATURE_TYPES.has("balanced"))
+	assert_true(Choice.NATURE_TYPES.has("negative"))
+
+
+func test_nature_roundtrip():
+	for nature in ["positive", "balanced", "negative"]:
+		var c = Choice.new()
+		c.text = "Test"
+		c.nature = nature
+		c.consequence = preload("res://src/models/consequence.gd").new()
+		c.consequence.type = "game_over"
+		var d = c.to_dict()
+		var c2 = Choice.from_dict(d)
+		assert_eq(c2.nature, nature, "Roundtrip raté pour nature=%s" % nature)

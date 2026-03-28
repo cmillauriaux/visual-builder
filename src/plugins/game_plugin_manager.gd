@@ -224,6 +224,12 @@ func dispatch_on_after_choice(ctx: RefCounted, choice_index: int, choice_text: S
 		plugin.on_after_choice(ctx, choice_index, choice_text)
 
 
+## Pipeline style : appelle on_style_choice_button sur chaque plugin actif pour un bouton donné.
+func pipeline_style_choice_button(ctx: RefCounted, btn: Button, choice: RefCounted, index: int) -> void:
+	for plugin in _get_active_plugins():
+		plugin.on_style_choice_button(ctx, btn, choice, index)
+
+
 # --- Dispatch hooks cycle de vie de la story ---
 
 func dispatch_on_story_started(ctx: RefCounted, story_title: String, story_version: String) -> void:

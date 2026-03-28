@@ -78,6 +78,12 @@ func on_before_choice(ctx: RefCounted, choices: Array) -> Array:
 	return choices
 
 
+## Appelé pour chaque bouton de choix après sa création.
+## Permet de personnaliser le style visuel du bouton (couleur, icône...).
+func on_style_choice_button(ctx: RefCounted, btn: Button, choice: RefCounted, index: int) -> void:
+	pass
+
+
 ## Appelé après qu'un choix a été fait.
 func on_after_choice(ctx: RefCounted, choice_index: int, choice_text: String) -> void:
 	pass

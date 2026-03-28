@@ -3,10 +3,14 @@ extends RefCounted
 const ConsequenceScript = preload("res://src/models/consequence.gd")
 const VariableEffectScript = preload("res://src/models/variable_effect.gd")
 
+const NATURE_TYPES = ["", "positive", "balanced", "negative"]
+const NATURE_LABELS = ["Aucune", "Positif", "Équilibré", "Pénalisant"]
+
 var text: String = ""
 var consequence = null  # Consequence
 var conditions: Dictionary = {}
 var effects: Array = []  # Array[VariableEffect]
+var nature: String = ""
 
 func to_dict() -> Dictionary:
 	var effects_arr := []
@@ -18,6 +22,8 @@ func to_dict() -> Dictionary:
 		"conditions": conditions,
 		"effects": effects_arr,
 	}
+	if nature != "":
+		d["nature"] = nature
 	return d
 
 static func from_dict(d: Dictionary):
@@ -30,4 +36,5 @@ static func from_dict(d: Dictionary):
 	if d.has("effects"):
 		for effect_dict in d["effects"]:
 			c.effects.append(VariableEffectScript.from_dict(effect_dict))
+	c.nature = d.get("nature", "")
 	return c
