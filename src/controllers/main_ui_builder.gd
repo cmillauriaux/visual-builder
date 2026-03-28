@@ -238,6 +238,11 @@ static func _build_sequence_editor(main: Control) -> void:
 	toolbar_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	main._sequence_toolbar.add_child(toolbar_spacer)
 
+	main._play_lang_selector = OptionButton.new()
+	main._play_lang_selector.custom_minimum_size = Vector2(60, 0)
+	main._play_lang_selector.tooltip_text = TranslationServer.translate("Langue de prévisualisation")
+	main._sequence_toolbar.add_child(main._play_lang_selector)
+
 	main._play_button = Button.new()
 	main._play_button.text = "▶ Play"
 	main._sequence_toolbar.add_child(main._play_button)

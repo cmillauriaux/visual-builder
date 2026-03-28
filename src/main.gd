@@ -76,6 +76,7 @@ var _add_fg_button: Button
 var _grid_toggle: Button
 var _snap_toggle: Button
 var _normalize_fg_button: Button
+var _play_lang_selector: OptionButton
 var _play_button: Button
 var _stop_button: Button
 var _sequence_content: HSplitContainer
@@ -629,7 +630,43 @@ func refresh_current_view() -> void:
 		_sequence_graph_view.load_scene(_editor_main._current_scene)
 	elif level == "map":
 		_map_view.load_story(_editor_main._story)
+	_refresh_play_lang_selector()
 	update_editor_mode()
+
+
+func _refresh_play_lang_selector() -> void:
+	if _play_lang_selector == null:
+		return
+	var previous: String = ""
+	if _play_lang_selector.get_item_count() > 0 and not _play_lang_selector.disabled:
+		previous = _play_lang_selector.get_item_text(_play_lang_selector.selected)
+	_play_lang_selector.clear()
+	var base_path := _get_story_base_path()
+	if base_path == "":
+		_play_lang_selector.add_item("--")
+		_play_lang_selector.disabled = true
+		return
+	var StoryI18nSvc = load("res://src/services/story_i18n_service.gd")
+	var lang_config: Dictionary = StoryI18nSvc.load_languages_config(base_path)
+	var default_lang: String = lang_config.get("default", "fr")
+	var languages: Array = lang_config.get("languages", [default_lang])
+	if languages.is_empty():
+		languages = [default_lang]
+	_play_lang_selector.disabled = false
+	var select_idx := 0
+	for i in range(languages.size()):
+		_play_lang_selector.add_item(languages[i])
+		if languages[i] == previous:
+			select_idx = i
+		elif previous == "" and languages[i] == default_lang:
+			select_idx = i
+	_play_lang_selector.selected = select_idx
+
+
+func get_play_language() -> String:
+	if _play_lang_selector == null or _play_lang_selector.get_item_count() == 0 or _play_lang_selector.disabled:
+		return ""
+	return _play_lang_selector.get_item_text(_play_lang_selector.selected)
 
 
 func update_view() -> void:

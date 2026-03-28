@@ -363,17 +363,12 @@ func _play_dialogue_voice(dlg) -> void:
 
 
 func _get_dialogue_voice_path(dlg) -> String:
-	# Try voice_files dict (new multilang format)
 	var voice_files = dlg.get("voice_files")
 	if voice_files != null and voice_files is Dictionary and not voice_files.is_empty():
-		# Load preferred language from config
-		var ELConfig = load("res://plugins/voice_studio/elevenlabs_config.gd")
-		if ELConfig:
-			var cfg = ELConfig.new()
-			cfg.load_from()
-			var lang: String = cfg.get_language_code()
-			if lang != "" and voice_files.has(lang):
-				return voice_files[lang]
+		# Use play language from main toolbar selector
+		var lang: String = _main.get_play_language() if _main.has_method("get_play_language") else ""
+		if lang != "" and voice_files.has(lang):
+			return voice_files[lang]
 		# Fallback: first available language
 		for key in voice_files:
 			return voice_files[key]
