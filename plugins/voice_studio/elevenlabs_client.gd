@@ -71,17 +71,16 @@ func generate_voice(voice_id: String, text: String, dialogue_uuid: String,
 	if lang != "":
 		body["language_code"] = lang
 
-	# Continuity: previous_text/next_text not supported by eleven_v3
-	# but previous_request_ids IS supported by all models
+	# Continuity: not supported by eleven_v3
 	var model: String = _config.get_model_id()
 	if not model.begins_with("eleven_v3"):
 		if previous_text != "":
 			body["previous_text"] = previous_text
 		if next_text != "":
 			body["next_text"] = next_text
-	if not previous_request_ids.is_empty():
-		var ids: Array = previous_request_ids.slice(0, 3) if previous_request_ids.size() > 3 else previous_request_ids
-		body["previous_request_ids"] = ids
+		if not previous_request_ids.is_empty():
+			var ids: Array = previous_request_ids.slice(0, 3) if previous_request_ids.size() > 3 else previous_request_ids
+			body["previous_request_ids"] = ids
 
 	var payload := JSON.stringify(body)
 	print("[VoiceStudio] POST %s" % url)
