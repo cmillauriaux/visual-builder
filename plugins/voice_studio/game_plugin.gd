@@ -37,13 +37,9 @@ func read_editor_config(ctrl: Control) -> Dictionary:
 
 
 func _create_editor_config(plugin_settings: Dictionary) -> Control:
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 6)
 	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.add_child(vbox)
 
 	var config := ElevenLabsConfig.new()
 	config.load_from()
@@ -202,8 +198,7 @@ func _create_editor_config(plugin_settings: Dictionary) -> Control:
 		return {"voices": result_voices}
 
 	vbox.set_meta("read_config", read_config)
-	scroll.set_meta("read_config", read_config)
-	return scroll
+	return vbox
 
 
 # ── UI Helpers ────────────────────────────────────────────────────────────────
