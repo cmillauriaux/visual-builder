@@ -416,6 +416,61 @@ func test_set_source_image_forwards_to_plugin_tab() -> void:
 	assert_eq(paths, ["/some/image.png"])
 
 
+# --- Search field in gallery ---
+
+func test_has_gallery_search_edit():
+	assert_not_null(_dialog._gallery_search_edit)
+	assert_is(_dialog._gallery_search_edit, LineEdit)
+
+
+func test_gallery_search_edit_has_placeholder():
+	assert_eq(_dialog._gallery_search_edit.placeholder_text, tr("Rechercher..."))
+
+
+func test_gallery_search_filters_by_name():
+	var dir = _test_dir + "/assets/foregrounds"
+	DirAccess.make_dir_recursive_absolute(dir)
+	_create_minimal_png(dir + "/hero.png")
+	_create_minimal_png(dir + "/villain.png")
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
+	_dialog._gallery_search_edit.text = "hero"
+	_dialog._refresh_gallery()
+	assert_eq(_dialog._gallery_grid.get_child_count(), 1)
+
+
+func test_gallery_search_is_case_insensitive():
+	var dir = _test_dir + "/assets/foregrounds"
+	DirAccess.make_dir_recursive_absolute(dir)
+	_create_minimal_png(dir + "/Hero.png")
+	_create_minimal_png(dir + "/villain.png")
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
+	_dialog._gallery_search_edit.text = "HERO"
+	_dialog._refresh_gallery()
+	assert_eq(_dialog._gallery_grid.get_child_count(), 1)
+
+
+func test_gallery_search_empty_shows_all():
+	var dir = _test_dir + "/assets/foregrounds"
+	DirAccess.make_dir_recursive_absolute(dir)
+	_create_minimal_png(dir + "/img1.png")
+	_create_minimal_png(dir + "/img2.png")
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
+	_dialog._gallery_search_edit.text = ""
+	_dialog._refresh_gallery()
+	assert_eq(_dialog._gallery_grid.get_child_count(), 2)
+
+
+func test_gallery_search_no_match_shows_empty():
+	var dir = _test_dir + "/assets/foregrounds"
+	DirAccess.make_dir_recursive_absolute(dir)
+	_create_minimal_png(dir + "/img1.png")
+	_dialog.setup(ImagePickerDialog.Mode.FOREGROUND, _test_dir)
+	_dialog._gallery_search_edit.text = "zzzzz"
+	_dialog._refresh_gallery()
+	assert_eq(_dialog._gallery_grid.get_child_count(), 0)
+	assert_true(_dialog._empty_label.visible)
+
+
 class _TabWithSetup extends Control:
 	var calls: Array = []
 	func setup(_ctx: Dictionary) -> void:

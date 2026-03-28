@@ -36,6 +36,7 @@ var _empty_label: Label
 var _no_story_label: Label
 var _gallery_category_filter_container: HBoxContainer
 var _gallery_category_checkboxes: Array = []
+var _gallery_search_edit: LineEdit
 var _gallery_context_menu: PopupMenu
 
 # Image preview
@@ -199,6 +200,13 @@ func _build_gallery_tab() -> void:
 	_gallery_category_filter_container.add_theme_constant_override("separation", 4)
 	filter_hbox.add_child(_gallery_category_filter_container)
 
+	_gallery_search_edit = LineEdit.new()
+	_gallery_search_edit.placeholder_text = tr("Rechercher...")
+	_gallery_search_edit.custom_minimum_size.x = 180
+	_gallery_search_edit.clear_button_enabled = true
+	_gallery_search_edit.text_changed.connect(func(_t): _refresh_gallery())
+	filter_hbox.add_child(_gallery_search_edit)
+
 	var spacer = Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	filter_hbox.add_child(spacer)
@@ -269,6 +277,9 @@ func _refresh_gallery() -> void:
 	var selected_cats = _get_gallery_selected_categories()
 	if not selected_cats.is_empty() and _category_service:
 		images = _category_service.filter_paths_by_categories(images, selected_cats)
+	var search_term = _gallery_search_edit.text.strip_edges().to_lower() if _gallery_search_edit else ""
+	if search_term != "":
+		images = images.filter(func(p): return p.get_file().to_lower().contains(search_term))
 	if images.is_empty():
 		_empty_label.text = tr("Aucune image disponible. Importez d'abord une image via l'onglet Fichier.")
 		_empty_label.visible = true

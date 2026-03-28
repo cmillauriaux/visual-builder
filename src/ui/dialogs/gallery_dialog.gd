@@ -32,6 +32,7 @@ var _close_button: Button
 var _image_preview: Control
 var _category_filter_container: HBoxContainer
 var _category_checkboxes: Array = []
+var _search_edit: LineEdit
 var _context_menu: PopupMenu
 
 
@@ -80,6 +81,13 @@ func _build_ui() -> void:
 	_category_filter_container = HBoxContainer.new()
 	_category_filter_container.add_theme_constant_override("separation", 4)
 	filter_hbox.add_child(_category_filter_container)
+
+	_search_edit = LineEdit.new()
+	_search_edit.placeholder_text = tr("Rechercher...")
+	_search_edit.custom_minimum_size.x = 180
+	_search_edit.clear_button_enabled = true
+	_search_edit.text_changed.connect(func(_t): _refresh())
+	filter_hbox.add_child(_search_edit)
 
 	var spacer_filt = Control.new()
 	spacer_filt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -187,6 +195,9 @@ func _refresh_grid(grid: GridContainer, empty_label: Label, dir_path: String) ->
 	var selected_cats = _get_selected_categories()
 	if not selected_cats.is_empty() and _category_service:
 		images = _category_service.filter_paths_by_categories(images, selected_cats)
+	var search_term = _search_edit.text.strip_edges().to_lower() if _search_edit else ""
+	if search_term != "":
+		images = images.filter(func(p): return p.get_file().to_lower().contains(search_term))
 	if images.is_empty():
 		empty_label.visible = true
 		grid.visible = false

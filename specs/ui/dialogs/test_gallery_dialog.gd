@@ -891,6 +891,72 @@ func test_show_replace_confirmation_dialog_text():
 	assert_string_contains(confirm.dialog_text, "new.png")
 
 
+# --- Search field ---
+
+func test_has_search_edit():
+	assert_not_null(_dialog._search_edit)
+	assert_is(_dialog._search_edit, LineEdit)
+
+
+func test_search_edit_has_placeholder():
+	assert_eq(_dialog._search_edit.placeholder_text, tr("Rechercher..."))
+
+
+func test_search_filters_backgrounds_by_name():
+	_create_test_image(_test_dir + "/assets/backgrounds/forest.png")
+	_create_test_image(_test_dir + "/assets/backgrounds/castle.png")
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	_dialog._search_edit.text = "forest"
+	_dialog._refresh()
+	assert_eq(_dialog._bg_grid.get_child_count(), 1)
+
+
+func test_search_filters_foregrounds_by_name():
+	_create_test_image(_test_dir + "/assets/foregrounds/hero.png")
+	_create_test_image(_test_dir + "/assets/foregrounds/villain.png")
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	_dialog._search_edit.text = "hero"
+	_dialog._refresh()
+	assert_eq(_dialog._fg_grid.get_child_count(), 1)
+
+
+func test_search_is_case_insensitive():
+	_create_test_image(_test_dir + "/assets/backgrounds/Forest.png")
+	_create_test_image(_test_dir + "/assets/backgrounds/castle.png")
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	_dialog._search_edit.text = "FOREST"
+	_dialog._refresh()
+	assert_eq(_dialog._bg_grid.get_child_count(), 1)
+
+
+func test_search_empty_shows_all():
+	_create_test_image(_test_dir + "/assets/backgrounds/bg1.png")
+	_create_test_image(_test_dir + "/assets/backgrounds/bg2.png")
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	_dialog._search_edit.text = ""
+	_dialog._refresh()
+	assert_eq(_dialog._bg_grid.get_child_count(), 2)
+
+
+func test_search_no_match_shows_empty():
+	_create_test_image(_test_dir + "/assets/backgrounds/bg1.png")
+	var story = StoryScript.new()
+	story.title = "Test"
+	_dialog.setup(story, _test_dir)
+	_dialog._search_edit.text = "zzzzz"
+	_dialog._refresh()
+	assert_eq(_dialog._bg_grid.get_child_count(), 0)
+	assert_true(_dialog._bg_empty_label.visible)
+
+
 # --- _on_clean_pressed ---
 
 func test_clean_pressed_shows_info_when_all_used():
