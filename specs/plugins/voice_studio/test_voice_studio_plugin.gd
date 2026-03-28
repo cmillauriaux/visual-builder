@@ -54,42 +54,99 @@ func test_game_plugin_has_editor_config() -> void:
 	assert_true(controls[0].create_control.is_valid())
 
 
-# ── Voice ID lookup ───────────────────────────────────────────────────────────
+# ── Voice ID lookup (avec langue) ────────────────────────────────────────────
 
-func test_get_voice_id_for_known_character() -> void:
+func test_get_voice_id_for_character_with_language() -> void:
 	var settings := {
-		"characters": [
-			{"name": "Narrateur", "voice_id": "abc123"},
-			{"name": "Héros", "voice_id": "def456"},
+		"voices": [
+			{"character": "Narrateur", "language": "fr", "voice_id": "fr-narr"},
+			{"character": "Narrateur", "language": "en", "voice_id": "en-narr"},
+			{"character": "Héros", "language": "fr", "voice_id": "fr-hero"},
 		]
 	}
-	assert_eq(VoiceStudioGamePlugin.get_voice_id_for_character(settings, "Narrateur"), "abc123")
-	assert_eq(VoiceStudioGamePlugin.get_voice_id_for_character(settings, "Héros"), "def456")
+	assert_eq(VoiceStudioGamePlugin.get_voice_id_for_character(settings, "Narrateur", "fr"), "fr-narr")
+	assert_eq(VoiceStudioGamePlugin.get_voice_id_for_character(settings, "Narrateur", "en"), "en-narr")
+	assert_eq(VoiceStudioGamePlugin.get_voice_id_for_character(settings, "Héros", "fr"), "fr-hero")
+
+
+func test_get_voice_id_fallback_without_language() -> void:
+	var settings := {
+		"voices": [
+			{"character": "Narrateur", "language": "fr", "voice_id": "fr-narr"},
+		]
+	}
+	# Sans filtre de langue, retourne le premier match
+	assert_eq(VoiceStudioGamePlugin.get_voice_id_for_character(settings, "Narrateur"), "fr-narr")
 
 
 func test_get_voice_id_for_unknown_character() -> void:
 	var settings := {
-		"characters": [
-			{"name": "Narrateur", "voice_id": "abc123"},
+		"voices": [
+			{"character": "Narrateur", "language": "fr", "voice_id": "abc123"},
 		]
 	}
-	assert_eq(VoiceStudioGamePlugin.get_voice_id_for_character(settings, "Inconnu"), "")
+	assert_eq(VoiceStudioGamePlugin.get_voice_id_for_character(settings, "Inconnu", "fr"), "")
+
+
+func test_get_voice_id_for_unknown_language() -> void:
+	var settings := {
+		"voices": [
+			{"character": "Narrateur", "language": "fr", "voice_id": "abc123"},
+		]
+	}
+	# Langue inconnue : fallback sur premier match du personnage
+	assert_eq(VoiceStudioGamePlugin.get_voice_id_for_character(settings, "Narrateur", "de"), "abc123")
 
 
 func test_get_voice_id_with_empty_settings() -> void:
-	assert_eq(VoiceStudioGamePlugin.get_voice_id_for_character({}, "Test"), "")
+	assert_eq(VoiceStudioGamePlugin.get_voice_id_for_character({}, "Test", "fr"), "")
 
 
-func test_get_voice_id_with_no_characters_key() -> void:
+func test_get_voice_id_with_no_voices_key() -> void:
 	var settings := {"other": "value"}
-	assert_eq(VoiceStudioGamePlugin.get_voice_id_for_character(settings, "Test"), "")
+	assert_eq(VoiceStudioGamePlugin.get_voice_id_for_character(settings, "Test", "fr"), "")
+
+
+# ── Available languages ───────────────────────────────────────────────────────
+
+func test_get_available_languages() -> void:
+	var settings := {
+		"voices": [
+			{"character": "A", "language": "fr", "voice_id": "v1"},
+			{"character": "A", "language": "en", "voice_id": "v2"},
+			{"character": "B", "language": "fr", "voice_id": "v3"},
+			{"character": "C", "language": "es", "voice_id": "v4"},
+		]
+	}
+	var langs := VoiceStudioGamePlugin.get_available_languages(settings)
+	assert_eq(langs.size(), 3)
+	assert_true("fr" in langs)
+	assert_true("en" in langs)
+	assert_true("es" in langs)
+
+
+func test_get_available_languages_empty() -> void:
+	var langs := VoiceStudioGamePlugin.get_available_languages({})
+	assert_eq(langs.size(), 0)
+
+
+func test_get_available_languages_no_duplicates() -> void:
+	var settings := {
+		"voices": [
+			{"character": "A", "language": "fr", "voice_id": "v1"},
+			{"character": "B", "language": "fr", "voice_id": "v2"},
+		]
+	}
+	var langs := VoiceStudioGamePlugin.get_available_languages(settings)
+	assert_eq(langs.size(), 1)
+	assert_eq(langs[0], "fr")
 
 
 # ── Editor config read/write ──────────────────────────────────────────────────
 
 func test_editor_config_creates_control() -> void:
 	var plugin := VoiceStudioGamePlugin.new()
-	var settings := {"characters": [{"name": "Hero", "voice_id": "v1"}]}
+	var settings := {"voices": [{"character": "Hero", "language": "fr", "voice_id": "v1"}]}
 	var controls := plugin.get_editor_config_controls()
 	var ctrl: Control = controls[0].create_control.call(settings)
 	assert_not_null(ctrl)
@@ -99,17 +156,17 @@ func test_editor_config_creates_control() -> void:
 
 func test_editor_config_roundtrip() -> void:
 	var plugin := VoiceStudioGamePlugin.new()
-	var initial := {"characters": [{"name": "Knight", "voice_id": "kn-001"}]}
+	var initial := {"voices": [{"character": "Knight", "language": "en", "voice_id": "kn-001"}]}
 	var controls := plugin.get_editor_config_controls()
 	var ctrl: Control = controls[0].create_control.call(initial)
-	# Need to add to scene tree for deferred operations
 	add_child_autofree(ctrl)
 	await get_tree().process_frame
 	var result := plugin.read_editor_config(ctrl)
-	assert_true(result.has("characters"))
-	assert_eq(result["characters"].size(), 1)
-	assert_eq(result["characters"][0]["name"], "Knight")
-	assert_eq(result["characters"][0]["voice_id"], "kn-001")
+	assert_true(result.has("voices"))
+	assert_eq(result["voices"].size(), 1)
+	assert_eq(result["voices"][0]["character"], "Knight")
+	assert_eq(result["voices"][0]["language"], "en")
+	assert_eq(result["voices"][0]["voice_id"], "kn-001")
 
 
 func test_read_editor_config_null_returns_empty() -> void:

@@ -3,7 +3,7 @@ extends VBoxContainer
 ## Onglet "Voix" dans l'éditeur de séquence.
 ## Affiche pour chaque dialogue : personnage, texte, statut voix,
 ## champ voice (description ElevenLabs), et boutons générer/supprimer.
-## Bouton "Générer toutes les voix" en haut.
+## Sélecteur de langue + bouton "Générer toutes les voix" en haut.
 
 const ElevenLabsConfig = preload("res://plugins/voice_studio/elevenlabs_config.gd")
 const ElevenLabsClient = preload("res://plugins/voice_studio/elevenlabs_client.gd")
@@ -12,11 +12,12 @@ const GamePlugin = preload("res://plugins/voice_studio/game_plugin.gd")
 var _ctx = null  # PluginContext
 var _config: RefCounted = null
 var _client: Node = null
-var _dialogue_rows: Array = []  # Array of HBoxContainer rows
+var _dialogue_rows: Array = []  # Array of PanelContainer rows
 var _generate_all_btn: Button = null
 var _status_label: Label = null
 var _scroll: ScrollContainer = null
 var _list_container: VBoxContainer = null
+var _lang_selector: OptionButton = null
 var _pending_generation: Array = []  # Queue of {dialogue_index, voice_id, text}
 
 signal voice_changed()
@@ -25,50 +26,23 @@ signal voice_changed()
 func _ready() -> void:
 	add_theme_constant_override("separation", 6)
 
-	# Config ElevenLabs
+	# Config ElevenLabs (API key + model persistés dans user://)
 	_config = ElevenLabsConfig.new()
 	_config.load_from()
 
-	# Header avec config API
-	var config_row := HBoxContainer.new()
-	config_row.add_theme_constant_override("separation", 4)
-	add_child(config_row)
+	# Language selector row
+	var lang_row := HBoxContainer.new()
+	lang_row.add_theme_constant_override("separation", 4)
+	add_child(lang_row)
 
-	var api_label := Label.new()
-	api_label.text = tr("Clé API ElevenLabs :")
-	config_row.add_child(api_label)
+	var lang_label := Label.new()
+	lang_label.text = tr("Langue :")
+	lang_row.add_child(lang_label)
 
-	var api_input := LineEdit.new()
-	api_input.text = _config.get_api_key()
-	api_input.secret = true
-	api_input.placeholder_text = "xi-..."
-	api_input.size_flags_horizontal = SIZE_EXPAND_FILL
-	api_input.text_changed.connect(func(t: String):
-		_config.set_api_key(t)
-		_config.save_to()
-	)
-	config_row.add_child(api_input)
-
-	# Model selector
-	var model_row := HBoxContainer.new()
-	model_row.add_theme_constant_override("separation", 4)
-	add_child(model_row)
-
-	var model_label := Label.new()
-	model_label.text = tr("Modèle :")
-	model_row.add_child(model_label)
-
-	var model_input := LineEdit.new()
-	model_input.text = _config.get_model_id()
-	model_input.placeholder_text = "eleven_multilingual_v2"
-	model_input.size_flags_horizontal = SIZE_EXPAND_FILL
-	model_input.text_changed.connect(func(t: String):
-		_config.set_model_id(t)
-		_config.save_to()
-	)
-	model_row.add_child(model_input)
-
-	add_child(HSeparator.new())
+	_lang_selector = OptionButton.new()
+	_lang_selector.size_flags_horizontal = SIZE_EXPAND_FILL
+	_lang_selector.item_selected.connect(func(_idx: int): refresh())
+	lang_row.add_child(_lang_selector)
 
 	# Bouton Générer toutes les voix
 	_generate_all_btn = Button.new()
@@ -97,6 +71,8 @@ func _ready() -> void:
 
 func setup(ctx) -> void:
 	_ctx = ctx
+	# Reload config (may have changed in Configurer le jeu)
+	_config.load_from()
 	# Create client node
 	if _client != null:
 		_client.queue_free()
@@ -107,7 +83,40 @@ func setup(ctx) -> void:
 	_client.generation_completed.connect(_on_generation_completed)
 	_client.generation_failed.connect(_on_generation_failed)
 	_client.generation_progress.connect(_on_generation_progress)
+	_refresh_language_selector()
 	refresh()
+
+
+func _refresh_language_selector() -> void:
+	if _lang_selector == null:
+		return
+	var previous: String = _get_selected_language()
+	_lang_selector.clear()
+	var langs := _get_available_languages()
+	if langs.is_empty():
+		_lang_selector.add_item(tr("(aucune langue configurée)"))
+		_lang_selector.disabled = true
+		return
+	_lang_selector.disabled = false
+	var select_idx := 0
+	for i in range(langs.size()):
+		_lang_selector.add_item(langs[i])
+		if langs[i] == previous:
+			select_idx = i
+	_lang_selector.selected = select_idx
+
+
+func _get_selected_language() -> String:
+	if _lang_selector == null or _lang_selector.get_item_count() == 0 or _lang_selector.disabled:
+		return ""
+	return _lang_selector.get_item_text(_lang_selector.selected)
+
+
+func _get_available_languages() -> PackedStringArray:
+	if _ctx == null or _ctx.story == null:
+		return PackedStringArray()
+	var ps: Dictionary = _ctx.story.plugin_settings.get("voice_studio", {})
+	return GamePlugin.get_available_languages(ps)
 
 
 func refresh() -> void:
@@ -149,7 +158,7 @@ func _create_dialogue_row(index: int, dlg) -> PanelContainer:
 	vbox.add_theme_constant_override("separation", 4)
 	panel.add_child(vbox)
 
-	# Header: index + character
+	# Header: index + character + language info
 	var header := HBoxContainer.new()
 	header.add_theme_constant_override("separation", 6)
 	vbox.add_child(header)
@@ -165,6 +174,16 @@ func _create_dialogue_row(index: int, dlg) -> PanelContainer:
 	char_label.add_theme_font_size_override("font_size", 13)
 	char_label.add_theme_color_override("font_color", Color(0.9, 0.8, 0.4))
 	header.add_child(char_label)
+
+	# Show voice ID match status for selected language
+	var selected_lang := _get_selected_language()
+	var voice_id := _get_voice_id(dlg.character, selected_lang)
+	if voice_id == "" and dlg.character != "":
+		var no_voice := Label.new()
+		no_voice.text = tr("(pas de Voice ID pour %s)") % selected_lang if selected_lang != "" else tr("(pas de Voice ID)")
+		no_voice.add_theme_font_size_override("font_size", 10)
+		no_voice.add_theme_color_override("font_color", Color(1.0, 0.5, 0.2))
+		header.add_child(no_voice)
 
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = SIZE_EXPAND_FILL
@@ -264,9 +283,14 @@ func _on_generate_single(index: int) -> void:
 		return
 
 	var dlg = seq.dialogues[index]
-	var voice_id := _get_voice_id(dlg.character)
+	var lang := _get_selected_language()
+	var voice_id := _get_voice_id(dlg.character, lang)
 	if voice_id == "":
-		_set_status(tr("Erreur : aucun Voice ID trouvé pour '%s'. Configurez-le dans Configurer le jeu > Plugins.") % dlg.character)
+		var msg := tr("Erreur : aucun Voice ID pour '%s'") % dlg.character
+		if lang != "":
+			msg += tr(" en langue '%s'") % lang
+		msg += tr(". Configurez-le dans Configurer le jeu > Plugins.")
+		_set_status(msg)
 		return
 
 	var text_to_speak: String = dlg.voice if dlg.voice != "" else dlg.text
@@ -298,23 +322,29 @@ func _on_generate_all_pressed() -> void:
 		_set_status(tr("Aucun dialogue à générer"))
 		return
 
-	# Vérifier que tous les personnages ont un Voice ID
+	var lang := _get_selected_language()
+
+	# Vérifier que tous les personnages ont un Voice ID pour cette langue
 	var missing: Array = []
 	for dlg in seq.dialogues:
 		var char_name: String = dlg.character if dlg.character != "" else ""
-		if char_name != "" and _get_voice_id(char_name) == "":
+		if char_name != "" and _get_voice_id(char_name, lang) == "":
 			if char_name not in missing:
 				missing.append(char_name)
 
 	if not missing.is_empty():
-		_set_status(tr("Erreur : Voice ID manquant pour : %s. Configurez-les dans Configurer le jeu > Plugins.") % ", ".join(missing))
+		var msg := tr("Erreur : Voice ID manquant pour : %s") % ", ".join(missing)
+		if lang != "":
+			msg += tr(" (langue: %s)") % lang
+		msg += tr(". Configurez-les dans Configurer le jeu > Plugins.")
+		_set_status(msg)
 		return
 
 	# Construire la queue de génération
 	_pending_generation.clear()
 	for i in range(seq.dialogues.size()):
 		var dlg = seq.dialogues[i]
-		var voice_id := _get_voice_id(dlg.character)
+		var voice_id := _get_voice_id(dlg.character, lang)
 		if voice_id == "":
 			continue
 		var text_to_speak: String = dlg.voice if dlg.voice != "" else dlg.text
@@ -375,14 +405,13 @@ func _on_generation_completed(mp3_bytes: PackedByteArray, dialogue_uuid: String)
 		_pending_generation.remove_at(0)
 		var remaining := _pending_generation.size()
 		if remaining > 0:
-			var total := remaining + 1
 			_set_status(tr("Génération en cours... %d restant(s)") % remaining)
 		_process_next_in_queue()
 	else:
 		refresh()
 
 
-func _on_generation_failed(error: String, dialogue_uuid: String) -> void:
+func _on_generation_failed(error: String, _dialogue_uuid: String) -> void:
 	_set_status(tr("Erreur : ") + error)
 
 	# Arrêter la queue en cas d'erreur
@@ -398,11 +427,11 @@ func _on_generation_progress(status: String, _dialogue_uuid: String) -> void:
 
 # --- Utilitaires ---
 
-func _get_voice_id(character_name: String) -> String:
+func _get_voice_id(character_name: String, language: String = "") -> String:
 	if _ctx == null or _ctx.story == null:
 		return ""
 	var ps: Dictionary = _ctx.story.plugin_settings.get("voice_studio", {})
-	return GamePlugin.get_voice_id_for_character(ps, character_name)
+	return GamePlugin.get_voice_id_for_character(ps, character_name, language)
 
 
 func _voice_file_exists(rel_path: String) -> bool:
