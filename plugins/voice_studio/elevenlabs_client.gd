@@ -71,30 +71,37 @@ func generate_voice(voice_id: String, text: String, dialogue_uuid: String,
 	if lang != "":
 		body["language_code"] = lang
 
-	# Continuity (not supported by eleven_v3)
+	# Continuity: previous_text/next_text not supported by eleven_v3
+	# but previous_request_ids IS supported by all models
 	var model: String = _config.get_model_id()
 	if not model.begins_with("eleven_v3"):
 		if previous_text != "":
 			body["previous_text"] = previous_text
 		if next_text != "":
 			body["next_text"] = next_text
-		if not previous_request_ids.is_empty():
-			var ids: Array = previous_request_ids.slice(0, 3) if previous_request_ids.size() > 3 else previous_request_ids
-			body["previous_request_ids"] = ids
+	if not previous_request_ids.is_empty():
+		var ids: Array = previous_request_ids.slice(0, 3) if previous_request_ids.size() > 3 else previous_request_ids
+		body["previous_request_ids"] = ids
 
 	var payload := JSON.stringify(body)
+	print("[VoiceStudio] POST %s" % url)
+	print("[VoiceStudio] body: %s" % payload)
 
 	var http := HTTPRequest.new()
 	add_child(http)
 	http.request_completed.connect(func(result: int, code: int, resp_headers: PackedStringArray, resp_body: PackedByteArray):
 		http.queue_free()
 		_generating = false
+		print("[VoiceStudio] Response: result=%d code=%d body_size=%d" % [result, code, resp_body.size()])
 		if result != HTTPRequest.RESULT_SUCCESS:
+			print("[VoiceStudio] ERROR: network result=%d" % result)
 			generation_failed.emit("Erreur réseau (code: %d)" % result, dialogue_uuid)
 			return
 		if code != 200:
 			var error_msg := "Erreur API ElevenLabs (HTTP %d)" % code
-			var parsed = JSON.parse_string(resp_body.get_string_from_utf8())
+			var resp_text: String = resp_body.get_string_from_utf8()
+			print("[VoiceStudio] ERROR: %s — %s" % [error_msg, resp_text])
+			var parsed = JSON.parse_string(resp_text)
 			if parsed is Dictionary and parsed.has("detail"):
 				var detail = parsed["detail"]
 				if detail is Dictionary and detail.has("message"):
@@ -103,8 +110,8 @@ func generate_voice(voice_id: String, text: String, dialogue_uuid: String,
 					error_msg += ": " + str(detail)
 			generation_failed.emit(error_msg, dialogue_uuid)
 			return
-		# Extract request-id from response headers
 		var req_id := _extract_request_id(resp_headers)
+		print("[VoiceStudio] OK: request_id=%s audio_bytes=%d" % [req_id, resp_body.size()])
 		generation_completed.emit(resp_body, req_id, dialogue_uuid)
 	)
 
