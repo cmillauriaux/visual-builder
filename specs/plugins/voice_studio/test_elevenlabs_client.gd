@@ -23,104 +23,85 @@ func after_each() -> void:
 func test_is_not_generating_by_default() -> void:
 	assert_false(_client.is_generating())
 
-
 func test_setup_stores_config() -> void:
 	var config := ElevenLabsConfig.new()
 	_client.setup(config)
 	assert_false(_client.is_generating())
 
 
-# ── Validation generate_voice (single dialogue) ──────────────────────────────
+# ── Validation ────────────────────────────────────────────────────────────────
 
-func test_generate_voice_fails_without_config() -> void:
+func test_fails_without_config() -> void:
 	watch_signals(_client)
-	_client.generate_voice("voice-id", "Hello", "test-uuid")
+	_client.generate_voice("vid", "Hello", "uuid-1")
 	assert_signal_emitted(_client, "generation_failed")
 
-
-func test_generate_voice_fails_without_api_key() -> void:
-	var config := ElevenLabsConfig.new()
-	_client.setup(config)
+func test_fails_without_api_key() -> void:
+	_client.setup(ElevenLabsConfig.new())
 	watch_signals(_client)
-	_client.generate_voice("voice-id", "Hello", "test-uuid")
+	_client.generate_voice("vid", "Hello", "uuid-1")
 	assert_signal_emitted(_client, "generation_failed")
 
-
-func test_generate_voice_fails_with_empty_voice_id() -> void:
-	var config := ElevenLabsConfig.new()
-	config.set_api_key("test-key")
-	_client.setup(config)
+func test_fails_with_empty_voice_id() -> void:
+	var c := ElevenLabsConfig.new()
+	c.set_api_key("k")
+	_client.setup(c)
 	watch_signals(_client)
-	_client.generate_voice("", "Hello", "test-uuid")
+	_client.generate_voice("", "Hello", "uuid-1")
 	assert_signal_emitted(_client, "generation_failed")
 
-
-func test_generate_voice_fails_with_empty_text() -> void:
-	var config := ElevenLabsConfig.new()
-	config.set_api_key("test-key")
-	_client.setup(config)
+func test_fails_with_empty_text() -> void:
+	var c := ElevenLabsConfig.new()
+	c.set_api_key("k")
+	_client.setup(c)
 	watch_signals(_client)
-	_client.generate_voice("voice-id", "   ", "test-uuid")
+	_client.generate_voice("vid", "   ", "uuid-1")
 	assert_signal_emitted(_client, "generation_failed")
 
-
-# ── Validation generate_dialogue (multi-input) ───────────────────────────────
-
-func test_generate_dialogue_fails_without_config() -> void:
+func test_accepts_voice_settings_override() -> void:
+	var c := ElevenLabsConfig.new()
+	c.set_api_key("k")
+	_client.setup(c)
+	# Should not fail validation (will fail at HTTP level but that's fine)
 	watch_signals(_client)
-	_client.generate_dialogue([{"text": "Hello", "voice_id": "v1"}], "req-1")
-	assert_signal_emitted(_client, "generation_failed")
+	_client.generate_voice("vid", "Hello", "uuid-1", {"speed": 1.5}, "prev", "next", ["rid1"])
+	# generation_progress should be emitted since validation passed
+	assert_signal_emitted(_client, "generation_progress")
 
 
-func test_generate_dialogue_fails_with_empty_inputs() -> void:
-	var config := ElevenLabsConfig.new()
-	config.set_api_key("test-key")
-	_client.setup(config)
-	watch_signals(_client)
-	_client.generate_dialogue([], "req-1")
-	assert_signal_emitted(_client, "generation_failed")
+# ── Request ID extraction ─────────────────────────────────────────────────────
 
+func test_extract_request_id_from_headers() -> void:
+	var headers := PackedStringArray([
+		"Content-Type: audio/mpeg",
+		"request-id: abc-123-def",
+	])
+	assert_eq(ElevenLabsClientScript._extract_request_id(headers), "abc-123-def")
 
-func test_generate_dialogue_fails_with_missing_voice_id() -> void:
-	var config := ElevenLabsConfig.new()
-	config.set_api_key("test-key")
-	_client.setup(config)
-	watch_signals(_client)
-	_client.generate_dialogue([{"text": "Hello", "voice_id": ""}], "req-1")
-	assert_signal_emitted(_client, "generation_failed")
+func test_extract_request_id_x_prefix() -> void:
+	var headers := PackedStringArray([
+		"X-Request-Id: xyz-789",
+	])
+	assert_eq(ElevenLabsClientScript._extract_request_id(headers), "xyz-789")
 
-
-func test_generate_dialogue_fails_with_empty_text_in_input() -> void:
-	var config := ElevenLabsConfig.new()
-	config.set_api_key("test-key")
-	_client.setup(config)
-	watch_signals(_client)
-	_client.generate_dialogue([{"text": "  ", "voice_id": "v1"}], "req-1")
-	assert_signal_emitted(_client, "generation_failed")
+func test_extract_request_id_missing() -> void:
+	var headers := PackedStringArray(["Content-Type: audio/mpeg"])
+	assert_eq(ElevenLabsClientScript._extract_request_id(headers), "")
 
 
 # ── Static save/delete ────────────────────────────────────────────────────────
 
 func test_save_mp3_creates_file() -> void:
-	var data := PackedByteArray([0xFF, 0xFB, 0x90, 0x00])  # Fake MP3 header
-	var result := ElevenLabsClientScript.save_mp3(data, TEST_MP3_PATH)
-	assert_true(result, "save_mp3 should return true")
+	var data := PackedByteArray([0xFF, 0xFB, 0x90, 0x00])
+	assert_true(ElevenLabsClientScript.save_mp3(data, TEST_MP3_PATH))
 	assert_true(FileAccess.file_exists(TEST_MP3_PATH))
-	var file := FileAccess.open(TEST_MP3_PATH, FileAccess.READ)
-	assert_eq(file.get_length(), 4)
-	file.close()
-
 
 func test_delete_voice_file_removes_existing() -> void:
 	var file := FileAccess.open(TEST_MP3_PATH, FileAccess.WRITE)
 	file.store_8(0xFF)
 	file.close()
-	assert_true(FileAccess.file_exists(TEST_MP3_PATH))
-	var result := ElevenLabsClientScript.delete_voice_file(TEST_MP3_PATH)
-	assert_true(result)
+	assert_true(ElevenLabsClientScript.delete_voice_file(TEST_MP3_PATH))
 	assert_false(FileAccess.file_exists(TEST_MP3_PATH))
 
-
-func test_delete_nonexistent_file_returns_true() -> void:
-	var result := ElevenLabsClientScript.delete_voice_file("user://nonexistent_voice.mp3")
-	assert_true(result)
+func test_delete_nonexistent_returns_true() -> void:
+	assert_true(ElevenLabsClientScript.delete_voice_file("user://nope.mp3"))

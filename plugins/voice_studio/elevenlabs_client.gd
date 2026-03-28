@@ -1,16 +1,16 @@
 extends Node
 
-## Client HTTP pour l'API ElevenLabs Text-to-Dialogue (Eleven v3).
-## Utilise l'endpoint /v1/text-to-dialogue qui accepte un tableau d'inputs
-## avec voice_id par segment, permettant le dialogue multi-personnages.
+## Client HTTP pour l'API ElevenLabs Text-to-Speech.
+## Utilise POST /v1/text-to-speech/{voice_id} avec voice_settings,
+## previous_text, next_text et previous_request_ids pour la continuité.
 
 const ElevenLabsConfig = preload("res://plugins/voice_studio/elevenlabs_config.gd")
 
 const BASE_URL := "https://api.elevenlabs.io/v1"
 
-signal generation_completed(mp3_bytes: PackedByteArray, request_id: String)
-signal generation_failed(error: String, request_id: String)
-signal generation_progress(status: String, request_id: String)
+signal generation_completed(mp3_bytes: PackedByteArray, request_id: String, dialogue_uuid: String)
+signal generation_failed(error: String, dialogue_uuid: String)
+signal generation_progress(status: String, dialogue_uuid: String)
 
 var _config: RefCounted = null
 var _generating: bool = false
@@ -24,74 +24,87 @@ func is_generating() -> bool:
 	return _generating
 
 
-## Génère la voix pour un dialogue unique via text-to-dialogue.
-## voice_id : identifiant de la voix ElevenLabs du personnage
-## text : texte à synthétiser (peut inclure des annotations [sarcastically], etc.)
-## request_id : identifiant de la requête (UUID du dialogue)
-func generate_voice(voice_id: String, text: String, request_id: String) -> void:
-	var inputs := [{"text": text, "voice_id": voice_id}]
-	generate_dialogue(inputs, request_id)
-
-
-## Génère un dialogue multi-personnages en une seule requête.
-## inputs : Array de {"text": String, "voice_id": String}
-## request_id : identifiant de la requête (pour identifier la réponse)
-func generate_dialogue(inputs: Array, request_id: String) -> void:
+## Génère la voix pour un dialogue.
+## voice_id : identifiant de la voix ElevenLabs
+## text : texte à synthétiser
+## dialogue_uuid : UUID du dialogue (pour identifier la réponse)
+## voice_settings : override des paramètres voix (ou {} pour utiliser les defaults config)
+## previous_text : texte du dialogue précédent (continuité)
+## next_text : texte du dialogue suivant (continuité)
+## previous_request_ids : IDs des requêtes précédentes (max 3, continuité)
+func generate_voice(voice_id: String, text: String, dialogue_uuid: String,
+		voice_settings: Dictionary = {}, previous_text: String = "",
+		next_text: String = "", previous_request_ids: Array = []) -> void:
 	if _config == null:
-		generation_failed.emit("Configuration non initialisée", request_id)
+		generation_failed.emit("Configuration non initialisée", dialogue_uuid)
 		return
 	if _config.get_api_key() == "":
-		generation_failed.emit("Clé API ElevenLabs non configurée", request_id)
+		generation_failed.emit("Clé API ElevenLabs non configurée", dialogue_uuid)
 		return
-	if inputs.is_empty():
-		generation_failed.emit("Aucun input fourni", request_id)
+	if voice_id == "":
+		generation_failed.emit("Voice ID non défini pour ce personnage", dialogue_uuid)
 		return
-
-	# Valider les inputs
-	for input in inputs:
-		if not input is Dictionary:
-			generation_failed.emit("Input invalide", request_id)
-			return
-		if input.get("voice_id", "") == "":
-			generation_failed.emit("Voice ID non défini pour un personnage", request_id)
-			return
-		if input.get("text", "").strip_edges() == "":
-			generation_failed.emit("Texte vide dans un input", request_id)
-			return
+	if text.strip_edges() == "":
+		generation_failed.emit("Texte vide", dialogue_uuid)
+		return
 
 	_generating = true
-	generation_progress.emit("Génération en cours...", request_id)
+	generation_progress.emit("Génération en cours...", dialogue_uuid)
 
-	var url := "%s/text-to-dialogue" % BASE_URL
+	var output_format: String = _config.get_output_format()
+	var url := "%s/text-to-speech/%s?output_format=%s" % [BASE_URL, voice_id, output_format]
+
+	# Build request body
 	var body := {
+		"text": text,
 		"model_id": _config.get_model_id(),
-		"inputs": inputs,
 	}
+
+	# Voice settings: merge defaults from config with overrides
+	var settings: Dictionary = _config.get_voice_settings()
+	for key in voice_settings:
+		settings[key] = voice_settings[key]
+	body["voice_settings"] = settings
+
+	# Language code
 	var lang: String = _config.get_language_code()
 	if lang != "":
 		body["language_code"] = lang
+
+	# Continuity
+	if previous_text != "":
+		body["previous_text"] = previous_text
+	if next_text != "":
+		body["next_text"] = next_text
+	if not previous_request_ids.is_empty():
+		# Max 3 IDs
+		var ids: Array = previous_request_ids.slice(0, 3) if previous_request_ids.size() > 3 else previous_request_ids
+		body["previous_request_ids"] = ids
+
 	var payload := JSON.stringify(body)
 
 	var http := HTTPRequest.new()
 	add_child(http)
-	http.request_completed.connect(func(result: int, code: int, _headers: PackedStringArray, response_body: PackedByteArray):
+	http.request_completed.connect(func(result: int, code: int, resp_headers: PackedStringArray, resp_body: PackedByteArray):
 		http.queue_free()
 		_generating = false
 		if result != HTTPRequest.RESULT_SUCCESS:
-			generation_failed.emit("Erreur réseau (code: %d)" % result, request_id)
+			generation_failed.emit("Erreur réseau (code: %d)" % result, dialogue_uuid)
 			return
 		if code != 200:
 			var error_msg := "Erreur API ElevenLabs (HTTP %d)" % code
-			var parsed = JSON.parse_string(response_body.get_string_from_utf8())
+			var parsed = JSON.parse_string(resp_body.get_string_from_utf8())
 			if parsed is Dictionary and parsed.has("detail"):
 				var detail = parsed["detail"]
 				if detail is Dictionary and detail.has("message"):
 					error_msg += ": " + str(detail["message"])
 				else:
 					error_msg += ": " + str(detail)
-			generation_failed.emit(error_msg, request_id)
+			generation_failed.emit(error_msg, dialogue_uuid)
 			return
-		generation_completed.emit(response_body, request_id)
+		# Extract request-id from response headers
+		var req_id := _extract_request_id(resp_headers)
+		generation_completed.emit(resp_body, req_id, dialogue_uuid)
 	)
 
 	var headers: PackedStringArray = _config.get_auth_headers()
@@ -99,11 +112,18 @@ func generate_dialogue(inputs: Array, request_id: String) -> void:
 	if err != OK:
 		http.queue_free()
 		_generating = false
-		generation_failed.emit("Impossible d'envoyer la requête (erreur: %d)" % err, request_id)
+		generation_failed.emit("Impossible d'envoyer la requête (erreur: %d)" % err, dialogue_uuid)
 
 
-## Sauvegarde les bytes MP3 dans le fichier spécifié.
-## Retourne true si la sauvegarde a réussi.
+static func _extract_request_id(headers: PackedStringArray) -> String:
+	for h in headers:
+		var lower: String = h.to_lower()
+		if lower.begins_with("request-id:") or lower.begins_with("x-request-id:"):
+			return h.substr(h.find(":") + 1).strip_edges()
+	return ""
+
+
+## Sauvegarde les bytes audio dans le fichier spécifié.
 static func save_mp3(mp3_bytes: PackedByteArray, file_path: String) -> bool:
 	var dir_path := file_path.get_base_dir()
 	if not DirAccess.dir_exists_absolute(dir_path):

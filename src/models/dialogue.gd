@@ -9,6 +9,7 @@ var character: String = ""
 var text: String = ""
 var voice: String = ""  # Optional: ElevenLabs voice description with annotations ([sarcastically], [whispers], etc.)
 var voice_file: String = ""  # Optional: path to generated MP3 voice file (e.g. "assets/voices/uuid.mp3")
+var voice_request_id: String = ""  # Optional: ElevenLabs request ID for previous_request_ids continuity
 var foregrounds: Array = []  # Array[Foreground]
 
 func _init():
@@ -47,6 +48,8 @@ func to_dict() -> Dictionary:
 		d["voice"] = voice
 	if voice_file != "":
 		d["voice_file"] = voice_file
+	if voice_request_id != "":
+		d["voice_request_id"] = voice_request_id
 	return d
 
 static func from_dict(d: Dictionary):
@@ -57,6 +60,7 @@ static func from_dict(d: Dictionary):
 	dlg.text = d.get("text", "")
 	dlg.voice = d.get("voice", "")
 	dlg.voice_file = d.get("voice_file", "")
+	dlg.voice_request_id = d.get("voice_request_id", "")
 	if d.has("foregrounds"):
 		for fg_dict in d["foregrounds"]:
 			dlg.foregrounds.append(ForegroundScript.from_dict(fg_dict))
