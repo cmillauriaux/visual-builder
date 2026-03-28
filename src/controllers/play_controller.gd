@@ -367,6 +367,7 @@ func _play_tr(source: String) -> String:
 func _stop_dialogue_voice() -> void:
 	if _voice_player and _voice_player.playing:
 		_voice_player.stop()
+	_restore_music_volume()
 
 
 func _play_dialogue_voice(dlg) -> void:
@@ -387,6 +388,19 @@ func _play_dialogue_voice(dlg) -> void:
 	stream.loop = false
 	_voice_player.stream = stream
 	_voice_player.play()
+	_duck_music_volume()
+	_voice_player.finished.connect(_restore_music_volume, CONNECT_ONE_SHOT)
+
+
+## Baisse le volume de la musique de ~20% quand une voix joue (ducking).
+func _duck_music_volume() -> void:
+	if _music_player and _music_player.has_method("set_duck_volume_db"):
+		_music_player.set_duck_volume_db(-4.0)  # ~20% moins fort
+
+
+func _restore_music_volume() -> void:
+	if _music_player and _music_player.has_method("set_duck_volume_db"):
+		_music_player.set_duck_volume_db(0.0)
 
 
 func _get_dialogue_voice_path(dlg) -> String:

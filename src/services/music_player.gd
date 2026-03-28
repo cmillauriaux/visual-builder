@@ -15,6 +15,8 @@ var _active_idx: int = 0
 var _fx_stream_player: AudioStreamPlayer
 var _current_music_path: String = ""
 var _crossfade_tween: Tween = null
+var _duck_offset_db: float = 0.0  # Volume offset for voice ducking
+var _duck_tween: Tween = null
 
 
 func _ready() -> void:
@@ -88,6 +90,19 @@ func stop_music() -> void:
 		p.stop()
 		p.volume_db = MIN_VOLUME_DB
 	_current_music_path = ""
+
+
+## Applique un offset de volume pour le ducking (voix par-dessus la musique).
+## duck_db = 0.0 pour restaurer, duck_db = -4.0 pour baisser de ~20%.
+func set_duck_volume_db(duck_db: float) -> void:
+	_duck_offset_db = duck_db
+	if _duck_tween:
+		_duck_tween.kill()
+	var active_player: AudioStreamPlayer = _players[_active_idx]
+	if not active_player.playing:
+		return
+	_duck_tween = create_tween()
+	_duck_tween.tween_property(active_player, "volume_db", duck_db, 0.3)
 
 
 ## Joue un FX (lecture unique, sans boucle).
