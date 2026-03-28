@@ -90,6 +90,12 @@ static func _build_top_bar(main: Control) -> void:
 	main._map_button.toggle_mode = true
 	main._top_bar.add_child(main._map_button)
 
+	main._play_lang_selector = OptionButton.new()
+	main._play_lang_selector.custom_minimum_size = Vector2(60, 0)
+	main._play_lang_selector.tooltip_text = TranslationServer.translate("Langue de prévisualisation")
+	main._play_lang_selector.visible = false
+	main._top_bar.add_child(main._play_lang_selector)
+
 	main._top_play_button = Button.new()
 	main._top_play_button.text = TranslationServer.translate("▶ Jouer")
 	main._top_play_button.visible = false
@@ -237,11 +243,6 @@ static func _build_sequence_editor(main: Control) -> void:
 	var toolbar_spacer = Control.new()
 	toolbar_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	main._sequence_toolbar.add_child(toolbar_spacer)
-
-	main._play_lang_selector = OptionButton.new()
-	main._play_lang_selector.custom_minimum_size = Vector2(60, 0)
-	main._play_lang_selector.tooltip_text = TranslationServer.translate("Langue de prévisualisation")
-	main._sequence_toolbar.add_child(main._play_lang_selector)
 
 	main._play_button = Button.new()
 	main._play_button.text = "▶ Play"

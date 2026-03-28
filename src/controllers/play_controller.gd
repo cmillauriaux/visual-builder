@@ -14,6 +14,7 @@ var _sequence_fx_player: Node
 var _visual_editor: Control
 var _music_player: Node = null
 var _voice_player: AudioStreamPlayer = null
+var _play_i18n_dict: Dictionary = {}  # i18n dict for play language
 
 # État du play
 var _previous_play_foregrounds: Array = []
@@ -48,6 +49,7 @@ func is_story_play_mode() -> bool:
 # --- Sequence Play ---
 
 func on_play_pressed() -> void:
+	_load_play_i18n()
 	var _play_ui_path = ""
 	var _play_story = _main._editor_main.get_current_story() if _main._editor_main.has_method("get_current_story") else null
 	if _play_story != null and _play_story.get("ui_theme_mode") == "custom":
@@ -173,7 +175,9 @@ func on_play_dialogue_changed(index: int) -> void:
 		return
 
 	var dlg = seq.dialogues[index]
-	EventBus.play_dialogue_changed.emit(dlg.character, dlg.text, index)
+	var display_character: String = _play_tr(dlg.character)
+	var display_text: String = _play_tr(dlg.text)
+	EventBus.play_dialogue_changed.emit(display_character, display_text, index)
 
 	# Play dialogue voice if available
 	_play_dialogue_voice(dlg)
@@ -337,6 +341,29 @@ func _restore_sequence_foregrounds() -> void:
 			_main.update_preview_for_dialogue(idx)
 
 
+func _load_play_i18n() -> void:
+	_play_i18n_dict = {}
+	var lang: String = _main.get_play_language() if _main.has_method("get_play_language") else ""
+	if lang == "":
+		return
+	var base_path: String = _main._get_story_base_path() if _main.has_method("_get_story_base_path") else ""
+	if base_path == "":
+		return
+	var StoryI18nSvc = load("res://src/services/story_i18n_service.gd")
+	var lang_config: Dictionary = StoryI18nSvc.load_languages_config(base_path)
+	var source_lang: String = lang_config.get("default", "fr")
+	if lang == source_lang:
+		return
+	_play_i18n_dict = StoryI18nSvc.load_i18n(base_path, lang)
+
+
+func _play_tr(source: String) -> String:
+	if source == "" or _play_i18n_dict.is_empty():
+		return source
+	var translated: String = _play_i18n_dict.get(source, "")
+	return translated if translated != "" else source
+
+
 func _stop_dialogue_voice() -> void:
 	if _voice_player and _voice_player.playing:
 		_voice_player.stop()
@@ -397,6 +424,7 @@ func _apply_sequence_audio() -> void:
 # --- Story Play ---
 
 func on_top_play_pressed() -> void:
+	_load_play_i18n()
 	var _play_ui_path = ""
 	var _play_story = _main._editor_main.get_current_story() if _main._editor_main.has_method("get_current_story") else null
 	if _play_story != null and _play_story.get("ui_theme_mode") == "custom":

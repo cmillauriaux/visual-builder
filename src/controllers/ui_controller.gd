@@ -75,7 +75,9 @@ func _on_editor_mode_changed(mode: int, context: Dictionary) -> void:
 	
 	_main._map_button.visible = (mode != EditorState.Mode.NONE)
 	_main._map_button.button_pressed = (mode == EditorState.Mode.MAP_VIEW)
-	_main._top_play_button.visible = (mode in [EditorState.Mode.CHAPTER_VIEW, EditorState.Mode.SCENE_VIEW, EditorState.Mode.SEQUENCE_VIEW])
+	var show_play := mode in [EditorState.Mode.CHAPTER_VIEW, EditorState.Mode.SCENE_VIEW, EditorState.Mode.SEQUENCE_VIEW]
+	_main._top_play_button.visible = show_play
+	_main._play_lang_selector.visible = show_play or (mode == EditorState.Mode.PLAY_MODE)
 	_main._top_stop_button.visible = (mode == EditorState.Mode.PLAY_MODE)
 	
 	var story_open = (mode != EditorState.Mode.NONE)
