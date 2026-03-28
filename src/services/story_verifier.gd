@@ -8,6 +8,7 @@ class_name StoryVerifier
 const MAX_RUNS := 100
 const MAX_STEPS := 10000
 const WORDS_PER_MINUTE := 250.0
+const SECONDS_PER_DIALOGUE := 1.0
 const SECONDS_PER_CHOICE := 5.0
 
 # String.split_words() n'existe pas en Godot 4.6.1 — on utilise RegEx a la place.
@@ -65,6 +66,8 @@ func verify(story: RefCounted) -> Dictionary:
 			all_valid = false
 			break
 
+	var timings_result := _compute_timings(runs)
+
 	return {
 		"success": all_valid and orphans.is_empty(),
 		"runs": runs,
@@ -72,7 +75,8 @@ func verify(story: RefCounted) -> Dictionary:
 		"total_runs": runs.size(),
 		"all_nodes": all_nodes.size(),
 		"visited_nodes": visited_nodes.size(),
-		"chapter_timings": _compute_chapter_timings(runs),
+		"chapter_timings": timings_result["chapters"],
+		"total_timings": timings_result["total"],
 	}
 
 
@@ -85,6 +89,7 @@ func _empty_report() -> Dictionary:
 		"all_nodes": 0,
 		"visited_nodes": 0,
 		"chapter_timings": [],
+		"total_timings": {},
 	}
 
 
@@ -447,8 +452,9 @@ func _count_sequence_words(seq) -> int:
 	return total
 
 
-func _compute_chapter_timings(runs: Array) -> Array:
+func _compute_timings(runs: Array) -> Dictionary:
 	var chapter_data: Dictionary = {}  # chapter_name -> { "game_over": Array[float], "continuation": Array[float] }
+	var total_data: Dictionary = {"game_over": [], "continuation": []}
 	var chapter_order: Array = []
 
 	for run in runs:
@@ -457,6 +463,7 @@ func _compute_chapter_timings(runs: Array) -> Array:
 			continue
 		var bucket: String = "game_over" if reason == "game_over" else "continuation"
 
+		var run_total_time := 0.0
 		var run_totals: Dictionary = {}  # chapter_name -> seconds for this run
 		for step in run.get("path", []):
 			var ch: String = step.get("chapter_name", "")
@@ -467,7 +474,12 @@ func _compute_chapter_timings(runs: Array) -> Array:
 			var words: int = step.get("word_count", 0)
 			var dialogues: int = step.get("dialogue_count", 0)
 			var is_choice: bool = step.get("type", "") == "choice"
-			run_totals[ch] += (words / WORDS_PER_MINUTE) * 60.0 + dialogues * SECONDS_PER_CHOICE + (SECONDS_PER_CHOICE if is_choice else 0.0)
+			
+			var step_time := (words / WORDS_PER_MINUTE) * 60.0 + dialogues * SECONDS_PER_DIALOGUE + (SECONDS_PER_CHOICE if is_choice else 0.0)
+			run_totals[ch] += step_time
+			run_total_time += step_time
+
+		total_data[bucket].append(run_total_time)
 
 		for ch in run_totals:
 			if not chapter_data.has(ch):
@@ -475,7 +487,7 @@ func _compute_chapter_timings(runs: Array) -> Array:
 				chapter_order.append(ch)
 			chapter_data[ch][bucket].append(run_totals[ch])
 
-	var result: Array = []
+	var result_chapters: Array = []
 	for ch in chapter_order:
 		var entry: Dictionary = {"chapter_name": ch}
 		var go_times: Array = chapter_data[ch]["game_over"]
@@ -488,8 +500,20 @@ func _compute_chapter_timings(runs: Array) -> Array:
 			var sorted_cont := cont_times.duplicate()
 			sorted_cont.sort()
 			entry["continuation"] = {"min_seconds": sorted_cont[0], "max_seconds": sorted_cont[-1]}
-		result.append(entry)
-	return result
+		result_chapters.append(entry)
+		
+	var result_total: Dictionary = {}
+	for bucket in ["game_over", "continuation"]:
+		var times: Array = total_data[bucket]
+		if times.size() > 0:
+			var sorted_times := times.duplicate()
+			sorted_times.sort()
+			result_total[bucket] = {"min_seconds": sorted_times[0], "max_seconds": sorted_times[-1]}
+			
+	return {
+		"chapters": result_chapters,
+		"total": result_total
+	}
 
 
 func _format_duration(seconds: float) -> String:

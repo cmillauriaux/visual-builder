@@ -41,6 +41,23 @@ func test_empty_report_does_not_crash():
 
 # === Section timings ===
 
+func test_total_timings_section_present_when_non_empty():
+	var report := _make_success_report()
+	report["total_timings"] = {
+		"continuation": {"min_seconds": 600.0, "max_seconds": 1200.0},
+		"game_over": {"min_seconds": 300.0, "max_seconds": 600.0},
+	}
+	var text: String = _formatter.format(report)
+	assert_true(text.contains("--- DUREE TOTALE ESTIMEE ---"), "Section total timings doit etre presente")
+	assert_true(text.contains("Histoire (Suite) : de 10 min a 20 min"), "Format total continuation incorrect")
+	assert_true(text.contains("Histoire (Game Over) : de 5 min a 10 min"), "Format total game_over incorrect")
+
+func test_total_timings_section_absent_when_empty():
+	var report := _make_success_report()
+	report["total_timings"] = {}
+	var text: String = _formatter.format(report)
+	assert_false(text.contains("--- DUREE TOTALE ESTIMEE ---"), "Section total timings ne doit pas etre presente si vide")
+
 func test_timings_section_present_when_non_empty():
 	var text: String = _formatter.format(_make_success_report())
 	assert_true(text.contains("--- DUREE ESTIMEE PAR CHAPITRE ---"), "Section timings doit etre presente")
