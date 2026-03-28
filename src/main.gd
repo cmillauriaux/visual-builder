@@ -371,10 +371,12 @@ func _rebuild_dialogue_list() -> void:
 func _update_ending_tab_indicator() -> void:
 	if _tab_container == null: return
 	var seq = _sequence_editor_ctrl.get_sequence()
+	# Terminaison est l'onglet index 2 (après Texte et Calques)
+	var terminaison_idx := 2
 	if seq and seq.ending != null:
-		_tab_container.set_tab_title(0, "Terminaison ●")
+		_tab_container.set_tab_title(terminaison_idx, "Terminaison ●")
 	else:
-		_tab_container.set_tab_title(0, "Terminaison")
+		_tab_container.set_tab_title(terminaison_idx, "Terminaison")
 
 
 # --- Selection handlers ---

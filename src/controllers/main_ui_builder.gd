@@ -260,34 +260,41 @@ static func _build_sequence_editor(main: Control) -> void:
 	main._visual_editor.size_flags_stretch_ratio = 1.85
 	main._sequence_content.add_child(main._visual_editor)
 
-	# Right Panel (~35%): Dialogue + Calques + Propriétés + Onglets
-	main._right_panel = VBoxContainer.new()
-	main._right_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	main._right_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	main._right_panel.size_flags_stretch_ratio = 1.0
-	main._sequence_content.add_child(main._right_panel)
-
-	# Section 1: Dialogue edit
-	main._dialogue_edit_section = DialogueEditSectionScript.new()
-	main._right_panel.add_child(main._dialogue_edit_section)
-
-	# Section 2: Foreground Layer Panel (extensible)
-	main._layer_panel = ForegroundLayerPanelScript.new()
-	main._layer_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	main._right_panel.add_child(main._layer_panel)
-
-	# Section 3: Foreground Properties Panel
-	main._properties_panel = ForegroundPropertiesPanelScript.new()
-	main._right_panel.add_child(main._properties_panel)
-
-	# Section 4: Onglets secondaires (sans Dialogues)
+	# Right Panel (~35%): TabContainer pleine hauteur
 	main._tab_container = TabContainer.new()
 	main._tab_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	main._tab_container.custom_minimum_size = Vector2(0, 150)
-	main._right_panel.add_child(main._tab_container)
+	main._tab_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	main._tab_container.size_flags_stretch_ratio = 1.0
+	main._sequence_content.add_child(main._tab_container)
 	main._sequence_tab_container = main._tab_container
 
-	# Tab 0: Terminaison
+	# Placeholder right_panel (conservé pour compat API, invisible)
+	main._right_panel = VBoxContainer.new()
+	main._right_panel.visible = false
+	main.add_child(main._right_panel)
+
+	# Tab 0: Texte (dialogue edit)
+	var texte_tab = VBoxContainer.new()
+	texte_tab.name = TranslationServer.translate("Texte")
+	main._tab_container.add_child(texte_tab)
+
+	main._dialogue_edit_section = DialogueEditSectionScript.new()
+	texte_tab.add_child(main._dialogue_edit_section)
+
+	# Tab 1: Calques (foreground layers + properties)
+	var calques_tab = VBoxContainer.new()
+	calques_tab.name = TranslationServer.translate("Calques")
+	calques_tab.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	main._tab_container.add_child(calques_tab)
+
+	main._layer_panel = ForegroundLayerPanelScript.new()
+	main._layer_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	calques_tab.add_child(main._layer_panel)
+
+	main._properties_panel = ForegroundPropertiesPanelScript.new()
+	calques_tab.add_child(main._properties_panel)
+
+	# Tab 2: Terminaison
 	var terminaison_tab = VBoxContainer.new()
 	terminaison_tab.name = TranslationServer.translate("Terminaison")
 	main._tab_container.add_child(terminaison_tab)
@@ -295,7 +302,7 @@ static func _build_sequence_editor(main: Control) -> void:
 	main._ending_editor = EndingEditorScene.instantiate()
 	terminaison_tab.add_child(main._ending_editor)
 
-	# Tab 1: Musique
+	# Tab 3: Musique
 	var musique_scroll = ScrollContainer.new()
 	musique_scroll.name = TranslationServer.translate("Musique")
 	musique_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -306,14 +313,14 @@ static func _build_sequence_editor(main: Control) -> void:
 	main._audio_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	musique_scroll.add_child(main._audio_panel)
 
-	# Tab 2: FX
+	# Tab 4: FX
 	main._fx_panel = VBoxContainer.new()
 	main._fx_panel.set_script(FxPanelScript)
 	main._fx_panel.name = "FX"
 	main._fx_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	main._tab_container.add_child(main._fx_panel)
 
-	# Tab 3: Paramètres / Transitions (Séquence)
+	# Tab 5: Paramètres / Transitions (Séquence)
 	main._sequence_transition_panel = VBoxContainer.new()
 	main._sequence_transition_panel.name = TranslationServer.translate("Paramètres")
 	main._tab_container.add_child(main._sequence_transition_panel)
