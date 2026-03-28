@@ -121,10 +121,40 @@ func show_report(report: Dictionary) -> void:
 	]
 	summary_vbox.add_child(_summary_label)
 
-	# Separator
-	_report_content.add_child(HSeparator.new())
+	# Total timings
+	var total_timings: Dictionary = report.get("total_timings", {})
+	if not total_timings.is_empty():
+		var total_title = Label.new()
+		total_title.name = "TotalTimingsTitle"
+		total_title.text = tr("-- Duree totale estimee --")
+		total_title.add_theme_font_size_override("font_size", 15)
+		total_title.add_theme_color_override("font_color", Color(0.8, 1.0, 0.8))
+		_report_content.add_child(total_title)
 
-	# Chapter timings
+		var total_list = VBoxContainer.new()
+		total_list.name = "TotalTimingsList"
+		_report_content.add_child(total_list)
+
+		if total_timings.has("continuation"):
+			var item = Label.new()
+			var sub: Dictionary = total_timings["continuation"]
+			var min_str := _format_duration(sub.get("min_seconds", 0.0))
+			var max_str := _format_duration(sub.get("max_seconds", 0.0))
+			item.text = tr("  Histoire (Suite)    de %s  a  %s") % [min_str, max_str]
+			total_list.add_child(item)
+		if total_timings.has("game_over"):
+			var item = Label.new()
+			var sub: Dictionary = total_timings["game_over"]
+			var min_str := _format_duration(sub.get("min_seconds", 0.0))
+			var max_str := _format_duration(sub.get("max_seconds", 0.0))
+			item.text = tr("  Histoire (Game Over)    de %s  a  %s") % [min_str, max_str]
+			item.add_theme_color_override("font_color", Color(1.0, 0.5, 0.5))
+			total_list.add_child(item)
+
+		_report_content.add_child(HSeparator.new())
+
+	# Separator
+	# (Chapter timings follow...)
 	var chapter_timings: Array = report.get("chapter_timings", [])
 	if chapter_timings.size() > 0:
 		var timings_title = Label.new()

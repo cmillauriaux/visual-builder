@@ -27,11 +27,31 @@ func format(report: Dictionary) -> String:
 	])
 	lines.append("Parcours effectues : %d" % report.get("total_runs", 0))
 
+	_append_total_timings(lines, report.get("total_timings", {}))
 	_append_timings(lines, report.get("chapter_timings", []))
 	_append_orphans(lines, report.get("orphan_nodes", []))
 	_append_runs(lines, report.get("runs", []))
 
 	return "\n".join(lines)
+
+
+func _append_total_timings(lines: PackedStringArray, total_timings: Dictionary) -> void:
+	if total_timings.is_empty():
+		return
+	lines.append("")
+	lines.append("--- DUREE TOTALE ESTIMEE ---")
+	if total_timings.has("continuation"):
+		var sub: Dictionary = total_timings["continuation"]
+		lines.append("  Histoire (Suite) : de %s a %s" % [
+			_format_duration(sub.get("min_seconds", 0.0)),
+			_format_duration(sub.get("max_seconds", 0.0)),
+		])
+	if total_timings.has("game_over"):
+		var sub: Dictionary = total_timings["game_over"]
+		lines.append("  Histoire (Game Over) : de %s a %s" % [
+			_format_duration(sub.get("min_seconds", 0.0)),
+			_format_duration(sub.get("max_seconds", 0.0)),
+		])
 
 
 func _append_timings(lines: PackedStringArray, timings: Array) -> void:
