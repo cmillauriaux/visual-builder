@@ -13,6 +13,7 @@ var _foreground_transition: Node
 var _sequence_fx_player: Node
 var _visual_editor: Control
 var _music_player: Node = null
+var _voice_player: AudioStreamPlayer = null
 
 # État du play
 var _previous_play_foregrounds: Array = []
@@ -34,6 +35,10 @@ func setup(main: Control) -> void:
 	_foreground_transition = main._foreground_transition
 	_sequence_fx_player = main._sequence_fx_player
 	_visual_editor = main._visual_editor
+	# Voice player for dialogue voice files
+	_voice_player = AudioStreamPlayer.new()
+	_voice_player.bus = "Master"
+	add_child(_voice_player)
 
 
 func is_story_play_mode() -> bool:
@@ -125,6 +130,7 @@ func _on_play_fx_finished() -> void:
 func on_stop_pressed() -> void:
 	_clear_play_ui_theme(_main._play_overlay, _main._choice_overlay)
 	_sequence_fx_player.stop_fx()
+	_stop_dialogue_voice()
 	if _music_player:
 		_music_player.stop_music()
 	if _is_story_play_mode:
@@ -155,6 +161,7 @@ func _on_trans_out_finished() -> void:
 		return
 	if _music_player:
 		_music_player.stop_music()
+	_stop_dialogue_voice()
 	_sequence_fx_player.stop_fx()
 	_restore_sequence_foregrounds()
 	EventBus.play_stopped.emit()
@@ -167,6 +174,9 @@ func on_play_dialogue_changed(index: int) -> void:
 
 	var dlg = seq.dialogues[index]
 	EventBus.play_dialogue_changed.emit(dlg.character, dlg.text, index)
+
+	# Play dialogue voice if available
+	_play_dialogue_voice(dlg)
 
 	# Foreground transitions logic
 	var new_fgs = _sequence_editor_ctrl.get_effective_foregrounds(index)
@@ -325,6 +335,40 @@ func _restore_sequence_foregrounds() -> void:
 		var idx = _sequence_editor_ctrl.get_selected_dialogue_index()
 		if idx >= 0:
 			_main.update_preview_for_dialogue(idx)
+
+
+func _stop_dialogue_voice() -> void:
+	if _voice_player and _voice_player.playing:
+		_voice_player.stop()
+
+
+func _play_dialogue_voice(dlg) -> void:
+	_stop_dialogue_voice()
+	if _voice_player == null:
+		return
+	var voice_path: String = dlg.get("voice_file") if dlg.get("voice_file") != null else ""
+	if voice_path == "":
+		return
+	var abs_path := _resolve_voice_path(voice_path)
+	if not FileAccess.file_exists(abs_path):
+		return
+	var bytes := FileAccess.get_file_as_bytes(abs_path)
+	if bytes.is_empty():
+		return
+	var stream := AudioStreamMP3.new()
+	stream.data = bytes
+	stream.loop = false
+	_voice_player.stream = stream
+	_voice_player.play()
+
+
+func _resolve_voice_path(rel_path: String) -> String:
+	if rel_path.begins_with("/") or rel_path.begins_with("res://") or rel_path.begins_with("user://"):
+		return rel_path
+	var base_path := _main._get_story_base_path() if _main.has_method("_get_story_base_path") else ""
+	if base_path != "":
+		return base_path + "/" + rel_path
+	return rel_path
 
 
 func _apply_sequence_audio() -> void:

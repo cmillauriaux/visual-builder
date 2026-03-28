@@ -30,6 +30,7 @@ var _is_showing_title: bool = false
 var _restore_dialogue_index: int = -1
 var _story_base_path: String = ""
 var _music_player: Node = null
+var _voice_player: AudioStreamPlayer = null
 var _auto_play: RefCounted = null
 var _auto_play_button: Button = null
 var _skip_button: Button = null
@@ -109,6 +110,10 @@ func setup(game: Control) -> void:
 		_play_buttons_bar = game._play_buttons_bar
 	if game.get("_history_button") != null:
 		_history_button = game._history_button
+	# Voice player for dialogue voice files
+	_voice_player = AudioStreamPlayer.new()
+	_voice_player.bus = "Master"
+	add_child(_voice_player)
 	_auto_play = AutoPlayManagerScript.new()
 	_auto_play.setup(game.get_tree())
 	_auto_play.auto_advance_requested.connect(_on_auto_advance)
@@ -349,6 +354,7 @@ func on_play_dialogue_changed(index: int) -> void:
 	if _auto_play:
 		_auto_play.stop_timer()
 	var dlg = seq.dialogues[index]
+	_play_dialogue_voice(dlg)
 	var display_character: String = dlg.character
 	var display_text: String = dlg.text
 	# Pipeline plugins in-game
@@ -841,6 +847,7 @@ func _cleanup_play() -> void:
 		_game._play_title_overlay.get_parent().remove_child(_game._play_title_overlay)
 	if _music_player:
 		_music_player.stop_music()
+	_stop_dialogue_voice()
 	if _auto_play:
 		_auto_play.reset()
 	if _skip_button:
@@ -861,3 +868,36 @@ func _cleanup_play() -> void:
 		_game._variable_sidebar_scroll.visible = false
 	if _game._variable_details_overlay:
 		_game._variable_details_overlay.hide_details()
+
+
+func _stop_dialogue_voice() -> void:
+	if _voice_player and _voice_player.playing:
+		_voice_player.stop()
+
+
+func _play_dialogue_voice(dlg) -> void:
+	_stop_dialogue_voice()
+	if _voice_player == null:
+		return
+	var voice_path: String = dlg.get("voice_file") if dlg.get("voice_file") != null else ""
+	if voice_path == "":
+		return
+	var abs_path := _resolve_voice_path(voice_path)
+	if not FileAccess.file_exists(abs_path):
+		return
+	var bytes := FileAccess.get_file_as_bytes(abs_path)
+	if bytes.is_empty():
+		return
+	var stream := AudioStreamMP3.new()
+	stream.data = bytes
+	stream.loop = false
+	_voice_player.stream = stream
+	_voice_player.play()
+
+
+func _resolve_voice_path(rel_path: String) -> String:
+	if rel_path.begins_with("/") or rel_path.begins_with("res://") or rel_path.begins_with("user://"):
+		return rel_path
+	if _story_base_path != "":
+		return _story_base_path + "/" + rel_path
+	return rel_path

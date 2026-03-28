@@ -19,7 +19,6 @@ var _scroll: ScrollContainer = null
 var _list_container: VBoxContainer = null
 var _lang_selector: OptionButton = null
 var _pending_generation: Array = []  # Queue for individual generation
-var _generating_all: bool = false  # True when using text-to-dialogue for whole sequence
 
 signal voice_changed()
 
@@ -132,28 +131,6 @@ func refresh() -> void:
 
 	var sequence = _ctx.current_sequence
 	_generate_all_btn.disabled = false
-
-	# Afficher le statut du fichier voix de la séquence (dialogue complet)
-	if sequence.voice_file != "" and _voice_file_exists(sequence.voice_file):
-		var seq_voice_panel := HBoxContainer.new()
-		seq_voice_panel.add_theme_constant_override("separation", 6)
-		_list_container.add_child(seq_voice_panel)
-		var seq_status := Label.new()
-		seq_status.text = "✓ " + tr("Dialogue complet : ") + sequence.voice_file
-		seq_status.add_theme_color_override("font_color", Color(0.3, 1.0, 0.3))
-		seq_status.add_theme_font_size_override("font_size", 11)
-		seq_voice_panel.add_child(seq_status)
-		var seq_del_btn := Button.new()
-		seq_del_btn.text = tr("Supprimer")
-		seq_del_btn.pressed.connect(func():
-			var abs_path := _resolve_voice_path(sequence.voice_file)
-			ElevenLabsClient.delete_voice_file(abs_path)
-			sequence.voice_file = ""
-			voice_changed.emit()
-			refresh()
-		)
-		seq_voice_panel.add_child(seq_del_btn)
-		_list_container.add_child(HSeparator.new())
 
 	if sequence.dialogues.is_empty():
 		var empty_label := Label.new()
@@ -363,25 +340,39 @@ func _on_generate_all_pressed() -> void:
 		_set_status(msg)
 		return
 
-	# Construire les inputs pour text-to-dialogue (une seule requête)
-	var inputs: Array = []
-	for dlg in seq.dialogues:
+	# Construire la queue de génération (un par dialogue, séquentiellement)
+	_pending_generation.clear()
+	for i in range(seq.dialogues.size()):
+		var dlg = seq.dialogues[i]
 		var voice_id := _get_voice_id(dlg.character, lang)
 		if voice_id == "":
 			continue
 		var text_to_speak: String = dlg.voice if dlg.voice != "" else dlg.text
 		if text_to_speak.strip_edges() == "":
 			continue
-		inputs.append({"text": text_to_speak, "voice_id": voice_id})
+		_pending_generation.append({
+			"voice_id": voice_id,
+			"text": text_to_speak,
+			"uuid": dlg.uuid,
+		})
 
-	if inputs.is_empty():
+	if _pending_generation.is_empty():
 		_set_status(tr("Rien à générer (textes vides)"))
 		return
 
-	_generating_all = true
-	_set_status(tr("Génération du dialogue complet (%d répliques)...") % inputs.size())
+	_set_status(tr("Génération en cours... 1/%d") % _pending_generation.size())
 	_generate_all_btn.disabled = true
-	_client.generate_dialogue(inputs, seq.uuid)
+	_process_next_in_queue()
+
+
+func _process_next_in_queue() -> void:
+	if _pending_generation.is_empty():
+		_generate_all_btn.disabled = false
+		_set_status(tr("Toutes les voix ont été générées !"))
+		refresh()
+		return
+	var item = _pending_generation[0]
+	_client.generate_voice(item["voice_id"], item["text"], item["uuid"])
 
 
 func _on_generation_completed(mp3_bytes: PackedByteArray, request_id: String) -> void:
@@ -389,23 +380,6 @@ func _on_generation_completed(mp3_bytes: PackedByteArray, request_id: String) ->
 		return
 
 	var seq = _ctx.current_sequence
-
-	if _generating_all and request_id == seq.uuid:
-		# Résultat de "Générer toutes les voix" → fichier séquence
-		var rel_path := "assets/voices/sequence_%s.mp3" % seq.uuid
-		var abs_path := _resolve_voice_path(rel_path)
-		if ElevenLabsClient.save_mp3(mp3_bytes, abs_path):
-			seq.voice_file = rel_path
-			voice_changed.emit()
-			_set_status(tr("Dialogue complet généré !"))
-		else:
-			_set_status(tr("Erreur sauvegarde fichier séquence"))
-		_generating_all = false
-		_generate_all_btn.disabled = false
-		refresh()
-		return
-
-	# Résultat d'une génération individuelle → fichier dialogue
 	var dlg = null
 	for d in seq.dialogues:
 		if d.uuid == request_id:
@@ -423,15 +397,16 @@ func _on_generation_completed(mp3_bytes: PackedByteArray, request_id: String) ->
 	else:
 		_set_status(tr("Erreur sauvegarde fichier pour '%s'") % dlg.character)
 
-	# Traiter la queue (génération individuelle séquentielle)
+	# Traiter la queue
 	if not _pending_generation.is_empty():
 		_pending_generation.remove_at(0)
 		var remaining := _pending_generation.size()
 		if remaining > 0:
-			_set_status(tr("Génération en cours... %d restant(s)") % remaining)
-			var item = _pending_generation[0]
-			_client.generate_voice(item["voice_id"], item["text"], item["uuid"])
+			_set_status(tr("Génération en cours... %d/%d") % [_pending_generation.size(), _pending_generation.size() + 1])
+			_process_next_in_queue()
 		else:
+			_generate_all_btn.disabled = false
+			_set_status(tr("Toutes les voix ont été générées !"))
 			refresh()
 	else:
 		refresh()
@@ -439,7 +414,6 @@ func _on_generation_completed(mp3_bytes: PackedByteArray, request_id: String) ->
 
 func _on_generation_failed(error: String, _request_id: String) -> void:
 	_set_status(tr("Erreur : ") + error)
-	_generating_all = false
 	_pending_generation.clear()
 	_generate_all_btn.disabled = false
 	refresh()
