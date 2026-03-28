@@ -1201,6 +1201,25 @@ func generate(config: RefCounted, source_image_path: String, prompt_text: String
 func _do_runpod_run(filename: String, file_bytes: PackedByteArray, prompt_text: String) -> void:
 	var seed = randi()
 	var workflow = build_workflow(filename, prompt_text, seed, _remove_background, _cfg, _steps, _workflow_type, _denoise, _negative_prompt, _face_box_size, _megapixels, _loras)
+
+	# --- DEBUG LOGS (même format que _do_prompt pour comparaison) ---
+	var wt_name = WorkflowType.keys()[_workflow_type] if _workflow_type < WorkflowType.size() else str(_workflow_type)
+	print("[RunPod] === RUN DEBUG ===")
+	print("[RunPod] endpoint       : ", _config.get_url())
+	print("[RunPod] workflow_type  : ", wt_name)
+	print("[RunPod] image          : ", filename, " (", file_bytes.size(), " bytes)")
+	print("[RunPod] prompt         : ", prompt_text)
+	print("[RunPod] seed           : ", seed)
+	print("[RunPod] cfg            : ", _cfg)
+	print("[RunPod] steps          : ", _steps)
+	print("[RunPod] denoise        : ", _denoise)
+	print("[RunPod] megapixels     : ", _megapixels)
+	print("[RunPod] remove_bg      : ", _remove_background)
+	print("[RunPod] neg_prompt     : '", _negative_prompt, "'")
+	print("[RunPod] --- workflow JSON ---")
+	print(JSON.stringify(workflow, "\t"))
+	print("[RunPod] --- fin workflow ---")
+
 	var image_b64 = Marshalls.raw_to_base64(file_bytes)
 	var payload = {
 		"input": {
