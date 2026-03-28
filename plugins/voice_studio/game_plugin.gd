@@ -198,6 +198,33 @@ func _create_editor_config(plugin_settings: Dictionary) -> Control:
 		return {"voices": result_voices}
 
 	vbox.set_meta("read_config", read_config)
+
+	vbox.add_child(HSeparator.new())
+
+	# ── Purge ─────────────────────────────────────────────────────────────────
+	_add_section_title(vbox, "Maintenance")
+	var purge_row := HBoxContainer.new()
+	purge_row.add_theme_constant_override("separation", 8)
+	vbox.add_child(purge_row)
+	var purge_btn := Button.new()
+	purge_btn.text = "Purger les fichiers audio orphelins"
+	purge_row.add_child(purge_btn)
+	var purge_label := Label.new()
+	purge_label.text = ""
+	purge_label.add_theme_font_size_override("font_size", 11)
+	purge_row.add_child(purge_label)
+	purge_btn.pressed.connect(func():
+		var story = vbox.get_meta("_story") if vbox.has_meta("_story") else null
+		var base_path: String = vbox.get_meta("_story_base_path") if vbox.has_meta("_story_base_path") else ""
+		if story == null or base_path == "":
+			purge_label.text = "Aucune story chargée"
+			purge_label.add_theme_color_override("font_color", Color(1.0, 0.5, 0.2))
+			return
+		var result: Dictionary = _purge_orphan_voice_files(story, base_path)
+		purge_label.text = "%d supprimé(s), %d conservé(s)" % [result["deleted"], result["kept"]]
+		purge_label.add_theme_color_override("font_color", Color(0.3, 1.0, 0.3))
+	)
+
 	return vbox
 
 
@@ -277,3 +304,41 @@ static func get_available_languages(plugin_settings: Dictionary) -> PackedString
 			if lang != "" and lang not in langs:
 				langs.append(lang)
 	return langs
+
+
+## Collecte tous les voice_file référencés dans la story, puis supprime
+## les fichiers dans assets/voices/ qui ne sont pas référencés.
+## Retourne {"deleted": int, "kept": int}.
+static func _purge_orphan_voice_files(story, base_path: String) -> Dictionary:
+	# 1. Collecter tous les voice_file référencés
+	var referenced := {}
+	for chapter in story.chapters:
+		for scene in chapter.scenes:
+			for seq in scene.sequences:
+				for dlg in seq.dialogues:
+					var vf: String = dlg.voice_file
+					if vf != "":
+						referenced[vf] = true
+	# 2. Scanner le dossier assets/voices/
+	var voices_dir := base_path + "/assets/voices"
+	var deleted := 0
+	var kept := 0
+	var dir := DirAccess.open(voices_dir)
+	if dir == null:
+		return {"deleted": 0, "kept": 0}
+	dir.list_dir_begin()
+	var file_name := dir.get_next()
+	while file_name != "":
+		if not dir.current_is_dir():
+			var rel_path := "assets/voices/" + file_name
+			if not referenced.has(rel_path):
+				var abs_path := voices_dir + "/" + file_name
+				DirAccess.remove_absolute(abs_path)
+				print("[VoiceStudio] Purge: deleted %s" % abs_path)
+				deleted += 1
+			else:
+				kept += 1
+		file_name = dir.get_next()
+	dir.list_dir_end()
+	print("[VoiceStudio] Purge: %d deleted, %d kept" % [deleted, kept])
+	return {"deleted": deleted, "kept": kept}
