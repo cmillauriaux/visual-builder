@@ -145,3 +145,51 @@ func test_from_dict_backwards_compatible():
 	assert_eq(d.text, "Bonjour !")
 	assert_ne(d.uuid, "", "UUID doit être généré si absent")
 	assert_eq(d.foregrounds.size(), 0)
+
+
+# --- Tests champs voice ---
+
+func test_voice_default_empty():
+	var d = Dialogue.new()
+	assert_eq(d.voice, "")
+	assert_eq(d.voice_file, "")
+
+
+func test_voice_to_dict_omits_when_empty():
+	var d = Dialogue.new()
+	d.character = "Test"
+	d.text = "Hello"
+	var dict = d.to_dict()
+	assert_false(dict.has("voice"), "voice should be omitted when empty")
+	assert_false(dict.has("voice_file"), "voice_file should be omitted when empty")
+
+
+func test_voice_to_dict_includes_when_set():
+	var d = Dialogue.new()
+	d.character = "Narrateur"
+	d.text = "Bienvenue"
+	d.voice = "[whispers] Bienvenue dans ce monde..."
+	d.voice_file = "assets/voices/abc123.mp3"
+	var dict = d.to_dict()
+	assert_eq(dict["voice"], "[whispers] Bienvenue dans ce monde...")
+	assert_eq(dict["voice_file"], "assets/voices/abc123.mp3")
+
+
+func test_voice_from_dict():
+	var dict = {
+		"character": "Héros",
+		"text": "En avant !",
+		"voice": "[sarcastically] En avant... [giggles]",
+		"voice_file": "assets/voices/hero-001.mp3"
+	}
+	var d = Dialogue.from_dict(dict)
+	assert_eq(d.voice, "[sarcastically] En avant... [giggles]")
+	assert_eq(d.voice_file, "assets/voices/hero-001.mp3")
+
+
+func test_voice_from_dict_backwards_compatible():
+	# Ancien format sans voice
+	var dict = {"character": "Test", "text": "Hello"}
+	var d = Dialogue.from_dict(dict)
+	assert_eq(d.voice, "")
+	assert_eq(d.voice_file, "")

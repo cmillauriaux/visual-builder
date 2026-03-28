@@ -285,6 +285,7 @@ static func _build_sequence_editor(main: Control) -> void:
 	main._tab_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	main._tab_container.custom_minimum_size = Vector2(0, 150)
 	main._right_panel.add_child(main._tab_container)
+	main._sequence_tab_container = main._tab_container
 
 	# Tab 0: Terminaison
 	var terminaison_tab = VBoxContainer.new()

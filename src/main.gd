@@ -85,6 +85,7 @@ var _dialogue_edit_section: VBoxContainer
 var _layer_panel: VBoxContainer
 var _properties_panel: VBoxContainer
 var _tab_container: TabContainer
+var _sequence_tab_container: TabContainer  # Alias for plugin system access
 var _dialogue_timeline: PanelContainer
 var _dialogue_editor: Control
 var _ending_editor: VBoxContainer
@@ -595,6 +596,7 @@ func load_sequence_editors(seq) -> void:
 
 	_sequence_editor_ctrl.load_sequence(seq)
 	_loading_sequence = false
+	_plugin_manager.notify_sequence_tabs()
 	_update_ending_tab_indicator()
 	_rebuild_dialogue_list()
 	if seq.dialogues.size() > 0:

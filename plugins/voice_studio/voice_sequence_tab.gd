@@ -1,0 +1,431 @@
+extends VBoxContainer
+
+## Onglet "Voix" dans l'éditeur de séquence.
+## Affiche pour chaque dialogue : personnage, texte, statut voix,
+## champ voice (description ElevenLabs), et boutons générer/supprimer.
+## Bouton "Générer toutes les voix" en haut.
+
+const ElevenLabsConfig = preload("res://plugins/voice_studio/elevenlabs_config.gd")
+const ElevenLabsClient = preload("res://plugins/voice_studio/elevenlabs_client.gd")
+const GamePlugin = preload("res://plugins/voice_studio/game_plugin.gd")
+
+var _ctx = null  # PluginContext
+var _config: RefCounted = null
+var _client: Node = null
+var _dialogue_rows: Array = []  # Array of HBoxContainer rows
+var _generate_all_btn: Button = null
+var _status_label: Label = null
+var _scroll: ScrollContainer = null
+var _list_container: VBoxContainer = null
+var _pending_generation: Array = []  # Queue of {dialogue_index, voice_id, text}
+
+signal voice_changed()
+
+
+func _ready() -> void:
+	add_theme_constant_override("separation", 6)
+
+	# Config ElevenLabs
+	_config = ElevenLabsConfig.new()
+	_config.load_from()
+
+	# Header avec config API
+	var config_row := HBoxContainer.new()
+	config_row.add_theme_constant_override("separation", 4)
+	add_child(config_row)
+
+	var api_label := Label.new()
+	api_label.text = tr("Clé API ElevenLabs :")
+	config_row.add_child(api_label)
+
+	var api_input := LineEdit.new()
+	api_input.text = _config.get_api_key()
+	api_input.secret = true
+	api_input.placeholder_text = "xi-..."
+	api_input.size_flags_horizontal = SIZE_EXPAND_FILL
+	api_input.text_changed.connect(func(t: String):
+		_config.set_api_key(t)
+		_config.save_to()
+	)
+	config_row.add_child(api_input)
+
+	# Model selector
+	var model_row := HBoxContainer.new()
+	model_row.add_theme_constant_override("separation", 4)
+	add_child(model_row)
+
+	var model_label := Label.new()
+	model_label.text = tr("Modèle :")
+	model_row.add_child(model_label)
+
+	var model_input := LineEdit.new()
+	model_input.text = _config.get_model_id()
+	model_input.placeholder_text = "eleven_multilingual_v2"
+	model_input.size_flags_horizontal = SIZE_EXPAND_FILL
+	model_input.text_changed.connect(func(t: String):
+		_config.set_model_id(t)
+		_config.save_to()
+	)
+	model_row.add_child(model_input)
+
+	add_child(HSeparator.new())
+
+	# Bouton Générer toutes les voix
+	_generate_all_btn = Button.new()
+	_generate_all_btn.text = tr("Générer toutes les voix de la séquence")
+	_generate_all_btn.pressed.connect(_on_generate_all_pressed)
+	add_child(_generate_all_btn)
+
+	# Status
+	_status_label = Label.new()
+	_status_label.text = ""
+	_status_label.add_theme_font_size_override("font_size", 11)
+	add_child(_status_label)
+
+	add_child(HSeparator.new())
+
+	# Scrollable list of dialogues
+	_scroll = ScrollContainer.new()
+	_scroll.size_flags_vertical = SIZE_EXPAND_FILL
+	add_child(_scroll)
+
+	_list_container = VBoxContainer.new()
+	_list_container.size_flags_horizontal = SIZE_EXPAND_FILL
+	_list_container.add_theme_constant_override("separation", 8)
+	_scroll.add_child(_list_container)
+
+
+func setup(ctx) -> void:
+	_ctx = ctx
+	# Create client node
+	if _client != null:
+		_client.queue_free()
+	_client = Node.new()
+	_client.set_script(ElevenLabsClient)
+	add_child(_client)
+	_client.setup(_config)
+	_client.generation_completed.connect(_on_generation_completed)
+	_client.generation_failed.connect(_on_generation_failed)
+	_client.generation_progress.connect(_on_generation_progress)
+	refresh()
+
+
+func refresh() -> void:
+	_dialogue_rows.clear()
+	for child in _list_container.get_children():
+		child.queue_free()
+
+	if _ctx == null or _ctx.current_sequence == null:
+		_status_label.text = tr("Aucune séquence sélectionnée")
+		_generate_all_btn.disabled = true
+		return
+
+	var sequence = _ctx.current_sequence
+	_generate_all_btn.disabled = false
+
+	if sequence.dialogues.is_empty():
+		var empty_label := Label.new()
+		empty_label.text = tr("Aucun dialogue dans cette séquence")
+		empty_label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
+		_list_container.add_child(empty_label)
+		return
+
+	for i in range(sequence.dialogues.size()):
+		var dlg = sequence.dialogues[i]
+		var row := _create_dialogue_row(i, dlg)
+		_list_container.add_child(row)
+		_dialogue_rows.append(row)
+
+
+func _create_dialogue_row(index: int, dlg) -> PanelContainer:
+	var panel := PanelContainer.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.15, 0.15, 0.15, 0.8)
+	style.set_corner_radius_all(4)
+	style.set_content_margin_all(8)
+	panel.add_theme_stylebox_override("panel", style)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 4)
+	panel.add_child(vbox)
+
+	# Header: index + character
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 6)
+	vbox.add_child(header)
+
+	var index_label := Label.new()
+	index_label.text = "#%d" % (index + 1)
+	index_label.add_theme_font_size_override("font_size", 12)
+	index_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
+	header.add_child(index_label)
+
+	var char_label := Label.new()
+	char_label.text = dlg.character if dlg.character != "" else tr("(narrateur)")
+	char_label.add_theme_font_size_override("font_size", 13)
+	char_label.add_theme_color_override("font_color", Color(0.9, 0.8, 0.4))
+	header.add_child(char_label)
+
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = SIZE_EXPAND_FILL
+	header.add_child(spacer)
+
+	# Voice status indicator
+	var status := Label.new()
+	status.name = "VoiceStatus"
+	if dlg.voice_file != "" and _voice_file_exists(dlg.voice_file):
+		status.text = "✓ " + tr("Voix générée")
+		status.add_theme_color_override("font_color", Color(0.3, 1.0, 0.3))
+	else:
+		status.text = "○ " + tr("Pas de voix")
+		status.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
+	status.add_theme_font_size_override("font_size", 11)
+	header.add_child(status)
+
+	# Dialogue text (read-only preview)
+	var text_preview := Label.new()
+	text_preview.text = _truncate(dlg.text, 120)
+	text_preview.add_theme_font_size_override("font_size", 11)
+	text_preview.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
+	text_preview.autowrap_mode = TextServer.AUTOWRAP_WORD
+	vbox.add_child(text_preview)
+
+	# Voice description field
+	var voice_row := HBoxContainer.new()
+	voice_row.add_theme_constant_override("separation", 4)
+	vbox.add_child(voice_row)
+
+	var voice_label := Label.new()
+	voice_label.text = tr("Voice :")
+	voice_label.custom_minimum_size = Vector2(50, 0)
+	voice_row.add_child(voice_label)
+
+	var voice_edit := TextEdit.new()
+	voice_edit.name = "VoiceEdit"
+	voice_edit.text = dlg.voice
+	voice_edit.placeholder_text = tr("Description vocale ElevenLabs (ex: [whispers] Texte... [sarcastically] Suite...)")
+	voice_edit.size_flags_horizontal = SIZE_EXPAND_FILL
+	voice_edit.custom_minimum_size = Vector2(0, 50)
+	voice_edit.text_changed.connect(func():
+		_on_voice_text_changed(index, voice_edit.text)
+	)
+	voice_row.add_child(voice_edit)
+
+	# Voice file info
+	if dlg.voice_file != "":
+		var file_label := Label.new()
+		file_label.text = tr("Fichier : ") + dlg.voice_file
+		file_label.add_theme_font_size_override("font_size", 10)
+		file_label.add_theme_color_override("font_color", Color(0.4, 0.4, 0.4))
+		vbox.add_child(file_label)
+
+	# Buttons row
+	var btn_row := HBoxContainer.new()
+	btn_row.add_theme_constant_override("separation", 4)
+	vbox.add_child(btn_row)
+
+	var generate_btn := Button.new()
+	generate_btn.name = "GenerateBtn"
+	if dlg.voice_file != "" and _voice_file_exists(dlg.voice_file):
+		generate_btn.text = tr("Regénérer")
+	else:
+		generate_btn.text = tr("Générer la voix")
+	generate_btn.pressed.connect(func():
+		_on_generate_single(index)
+	)
+	btn_row.add_child(generate_btn)
+
+	if dlg.voice_file != "" and _voice_file_exists(dlg.voice_file):
+		var delete_btn := Button.new()
+		delete_btn.text = tr("Supprimer la voix")
+		delete_btn.pressed.connect(func():
+			_on_delete_voice(index)
+		)
+		btn_row.add_child(delete_btn)
+
+	return panel
+
+
+func _on_voice_text_changed(index: int, new_voice: String) -> void:
+	if _ctx == null or _ctx.current_sequence == null:
+		return
+	var seq = _ctx.current_sequence
+	if index < 0 or index >= seq.dialogues.size():
+		return
+	seq.dialogues[index].voice = new_voice
+	voice_changed.emit()
+
+
+func _on_generate_single(index: int) -> void:
+	if _ctx == null or _ctx.current_sequence == null:
+		return
+	var seq = _ctx.current_sequence
+	if index < 0 or index >= seq.dialogues.size():
+		return
+
+	var dlg = seq.dialogues[index]
+	var voice_id := _get_voice_id(dlg.character)
+	if voice_id == "":
+		_set_status(tr("Erreur : aucun Voice ID trouvé pour '%s'. Configurez-le dans Configurer le jeu > Plugins.") % dlg.character)
+		return
+
+	var text_to_speak: String = dlg.voice if dlg.voice != "" else dlg.text
+	_client.generate_voice(voice_id, text_to_speak, dlg.uuid)
+
+
+func _on_delete_voice(index: int) -> void:
+	if _ctx == null or _ctx.current_sequence == null:
+		return
+	var seq = _ctx.current_sequence
+	if index < 0 or index >= seq.dialogues.size():
+		return
+
+	var dlg = seq.dialogues[index]
+	if dlg.voice_file != "":
+		var abs_path := _resolve_voice_path(dlg.voice_file)
+		ElevenLabsClient.delete_voice_file(abs_path)
+		dlg.voice_file = ""
+		voice_changed.emit()
+		_set_status(tr("Voix supprimée pour le dialogue #%d") % (index + 1))
+		refresh()
+
+
+func _on_generate_all_pressed() -> void:
+	if _ctx == null or _ctx.current_sequence == null:
+		return
+	var seq = _ctx.current_sequence
+	if seq.dialogues.is_empty():
+		_set_status(tr("Aucun dialogue à générer"))
+		return
+
+	# Vérifier que tous les personnages ont un Voice ID
+	var missing: Array = []
+	for dlg in seq.dialogues:
+		var char_name: String = dlg.character if dlg.character != "" else ""
+		if char_name != "" and _get_voice_id(char_name) == "":
+			if char_name not in missing:
+				missing.append(char_name)
+
+	if not missing.is_empty():
+		_set_status(tr("Erreur : Voice ID manquant pour : %s. Configurez-les dans Configurer le jeu > Plugins.") % ", ".join(missing))
+		return
+
+	# Construire la queue de génération
+	_pending_generation.clear()
+	for i in range(seq.dialogues.size()):
+		var dlg = seq.dialogues[i]
+		var voice_id := _get_voice_id(dlg.character)
+		if voice_id == "":
+			continue
+		var text_to_speak: String = dlg.voice if dlg.voice != "" else dlg.text
+		if text_to_speak.strip_edges() == "":
+			continue
+		_pending_generation.append({
+			"dialogue_index": i,
+			"voice_id": voice_id,
+			"text": text_to_speak,
+			"uuid": dlg.uuid,
+		})
+
+	if _pending_generation.is_empty():
+		_set_status(tr("Rien à générer (textes vides)"))
+		return
+
+	_set_status(tr("Génération en cours... 0/%d") % _pending_generation.size())
+	_generate_all_btn.disabled = true
+	_process_next_in_queue()
+
+
+func _process_next_in_queue() -> void:
+	if _pending_generation.is_empty():
+		_generate_all_btn.disabled = false
+		_set_status(tr("Toutes les voix ont été générées !"))
+		refresh()
+		return
+
+	var item = _pending_generation[0]
+	_client.generate_voice(item["voice_id"], item["text"], item["uuid"])
+
+
+func _on_generation_completed(mp3_bytes: PackedByteArray, dialogue_uuid: String) -> void:
+	if _ctx == null or _ctx.current_sequence == null:
+		return
+
+	var seq = _ctx.current_sequence
+	var dlg = null
+	for d in seq.dialogues:
+		if d.uuid == dialogue_uuid:
+			dlg = d
+			break
+	if dlg == null:
+		return
+
+	# Sauvegarder le MP3
+	var rel_path := "assets/voices/%s.mp3" % dialogue_uuid
+	var abs_path := _resolve_voice_path(rel_path)
+	if ElevenLabsClient.save_mp3(mp3_bytes, abs_path):
+		dlg.voice_file = rel_path
+		voice_changed.emit()
+		_set_status(tr("Voix générée pour '%s'") % dlg.character)
+	else:
+		_set_status(tr("Erreur sauvegarde fichier pour '%s'") % dlg.character)
+
+	# Traiter la queue
+	if not _pending_generation.is_empty():
+		_pending_generation.remove_at(0)
+		var remaining := _pending_generation.size()
+		if remaining > 0:
+			var total := remaining + 1
+			_set_status(tr("Génération en cours... %d restant(s)") % remaining)
+		_process_next_in_queue()
+	else:
+		refresh()
+
+
+func _on_generation_failed(error: String, dialogue_uuid: String) -> void:
+	_set_status(tr("Erreur : ") + error)
+
+	# Arrêter la queue en cas d'erreur
+	if not _pending_generation.is_empty():
+		_pending_generation.clear()
+		_generate_all_btn.disabled = false
+		refresh()
+
+
+func _on_generation_progress(status: String, _dialogue_uuid: String) -> void:
+	_set_status(status)
+
+
+# --- Utilitaires ---
+
+func _get_voice_id(character_name: String) -> String:
+	if _ctx == null or _ctx.story == null:
+		return ""
+	var ps: Dictionary = _ctx.story.plugin_settings.get("voice_studio", {})
+	return GamePlugin.get_voice_id_for_character(ps, character_name)
+
+
+func _voice_file_exists(rel_path: String) -> bool:
+	if rel_path == "":
+		return false
+	var abs_path := _resolve_voice_path(rel_path)
+	return FileAccess.file_exists(abs_path)
+
+
+func _resolve_voice_path(rel_path: String) -> String:
+	if rel_path.begins_with("/") or rel_path.begins_with("res://") or rel_path.begins_with("user://"):
+		return rel_path
+	if _ctx != null and _ctx.story_base_path != "":
+		return _ctx.story_base_path + "/" + rel_path
+	return rel_path
+
+
+func _set_status(text: String) -> void:
+	if _status_label:
+		_status_label.text = text
+
+
+static func _truncate(text: String, max_len: int) -> String:
+	if text.length() <= max_len:
+		return text
+	return text.substr(0, max_len) + "..."

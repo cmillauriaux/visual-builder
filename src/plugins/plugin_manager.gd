@@ -198,6 +198,20 @@ func _inject_background_services(plugin: RefCounted, main: Control) -> void:
 			def.setup_callback.call(node, _build_context())
 
 
+## Notifies all plugin sequence tabs that the active sequence changed.
+## Calls setup(ctx) on each tab child that has the method.
+func notify_sequence_tabs() -> void:
+	if _current_main == null:
+		return
+	var tab_container: TabContainer = _current_main.get("_sequence_tab_container")
+	if tab_container == null:
+		return
+	var ctx := _build_context()
+	for tab in tab_container.get_children():
+		if tab.has_method("setup"):
+			tab.setup(ctx)
+
+
 ## Returns all ImagePickerTabDef contributions from all plugins.
 func get_image_picker_tabs() -> Array:
 	var result: Array = []
