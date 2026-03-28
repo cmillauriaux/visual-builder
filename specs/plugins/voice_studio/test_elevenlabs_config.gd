@@ -21,8 +21,12 @@ func test_default_api_key_is_empty() -> void:
 	assert_eq(_config.get_api_key(), "")
 
 
-func test_default_model_id() -> void:
-	assert_eq(_config.get_model_id(), "eleven_multilingual_v2")
+func test_default_model_id_is_eleven_v3() -> void:
+	assert_eq(_config.get_model_id(), "eleven_v3")
+
+
+func test_default_language_code_is_empty() -> void:
+	assert_eq(_config.get_language_code(), "")
 
 
 # ── Getters / Setters ────────────────────────────────────────────────────────
@@ -35,6 +39,11 @@ func test_set_and_get_api_key() -> void:
 func test_set_and_get_model_id() -> void:
 	_config.set_model_id("eleven_turbo_v2_5")
 	assert_eq(_config.get_model_id(), "eleven_turbo_v2_5")
+
+
+func test_set_and_get_language_code() -> void:
+	_config.set_language_code("fr")
+	assert_eq(_config.get_language_code(), "fr")
 
 
 # ── Auth headers ──────────────────────────────────────────────────────────────
@@ -65,18 +74,21 @@ func test_auth_headers_without_key() -> void:
 func test_save_and_load() -> void:
 	_config.set_api_key("persisted-key")
 	_config.set_model_id("custom_model")
+	_config.set_language_code("es")
 	_config.save_to(TEST_PATH)
 
 	var loaded := ElevenLabsConfig.new()
 	loaded.load_from(TEST_PATH)
 	assert_eq(loaded.get_api_key(), "persisted-key")
 	assert_eq(loaded.get_model_id(), "custom_model")
+	assert_eq(loaded.get_language_code(), "es")
 
 
 func test_load_missing_file_keeps_defaults() -> void:
 	_config.load_from("user://nonexistent_elevenlabs.cfg")
 	assert_eq(_config.get_api_key(), "")
-	assert_eq(_config.get_model_id(), "eleven_multilingual_v2")
+	assert_eq(_config.get_model_id(), "eleven_v3")
+	assert_eq(_config.get_language_code(), "")
 
 
 func test_save_then_modify_then_reload() -> void:

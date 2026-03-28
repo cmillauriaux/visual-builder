@@ -1,13 +1,15 @@
 extends RefCounted
 
-## Persistance de la configuration ElevenLabs (API key) via ConfigFile.
+## Persistance de la configuration ElevenLabs (API key, modèle, langue) via ConfigFile.
 
 const DEFAULT_API_KEY := ""
-const DEFAULT_MODEL_ID := "eleven_multilingual_v2"
+const DEFAULT_MODEL_ID := "eleven_v3"
+const DEFAULT_LANGUAGE_CODE := ""
 const DEFAULT_PATH := "user://elevenlabs_config.cfg"
 
 var _api_key: String = DEFAULT_API_KEY
 var _model_id: String = DEFAULT_MODEL_ID
+var _language_code: String = DEFAULT_LANGUAGE_CODE
 
 
 func get_api_key() -> String:
@@ -26,6 +28,14 @@ func set_model_id(model: String) -> void:
 	_model_id = model
 
 
+func get_language_code() -> String:
+	return _language_code
+
+
+func set_language_code(code: String) -> void:
+	_language_code = code
+
+
 func get_auth_headers() -> PackedStringArray:
 	var headers := PackedStringArray([
 		"Content-Type: application/json",
@@ -39,6 +49,7 @@ func save_to(path: String = DEFAULT_PATH) -> void:
 	var cfg = ConfigFile.new()
 	cfg.set_value("elevenlabs", "api_key", _api_key)
 	cfg.set_value("elevenlabs", "model_id", _model_id)
+	cfg.set_value("elevenlabs", "language_code", _language_code)
 	cfg.save(path)
 
 
@@ -49,3 +60,4 @@ func load_from(path: String = DEFAULT_PATH) -> void:
 		return
 	_api_key = cfg.get_value("elevenlabs", "api_key", DEFAULT_API_KEY)
 	_model_id = cfg.get_value("elevenlabs", "model_id", DEFAULT_MODEL_ID)
+	_language_code = cfg.get_value("elevenlabs", "language_code", DEFAULT_LANGUAGE_CODE)

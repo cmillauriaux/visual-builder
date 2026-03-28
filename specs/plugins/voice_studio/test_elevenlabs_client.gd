@@ -30,7 +30,7 @@ func test_setup_stores_config() -> void:
 	assert_false(_client.is_generating())
 
 
-# ── Validation generate_voice ─────────────────────────────────────────────────
+# ── Validation generate_voice (single dialogue) ──────────────────────────────
 
 func test_generate_voice_fails_without_config() -> void:
 	watch_signals(_client)
@@ -64,6 +64,41 @@ func test_generate_voice_fails_with_empty_text() -> void:
 	assert_signal_emitted(_client, "generation_failed")
 
 
+# ── Validation generate_dialogue (multi-input) ───────────────────────────────
+
+func test_generate_dialogue_fails_without_config() -> void:
+	watch_signals(_client)
+	_client.generate_dialogue([{"text": "Hello", "voice_id": "v1"}], "req-1")
+	assert_signal_emitted(_client, "generation_failed")
+
+
+func test_generate_dialogue_fails_with_empty_inputs() -> void:
+	var config := ElevenLabsConfig.new()
+	config.set_api_key("test-key")
+	_client.setup(config)
+	watch_signals(_client)
+	_client.generate_dialogue([], "req-1")
+	assert_signal_emitted(_client, "generation_failed")
+
+
+func test_generate_dialogue_fails_with_missing_voice_id() -> void:
+	var config := ElevenLabsConfig.new()
+	config.set_api_key("test-key")
+	_client.setup(config)
+	watch_signals(_client)
+	_client.generate_dialogue([{"text": "Hello", "voice_id": ""}], "req-1")
+	assert_signal_emitted(_client, "generation_failed")
+
+
+func test_generate_dialogue_fails_with_empty_text_in_input() -> void:
+	var config := ElevenLabsConfig.new()
+	config.set_api_key("test-key")
+	_client.setup(config)
+	watch_signals(_client)
+	_client.generate_dialogue([{"text": "  ", "voice_id": "v1"}], "req-1")
+	assert_signal_emitted(_client, "generation_failed")
+
+
 # ── Static save/delete ────────────────────────────────────────────────────────
 
 func test_save_mp3_creates_file() -> void:
@@ -77,7 +112,6 @@ func test_save_mp3_creates_file() -> void:
 
 
 func test_delete_voice_file_removes_existing() -> void:
-	# Create file first
 	var file := FileAccess.open(TEST_MP3_PATH, FileAccess.WRITE)
 	file.store_8(0xFF)
 	file.close()

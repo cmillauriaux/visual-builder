@@ -23,6 +23,7 @@ var fx: Array = []  # Array[SequenceFx]
 var music: String = ""
 var audio_fx: String = ""
 var stop_music: bool = false
+var voice_file: String = ""  # Optional: combined voice MP3 for all dialogues (via text-to-dialogue)
 
 # Transitions
 var transition_in_type: String = "none" # "none", "fade", "pixelate"
@@ -85,6 +86,9 @@ func to_dict() -> Dictionary:
 		"transition_out_duration": transition_out_duration,
 	}
 
+	if voice_file != "":
+		d["voice_file"] = voice_file
+
 	if ending:
 		d["ending"] = ending.to_dict()
 
@@ -123,6 +127,7 @@ static func from_dict(d: Dictionary):
 	seq.music = d.get("music", "")
 	seq.audio_fx = d.get("audio_fx", "")
 	seq.stop_music = d.get("stop_music", false)
+	seq.voice_file = d.get("voice_file", "")
 
 	if d.has("ending"):
 		seq.ending = EndingScript.from_dict(d["ending"])

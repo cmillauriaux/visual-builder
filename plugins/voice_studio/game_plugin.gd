@@ -85,7 +85,7 @@ func _create_editor_config(plugin_settings: Dictionary) -> Control:
 
 	var model_input := LineEdit.new()
 	model_input.text = config.get_model_id()
-	model_input.placeholder_text = "eleven_multilingual_v2"
+	model_input.placeholder_text = "eleven_v3"
 	model_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	model_input.text_changed.connect(func(t: String):
 		config.set_model_id(t)
@@ -93,8 +93,28 @@ func _create_editor_config(plugin_settings: Dictionary) -> Control:
 	)
 	model_row.add_child(model_input)
 
+	# Code langue (ISO 639-1) pour la normalisation du texte
+	var lang_row := HBoxContainer.new()
+	lang_row.add_theme_constant_override("separation", 4)
+	vbox.add_child(lang_row)
+
+	var lang_code_label := Label.new()
+	lang_code_label.text = "Langue API :"
+	lang_code_label.custom_minimum_size = Vector2(80, 0)
+	lang_row.add_child(lang_code_label)
+
+	var lang_code_input := LineEdit.new()
+	lang_code_input.text = config.get_language_code()
+	lang_code_input.placeholder_text = "fr, en, es... (ISO 639-1, optionnel)"
+	lang_code_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	lang_code_input.text_changed.connect(func(t: String):
+		config.set_language_code(t.strip_edges())
+		config.save_to()
+	)
+	lang_row.add_child(lang_code_input)
+
 	var api_note := Label.new()
-	api_note.text = "(La clé API est stockée localement, pas dans la story)"
+	api_note.text = "(Clé API et paramètres stockés localement, pas dans la story)"
 	api_note.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
 	api_note.add_theme_font_size_override("font_size", 10)
 	vbox.add_child(api_note)
