@@ -38,7 +38,10 @@ var _category_service: RefCounted = null
 
 # Shared UI
 var _tab_container: TabContainer
+var _provider_option: OptionButton
+var _url_label: Label
 var _url_input: LineEdit
+var _token_label: Label
 var _token_input: LineEdit
 var _negative_prompt_input: TextEdit
 var _image_preview: Control
@@ -98,19 +101,29 @@ func _build_ui() -> void:
 	vbox.add_theme_constant_override("separation", 8)
 	margin.add_child(vbox)
 
-	# --- Shared ComfyUI config ---
-	var url_label = Label.new()
-	url_label.text = "URL ComfyUI :"
-	vbox.add_child(url_label)
+	# --- Shared IA config ---
+	var provider_label = Label.new()
+	provider_label.text = "Provider :"
+	vbox.add_child(provider_label)
+
+	_provider_option = OptionButton.new()
+	_provider_option.add_item("ComfyUI local", ComfyUIConfig.PROVIDER_LOCAL)
+	_provider_option.add_item("RunPod", ComfyUIConfig.PROVIDER_RUNPOD)
+	_provider_option.item_selected.connect(_on_provider_changed)
+	vbox.add_child(_provider_option)
+
+	_url_label = Label.new()
+	_url_label.text = "URL ComfyUI :"
+	vbox.add_child(_url_label)
 
 	_url_input = LineEdit.new()
 	_url_input.placeholder_text = "http://localhost:8188"
 	_url_input.text_changed.connect(func(_t): _update_all_generate_buttons())
 	vbox.add_child(_url_input)
 
-	var token_label = Label.new()
-	token_label.text = "Token (optionnel) :"
-	vbox.add_child(token_label)
+	_token_label = Label.new()
+	_token_label.text = "Token (optionnel) :"
+	vbox.add_child(_token_label)
 
 	_token_input = LineEdit.new()
 	_token_input.secret = true
@@ -140,13 +153,13 @@ func _build_ui() -> void:
 	_upscale_tab = UpscaleTab.new()
 	_hires_tab = HiResTab.new()
 
-	_decl_tab.initialize(self, _url_input, _token_input, _negative_prompt_input,
+	_decl_tab.initialize(self, _get_config, _negative_prompt_input,
 		_show_image_preview, _open_gallery_source_picker, _save_config, _resolve_unique_path)
-	_expr_tab.initialize(self, _url_input, _token_input, _negative_prompt_input,
+	_expr_tab.initialize(self, _get_config, _negative_prompt_input,
 		_show_image_preview, _open_gallery_source_picker, _save_config, _resolve_unique_path)
-	_upscale_tab.initialize(self, _url_input, _token_input, _negative_prompt_input,
+	_upscale_tab.initialize(self, _get_config, _negative_prompt_input,
 		_show_image_preview, _open_gallery_source_picker, _save_config, _resolve_unique_path)
-	_hires_tab.initialize(self, _url_input, _token_input, _negative_prompt_input,
+	_hires_tab.initialize(self, _get_config, _negative_prompt_input,
 		_show_image_preview, _open_gallery_source_picker, _save_config, _resolve_unique_path)
 
 	_decl_tab.build_tab(_tab_container)
@@ -185,15 +198,18 @@ func _build_ui() -> void:
 func _load_config() -> void:
 	var config = ComfyUIConfig.new()
 	config.load_from()
+	_provider_option.select(config.get_provider())
 	_url_input.text = config.get_url()
 	_token_input.text = config.get_token()
 	_negative_prompt_input.text = config.get_negative_prompt()
+	_apply_provider_ui(config.get_provider())
 	_update_all_generate_buttons()
 	_update_cfg_hints()
 
 
 func _save_config() -> void:
 	var config = ComfyUIConfig.new()
+	config.set_provider(_provider_option.get_selected_id())
 	config.set_url(_url_input.text.strip_edges())
 	config.set_token(_token_input.text.strip_edges())
 	config.set_negative_prompt(_negative_prompt_input.text.strip_edges())
@@ -202,6 +218,33 @@ func _save_config() -> void:
 	existing.load_from()
 	config.set_custom_expressions(existing.get_custom_expressions())
 	config.save_to()
+
+
+func _get_config() -> RefCounted:
+	var config = ComfyUIConfig.new()
+	config.set_provider(_provider_option.get_selected_id())
+	config.set_url(_url_input.text.strip_edges())
+	config.set_token(_token_input.text.strip_edges())
+	return config
+
+
+func _on_provider_changed(index: int) -> void:
+	var provider = _provider_option.get_item_id(index)
+	_apply_provider_ui(provider)
+	_update_all_generate_buttons()
+
+
+func _apply_provider_ui(provider: int) -> void:
+	if provider == ComfyUIConfig.PROVIDER_RUNPOD:
+		_url_label.text = "Endpoint RunPod :"
+		_url_input.placeholder_text = "https://api.runpod.ai/v2/..."
+		_token_label.text = "API Key :"
+		_token_input.placeholder_text = "rpa_..."
+	else:
+		_url_label.text = "URL ComfyUI :"
+		_url_input.placeholder_text = "http://localhost:8188"
+		_token_label.text = "Token (optionnel) :"
+		_token_input.placeholder_text = "Laisser vide si pas d'auth"
 
 
 func _update_all_generate_buttons() -> void:

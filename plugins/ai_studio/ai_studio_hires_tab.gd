@@ -6,8 +6,7 @@ const ImageFileDialog = preload("res://src/ui/shared/image_file_dialog.gd")
 
 # Shared refs (set via initialize)
 var _parent_window: Window
-var _url_input: LineEdit
-var _token_input: LineEdit
+var _get_config_fn: Callable
 var _neg_input: TextEdit
 var _show_preview_fn: Callable
 var _open_gallery_fn: Callable
@@ -48,8 +47,7 @@ var _client: Node = null
 
 func initialize(
 	parent_window: Window,
-	url_input: LineEdit,
-	token_input: LineEdit,
+	get_config_fn: Callable,
 	neg_input: TextEdit,
 	show_preview_fn: Callable,
 	open_gallery_fn: Callable,
@@ -57,8 +55,7 @@ func initialize(
 	_resolve_path_fn: Callable  # Non utilisé, mais requis pour la cohérence de l'interface
 ) -> void:
 	_parent_window = parent_window
-	_url_input = url_input
-	_token_input = token_input
+	_get_config_fn = get_config_fn
 	_neg_input = neg_input
 	_show_preview_fn = show_preview_fn
 	_open_gallery_fn = open_gallery_fn
@@ -430,7 +427,7 @@ func _update_backup_info() -> void:
 func _update_generate_button() -> void:
 	if _generate_btn == null:
 		return
-	var has_url = _url_input.text.strip_edges() != ""
+	var has_url = _get_config_fn.call().get_url() != ""
 	var has_source = _source_image_path != ""
 	_generate_btn.disabled = not (has_url and has_source)
 
@@ -462,9 +459,7 @@ func _on_generate_pressed() -> void:
 	_set_inputs_enabled(false)
 	_show_status("Lancement de la restauration…")
 
-	var config = ComfyUIConfig.new()
-	config.set_url(_url_input.text.strip_edges())
-	config.set_token(_token_input.text.strip_edges())
+	var config = _get_config_fn.call()
 
 	_client.generate(
 		config,
@@ -562,8 +557,6 @@ func _reset_to_empty() -> void:
 
 
 func _set_inputs_enabled(enabled: bool) -> void:
-	_url_input.editable = enabled
-	_token_input.editable = enabled
 	_neg_input.editable = enabled
 	_choose_source_btn.disabled = not enabled
 	if _story_base_path == "":

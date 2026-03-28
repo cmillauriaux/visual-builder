@@ -1,16 +1,29 @@
 extends RefCounted
 
-## Persistance de la configuration ComfyUI (URL + token) via ConfigFile.
+## Persistance de la configuration IA (provider, URL + token) via ConfigFile.
+
+const PROVIDER_LOCAL = 0   ## ComfyUI local
+const PROVIDER_RUNPOD = 1  ## RunPod serverless
 
 const DEFAULT_URL := "http://localhost:8188"
 const DEFAULT_TOKEN := ""
 const DEFAULT_NEGATIVE_PROMPT := ""
 const DEFAULT_PATH := "user://comfyui_config.cfg"
 
+var _provider: int = PROVIDER_LOCAL
 var _url: String = DEFAULT_URL
 var _token: String = ""
 var _negative_prompt: String = DEFAULT_NEGATIVE_PROMPT
 var _custom_expressions: PackedStringArray = PackedStringArray([])
+
+func get_provider() -> int:
+	return _provider
+
+func set_provider(p: int) -> void:
+	_provider = p
+
+func is_runpod() -> bool:
+	return _provider == PROVIDER_RUNPOD
 
 func get_url() -> String:
 	return _url
@@ -47,6 +60,7 @@ func get_auth_headers() -> PackedStringArray:
 
 func save_to(path: String = DEFAULT_PATH) -> void:
 	var cfg = ConfigFile.new()
+	cfg.set_value("comfyui", "provider", _provider)
 	cfg.set_value("comfyui", "url", _url)
 	cfg.set_value("comfyui", "token", _token)
 	cfg.set_value("comfyui", "negative_prompt", _negative_prompt)
@@ -59,6 +73,7 @@ func load_from(path: String = DEFAULT_PATH) -> void:
 	var err = cfg.load(path)
 	if err != OK:
 		return
+	_provider = cfg.get_value("comfyui", "provider", PROVIDER_LOCAL)
 	_url = cfg.get_value("comfyui", "url", DEFAULT_URL)
 	_token = cfg.get_value("comfyui", "token", DEFAULT_TOKEN)
 	_negative_prompt = cfg.get_value("comfyui", "negative_prompt", DEFAULT_NEGATIVE_PROMPT)

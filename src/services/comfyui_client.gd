@@ -1191,9 +1191,111 @@ func generate(config: RefCounted, source_image_path: String, prompt_text: String
 
 	var filename = source_image_path.get_file()
 
-	# Step 1: Upload
-	generation_progress.emit("Upload de l'image vers ComfyUI...")
-	_do_upload(filename, file_bytes, prompt_text)
+	if _config.is_runpod():
+		generation_progress.emit("Envoi vers RunPod...")
+		_do_runpod_run(filename, file_bytes, prompt_text)
+	else:
+		generation_progress.emit("Upload de l'image vers ComfyUI...")
+		_do_upload(filename, file_bytes, prompt_text)
+
+func _do_runpod_run(filename: String, file_bytes: PackedByteArray, prompt_text: String) -> void:
+	var seed = randi()
+	var workflow = build_workflow(filename, prompt_text, seed, _remove_background, _cfg, _steps, _workflow_type, _denoise, _negative_prompt, _face_box_size, _megapixels, _loras)
+	var image_b64 = Marshalls.raw_to_base64(file_bytes)
+	var payload = {
+		"input": {
+			"workflow": workflow,
+			"images": [{"name": filename, "image": image_b64}]
+		}
+	}
+
+	var http = HTTPRequest.new()
+	add_child(http)
+	var url = _config.get_full_url("/run")
+	var headers = PackedStringArray(["Content-Type: application/json"])
+	for h in _config.get_auth_headers():
+		headers.append(h)
+
+	http.request_completed.connect(func(result: int, code: int, _h: PackedStringArray, body_bytes: PackedByteArray):
+		http.queue_free()
+		if _cancelled:
+			_generating = false
+			return
+		if result != HTTPRequest.RESULT_SUCCESS or code != 200:
+			_generating = false
+			generation_failed.emit("Erreur RunPod /run (HTTP %d)" % code)
+			return
+		var resp = JSON.parse_string(body_bytes.get_string_from_utf8())
+		if resp == null:
+			_generating = false
+			generation_failed.emit("Réponse RunPod invalide")
+			return
+		var job_id: String = resp.get("id", "")
+		if job_id == "":
+			_generating = false
+			generation_failed.emit("Pas de job ID dans la réponse RunPod")
+			return
+		generation_progress.emit("Job RunPod soumis, traitement en cours...")
+		_do_runpod_poll(job_id)
+	)
+	http.request(url, headers, HTTPClient.METHOD_POST, JSON.stringify(payload))
+
+
+func _do_runpod_poll(job_id: String) -> void:
+	if _cancelled:
+		_generating = false
+		return
+
+	var http = HTTPRequest.new()
+	add_child(http)
+	var url = _config.get_full_url("/status/" + job_id)
+
+	http.request_completed.connect(func(result: int, code: int, _h: PackedStringArray, body_bytes: PackedByteArray):
+		http.queue_free()
+		if _cancelled:
+			_generating = false
+			return
+		if result != HTTPRequest.RESULT_SUCCESS:
+			_generating = false
+			generation_failed.emit("Erreur polling RunPod")
+			return
+		var resp = JSON.parse_string(body_bytes.get_string_from_utf8())
+		if resp == null:
+			_generating = false
+			generation_failed.emit("Réponse statut RunPod invalide")
+			return
+		var status: String = resp.get("status", "")
+		if status == "COMPLETED":
+			var output = resp.get("output", {})
+			if output == null:
+				output = {}
+			var images = output.get("images", [])
+			if images.size() == 0:
+				_generating = false
+				generation_failed.emit("Aucune image dans la sortie RunPod")
+				return
+			var b64: String = images[0].get("data", "")
+			if b64 == "":
+				_generating = false
+				generation_failed.emit("Image vide dans la sortie RunPod")
+				return
+			var image_bytes = Marshalls.base64_to_raw(b64)
+			var image = Image.new()
+			if image.load_png_from_buffer(image_bytes) != OK:
+				_generating = false
+				generation_failed.emit("Impossible de décoder l'image RunPod")
+				return
+			_generating = false
+			generation_completed.emit(image)
+		elif status == "FAILED":
+			_generating = false
+			generation_failed.emit("Job RunPod échoué : " + str(resp.get("error", "erreur inconnue")))
+		else:
+			generation_progress.emit("RunPod : " + status + "...")
+			get_tree().create_timer(5.0).timeout.connect(func(): _do_runpod_poll(job_id))
+	)
+	http.request(url, _config.get_auth_headers(), HTTPClient.METHOD_GET)
+
 
 func _do_upload(filename: String, file_bytes: PackedByteArray, prompt_text: String) -> void:
 	var multipart = build_multipart_body(filename, file_bytes)

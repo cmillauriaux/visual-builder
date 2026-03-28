@@ -19,8 +19,6 @@ var _ctx: Dictionary = {}
 
 # UI references
 var _ia_workflow_option: OptionButton
-var _ia_url_input: LineEdit
-var _ia_token_input: LineEdit
 var _ia_source_path_label: Label
 var _ia_source_preview: TextureRect
 var _ia_choose_source_btn: Button
@@ -76,26 +74,6 @@ func _build_ui() -> void:
 	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vbox.add_theme_constant_override("separation", 8)
 	add_child(vbox)
-
-	# --- URL ComfyUI ---
-	var url_label := Label.new()
-	url_label.text = "URL ComfyUI :"
-	vbox.add_child(url_label)
-
-	_ia_url_input = LineEdit.new()
-	_ia_url_input.placeholder_text = "http://localhost:8188"
-	_ia_url_input.text_changed.connect(func(_t): _ia_update_generate_button_state())
-	vbox.add_child(_ia_url_input)
-
-	# --- Token ---
-	var token_label := Label.new()
-	token_label.text = "Token (optionnel) :"
-	vbox.add_child(token_label)
-
-	_ia_token_input = LineEdit.new()
-	_ia_token_input.secret = true
-	_ia_token_input.placeholder_text = "Laisser vide si pas d'auth"
-	vbox.add_child(_ia_token_input)
 
 	# --- Workflow ---
 	var workflow_label := Label.new()
@@ -264,17 +242,15 @@ func _build_ui() -> void:
 
 
 func _ia_load_config() -> void:
-	var config := ComfyUIConfig.new()
-	config.load_from()
-	_ia_url_input.text = config.get_url()
-	_ia_token_input.text = config.get_token()
 	_ia_update_generate_button_state()
 
 
 func _ia_update_generate_button_state() -> void:
 	if _ia_generate_btn == null:
 		return
-	var has_url := _ia_url_input.text.strip_edges() != ""
+	var config := ComfyUIConfig.new()
+	config.load_from()
+	var has_url := config.get_url() != ""
 	var has_prompt := _ia_prompt_input.text.strip_edges() != ""
 	var has_source := _ia_source_image_path != ""
 	_ia_generate_btn.disabled = not (has_url and has_prompt and has_source)
@@ -299,8 +275,6 @@ func _ia_show_error(message: String) -> void:
 
 
 func _ia_set_inputs_enabled(enabled: bool) -> void:
-	_ia_url_input.editable = enabled
-	_ia_token_input.editable = enabled
 	_ia_prompt_input.editable = enabled
 	_ia_name_input.editable = enabled
 	_ia_choose_source_btn.disabled = not enabled
@@ -459,9 +433,6 @@ func _ia_load_source_preview(path: String) -> void:
 func _on_ia_generate_pressed() -> void:
 	var config := ComfyUIConfig.new()
 	config.load_from()
-	config.set_url(_ia_url_input.text.strip_edges())
-	config.set_token(_ia_token_input.text.strip_edges())
-	config.save_to()
 
 	if _ia_client != null:
 		_ia_client.cancel()

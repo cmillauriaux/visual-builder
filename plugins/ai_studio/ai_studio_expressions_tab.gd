@@ -24,8 +24,7 @@ const ADVANCED_EXPRESSIONS := [
 
 # Shared refs (set via initialize)
 var _parent_window: Window
-var _url_input: LineEdit
-var _token_input: LineEdit
+var _get_config_fn: Callable
 var _neg_input: TextEdit
 var _show_preview_fn: Callable
 var _open_gallery_fn: Callable
@@ -80,8 +79,7 @@ var _image_preview: Control = null
 
 func initialize(
 	parent_window: Window,
-	url_input: LineEdit,
-	token_input: LineEdit,
+	get_config_fn: Callable,
 	neg_input: TextEdit,
 	show_preview_fn: Callable,
 	open_gallery_fn: Callable,
@@ -89,8 +87,7 @@ func initialize(
 	resolve_path_fn: Callable
 ) -> void:
 	_parent_window = parent_window
-	_url_input = url_input
-	_token_input = token_input
+	_get_config_fn = get_config_fn
 	_neg_input = neg_input
 	_show_preview_fn = show_preview_fn
 	_open_gallery_fn = open_gallery_fn
@@ -510,7 +507,7 @@ func _update_generate_button() -> void:
 		return
 	if _generating:
 		return
-	var has_url = _url_input.text.strip_edges() != ""
+	var has_url = _get_config_fn.call().get_url() != ""
 	var has_source = _source_image_path != ""
 	var has_prefix = _prefix_input.text.strip_edges() != ""
 	var has_expr = _get_selected_expressions().size() > 0
@@ -692,9 +689,7 @@ func _process_next_expression() -> void:
 	_client.generation_failed.connect(_on_item_failed)
 	_client.generation_progress.connect(_on_item_progress)
 
-	var config = ComfyUIConfig.new()
-	config.set_url(_url_input.text.strip_edges())
-	config.set_token(_token_input.text.strip_edges())
+	var config = _get_config_fn.call()
 
 	var strategy_id = _strategy_option.get_selected_id()
 	var workflow_type: int
@@ -788,8 +783,6 @@ func _on_strategy_changed(_index: int) -> void:
 
 
 func _set_inputs_enabled(enabled: bool) -> void:
-	_url_input.editable = enabled
-	_token_input.editable = enabled
 	_neg_input.editable = enabled
 	_choose_source_btn.disabled = not enabled
 	if _story_base_path == "":
