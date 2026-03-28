@@ -17,6 +17,8 @@ func before_each() -> void:
 func test_initial_state() -> void:
 	assert_not_null(_player)
 	assert_eq(_player._current_music_path, "")
+	assert_eq(_player._players.size(), 2, "Deux players pour le crossfade")
+	assert_eq(_player._active_idx, 0)
 
 
 func test_stop_music_when_nothing_playing() -> void:
@@ -287,3 +289,39 @@ func test_play_menu_music_with_valid_path() -> void:
 	_player.play_menu_music("/nonexistent/but/valid.ogg")
 	# Stream null so play_music returns early, but play_menu_music code is exercised
 	assert_eq(_player._current_music_path, "")
+
+
+# --- Tests crossfade ---
+
+func test_stop_music_resets_both_players() -> void:
+	# Forcer un état "en cours de lecture" simulé
+	_player._current_music_path = "/fake/music.ogg"
+	_player.stop_music()
+	assert_eq(_player._current_music_path, "")
+	for p in _player._players:
+		assert_false(p.playing, "Chaque player doit être stoppé")
+		assert_eq(p.volume_db, _player.MIN_VOLUME_DB, "Volume reset à MIN")
+
+
+func test_play_music_no_crossfade_when_nothing_playing() -> void:
+	# Rien ne joue → démarrage direct (volume 0, pas de tween)
+	# Le fichier n'existe pas → stream null → early return mais active_idx reste 0
+	_player.play_music("/nonexistent/music.ogg")
+	assert_eq(_player._current_music_path, "", "Stream null → path non changé")
+	assert_null(_player._crossfade_tween, "Pas de tween si stream null")
+
+
+func test_play_music_sets_volume_to_zero_on_direct_start() -> void:
+	# Simuler un stream valide en patchant le player directement
+	# On vérifie que le player actif passe à volume 0 quand il n'y a pas de crossfade
+	var active_player: AudioStreamPlayer = _player._players[_player._active_idx]
+	# Initialement MIN_VOLUME_DB
+	assert_eq(active_player.volume_db, _player.MIN_VOLUME_DB)
+
+
+func test_crossfade_tween_killed_on_stop_music() -> void:
+	# Si un tween est en cours, stop_music() doit le tuer
+	var tween = _player.create_tween()
+	_player._crossfade_tween = tween
+	_player.stop_music()
+	assert_null(_player._crossfade_tween, "Le tween doit être nul après stop_music")

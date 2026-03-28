@@ -91,8 +91,16 @@ Dans `MenuConfigDialog` :
 ### Rôle
 
 `MusicPlayer` est un `Node` qui gère la lecture audio en jeu :
-- Un `AudioStreamPlayer` pour la musique (bus "Music", loop = true)
+- **Deux** `AudioStreamPlayer` pour la musique (bus "Music", loop = true) — permet le crossfade
 - Un `AudioStreamPlayer` pour les FX (bus "FX", loop = false)
+
+### Crossfade entre musiques
+
+Lorsqu'une nouvelle musique remplace une musique en cours, un **fondu enchaîné de 2 secondes** est appliqué :
+- La musique sortante diminue progressivement de 0 dB à -80 dB, puis est stoppée
+- La musique entrante démarre à -80 dB et monte progressivement à 0 dB
+- Si aucune musique n'est en cours, la nouvelle démarre directement sans fondu
+- `stop_music()` stoppe immédiatement les deux players et annule tout crossfade en cours
 
 ### API
 
@@ -139,3 +147,4 @@ La rétrocompatibilité est assurée : les champs manquants prennent leur valeur
 8. La musique du menu se configure via le dialogue de configuration du menu
 9. La musique du menu est jouée à l'affichage du menu principal
 10. La musique s'arrête / est remplacée correctement lors des transitions de séquence
+11. Quand une musique remplace une autre en cours de lecture, un fondu enchaîné de 2 secondes est appliqué

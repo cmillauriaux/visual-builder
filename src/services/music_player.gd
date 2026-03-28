@@ -3,25 +3,36 @@ extends Node
 ## Service de lecture audio pour le jeu standalone.
 ## Gère la musique (boucle continue) et les FX (lecture unique).
 ## Utilise les bus audio "Music" et "FX" de Godot.
+## Deux AudioStreamPlayers permettent le crossfade de 2s lors des transitions.
 
 class_name MusicPlayer
 
-var _music_stream_player: AudioStreamPlayer
+const CROSSFADE_DURATION := 2.0
+const MIN_VOLUME_DB := -80.0
+
+var _players: Array = []  # [AudioStreamPlayer, AudioStreamPlayer]
+var _active_idx: int = 0
 var _fx_stream_player: AudioStreamPlayer
 var _current_music_path: String = ""
+var _crossfade_tween: Tween = null
 
 
 func _ready() -> void:
-	_music_stream_player = AudioStreamPlayer.new()
-	_music_stream_player.bus = "Music"
-	add_child(_music_stream_player)
+	for i in 2:
+		var p := AudioStreamPlayer.new()
+		p.bus = "Music"
+		p.volume_db = MIN_VOLUME_DB
+		add_child(p)
+		_players.append(p)
 
 	_fx_stream_player = AudioStreamPlayer.new()
 	_fx_stream_player.bus = "FX"
 	add_child(_fx_stream_player)
 
 
-## Joue une musique en boucle. Si le même fichier est déjà en cours, ne recharge pas.
+## Joue une musique en boucle.
+## Si le même fichier est déjà en cours, ne recharge pas.
+## Si une autre musique joue, applique un crossfade de 2s.
 func play_music(path: String) -> void:
 	if path == "" or path == _current_music_path:
 		print("[MusicPlayer] play_music skipped — path='%s' current='%s'" % [path, _current_music_path])
@@ -31,15 +42,51 @@ func play_music(path: String) -> void:
 	if stream == null:
 		print("[MusicPlayer] play_music FAILED — stream is null for '%s'" % path)
 		return
+
 	_current_music_path = path
-	_music_stream_player.stream = stream
-	_music_stream_player.play()
-	print("[MusicPlayer] play_music OK — playing '%s', bus='%s'" % [path, _music_stream_player.bus])
+
+	var current_player: AudioStreamPlayer = _players[_active_idx]
+	var next_idx: int = 1 - _active_idx
+	var next_player: AudioStreamPlayer = _players[next_idx]
+
+	if _crossfade_tween:
+		_crossfade_tween.kill()
+		_crossfade_tween = null
+
+	if current_player.playing:
+		# Crossfade : fade out current, fade in new
+		next_player.stream = stream
+		next_player.volume_db = MIN_VOLUME_DB
+		next_player.play()
+
+		_crossfade_tween = create_tween()
+		_crossfade_tween.set_parallel(true)
+		_crossfade_tween.tween_property(current_player, "volume_db", MIN_VOLUME_DB, CROSSFADE_DURATION)
+		_crossfade_tween.tween_property(next_player, "volume_db", 0.0, CROSSFADE_DURATION)
+		var cp := current_player
+		_crossfade_tween.chain().tween_callback(func() -> void:
+			cp.stop()
+			cp.volume_db = MIN_VOLUME_DB
+		)
+
+		_active_idx = next_idx
+		print("[MusicPlayer] play_music OK — crossfading to '%s'" % path)
+	else:
+		# Pas de musique en cours — démarrage direct
+		current_player.stream = stream
+		current_player.volume_db = 0.0
+		current_player.play()
+		print("[MusicPlayer] play_music OK — playing '%s', bus='%s'" % [path, current_player.bus])
 
 
-## Arrête la musique en cours.
+## Arrête la musique immédiatement (annule tout crossfade en cours).
 func stop_music() -> void:
-	_music_stream_player.stop()
+	if _crossfade_tween:
+		_crossfade_tween.kill()
+		_crossfade_tween = null
+	for p in _players:
+		p.stop()
+		p.volume_db = MIN_VOLUME_DB
 	_current_music_path = ""
 
 
