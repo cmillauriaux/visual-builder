@@ -1,0 +1,3 @@
+[submodule "plugins/ai_studio/runpod"]
+	path = plugins/ai_studio/runpod
+	url = git@github.com:Raccoons-Studio/visual-builder-aistudio-runpod.git
