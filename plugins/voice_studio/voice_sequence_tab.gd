@@ -7,6 +7,7 @@ extends VBoxContainer
 const ElevenLabsConfig = preload("res://plugins/voice_studio/elevenlabs_config.gd")
 const ElevenLabsClient = preload("res://plugins/voice_studio/elevenlabs_client.gd")
 const GamePlugin = preload("res://plugins/voice_studio/game_plugin.gd")
+const StoryI18nService = preload("res://src/services/story_i18n_service.gd")
 
 var _ctx = null  # PluginContext
 var _config: RefCounted = null
@@ -18,6 +19,7 @@ var _scroll: ScrollContainer = null
 var _list_container: VBoxContainer = null
 var _lang_selector: OptionButton = null
 var _pending_generation: Array = []
+var _i18n_dict: Dictionary = {}  # Source text → translated text for selected language
 
 # Voice settings sliders (override defaults from config)
 var _slider_stability: HSlider = null
@@ -43,7 +45,10 @@ func _ready() -> void:
 	lang_row.add_child(lang_label)
 	_lang_selector = OptionButton.new()
 	_lang_selector.size_flags_horizontal = SIZE_EXPAND_FILL
-	_lang_selector.item_selected.connect(func(_idx: int): refresh())
+	_lang_selector.item_selected.connect(func(_idx: int):
+		_load_i18n_for_selected_language()
+		refresh()
+	)
 	lang_row.add_child(_lang_selector)
 
 	# ── Voice settings sliders ────────────────────────────────────────────────
@@ -143,6 +148,7 @@ func setup(ctx) -> void:
 	_client.generation_failed.connect(_on_generation_failed)
 	_client.generation_progress.connect(_on_generation_progress)
 	_refresh_language_selector()
+	_load_i18n_for_selected_language()
 	refresh()
 
 
@@ -221,19 +227,20 @@ func _create_dialogue_row(index: int, dlg) -> PanelContainer:
 	idx_lbl.add_theme_font_size_override("font_size", 12)
 	idx_lbl.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
 	header.add_child(idx_lbl)
+	var translated_character: String = _i18n(dlg.character) if dlg.character != "" else ""
 	var char_lbl := Label.new()
-	char_lbl.text = dlg.character if dlg.character != "" else tr("(narrateur)")
+	char_lbl.text = translated_character if translated_character != "" else tr("(narrateur)")
 	char_lbl.add_theme_font_size_override("font_size", 13)
 	char_lbl.add_theme_color_override("font_color", Color(0.9, 0.8, 0.4))
 	header.add_child(char_lbl)
 
 	var lang := _get_selected_language()
-	var vid := _get_voice_id(dlg.character, lang)
-	if vid == "" and dlg.character != "":
+	var vid := _get_voice_id(translated_character, lang)
+	if vid == "" and translated_character != "":
 		var warn := Label.new()
-		warn.text = tr("(pas de Voice ID)")
+		warn.text = tr("(pas de Voice ID pour '%s' [%s])") % [translated_character, lang]
 		warn.add_theme_font_size_override("font_size", 10)
-		warn.add_theme_color_override("font_color", Color(1.0, 0.5, 0.2))
+		warn.add_theme_color_override("font_color", Color(1.0, 0.3, 0.2))
 		header.add_child(warn)
 
 	var sp := Control.new()
@@ -257,9 +264,10 @@ func _create_dialogue_row(index: int, dlg) -> PanelContainer:
 	status.add_theme_font_size_override("font_size", 11)
 	header.add_child(status)
 
-	# Text preview
+	# Text preview (translated)
+	var translated_text: String = _i18n(dlg.text)
 	var preview := Label.new()
-	preview.text = _truncate(dlg.text, 120)
+	preview.text = _truncate(translated_text, 120)
 	preview.add_theme_font_size_override("font_size", 11)
 	preview.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
 	preview.autowrap_mode = TextServer.AUTOWRAP_WORD
@@ -330,11 +338,13 @@ func _on_generate_single(index: int) -> void:
 		return
 	var dlg = seq.dialogues[index]
 	var lang := _get_selected_language()
-	var voice_id := _get_voice_id(dlg.character, lang)
+	var char_name: String = _i18n(dlg.character) if dlg.character != "" else ""
+	var voice_id := _get_voice_id(char_name, lang)
 	if voice_id == "":
-		_set_status(tr("Erreur : aucun Voice ID pour '%s'. Configurer le jeu > Plugins.") % dlg.character)
+		_set_status(tr("Erreur : aucun Voice ID pour '%s' [%s]. Configurer le jeu > Plugins.") % [char_name, lang])
 		return
-	var text_to_speak: String = dlg.voice if dlg.voice != "" else dlg.text
+	# Use voice field if set, otherwise translated text
+	var text_to_speak: String = dlg.voice if dlg.voice != "" else _i18n(dlg.text)
 	var prev_text := _get_previous_text(index)
 	var next_text := _get_next_text(index)
 	var prev_ids := _get_previous_request_ids(index)
@@ -370,21 +380,22 @@ func _on_generate_all_pressed() -> void:
 	var lang := _get_selected_language()
 	var missing: Array = []
 	for dlg in seq.dialogues:
-		var cn: String = dlg.character if dlg.character != "" else ""
+		var cn: String = _i18n(dlg.character) if dlg.character != "" else ""
 		if cn != "" and _get_voice_id(cn, lang) == "":
 			if cn not in missing:
 				missing.append(cn)
 	if not missing.is_empty():
-		_set_status(tr("Voice ID manquant pour : %s") % ", ".join(missing))
+		_set_status(tr("Voice ID manquant pour : %s [%s]") % [", ".join(missing), lang])
 		return
 
 	_pending_generation.clear()
 	for i in range(seq.dialogues.size()):
 		var dlg = seq.dialogues[i]
-		var voice_id := _get_voice_id(dlg.character, lang)
+		var char_i18n: String = _i18n(dlg.character) if dlg.character != "" else ""
+		var voice_id := _get_voice_id(char_i18n, lang)
 		if voice_id == "":
 			continue
-		var tts: String = dlg.voice if dlg.voice != "" else dlg.text
+		var tts: String = dlg.voice if dlg.voice != "" else _i18n(dlg.text)
 		if tts.strip_edges() == "":
 			continue
 		_pending_generation.append({"index": i, "voice_id": voice_id, "text": tts, "uuid": dlg.uuid})
@@ -466,11 +477,10 @@ func _get_previous_text(dialogue_index: int) -> String:
 	var seq = _ctx.current_sequence
 	if dialogue_index > 0:
 		var prev = seq.dialogues[dialogue_index - 1]
-		return prev.voice if prev.voice != "" else prev.text
-	# Premier dialogue : chercher le dernier dialogue de la séquence précédente
+		return prev.voice if prev.voice != "" else _i18n(prev.text)
 	var prev_dlg = _get_last_dialogue_before_sequence()
 	if prev_dlg != null:
-		var v: String = prev_dlg.voice if prev_dlg.voice != "" else prev_dlg.text
+		var v: String = prev_dlg.voice if prev_dlg.voice != "" else _i18n(prev_dlg.text)
 		return v
 	return ""
 
@@ -481,7 +491,7 @@ func _get_next_text(dialogue_index: int) -> String:
 	var seq = _ctx.current_sequence
 	if dialogue_index < seq.dialogues.size() - 1:
 		var nxt = seq.dialogues[dialogue_index + 1]
-		return nxt.voice if nxt.voice != "" else nxt.text
+		return nxt.voice if nxt.voice != "" else _i18n(nxt.text)
 	return ""
 
 
@@ -539,6 +549,31 @@ func _collect_previous_request_ids_from_story(max_count: int, lang: String) -> A
 				if ids.size() >= max_count:
 					return ids
 	return ids
+
+
+# ── I18n ──────────────────────────────────────────────────────────────────────
+
+func _load_i18n_for_selected_language() -> void:
+	_i18n_dict = {}
+	var lang := _get_selected_language()
+	if lang == "" or _ctx == null or _ctx.story_base_path == "":
+		return
+	# Load language config to know the source language
+	var lang_config: Dictionary = StoryI18nService.load_languages_config(_ctx.story_base_path)
+	var source_lang: String = lang_config.get("default", "fr")
+	if lang == source_lang:
+		return  # Source language — no translation needed
+	_i18n_dict = StoryI18nService.load_i18n(_ctx.story_base_path, lang)
+
+
+## Translate a source string using the current i18n dict.
+func _i18n(source: String) -> String:
+	if source == "" or _i18n_dict.is_empty():
+		return source
+	var translated: String = _i18n_dict.get(source, "")
+	if translated == "":
+		return source
+	return translated
 
 
 # ── Utilities ─────────────────────────────────────────────────────────────────
