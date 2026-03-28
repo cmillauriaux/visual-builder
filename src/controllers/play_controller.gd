@@ -346,7 +346,7 @@ func _play_dialogue_voice(dlg) -> void:
 	_stop_dialogue_voice()
 	if _voice_player == null:
 		return
-	var voice_path: String = dlg.get("voice_file") if dlg.get("voice_file") != null else ""
+	var voice_path := _get_dialogue_voice_path(dlg)
 	if voice_path == "":
 		return
 	var abs_path := _resolve_voice_path(voice_path)
@@ -360,6 +360,28 @@ func _play_dialogue_voice(dlg) -> void:
 	stream.loop = false
 	_voice_player.stream = stream
 	_voice_player.play()
+
+
+func _get_dialogue_voice_path(dlg) -> String:
+	# Try voice_files dict (new multilang format)
+	var voice_files = dlg.get("voice_files")
+	if voice_files != null and voice_files is Dictionary and not voice_files.is_empty():
+		# Load preferred language from config
+		var ELConfig = load("res://plugins/voice_studio/elevenlabs_config.gd")
+		if ELConfig:
+			var cfg = ELConfig.new()
+			cfg.load_from()
+			var lang: String = cfg.get_language_code()
+			if lang != "" and voice_files.has(lang):
+				return voice_files[lang]
+		# Fallback: first available language
+		for key in voice_files:
+			return voice_files[key]
+	# Rétro-compat: old voice_file string
+	var old_vf = dlg.get("voice_file")
+	if old_vf != null and old_vf is String and old_vf != "":
+		return old_vf
+	return ""
 
 
 func _resolve_voice_path(rel_path: String) -> String:

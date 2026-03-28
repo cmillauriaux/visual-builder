@@ -241,12 +241,19 @@ func _create_dialogue_row(index: int, dlg) -> PanelContainer:
 	header.add_child(sp)
 
 	var status := Label.new()
-	if dlg.voice_file != "" and _voice_file_exists(dlg.voice_file):
-		status.text = "✓ " + tr("Voix générée")
+	var vf_for_lang: String = dlg.get_voice_file(lang) if lang != "" else ""
+	if vf_for_lang != "" and _voice_file_exists(vf_for_lang):
+		status.text = "✓ " + tr("Voix [%s]") % lang
 		status.add_theme_color_override("font_color", Color(0.3, 1.0, 0.3))
 	else:
-		status.text = "○ " + tr("Pas de voix")
-		status.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
+		# Check if voice exists in any other language
+		var other_langs: String = ", ".join(dlg.voice_files.keys()) if not dlg.voice_files.is_empty() else ""
+		if other_langs != "":
+			status.text = "○ " + tr("Voix: %s") % other_langs
+			status.add_theme_color_override("font_color", Color(0.6, 0.6, 0.3))
+		else:
+			status.text = "○ " + tr("Pas de voix")
+			status.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
 	status.add_theme_font_size_override("font_size", 11)
 	header.add_child(status)
 
@@ -276,12 +283,13 @@ func _create_dialogue_row(index: int, dlg) -> PanelContainer:
 	)
 	voice_row.add_child(voice_edit)
 
-	# File info + request_id
-	if dlg.voice_file != "":
+	# File info per language
+	if vf_for_lang != "":
 		var info := Label.new()
-		var info_text: String = dlg.voice_file
-		if dlg.voice_request_id != "":
-			info_text += " (req: %s)" % _truncate(dlg.voice_request_id, 20)
+		var info_text: String = vf_for_lang
+		var rid: String = dlg.get_voice_request_id(lang)
+		if rid != "":
+			info_text += " (req: %s)" % _truncate(rid, 20)
 		info.text = info_text
 		info.add_theme_font_size_override("font_size", 10)
 		info.add_theme_color_override("font_color", Color(0.4, 0.4, 0.4))
@@ -292,12 +300,12 @@ func _create_dialogue_row(index: int, dlg) -> PanelContainer:
 	btn_row.add_theme_constant_override("separation", 4)
 	vbox.add_child(btn_row)
 	var gen_btn := Button.new()
-	gen_btn.text = tr("Regénérer") if (dlg.voice_file != "" and _voice_file_exists(dlg.voice_file)) else tr("Générer la voix")
+	gen_btn.text = tr("Regénérer") if (vf_for_lang != "" and _voice_file_exists(vf_for_lang)) else tr("Générer la voix")
 	gen_btn.pressed.connect(func(): _on_generate_single(index))
 	btn_row.add_child(gen_btn)
-	if dlg.voice_file != "" and _voice_file_exists(dlg.voice_file):
+	if vf_for_lang != "" and _voice_file_exists(vf_for_lang):
 		var del_btn := Button.new()
-		del_btn.text = tr("Supprimer la voix")
+		del_btn.text = tr("Supprimer [%s]") % lang
 		del_btn.pressed.connect(func(): _on_delete_voice(index))
 		btn_row.add_child(del_btn)
 
@@ -341,12 +349,14 @@ func _on_delete_voice(index: int) -> void:
 	if index < 0 or index >= seq.dialogues.size():
 		return
 	var dlg = seq.dialogues[index]
-	if dlg.voice_file != "":
-		ElevenLabsClient.delete_voice_file(_resolve_voice_path(dlg.voice_file))
-		dlg.voice_file = ""
-		dlg.voice_request_id = ""
+	var lang := _get_selected_language()
+	var vf: String = dlg.get_voice_file(lang)
+	if vf != "":
+		ElevenLabsClient.delete_voice_file(_resolve_voice_path(vf))
+		dlg.voice_files.erase(lang)
+		dlg.voice_request_ids.erase(lang)
 		voice_changed.emit()
-		_set_status(tr("Voix supprimée pour le dialogue #%d") % (index + 1))
+		_set_status(tr("Voix [%s] supprimée pour le dialogue #%d") % [lang, index + 1])
 		refresh()
 
 
@@ -413,12 +423,13 @@ func _on_generation_completed(mp3_bytes: PackedByteArray, request_id: String, di
 			break
 	if dlg == null:
 		return
-	var rel_path := "assets/voices/%s.mp3" % dialogue_uuid
+	var lang := _get_selected_language()
+	var rel_path := "assets/voices/%s_%s.mp3" % [dialogue_uuid, lang]
 	if ElevenLabsClient.save_mp3(mp3_bytes, _resolve_voice_path(rel_path)):
-		dlg.voice_file = rel_path
-		dlg.voice_request_id = request_id
+		dlg.voice_files[lang] = rel_path
+		dlg.voice_request_ids[lang] = request_id
 		voice_changed.emit()
-		_set_status(tr("Voix générée pour '%s'") % dlg.character)
+		_set_status(tr("Voix [%s] générée pour '%s'") % [lang, dlg.character])
 	else:
 		_set_status(tr("Erreur sauvegarde pour '%s'") % dlg.character)
 
@@ -476,20 +487,19 @@ func _get_next_text(dialogue_index: int) -> String:
 
 func _get_previous_request_ids(dialogue_index: int) -> Array:
 	var ids: Array = []
+	var lang := _get_selected_language()
 	if _ctx == null or _ctx.current_sequence == null:
 		return ids
 	var seq = _ctx.current_sequence
-	# Collecter les IDs des dialogues précédents dans la séquence
 	var start := maxi(0, dialogue_index - 3)
 	for i in range(dialogue_index - 1, start - 1, -1):
-		var rid: String = seq.dialogues[i].voice_request_id
+		var rid: String = seq.dialogues[i].get_voice_request_id(lang)
 		if rid != "":
 			ids.append(rid)
 		if ids.size() >= 3:
 			return ids
-	# Si pas assez, chercher dans les séquences/scènes/chapitres précédents
 	if ids.size() < 3:
-		var prev_ids := _collect_previous_request_ids_from_story(3 - ids.size())
+		var prev_ids := _collect_previous_request_ids_from_story(3 - ids.size(), lang)
 		ids.append_array(prev_ids)
 	return ids.slice(0, 3) if ids.size() > 3 else ids
 
@@ -510,13 +520,12 @@ func _get_last_dialogue_before_sequence():
 	return null
 
 
-func _collect_previous_request_ids_from_story(max_count: int) -> Array:
+func _collect_previous_request_ids_from_story(max_count: int, lang: String) -> Array:
 	var ids: Array = []
 	if _ctx == null or _ctx.current_scene == null or _ctx.current_sequence == null:
 		return ids
 	var scene = _ctx.current_scene
 	var found_current := false
-	# Chercher dans les séquences précédentes de la scène
 	for i in range(scene.sequences.size() - 1, -1, -1):
 		var s = scene.sequences[i]
 		if s.uuid == _ctx.current_sequence.uuid:
@@ -524,7 +533,7 @@ func _collect_previous_request_ids_from_story(max_count: int) -> Array:
 			continue
 		if found_current:
 			for j in range(s.dialogues.size() - 1, -1, -1):
-				var rid: String = s.dialogues[j].voice_request_id
+				var rid: String = s.dialogues[j].get_voice_request_id(lang)
 				if rid != "":
 					ids.append(rid)
 				if ids.size() >= max_count:

@@ -152,8 +152,8 @@ func test_from_dict_backwards_compatible():
 func test_voice_default_empty():
 	var d = Dialogue.new()
 	assert_eq(d.voice, "")
-	assert_eq(d.voice_file, "")
-	assert_eq(d.voice_request_id, "")
+	assert_true(d.voice_files.is_empty())
+	assert_true(d.voice_request_ids.is_empty())
 
 
 func test_voice_to_dict_omits_when_empty():
@@ -162,8 +162,8 @@ func test_voice_to_dict_omits_when_empty():
 	d.text = "Hello"
 	var dict = d.to_dict()
 	assert_false(dict.has("voice"), "voice should be omitted when empty")
-	assert_false(dict.has("voice_file"), "voice_file should be omitted when empty")
-	assert_false(dict.has("voice_request_id"), "voice_request_id should be omitted when empty")
+	assert_false(dict.has("voice_files"), "voice_files should be omitted when empty")
+	assert_false(dict.has("voice_request_ids"), "voice_request_ids should be omitted when empty")
 
 
 func test_voice_to_dict_includes_when_set():
@@ -171,24 +171,37 @@ func test_voice_to_dict_includes_when_set():
 	d.character = "Narrateur"
 	d.text = "Bienvenue"
 	d.voice = "[whispers] Bienvenue dans ce monde..."
-	d.voice_file = "assets/voices/abc123.mp3"
-	d.voice_request_id = "req-abc-123"
+	d.voice_files = {"fr": "assets/voices/abc_fr.mp3", "en": "assets/voices/abc_en.mp3"}
+	d.voice_request_ids = {"fr": "req-fr-123", "en": "req-en-456"}
 	var dict = d.to_dict()
 	assert_eq(dict["voice"], "[whispers] Bienvenue dans ce monde...")
-	assert_eq(dict["voice_file"], "assets/voices/abc123.mp3")
-	assert_eq(dict["voice_request_id"], "req-abc-123")
+	assert_eq(dict["voice_files"]["fr"], "assets/voices/abc_fr.mp3")
+	assert_eq(dict["voice_files"]["en"], "assets/voices/abc_en.mp3")
+	assert_eq(dict["voice_request_ids"]["fr"], "req-fr-123")
 
 
-func test_voice_from_dict():
+func test_voice_from_dict_multilang():
 	var dict = {
 		"character": "Héros",
 		"text": "En avant !",
-		"voice": "[sarcastically] En avant... [giggles]",
-		"voice_file": "assets/voices/hero-001.mp3"
+		"voice": "[sarcastically] En avant...",
+		"voice_files": {"fr": "assets/voices/hero_fr.mp3", "en": "assets/voices/hero_en.mp3"},
+		"voice_request_ids": {"fr": "req-fr"}
 	}
 	var d = Dialogue.from_dict(dict)
-	assert_eq(d.voice, "[sarcastically] En avant... [giggles]")
-	assert_eq(d.voice_file, "assets/voices/hero-001.mp3")
+	assert_eq(d.voice, "[sarcastically] En avant...")
+	assert_eq(d.get_voice_file("fr"), "assets/voices/hero_fr.mp3")
+	assert_eq(d.get_voice_file("en"), "assets/voices/hero_en.mp3")
+	assert_eq(d.get_voice_file("de"), "")
+	assert_eq(d.get_voice_request_id("fr"), "req-fr")
+
+
+func test_voice_from_dict_retrocompat_old_format():
+	# Ancien format voice_file (String) → migré vers voice_files dict
+	var dict = {"character": "Test", "text": "Hello", "voice_file": "assets/voices/old.mp3", "voice_request_id": "old-req"}
+	var d = Dialogue.from_dict(dict)
+	assert_eq(d.get_voice_file("default"), "assets/voices/old.mp3")
+	assert_eq(d.get_voice_request_id("default"), "old-req")
 
 
 func test_voice_from_dict_backwards_compatible():
@@ -196,4 +209,4 @@ func test_voice_from_dict_backwards_compatible():
 	var dict = {"character": "Test", "text": "Hello"}
 	var d = Dialogue.from_dict(dict)
 	assert_eq(d.voice, "")
-	assert_eq(d.voice_file, "")
+	assert_true(d.voice_files.is_empty())

@@ -310,15 +310,16 @@ static func get_available_languages(plugin_settings: Dictionary) -> PackedString
 ## les fichiers dans assets/voices/ qui ne sont pas référencés.
 ## Retourne {"deleted": int, "kept": int}.
 static func _purge_orphan_voice_files(story, base_path: String) -> Dictionary:
-	# 1. Collecter tous les voice_file référencés
+	# 1. Collecter tous les voice_files référencés (toutes langues)
 	var referenced := {}
 	for chapter in story.chapters:
 		for scene in chapter.scenes:
 			for seq in scene.sequences:
 				for dlg in seq.dialogues:
-					var vf: String = dlg.voice_file
-					if vf != "":
-						referenced[vf] = true
+					for lang_key in dlg.voice_files:
+						var vf: String = dlg.voice_files[lang_key]
+						if vf != "":
+							referenced[vf] = true
 	# 2. Scanner le dossier assets/voices/
 	var voices_dir := base_path + "/assets/voices"
 	var deleted := 0
