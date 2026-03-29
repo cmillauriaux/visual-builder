@@ -66,6 +66,7 @@ static func _get_default_config() -> Dictionary:
 	return {
 		"studio_logo_enabled": false,
 		"studio_logo_path": "",
+		"studio_logo_fallback_text": "Studio",
 		"studio_logo_duration": 2.0,
 		"engine_logo_enabled": true,
 		"engine_logo_duration": 2.0,
@@ -92,6 +93,7 @@ func _build_steps(config: Dictionary, ctx: RefCounted) -> Array:
 		steps.append({
 			"type": "studio_logo",
 			"path": logo_path,
+			"fallback_text": config.get("studio_logo_fallback_text", "Studio"),
 			"duration": config.get("studio_logo_duration", 2.0),
 		})
 
@@ -233,26 +235,25 @@ func _create_step_content(step: Dictionary) -> Control:
 
 
 func _create_studio_logo_content(step: Dictionary) -> Control:
-	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-
 	var logo_path: String = step.get("path", "")
 	if logo_path != "" and (FileAccess.file_exists(logo_path) or ResourceLoader.exists(logo_path)):
 		var tex := _load_image_as_texture(logo_path)
 		if tex != null:
 			var tex_rect := TextureRect.new()
 			tex_rect.texture = tex
+			tex_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 			tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			tex_rect.custom_minimum_size = Vector2(512, 512)
-			tex_rect.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+			tex_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			center.add_child(tex_rect)
-			return center
+			return tex_rect
 
-	# Fallback: texte "Studio" si pas d'image
+	# Fallback: texte configurable si pas d'image
+	var fallback_text: String = step.get("fallback_text", "Studio")
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var label := Label.new()
-	label.text = "Studio"
+	label.text = fallback_text
 	label.add_theme_font_size_override("font_size", 48)
 	label.add_theme_color_override("font_color", Color.WHITE)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -393,6 +394,12 @@ func _create_editor_config(current_settings) -> Control:
 
 	vbox.add_child(studio_path_hbox)
 
+	var studio_fallback_edit := LineEdit.new()
+	studio_fallback_edit.name = "StudioLogoFallbackEdit"
+	studio_fallback_edit.placeholder_text = "Texte de fallback si pas d'image"
+	studio_fallback_edit.text = ps.get("studio_logo_fallback_text", "Studio")
+	vbox.add_child(studio_fallback_edit)
+
 	# --- Section Logo Moteur ---
 	var engine_check := CheckButton.new()
 	engine_check.name = "EngineLogoCheck"
@@ -430,6 +437,7 @@ func _create_editor_config(current_settings) -> Control:
 	# Stocker les références pour la lecture
 	vbox.set_meta("_studio_check", studio_check)
 	vbox.set_meta("_studio_path_edit", studio_path_edit)
+	vbox.set_meta("_studio_fallback_edit", studio_fallback_edit)
 	vbox.set_meta("_engine_check", engine_check)
 	vbox.set_meta("_disclaimer_check", disclaimer_check)
 	vbox.set_meta("_disclaimer_edit", disclaimer_edit)
@@ -446,6 +454,7 @@ func read_editor_config(control: Control) -> Dictionary:
 	return {
 		"studio_logo_enabled": control.get_meta("_studio_check").button_pressed if control.has_meta("_studio_check") else false,
 		"studio_logo_path": control.get_meta("_studio_path_edit").text if control.has_meta("_studio_path_edit") else "",
+		"studio_logo_fallback_text": control.get_meta("_studio_fallback_edit").text if control.has_meta("_studio_fallback_edit") else "Studio",
 		"studio_logo_duration": 2.0,
 		"engine_logo_enabled": control.get_meta("_engine_check").button_pressed if control.has_meta("_engine_check") else true,
 		"engine_logo_duration": 2.0,

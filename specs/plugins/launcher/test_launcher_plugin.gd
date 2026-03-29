@@ -49,6 +49,7 @@ func test_default_config_only_engine_logo_enabled():
 	assert_true(defaults["engine_logo_enabled"])
 	assert_false(defaults["disclaimer_enabled"])
 	assert_false(defaults["free_text_enabled"])
+	assert_eq(defaults["studio_logo_fallback_text"], "Studio")
 
 
 func test_default_config_durations():
@@ -88,6 +89,7 @@ func test_build_steps_all_enabled():
 	var config := {
 		"studio_logo_enabled": true,
 		"studio_logo_path": "res://icon.svg",
+		"studio_logo_fallback_text": "My Studio",
 		"studio_logo_duration": 2.0,
 		"engine_logo_enabled": true,
 		"engine_logo_duration": 2.0,
@@ -101,6 +103,7 @@ func test_build_steps_all_enabled():
 	var steps = _plugin._build_steps(config, ctx)
 	assert_eq(steps.size(), 4)
 	assert_eq(steps[0]["type"], "studio_logo")
+	assert_eq(steps[0]["fallback_text"], "My Studio")
 	assert_eq(steps[1]["type"], "engine_logo")
 	assert_eq(steps[2]["type"], "disclaimer")
 	assert_eq(steps[2]["text"], "TEST DISCLAIMER")
@@ -222,10 +225,33 @@ func test_create_studio_logo_no_image():
 	var content = _plugin._create_studio_logo_content(step)
 	assert_not_null(content)
 	assert_true(content is CenterContainer)
-	# Fallback: affiche "Studio"
+	# Fallback: affiche "Studio" par défaut
 	var label = content.get_child(0)
 	assert_true(label is Label)
 	assert_eq(label.text, "Studio")
+	content.queue_free()
+
+
+func test_create_studio_logo_custom_fallback_text():
+	var step := {"path": "", "fallback_text": "Mon Studio"}
+	var content = _plugin._create_studio_logo_content(step)
+	assert_not_null(content)
+	assert_true(content is CenterContainer)
+	var label = content.get_child(0)
+	assert_true(label is Label)
+	assert_eq(label.text, "Mon Studio")
+	content.queue_free()
+
+
+func test_create_studio_logo_with_valid_image():
+	# res://icon.svg exists in the project
+	var step := {"path": "res://icon.svg"}
+	var content = _plugin._create_studio_logo_content(step)
+	assert_not_null(content)
+	assert_true(content is TextureRect, "With valid image, should return TextureRect directly")
+	var tex_rect := content as TextureRect
+	assert_eq(tex_rect.stretch_mode, TextureRect.STRETCH_KEEP_ASPECT_CENTERED)
+	assert_eq(tex_rect.expand_mode, TextureRect.EXPAND_IGNORE_SIZE)
 	content.queue_free()
 
 
@@ -342,6 +368,7 @@ func test_editor_config_reads_existing_values():
 	var existing := {
 		"studio_logo_enabled": true,
 		"studio_logo_path": "logo.png",
+		"studio_logo_fallback_text": "Mon Studio",
 		"engine_logo_enabled": false,
 		"disclaimer_enabled": true,
 		"disclaimer_text": "Mon disclaimer",
@@ -353,6 +380,7 @@ func test_editor_config_reads_existing_values():
 	var values = _plugin.read_editor_config(ctrl)
 	assert_true(values["studio_logo_enabled"])
 	assert_eq(values["studio_logo_path"], "logo.png")
+	assert_eq(values["studio_logo_fallback_text"], "Mon Studio")
 	assert_false(values["engine_logo_enabled"])
 	assert_true(values["disclaimer_enabled"])
 	assert_eq(values["disclaimer_text"], "Mon disclaimer")
