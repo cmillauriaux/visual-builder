@@ -851,6 +851,8 @@ func _cleanup_play() -> void:
 	_game._play_title_overlay.visible = false
 	if _game._play_title_overlay.get_parent():
 		_game._play_title_overlay.get_parent().remove_child(_game._play_title_overlay)
+	if _sequence_fx_player:
+		_sequence_fx_player.stop_fx()
 	if _music_player:
 		_music_player.stop_music()
 	_stop_dialogue_voice()
