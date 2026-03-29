@@ -8,7 +8,7 @@ signal generation_completed(image: Image)
 signal generation_failed(error: String)
 signal generation_progress(status: String)
 
-enum WorkflowType { CREATION = 0, EXPRESSION = 1 }
+enum WorkflowType { CREATION = 0, EXPRESSION = 1, OUTPAINT = 2 }
 
 var _generating: bool = false
 var _prompt_id: String = ""
@@ -24,6 +24,12 @@ var _negative_prompt: String = ""
 var _face_box_size: int = 80
 var _megapixels: float = 1.0
 var _loras: Array = []
+var _outpaint_left: int = 0
+var _outpaint_top: int = 0
+var _outpaint_right: int = 0
+var _outpaint_bottom: int = 0
+var _outpaint_feathering: int = 24
+var _outpaint_guidance: float = 40.0
 
 # --- Workflow template (Flux 2 Klein + BiRefNet) ---
 # Reproduit exactement Edit_Image_Transparent_API.json
@@ -393,6 +399,122 @@ const EXPRESSION_WORKFLOW_TEMPLATE: Dictionary = {
 
 
 
+# --- Outpaint workflow template (Flux Fill + ImagePadForOutpaint) ---
+# Reproduit le workflow flux_fill_outpaint.
+# Paramètres dynamiques : 17.inputs.image, 23.inputs.text, 3.inputs.seed,
+#                         44.inputs.left/top/right/bottom/feathering,
+#                         26.inputs.guidance, 3.inputs.cfg, 3.inputs.steps
+
+const OUTPAINT_WORKFLOW_TEMPLATE: Dictionary = {
+	"3": {
+		"class_type": "KSampler",
+		"inputs": {
+			"seed": 0,
+			"steps": 20,
+			"cfg": 0.7,
+			"sampler_name": "euler",
+			"scheduler": "normal",
+			"denoise": 1,
+			"model": ["39", 0],
+			"positive": ["38", 0],
+			"negative": ["38", 1],
+			"latent_image": ["38", 2]
+		}
+	},
+	"8": {
+		"class_type": "VAEDecode",
+		"inputs": {
+			"samples": ["3", 0],
+			"vae": ["32", 0]
+		}
+	},
+	"9": {
+		"class_type": "SaveImage",
+		"inputs": {
+			"filename_prefix": "Outpaint",
+			"images": ["8", 0]
+		}
+	},
+	"17": {
+		"class_type": "LoadImage",
+		"inputs": {
+			"image": ""
+		}
+	},
+	"23": {
+		"class_type": "CLIPTextEncode",
+		"inputs": {
+			"text": "",
+			"clip": ["34", 0]
+		}
+	},
+	"26": {
+		"class_type": "FluxGuidance",
+		"inputs": {
+			"guidance": 40,
+			"conditioning": ["23", 0]
+		}
+	},
+	"31": {
+		"class_type": "UNETLoader",
+		"inputs": {
+			"unet_name": "flux1-fill-dev.safetensors",
+			"weight_dtype": "default"
+		}
+	},
+	"32": {
+		"class_type": "VAELoader",
+		"inputs": {
+			"vae_name": "ae.safetensors"
+		}
+	},
+	"34": {
+		"class_type": "DualCLIPLoader",
+		"inputs": {
+			"clip_name1": "clip_l.safetensors",
+			"clip_name2": "t5xxl_fp16.safetensors",
+			"type": "flux",
+			"device": "default"
+		}
+	},
+	"38": {
+		"class_type": "InpaintModelConditioning",
+		"inputs": {
+			"noise_mask": false,
+			"positive": ["26", 0],
+			"negative": ["46", 0],
+			"vae": ["32", 0],
+			"pixels": ["44", 0],
+			"mask": ["44", 1]
+		}
+	},
+	"39": {
+		"class_type": "DifferentialDiffusion",
+		"inputs": {
+			"strength": 1,
+			"model": ["31", 0]
+		}
+	},
+	"44": {
+		"class_type": "ImagePadForOutpaint",
+		"inputs": {
+			"left": 0,
+			"top": 0,
+			"right": 0,
+			"bottom": 0,
+			"feathering": 24,
+			"image": ["17", 0]
+		}
+	},
+	"46": {
+		"class_type": "ConditioningZeroOut",
+		"inputs": {
+			"conditioning": ["23", 0]
+		}
+	}
+}
+
+
 func is_generating() -> bool:
 	return _generating
 
@@ -422,7 +544,36 @@ func _inject_loras(wf: Dictionary, loras: Array) -> void:
 	wf["75:74"]["inputs"]["clip"] = [last_node_id, 1]
 
 
+func _build_outpaint_workflow(filename: String, prompt_text: String, seed: int, cfg: float, steps: int, negative_prompt: String) -> Dictionary:
+	var wf = OUTPAINT_WORKFLOW_TEMPLATE.duplicate(true)
+	wf["17"]["inputs"]["image"] = filename
+	wf["23"]["inputs"]["text"] = prompt_text
+	wf["3"]["inputs"]["seed"] = seed
+	wf["3"]["inputs"]["steps"] = steps
+	wf["3"]["inputs"]["cfg"] = cfg
+	wf["26"]["inputs"]["guidance"] = _outpaint_guidance
+	wf["44"]["inputs"]["left"] = _outpaint_left
+	wf["44"]["inputs"]["top"] = _outpaint_top
+	wf["44"]["inputs"]["right"] = _outpaint_right
+	wf["44"]["inputs"]["bottom"] = _outpaint_bottom
+	wf["44"]["inputs"]["feathering"] = _outpaint_feathering
+	# Negative prompt : remplacer ConditioningZeroOut par CLIPTextEncode si fourni
+	if negative_prompt.strip_edges() != "":
+		wf["47"] = {
+			"class_type": "CLIPTextEncode",
+			"inputs": {
+				"text": negative_prompt,
+				"clip": ["34", 0]
+			}
+		}
+		wf["38"]["inputs"]["negative"] = ["47", 0]
+		wf.erase("46")
+	return wf
+
+
 func build_workflow(filename: String, prompt_text: String, seed: int, remove_background: bool = true, cfg: float = 1.0, steps: int = 4, workflow_type: int = WorkflowType.CREATION, denoise: float = 0.5, negative_prompt: String = "", face_box_size: int = 80, megapixels: float = 1.0, loras: Array = []) -> Dictionary:
+	if workflow_type == WorkflowType.OUTPAINT:
+		return _build_outpaint_workflow(filename, prompt_text, seed, cfg, steps, negative_prompt)
 	if workflow_type == WorkflowType.EXPRESSION:
 		return _build_expression_workflow(filename, prompt_text, seed, remove_background, cfg, steps, denoise, negative_prompt, face_box_size, megapixels)
 	var wf = WORKFLOW_TEMPLATE.duplicate(true)
@@ -578,6 +729,50 @@ func parse_history_response(json_str: String, prompt_id: String) -> Dictionary:
 	return {"status": "error", "error": "Aucune image dans les sorties"}
 
 # --- Full generation flow ---
+
+func generate_outpaint(config: RefCounted, source_image_path: String, prompt_text: String, pad_left: int, pad_top: int, pad_right: int, pad_bottom: int, feathering: int, guidance: float, cfg: float, steps: int, negative_prompt: String) -> void:
+	if _generating:
+		generation_failed.emit("Une génération est déjà en cours")
+		return
+
+	_generating = true
+	_cancelled = false
+	_config = config
+	_workflow_type = WorkflowType.OUTPAINT
+	_cfg = cfg
+	_steps = steps
+	_negative_prompt = negative_prompt
+	_remove_background = false
+	_denoise = 1.0
+	_megapixels = 1.0
+	_loras = []
+	_outpaint_left = pad_left
+	_outpaint_top = pad_top
+	_outpaint_right = pad_right
+	_outpaint_bottom = pad_bottom
+	_outpaint_feathering = feathering
+	_outpaint_guidance = guidance
+
+	generation_progress.emit("Chargement de l'image source...")
+
+	var file = FileAccess.open(source_image_path, FileAccess.READ)
+	if file == null:
+		_generating = false
+		generation_failed.emit("Impossible d'ouvrir l'image : " + source_image_path)
+		return
+
+	var file_bytes = file.get_buffer(file.get_length())
+	file.close()
+
+	var filename = source_image_path.get_file()
+
+	if _config.is_runpod():
+		generation_progress.emit("Envoi vers RunPod...")
+		_do_runpod_run(filename, file_bytes, prompt_text)
+	else:
+		generation_progress.emit("Upload de l'image vers ComfyUI...")
+		_do_upload(filename, file_bytes, prompt_text)
+
 
 func generate(config: RefCounted, source_image_path: String, prompt_text: String, remove_background: bool = true, cfg: float = 1.0, steps: int = 4, workflow_type: int = WorkflowType.CREATION, denoise: float = 0.5, negative_prompt: String = "", face_box_size: int = 80, megapixels: float = 1.0, loras: Array = []) -> void:
 	if _generating:
