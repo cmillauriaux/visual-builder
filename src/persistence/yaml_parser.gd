@@ -16,8 +16,9 @@ static func dict_to_yaml(d: Dictionary, indent: int = 0) -> String:
 ## Sérialise une clé YAML en la quotant si elle contient des caractères spéciaux.
 static func _key_to_yaml(key: String) -> String:
 	if key.contains(":") or key.contains("#") or key.contains('"') or \
+			key.contains("\n") or key.contains("\r") or key.contains("\t") or \
 			key.begins_with(" ") or key.ends_with(" ") or key == "":
-		return '"%s"' % key.replace("\\", "\\\\").replace('"', '\\"')
+		return '"%s"' % _escape_string(key)
 	return key
 
 static func _serialize_key_value(key: String, value, indent: int) -> String:
@@ -25,7 +26,7 @@ static func _serialize_key_value(key: String, value, indent: int) -> String:
 	if value == null:
 		return "%s: null" % k
 	elif value is String:
-		return '%s: "%s"' % [k, value.replace('"', '\\"')]
+		return '%s: "%s"' % [k, _escape_string(value)]
 	elif value is bool:
 		return "%s: %s" % [k, "true" if value else "false"]
 	elif value is int:
@@ -78,10 +79,15 @@ static func _inline_dict(d: Dictionary) -> String:
 
 static func _serialize_value(value) -> String:
 	if value is String:
-		return '"%s"' % value.replace('"', '\\"')
+		return '"%s"' % _escape_string(value)
 	elif value is bool:
 		return "true" if value else "false"
 	return str(value)
+
+
+## Échappe les caractères spéciaux dans une chaîne pour la sérialisation YAML.
+static func _escape_string(s: String) -> String:
+	return s.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
 
 # --- Lecture (YAML → dict) ---
 
@@ -102,7 +108,7 @@ static func _split_key_rest(stripped: String) -> Array:
 				i += 2
 				continue
 			if stripped[i] == '"':
-				var key = stripped.substr(1, i - 1).replace('\\"', '"').replace("\\\\", "\\")
+				var key = _unescape_string(stripped.substr(1, i - 1))
 				var after = stripped.substr(i + 1).strip_edges()
 				if after.begins_with(":"):
 					return [key, after.substr(1).strip_edges()]
@@ -266,7 +272,7 @@ static func _parse_value(s: String):
 
 	# String entre guillemets
 	if s.begins_with('"') and s.ends_with('"'):
-		return s.substr(1, s.length() - 2).replace('\\"', '"')
+		return _unescape_string(s.substr(1, s.length() - 2))
 
 	# String entre guillemets simples
 	if s.begins_with("'") and s.ends_with("'"):
@@ -290,6 +296,26 @@ static func _parse_value(s: String):
 
 	# String non-quotée
 	return s
+
+## Déséchappe les séquences d'échappement dans une chaîne YAML double-quotée.
+static func _unescape_string(s: String) -> String:
+	var result := ""
+	var i := 0
+	while i < s.length():
+		if s[i] == "\\" and i + 1 < s.length():
+			match s[i + 1]:
+				"n": result += "\n"
+				"r": result += "\r"
+				"t": result += "\t"
+				'"': result += '"'
+				"\\": result += "\\"
+				_: result += s[i + 1]
+			i += 2
+		else:
+			result += s[i]
+			i += 1
+	return result
+
 
 static func _parse_inline_dict(s: String) -> Dictionary:
 	var content = s.substr(1, s.length() - 2).strip_edges()

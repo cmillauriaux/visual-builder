@@ -196,3 +196,48 @@ func test_roundtrip_story_yaml():
 	assert_eq(restored["chapters"][0]["uuid"], "abc-123")
 	assert_eq(restored["connections"].size(), 1)
 	assert_eq(restored["connections"][0]["from"], "abc-123")
+
+
+func test_write_string_with_newlines():
+	var d = {"msg": "Ligne 1\nLigne 2\nLigne 3"}
+	var yaml = YamlParser.dict_to_yaml(d)
+	# Les newlines doivent être échappées (pas de saut de ligne réel dans le YAML)
+	assert_eq(yaml.find("\n"), -1, "Le YAML sérialisé ne doit pas contenir de sauts de ligne réels dans la valeur")
+	assert_true(yaml.find("\\n") >= 0, "Les newlines doivent être échappées en \\n")
+
+
+func test_read_string_with_escaped_newlines():
+	var yaml = 'msg: "Ligne 1\\nLigne 2\\nLigne 3"'
+	var d = YamlParser.yaml_to_dict(yaml)
+	assert_eq(d["msg"], "Ligne 1\nLigne 2\nLigne 3")
+
+
+func test_roundtrip_multiline_string():
+	var original = {"msg": "Pour une meilleure expérience :\n\n1. Appuyez sur le bouton\n2. Sélectionnez « Installer »"}
+	var yaml = YamlParser.dict_to_yaml(original)
+	var restored = YamlParser.yaml_to_dict(yaml)
+	assert_eq(restored["msg"], original["msg"])
+
+
+func test_roundtrip_multiline_key_and_value():
+	# Cas i18n : la clé source contient des newlines
+	var source = "Installez l'application :\n\n1. Appuyez sur (⎙)\n2. Sélectionnez « Accueil »"
+	var original = {source: "Install the app:\n\n1. Press (⎙)\n2. Select 'Home'"}
+	var yaml = YamlParser.dict_to_yaml(original)
+	var restored = YamlParser.yaml_to_dict(yaml)
+	assert_true(restored.has(source), "La clé multi-ligne doit survivre au round-trip")
+	assert_eq(restored[source], original[source])
+
+
+func test_roundtrip_string_with_backslash():
+	var original = {"path": "C:\\Users\\test"}
+	var yaml = YamlParser.dict_to_yaml(original)
+	var restored = YamlParser.yaml_to_dict(yaml)
+	assert_eq(restored["path"], "C:\\Users\\test")
+
+
+func test_roundtrip_string_with_quotes_and_newlines():
+	var original = {"text": "Il a dit \"bonjour\"\net puis est parti."}
+	var yaml = YamlParser.dict_to_yaml(original)
+	var restored = YamlParser.yaml_to_dict(yaml)
+	assert_eq(restored["text"], original["text"])
