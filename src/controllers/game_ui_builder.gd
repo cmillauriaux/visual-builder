@@ -276,6 +276,7 @@ static func _build_menu_button(game: Control) -> void:
 static func _build_pause_menu(game: Control) -> void:
 	game._pause_menu = Control.new()
 	game._pause_menu.set_script(PauseMenuScript)
+	game._pause_menu.z_index = SequenceVisualEditorScript.UI_OVERLAY_Z
 	game._pause_menu.build_ui()
 	game.add_child(game._pause_menu)
 
@@ -352,6 +353,7 @@ static func _build_ending_screens(game: Control) -> void:
 static func _build_save_load_menu(game: Control) -> void:
 	game._save_load_menu = Control.new()
 	game._save_load_menu.set_script(SaveLoadMenuScript)
+	game._save_load_menu.z_index = SequenceVisualEditorScript.UI_OVERLAY_Z
 	game._save_load_menu.build_ui()
 	game.add_child(game._save_load_menu)
 
@@ -359,6 +361,7 @@ static func _build_save_load_menu(game: Control) -> void:
 static func _build_chapter_scene_menu(game: Control) -> void:
 	game._chapter_scene_menu = Control.new()
 	game._chapter_scene_menu.set_script(ChapterSceneMenuScript)
+	game._chapter_scene_menu.z_index = SequenceVisualEditorScript.UI_OVERLAY_Z
 	game._chapter_scene_menu.build_ui()
 	game.add_child(game._chapter_scene_menu)
 

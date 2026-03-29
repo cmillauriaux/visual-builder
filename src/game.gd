@@ -24,6 +24,7 @@ const GamePluginManagerScript = preload("res://src/plugins/game_plugin_manager.g
 const GamePluginContextScript = preload("res://src/plugins/game_plugin_context.gd")
 const LocaleDetector = preload("res://src/services/locale_detector.gd")
 const ScreenshotServiceScript = preload("res://src/services/screenshot_service.gd")
+const SequenceVisualEditorScript = preload("res://src/ui/sequence/sequence_visual_editor.gd")
 
 ## Chemin vers la story à charger automatiquement.
 ## Si vide, affiche le sélecteur. Peut pointer vers res:// ou user://.
@@ -254,6 +255,7 @@ func _ready() -> void:
 	_pause_options_center.add_theme_constant_override("margin_right", pause_margin)
 	_pause_options_center.visible = false
 	_pause_options_center.process_mode = Node.PROCESS_MODE_ALWAYS
+	_pause_options_center.z_index = SequenceVisualEditorScript.UI_OVERLAY_Z
 	add_child(_pause_options_center)
 
 	_pause_options_menu = PanelContainer.new()
