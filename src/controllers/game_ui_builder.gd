@@ -262,7 +262,8 @@ static func _build_menu_button(game: Control) -> void:
 	var s := UIScale.get_scale()
 	game._menu_button = Button.new()
 	game._menu_button.z_index = SequenceVisualEditorScript.UI_OVERLAY_Z
-	game._menu_button.text = "≡ Menu"
+	game._menu_button.text = "Menu"
+	game._menu_button.icon = _create_hamburger_icon(roundi(16 * s), GameTheme.COLOR_BUTTON_TEXT)
 	game._menu_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 	game._menu_button.offset_left = -roundi(100 * s)
 	game._menu_button.offset_right = -roundi(10 * s)
@@ -271,6 +272,25 @@ static func _build_menu_button(game: Control) -> void:
 	game._menu_button.visible = false
 	game._menu_button.process_mode = Node.PROCESS_MODE_ALWAYS
 	game.add_child(game._menu_button)
+
+
+## Génère une icône hamburger (3 lignes horizontales) comme ImageTexture.
+## Fonctionne sur toutes les plateformes sans dépendance de police.
+static func _create_hamburger_icon(size: int, color: Color) -> ImageTexture:
+	var img := Image.create(size, size, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var line_h: int = maxi(1, roundi(size * 0.12))
+	var gap: int = roundi(size * 0.22)
+	var y_positions: Array[int] = [
+		roundi(size * 0.18),
+		roundi(size * 0.18) + line_h + gap,
+		roundi(size * 0.18) + (line_h + gap) * 2,
+	]
+	for y_start in y_positions:
+		for dy in range(line_h):
+			for x in range(size):
+				img.set_pixel(x, y_start + dy, color)
+	return ImageTexture.create_from_image(img)
 
 
 static func _build_pause_menu(game: Control) -> void:

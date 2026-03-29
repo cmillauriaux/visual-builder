@@ -11,7 +11,7 @@ const YamlParser = preload("res://src/persistence/yaml_parser.gd")
 ## Chaînes fixes de l'interface utilisateur du jeu (incluses dans tous les fichiers i18n).
 const UI_STRINGS: Array[String] = [
 	# Bouton menu in-game
-	"≡ Menu",
+	"Menu",
 	# Sélecteur d'histoires
 	"Sélectionnez une histoire",
 	"Aucune histoire trouvée",

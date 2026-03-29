@@ -414,7 +414,7 @@ func _get_story_voice_languages(story) -> Array:
 
 
 func _apply_ui_lang() -> void:
-	_menu_button.text = StoryI18nService.get_ui_string("≡ Menu", _i18n_dict)
+	_menu_button.text = StoryI18nService.get_ui_string("Menu", _i18n_dict)
 	if _story_selector_title:
 		_story_selector_title.text = StoryI18nService.get_ui_string("Sélectionnez une histoire", _i18n_dict)
 	_main_menu.apply_ui_translations(_i18n_dict)
