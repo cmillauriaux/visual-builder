@@ -42,8 +42,8 @@ func test_has_tab_container():
 	assert_is(_dialog._tab_container, TabContainer)
 
 
-func test_has_four_tabs():
-	assert_eq(_dialog._tab_container.get_tab_count(), 4)
+func test_has_two_tabs():
+	assert_eq(_dialog._tab_container.get_tab_count(), 2)
 
 
 func test_tab_decliner_exists():
@@ -54,8 +54,6 @@ func test_tab_expressions_exists():
 	assert_eq(_dialog._tab_container.get_tab_title(1), "Expressions")
 
 
-func test_tab_restauration_exists():
-	assert_eq(_dialog._tab_container.get_tab_title(3), "Restauration")
 
 
 func test_has_shared_url_input():
@@ -80,19 +78,6 @@ func test_is_exclusive():
 # ========================================================
 # Décliner Tab — Structure
 # ========================================================
-
-func test_decl_has_workflow_option():
-	assert_not_null(_dialog._decl_tab._workflow_option)
-	assert_is(_dialog._decl_tab._workflow_option, OptionButton)
-
-
-func test_decl_workflow_has_two_items():
-	assert_eq(_dialog._decl_tab._workflow_option.item_count, 2)
-
-
-func test_decl_workflow_default_creation():
-	assert_eq(_dialog._decl_tab._workflow_option.selected, 0)
-
 
 func test_decl_has_source_preview():
 	assert_not_null(_dialog._decl_tab._source_preview)
@@ -923,176 +908,6 @@ func test_get_selected_expressions_includes_custom():
 				cb.button_pressed = true
 	var selected = _dialog._expr_tab._get_selected_expressions()
 	assert_true(selected.has("ma_custom_expr"), "Custom expression devrait être dans la sélection")
-
-
-# ========================================================
-# Upscale Tab — Structure
-# ========================================================
-
-func test_tab_upscale_exists():
-	assert_eq(_dialog._tab_container.get_tab_title(2), "Upscale")
-
-
-func test_upscale_has_source_preview():
-	assert_not_null(_dialog._upscale_tab._source_preview)
-	assert_is(_dialog._upscale_tab._source_preview, TextureRect)
-
-
-func test_upscale_has_source_path_label():
-	assert_not_null(_dialog._upscale_tab._source_path_label)
-	assert_is(_dialog._upscale_tab._source_path_label, Label)
-	assert_eq(_dialog._upscale_tab._source_path_label.text, "Aucune image sélectionnée")
-
-
-func test_upscale_has_max_dim_input():
-	assert_not_null(_dialog._upscale_tab._max_dim_input)
-	assert_is(_dialog._upscale_tab._max_dim_input, SpinBox)
-	assert_eq(_dialog._upscale_tab._max_dim_input.value, 2048.0)
-
-
-func test_upscale_has_dim_feedback_label():
-	assert_not_null(_dialog._upscale_tab._dim_feedback_label)
-	assert_is(_dialog._upscale_tab._dim_feedback_label, Label)
-
-
-func test_upscale_has_model_option():
-	assert_not_null(_dialog._upscale_tab._model_option)
-	assert_is(_dialog._upscale_tab._model_option, OptionButton)
-	assert_eq(_dialog._upscale_tab._model_option.item_count, 4)
-	assert_eq(_dialog._upscale_tab._model_option.get_item_text(0), "4x-UltraSharp.pth")
-
-
-func test_upscale_has_denoise_slider():
-	assert_not_null(_dialog._upscale_tab._denoise_slider)
-	assert_is(_dialog._upscale_tab._denoise_slider, HSlider)
-	assert_eq(_dialog._upscale_tab._denoise_slider.min_value, 0.0)
-	assert_eq(_dialog._upscale_tab._denoise_slider.max_value, 1.0)
-	assert_eq(_dialog._upscale_tab._denoise_slider.step, 0.05)
-	assert_eq(_dialog._upscale_tab._denoise_slider.value, 0.35)
-
-
-func test_upscale_has_denoise_value_label():
-	assert_not_null(_dialog._upscale_tab._denoise_value_label)
-	assert_is(_dialog._upscale_tab._denoise_value_label, Label)
-	assert_eq(_dialog._upscale_tab._denoise_value_label.text, "0.35")
-
-
-func test_upscale_has_tile_buttons():
-	assert_not_null(_dialog._upscale_tab._tile_btns)
-	assert_eq(_dialog._upscale_tab._tile_btns.size(), 4)
-	assert_eq(_dialog._upscale_tab._selected_tile_size, 512)
-
-
-func test_upscale_tile_default_is_512():
-	assert_true(_dialog._upscale_tab._tile_btns[1].button_pressed)
-	assert_false(_dialog._upscale_tab._tile_btns[0].button_pressed)
-	assert_false(_dialog._upscale_tab._tile_btns[2].button_pressed)
-	assert_false(_dialog._upscale_tab._tile_btns[3].button_pressed)
-
-
-func test_upscale_has_prompt_input():
-	assert_not_null(_dialog._upscale_tab._prompt_input)
-	assert_is(_dialog._upscale_tab._prompt_input, TextEdit)
-
-
-func test_upscale_generate_btn_exists_and_disabled_by_default():
-	assert_not_null(_dialog._upscale_tab._generate_btn)
-	assert_is(_dialog._upscale_tab._generate_btn, Button)
-	assert_true(_dialog._upscale_tab._generate_btn.disabled)
-
-
-func test_upscale_has_result_preview():
-	assert_not_null(_dialog._upscale_tab._result_preview)
-	assert_is(_dialog._upscale_tab._result_preview, TextureRect)
-
-
-func test_upscale_has_status_label():
-	assert_not_null(_dialog._upscale_tab._status_label)
-	assert_is(_dialog._upscale_tab._status_label, Label)
-
-
-func test_upscale_has_progress_bar():
-	assert_not_null(_dialog._upscale_tab._progress_bar)
-	assert_is(_dialog._upscale_tab._progress_bar, ProgressBar)
-	assert_false(_dialog._upscale_tab._progress_bar.visible)
-
-
-func test_upscale_save_btn_disabled_by_default():
-	assert_not_null(_dialog._upscale_tab._save_btn)
-	assert_is(_dialog._upscale_tab._save_btn, Button)
-	assert_true(_dialog._upscale_tab._save_btn.disabled)
-
-
-func test_upscale_regenerate_btn_disabled_by_default():
-	assert_not_null(_dialog._upscale_tab._regenerate_btn)
-	assert_is(_dialog._upscale_tab._regenerate_btn, Button)
-	assert_true(_dialog._upscale_tab._regenerate_btn.disabled)
-
-
-# ========================================================
-# Upscale Tab — Generate button state
-# ========================================================
-
-func test_upscale_generate_enabled_when_url_and_source_set():
-	_dialog._url_input.text = "http://localhost:8188"
-	_dialog._upscale_tab._source_image_path = "/tmp/test.png"
-	_dialog._upscale_tab.update_generate_button()
-	assert_false(_dialog._upscale_tab._generate_btn.disabled)
-
-
-func test_upscale_generate_disabled_without_url():
-	_dialog._url_input.text = ""
-	_dialog._upscale_tab._source_image_path = "/tmp/test.png"
-	_dialog._upscale_tab.update_generate_button()
-	assert_true(_dialog._upscale_tab._generate_btn.disabled)
-
-
-func test_upscale_generate_disabled_without_source():
-	_dialog._url_input.text = "http://localhost:8188"
-	_dialog._upscale_tab._source_image_path = ""
-	_dialog._upscale_tab.update_generate_button()
-	assert_true(_dialog._upscale_tab._generate_btn.disabled)
-
-
-# ========================================================
-# Upscale Tab — Dimension computation
-# ========================================================
-
-func test_compute_upscale_target_zero_returns_zero():
-	var result = AIStudioDialog._compute_upscale_target(Vector2i.ZERO, 2048)
-	assert_eq(result, Vector2i.ZERO)
-
-
-func test_compute_upscale_target_portrait():
-	# 512×1024, max_dim=2048 → scale=2.0 → 1024×2048
-	var result = AIStudioDialog._compute_upscale_target(Vector2i(512, 1024), 2048)
-	assert_eq(result, Vector2i(1024, 2048))
-
-
-func test_compute_upscale_target_landscape():
-	# 1024×512, max_dim=2048 → scale=2.0 → 2048×1024
-	var result = AIStudioDialog._compute_upscale_target(Vector2i(1024, 512), 2048)
-	assert_eq(result, Vector2i(2048, 1024))
-
-
-func test_compute_upscale_target_downscale():
-	# 4096×4096, max_dim=2048 → scale=0.5 → 2048×2048
-	var result = AIStudioDialog._compute_upscale_target(Vector2i(4096, 4096), 2048)
-	assert_eq(result, Vector2i(2048, 2048))
-
-
-# ========================================================
-# Upscale Tab — Setup (gallery button)
-# ========================================================
-
-func test_setup_upscale_gallery_btn_disabled_without_story():
-	_dialog.setup(null, "")
-	assert_true(_dialog._upscale_tab._choose_gallery_btn.disabled)
-
-
-func test_setup_upscale_gallery_btn_enabled_with_story():
-	_dialog.setup(RefCounted.new(), _test_dir)
-	assert_false(_dialog._upscale_tab._choose_gallery_btn.disabled)
 
 
 # ========================================================

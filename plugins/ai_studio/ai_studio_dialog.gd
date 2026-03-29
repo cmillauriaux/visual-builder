@@ -1,7 +1,7 @@
 extends Window
 
 ## Studio IA : dialogue avancé de génération d'images par IA.
-## Quatre onglets : Décliner, Expressions, Upscale, Restauration.
+## Deux onglets : Décliner, Expressions.
 
 const ComfyUIConfig = preload("res://src/services/comfyui_config.gd")
 const ComfyUIClient = preload("res://src/services/comfyui_client.gd")
@@ -13,8 +13,6 @@ const ExpressionQueueService = preload("res://src/services/expression_queue_serv
 
 const DeclinerTab = preload("res://plugins/ai_studio/ai_studio_decliner_tab.gd")
 const ExpressionsTab = preload("res://plugins/ai_studio/ai_studio_expressions_tab.gd")
-const UpscaleTab = preload("res://plugins/ai_studio/ai_studio_upscale_tab.gd")
-const HiResTab = preload("res://plugins/ai_studio/ai_studio_hires_tab.gd")
 
 const ELEMENTARY_EXPRESSIONS := [
 	"smile", "sad", "shy", "grumpy", "laughing out loud",
@@ -49,8 +47,6 @@ var _image_preview: Control
 # Tab controllers
 var _decl_tab: RefCounted = null
 var _expr_tab: RefCounted = null
-var _upscale_tab: RefCounted = null
-var _hires_tab: RefCounted = null
 
 
 func _ready() -> void:
@@ -71,15 +67,11 @@ func setup(story, story_base_path: String) -> void:
 	var has_story = story_base_path != ""
 	_decl_tab.setup(story_base_path, has_story)
 	_expr_tab.setup(story_base_path, has_story)
-	_upscale_tab.setup(story_base_path, has_story)
-	_hires_tab.setup(story_base_path, has_story)
 
 
 func _on_close() -> void:
 	_decl_tab.cancel_generation()
 	_expr_tab.cancel_generation()
-	_upscale_tab.cancel_generation()
-	_hires_tab.cancel_generation()
 	queue_free()
 
 
@@ -150,22 +142,14 @@ func _build_ui() -> void:
 
 	_decl_tab = DeclinerTab.new()
 	_expr_tab = ExpressionsTab.new()
-	_upscale_tab = UpscaleTab.new()
-	_hires_tab = HiResTab.new()
 
 	_decl_tab.initialize(self, _get_config, _negative_prompt_input,
 		_show_image_preview, _open_gallery_source_picker, _save_config, _resolve_unique_path)
 	_expr_tab.initialize(self, _get_config, _negative_prompt_input,
 		_show_image_preview, _open_gallery_source_picker, _save_config, _resolve_unique_path)
-	_upscale_tab.initialize(self, _get_config, _negative_prompt_input,
-		_show_image_preview, _open_gallery_source_picker, _save_config, _resolve_unique_path)
-	_hires_tab.initialize(self, _get_config, _negative_prompt_input,
-		_show_image_preview, _open_gallery_source_picker, _save_config, _resolve_unique_path)
 
 	_decl_tab.build_tab(_tab_container)
 	_expr_tab.build_tab(_tab_container)
-	_upscale_tab.build_tab(_tab_container)
-	_hires_tab.build_tab(_tab_container)
 
 	vbox.add_child(HSeparator.new())
 
@@ -250,16 +234,12 @@ func _apply_provider_ui(provider: int) -> void:
 func _update_all_generate_buttons() -> void:
 	_decl_tab.update_generate_button()
 	_expr_tab.update_generate_button()
-	_upscale_tab.update_generate_button()
-	_hires_tab.update_generate_button()
 
 
 func _update_cfg_hints() -> void:
 	var has_negative = _negative_prompt_input.text.strip_edges() != ""
 	_decl_tab.update_cfg_hint(has_negative)
 	_expr_tab.update_cfg_hint(has_negative)
-	_hires_tab.update_cfg_hint(has_negative)
-	# _upscale_tab intentionally excluded: upscale workflow uses fixed CFG=1 and ignores negative prompt
 
 
 # ========================================================
@@ -427,8 +407,3 @@ static func _resolve_unique_path(dir_path: String, filename: String) -> String:
 	return dir_path + "/" + name_part + "_" + str(i) + ext
 
 
-static func _compute_upscale_target(original: Vector2i, max_dim: int) -> Vector2i:
-	if original == Vector2i.ZERO:
-		return Vector2i.ZERO
-	var scale = float(max_dim) / float(max(original.x, original.y))
-	return Vector2i(roundi(original.x * scale), roundi(original.y * scale))

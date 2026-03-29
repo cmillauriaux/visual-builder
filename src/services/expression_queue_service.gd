@@ -9,14 +9,14 @@ var _current_index: int = -1
 var _cancelled: bool = false
 
 
-func build_queue(expressions: Array, prefix: String, use_live_portrait: bool = false) -> void:
+func build_queue(expressions: Array, prefix: String) -> void:
 	_items.clear()
 	_current_index = -1
 	_cancelled = false
 	for expr in expressions:
 		_items.append({
 			"expression": expr,
-			"prompt": expr if use_live_portrait else _build_prompt(expr),
+			"prompt": _build_prompt(expr),
 			"filename": _build_filename(prefix, expr),
 			"status": ItemStatus.PENDING,
 			"image": null,

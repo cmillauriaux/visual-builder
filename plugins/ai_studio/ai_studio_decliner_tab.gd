@@ -20,7 +20,6 @@ var _resolve_path_fn: Callable
 var _story_base_path: String = ""
 
 # UI widgets
-var _workflow_option: OptionButton
 var _source_preview: TextureRect
 var _source_path_label: Label
 var _choose_source_btn: Button
@@ -76,17 +75,6 @@ func build_tab(tab_container: TabContainer) -> void:
 	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vbox.add_theme_constant_override("separation", 8)
 	scroll.add_child(vbox)
-
-	# Workflow selector
-	var workflow_label = Label.new()
-	workflow_label.text = "Workflow :"
-	vbox.add_child(workflow_label)
-
-	_workflow_option = OptionButton.new()
-	_workflow_option.add_item("Création", 0)
-	_workflow_option.add_item("Expression", 1)
-	_workflow_option.selected = 0
-	vbox.add_child(_workflow_option)
 
 	# Image source
 	var source_label = Label.new()
@@ -402,9 +390,9 @@ func _on_generate_pressed() -> void:
 
 	var cfg_value = _cfg_slider.value
 	var steps_value = int(_steps_slider.value)
-	var workflow_type = _workflow_option.get_selected_id()
+	var workflow_type: int = ComfyUIClient.WorkflowType.CREATION
 	var neg_prompt = _neg_input.text.strip_edges()
-	_client.generate(config, _source_image_path, _prompt_input.text, true, cfg_value, steps_value, workflow_type, 0.5, neg_prompt, 80, "4x-UltraSharp.pth", 512, 0, 0, _megapixels_slider.value, _get_selected_loras())
+	_client.generate(config, _source_image_path, _prompt_input.text, true, cfg_value, steps_value, workflow_type, 0.5, neg_prompt, 80, _megapixels_slider.value, _get_selected_loras())
 
 
 func _on_generation_completed(image: Image) -> void:
@@ -502,7 +490,6 @@ func _set_inputs_enabled(enabled: bool) -> void:
 	_prompt_input.editable = enabled
 	_choose_source_btn.disabled = not enabled
 	_choose_gallery_btn.disabled = not enabled
-	_workflow_option.disabled = not enabled
 
 
 func _load_preview(tex_rect: TextureRect, path: String) -> void:
