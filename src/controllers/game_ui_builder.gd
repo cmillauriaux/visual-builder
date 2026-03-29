@@ -262,7 +262,7 @@ static func _build_menu_button(game: Control) -> void:
 	var s := UIScale.get_scale()
 	game._menu_button = Button.new()
 	game._menu_button.z_index = SequenceVisualEditorScript.UI_OVERLAY_Z
-	game._menu_button.text = "☰ Menu"
+	game._menu_button.text = "≡ Menu"
 	game._menu_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 	game._menu_button.offset_left = -roundi(100 * s)
 	game._menu_button.offset_right = -roundi(10 * s)

@@ -62,7 +62,7 @@ func test_builds_choice_overlay() -> void:
 func test_builds_menu_button() -> void:
 	assert_not_null(_game._menu_button, "menu button should be created")
 	assert_false(_game._menu_button.visible, "menu button should start hidden")
-	assert_eq(_game._menu_button.text, "☰ Menu")
+	assert_eq(_game._menu_button.text, "≡ Menu")
 	assert_eq(_game._menu_button.process_mode, Node.PROCESS_MODE_ALWAYS)
 
 

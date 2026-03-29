@@ -64,6 +64,27 @@ func test_no_replacement_clean_text():
 	ctx.game_node.queue_free()
 
 
+func test_no_replacement_partial_word():
+	var ctx = _create_context()
+	var result = _plugin.on_before_dialogue(ctx, "Alice", "La connière est belle")
+	assert_eq(result["text"], "La connière est belle")
+	ctx.game_node.queue_free()
+
+
+func test_no_replacement_word_prefix():
+	var ctx = _create_context()
+	var result = _plugin.on_before_dialogue(ctx, "Alice", "Le concert était bien")
+	assert_eq(result["text"], "Le concert était bien")
+	ctx.game_node.queue_free()
+
+
+func test_replacement_whole_word_with_punctuation():
+	var ctx = _create_context()
+	var result = _plugin.on_before_dialogue(ctx, "Alice", "Quel con!")
+	assert_eq(result["text"], "Quel ***!")
+	ctx.game_node.queue_free()
+
+
 func test_character_unchanged():
 	var ctx = _create_context()
 	var result = _plugin.on_before_dialogue(ctx, "Alice", "merde")
@@ -165,5 +186,15 @@ func test_contains_ignore_case():
 	assert_false(CensurePluginScript._contains_ignore_case("Hello", "xyz"))
 
 
+func test_contains_ignore_case_whole_word_only():
+	assert_false(CensurePluginScript._contains_ignore_case("connière", "con"))
+	assert_true(CensurePluginScript._contains_ignore_case("quel con !", "con"))
+	assert_false(CensurePluginScript._contains_ignore_case("concert", "con"))
+
+
 func test_replace_ignore_case():
 	assert_eq(CensurePluginScript._replace_ignore_case("Hello WORLD world", "world", "***"), "Hello *** ***")
+
+
+func test_replace_ignore_case_whole_word_only():
+	assert_eq(CensurePluginScript._replace_ignore_case("connière et con", "con", "***"), "connière et ***")

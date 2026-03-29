@@ -104,19 +104,49 @@ func _show_bubble(ctx: RefCounted) -> void:
 		)
 
 
-## Vérifie si text contient word (insensible à la casse).
+## Vérifie si le caractère à l'index donné est une lettre ou un chiffre.
+static func _is_word_char(text: String, index: int) -> bool:
+	if index < 0 or index >= text.length():
+		return false
+	var c := text.unicode_at(index)
+	# A-Z
+	if c >= 65 and c <= 90:
+		return true
+	# a-z
+	if c >= 97 and c <= 122:
+		return true
+	# 0-9
+	if c >= 48 and c <= 57:
+		return true
+	# Accented Latin (À-Ö, Ø-ö, ø-ɏ)
+	if (c >= 0xC0 and c <= 0xD6) or (c >= 0xD8 and c <= 0xF6) or (c >= 0xF8 and c <= 0x024F):
+		return true
+	return false
+
+
+## Vérifie si text contient word comme mot entier (insensible à la casse).
 static func _contains_ignore_case(text: String, word: String) -> bool:
-	return text.to_lower().contains(word.to_lower())
+	var lower := text.to_lower()
+	var lower_word := word.to_lower()
+	var pos := lower.find(lower_word)
+	while pos >= 0:
+		if not _is_word_char(text, pos - 1) and not _is_word_char(text, pos + word.length()):
+			return true
+		pos = lower.find(lower_word, pos + 1)
+	return false
 
 
-## Remplace toutes les occurrences de word dans text (insensible à la casse).
+## Remplace toutes les occurrences du mot entier word dans text (insensible à la casse).
 static func _replace_ignore_case(text: String, word: String, replacement: String) -> String:
 	var result := text
 	var lower := result.to_lower()
 	var lower_word := word.to_lower()
 	var pos := lower.find(lower_word)
 	while pos >= 0:
-		result = result.substr(0, pos) + replacement + result.substr(pos + word.length())
-		lower = result.to_lower()
-		pos = lower.find(lower_word, pos + replacement.length())
+		if not _is_word_char(result, pos - 1) and not _is_word_char(result, pos + word.length()):
+			result = result.substr(0, pos) + replacement + result.substr(pos + word.length())
+			lower = result.to_lower()
+			pos = lower.find(lower_word, pos + replacement.length())
+		else:
+			pos = lower.find(lower_word, pos + 1)
 	return result
