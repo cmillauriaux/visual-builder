@@ -126,11 +126,11 @@ static func _detect_platform() -> int:
 static func _get_user_agent() -> String:
 	if not ClassDB.class_exists(&"JavaScriptBridge"):
 		return ""
-	var expr := Expression.new()
-	if expr.parse("JavaScriptBridge.eval('navigator.userAgent || \"\"')") != OK:
+	var bridge = Engine.get_singleton(&"JavaScriptBridge")
+	if bridge == null:
 		return ""
-	var result = expr.execute([], null, false)
-	if expr.has_execute_failed() or result == null:
+	var result = bridge.call(&"eval", "navigator.userAgent || \"\"")
+	if result == null:
 		return ""
 	return str(result).to_lower()
 
@@ -139,12 +139,12 @@ static func _get_user_agent() -> String:
 static func _is_standalone() -> bool:
 	if not ClassDB.class_exists(&"JavaScriptBridge"):
 		return false
-	var expr := Expression.new()
-	var js_code := "JavaScriptBridge.eval('window.navigator.standalone === true || window.matchMedia(\"(display-mode: standalone)\").matches')"
-	if expr.parse(js_code) != OK:
+	var bridge = Engine.get_singleton(&"JavaScriptBridge")
+	if bridge == null:
 		return false
-	var result = expr.execute([], null, false)
-	if expr.has_execute_failed() or result == null:
+	var js := "window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches"
+	var result = bridge.call(&"eval", js)
+	if result == null:
 		return false
 	return result == true
 

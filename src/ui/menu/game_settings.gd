@@ -61,16 +61,11 @@ static func _is_mobile_browser() -> bool:
 		return false
 	if not ClassDB.class_exists(&"JavaScriptBridge"):
 		return false
-	var js = ClassDB.instantiate(&"JavaScriptBridge")
-	if js == null:
+	var bridge = Engine.get_singleton(&"JavaScriptBridge")
+	if bridge == null:
 		return false
-	# Utiliser Engine.get_singleton ou un appel direct ne fonctionne pas en GDScript
-	# pour les classes non-singleton. On utilise Expression pour évaluer dynamiquement.
-	var expr := Expression.new()
-	if expr.parse("JavaScriptBridge.eval('navigator.userAgent || \"\"')") != OK:
-		return false
-	var result = expr.execute()
-	if expr.has_execute_failed() or result == null:
+	var result = bridge.call(&"eval", "navigator.userAgent || \"\"")
+	if result == null:
 		return false
 	var ua: String = str(result).to_lower()
 	return ua.contains("mobile") or ua.contains("android") or ua.contains("iphone") or ua.contains("ipad")
