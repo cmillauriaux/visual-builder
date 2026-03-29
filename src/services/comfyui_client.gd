@@ -98,7 +98,7 @@ const WORKFLOW_TEMPLATE: Dictionary = {
 	"75:70": {
 		"class_type": "UNETLoader",
 		"inputs": {
-			"unet_name": "flux-2-klein-base-9b-fp8.safetensors",
+			"unet_name": "flux-2-klein-9b-fp8.safetensors",
 			"weight_dtype": "default"
 		}
 	},
@@ -299,7 +299,7 @@ const EXPRESSION_WORKFLOW_TEMPLATE: Dictionary = {
 	"75:70": {
 		"class_type": "UNETLoader",
 		"inputs": {
-			"unet_name": "flux-2-klein-base-9b-fp8.safetensors",
+			"unet_name": "flux-2-klein-9b-fp8.safetensors",
 			"weight_dtype": "default"
 		}
 	},
@@ -424,7 +424,7 @@ const FACE_DETAILER_WORKFLOW_TEMPLATE: Dictionary = {
 	"75:70": {
 		"class_type": "UNETLoader",
 		"inputs": {
-			"unet_name": "flux-2-klein-base-9b-fp8.safetensors",
+			"unet_name": "flux-2-klein-9b-fp8.safetensors",
 			"weight_dtype": "default"
 		}
 	},
@@ -547,7 +547,7 @@ const UPSCALE_WORKFLOW_TEMPLATE: Dictionary = {
 	"75:70": {
 		"class_type": "UNETLoader",
 		"inputs": {
-			"unet_name": "flux-2-klein-base-9b-fp8.safetensors",
+			"unet_name": "flux-2-klein-9b-fp8.safetensors",
 			"weight_dtype": "default"
 		}
 	},
@@ -667,7 +667,7 @@ const HIRES_WORKFLOW_TEMPLATE: Dictionary = {
 	"75:70": {
 		"class_type": "UNETLoader",
 		"inputs": {
-			"unet_name": "flux-2-klein-base-9b-fp8.safetensors",
+			"unet_name": "flux-2-klein-9b-fp8.safetensors",
 			"weight_dtype": "default"
 		}
 	},
