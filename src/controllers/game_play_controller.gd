@@ -883,15 +883,12 @@ func _play_dialogue_voice(dlg) -> void:
 	var voice_path := _get_dialogue_voice_path(dlg)
 	if voice_path == "":
 		return
-	var abs_path := _resolve_voice_path(voice_path)
-	if not FileAccess.file_exists(abs_path):
+	var resolved := MusicPlayer._resolve_path(voice_path, _story_base_path)
+	if resolved == "":
 		return
-	var bytes := FileAccess.get_file_as_bytes(abs_path)
-	if bytes.is_empty():
+	var stream: AudioStream = MusicPlayer._load_audio_stream(resolved, false)
+	if stream == null:
 		return
-	var stream := AudioStreamMP3.new()
-	stream.data = bytes
-	stream.loop = false
 	_voice_player.stream = stream
 	_voice_player.play()
 	_duck_music_volume()
@@ -926,9 +923,3 @@ func _get_dialogue_voice_path(dlg) -> String:
 	return ""
 
 
-func _resolve_voice_path(rel_path: String) -> String:
-	if rel_path.begins_with("/") or rel_path.begins_with("res://") or rel_path.begins_with("user://"):
-		return rel_path
-	if _story_base_path != "":
-		return _story_base_path + "/" + rel_path
-	return rel_path

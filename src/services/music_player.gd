@@ -175,7 +175,7 @@ static func _resolve_path(path: String, base_path: String) -> String:
 		# Tenter le fallback par nom de fichier dans base_path
 		if base_path != "":
 			var filename = path.get_file()
-			for subfolder in ["assets/music", "assets/fx"]:
+			for subfolder in ["assets/music", "assets/fx", "assets/voices"]:
 				var fallback = base_path.path_join(subfolder).path_join(filename)
 				if _audio_exists(fallback):
 					print("[MusicPlayer]   → fallback hit: '%s'" % fallback)
@@ -191,7 +191,7 @@ static func _resolve_path(path: String, base_path: String) -> String:
 			print("[MusicPlayer]   → joined NOT found: '%s'" % full)
 		# Fallback : essayer avec juste le nom du fichier dans assets/music/ et assets/fx/
 		var filename = path.get_file()
-		for subfolder in ["assets/music", "assets/fx"]:
+		for subfolder in ["assets/music", "assets/fx", "assets/voices"]:
 			var fallback = base_path.path_join(subfolder).path_join(filename)
 			if _audio_exists(fallback):
 				print("[MusicPlayer]   → fallback hit: '%s'" % fallback)
