@@ -90,6 +90,10 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 	if not partial_export.is_empty():
 		_filter_partial_chapters(story, abs_temp_story, partial_export, log_path)
 
+	# 3b-extra. Supprimer les assets non référencés (évite d'embarquer des fichiers inutilisés)
+	if platform != "web":
+		_remove_unused_assets(abs_temp_story, log_path)
+
 	# 3b. Redimensionner les images si qualité SD ou Ultra SD
 	if quality == "sd":
 		_resize_story_images(abs_temp_story, 2, log_path)
@@ -440,49 +444,108 @@ func _collect_voice_files_to_keep(scenes_dir: String, language: String, source_l
 
 
 ## Extrait les noms de fichiers voice à garder depuis le contenu YAML d'une scène.
+## Gère deux formats YAML :
+##   Inline : voice_files: { default: "path", en: "path" }
+##   Block  : voice_files:\n          default: "path"\n          en: "path"
 func _extract_voice_keeps_from_content(content: String, language: String, source_lang: String, keep_files: Dictionary) -> void:
-	# Chercher les blocs voice_files: { key: "path", ... } dans le texte brut
-	# Format: voice_files: { default: "assets/voices/uuid.mp3", en: "assets/voices/uuid_en.mp3" }
-	var pos: int = 0
-	while true:
-		var idx = content.find("voice_files:", pos)
-		if idx == -1:
-			break
-		# Trouver le bloc { ... }
-		var brace_start = content.find("{", idx)
-		if brace_start == -1:
-			break
-		var brace_end = content.find("}", brace_start)
-		if brace_end == -1:
-			break
-		var block = content.substr(brace_start + 1, brace_end - brace_start - 1)
-		# Parser les paires clé: "valeur"
-		# Ex: default: "assets/voices/uuid.mp3", en: "assets/voices/uuid_en.mp3"
-		var parts = block.split(",")
-		for part in parts:
-			part = part.strip_edges()
-			if part == "":
+	var lines = content.split("\n")
+	var i: int = 0
+	while i < lines.size():
+		var line = lines[i]
+		var stripped = line.strip_edges()
+		var vf_pos = stripped.find("voice_files:")
+		if vf_pos == -1:
+			i += 1
+			continue
+
+		var after_colon = stripped.substr(vf_pos + "voice_files:".length()).strip_edges()
+		if after_colon.begins_with("{"):
+			# Format inline : voice_files: { default: "path", en: "path" }
+			var brace_end = after_colon.find("}")
+			if brace_end == -1:
+				i += 1
 				continue
-			var colon = part.find(":")
-			if colon == -1:
+			var block = after_colon.substr(1, brace_end - 1)
+			_keep_voice_from_pairs(block.split(","), language, source_lang, keep_files, block)
+			i += 1
+		elif after_colon == "" or after_colon == "{}":
+			if after_colon == "{}":
+				i += 1
 				continue
-			var key = part.substr(0, colon).strip_edges()
-			var val = part.substr(colon + 1).strip_edges()
-			# Retirer les guillemets
-			val = val.trim_prefix("\"").trim_suffix("\"")
-			if val == "":
-				continue
-			var filename = val.get_file()
-			# Garder le fichier si c'est la langue sélectionnée ou si c'est "default"
-			# quand la langue sélectionnée est la langue source
-			if key == language:
-				keep_files[filename] = true
-			elif key == "default" and language == source_lang:
-				keep_files[filename] = true
-			elif key == "default" and not block.contains(language + ":"):
-				# Si la langue demandée n'a pas de fichier spécifique, garder le default
-				keep_files[filename] = true
-		pos = brace_end + 1
+			# Format block : lignes indentées qui suivent
+			var base_indent = _get_indent(line)
+			var pairs: Array = []
+			var has_language_key: bool = false
+			i += 1
+			while i < lines.size():
+				var next_line = lines[i]
+				if next_line.strip_edges() == "":
+					i += 1
+					continue
+				var next_indent = _get_indent(next_line)
+				if next_indent <= base_indent:
+					break
+				var pair = next_line.strip_edges()
+				pairs.append(pair)
+				# Vérifier si la langue demandée est présente
+				if pair.begins_with(language + ":"):
+					has_language_key = true
+				i += 1
+			# Traiter les paires collectées
+			for pair in pairs:
+				var colon = pair.find(":")
+				if colon == -1:
+					continue
+				var key = pair.substr(0, colon).strip_edges()
+				var val = pair.substr(colon + 1).strip_edges()
+				val = val.trim_prefix("\"").trim_suffix("\"")
+				if val == "":
+					continue
+				var filename = val.get_file()
+				if key == language:
+					keep_files[filename] = true
+				elif key == "default" and language == source_lang:
+					keep_files[filename] = true
+				elif key == "default" and not has_language_key:
+					keep_files[filename] = true
+		else:
+			i += 1
+
+
+## Retourne le niveau d'indentation (nombre d'espaces en début de ligne).
+func _get_indent(line: String) -> int:
+	var count: int = 0
+	for ch_idx in line.length():
+		if line[ch_idx] == " ":
+			count += 1
+		elif line[ch_idx] == "\t":
+			count += 4
+		else:
+			break
+	return count
+
+
+## Traite les paires clé: "valeur" d'un bloc inline voice_files.
+func _keep_voice_from_pairs(parts: Array, language: String, source_lang: String, keep_files: Dictionary, block: String) -> void:
+	for part in parts:
+		var p: String = part.strip_edges()
+		if p == "":
+			continue
+		var colon = p.find(":")
+		if colon == -1:
+			continue
+		var key = p.substr(0, colon).strip_edges()
+		var val = p.substr(colon + 1).strip_edges()
+		val = val.trim_prefix("\"").trim_suffix("\"")
+		if val == "":
+			continue
+		var filename = val.get_file()
+		if key == language:
+			keep_files[filename] = true
+		elif key == "default" and language == source_lang:
+			keep_files[filename] = true
+		elif key == "default" and not block.contains(language + ":"):
+			keep_files[filename] = true
 
 
 ## Filtre les chapitres selon l'intervalle partial_export {start_idx, end_idx}.
@@ -514,6 +577,9 @@ func _filter_partial_chapters(story, story_dir: String, partial_export: Dictiona
 				entry = dir.get_next()
 			dir.list_dir_end()
 
+	# Patcher les conséquences redirect_chapter orphelines → to_be_continued
+	_patch_orphan_redirects(chapters_dir, selected_uuids, log_path)
+
 	# Mettre à jour story.yaml pour ne lister que les chapitres sélectionnés
 	var story_yaml_path = story_dir + "/story.yaml"
 	if not FileAccess.file_exists(story_yaml_path):
@@ -536,6 +602,79 @@ func _filter_partial_chapters(story, story_dir: String, partial_export: Dictiona
 		f.store_string(updated_yaml)
 		f.close()
 	_append_log(log_path, "→ story.yaml mis à jour : %d chapitres conservés" % filtered_chapters.size())
+
+
+## Convertit les conséquences redirect_chapter orphelines en to_be_continued.
+## Une conséquence est orpheline si son target ne fait pas partie des selected_uuids.
+func _patch_orphan_redirects(chapters_dir: String, selected_uuids: Array, log_path: String) -> void:
+	if not DirAccess.dir_exists_absolute(chapters_dir):
+		return
+	var YamlParser = load("res://src/persistence/yaml_parser.gd")
+	if YamlParser == null:
+		return
+	for chapter_uuid in selected_uuids:
+		var scenes_dir = chapters_dir + "/" + chapter_uuid + "/scenes"
+		if not DirAccess.dir_exists_absolute(scenes_dir):
+			continue
+		var dir = DirAccess.open(scenes_dir)
+		if dir == null:
+			continue
+		dir.list_dir_begin()
+		var entry = dir.get_next()
+		while entry != "":
+			if not dir.current_is_dir() and entry.ends_with(".yaml"):
+				var scene_path = scenes_dir + "/" + entry
+				var modified = _patch_scene_redirects(scene_path, selected_uuids, YamlParser, log_path)
+				if modified:
+					_append_log(log_path, "→ Scène patchée (redirect→to_be_continued) : " + chapter_uuid + "/scenes/" + entry)
+			entry = dir.get_next()
+		dir.list_dir_end()
+
+
+## Parcourt un fichier scene YAML et convertit les redirect_chapter orphelins en to_be_continued.
+## Retourne true si le fichier a été modifié.
+func _patch_scene_redirects(scene_path: String, selected_uuids: Array, YamlParser, log_path: String) -> bool:
+	var content = FileAccess.get_file_as_string(scene_path)
+	if content == "":
+		return false
+	var scene_dict = YamlParser.yaml_to_dict(content)
+	if scene_dict == null or not scene_dict.has("sequences"):
+		return false
+	var modified = false
+	for seq in scene_dict["sequences"]:
+		if not seq is Dictionary or not seq.has("ending"):
+			continue
+		var ending = seq["ending"]
+		if not ending is Dictionary:
+			continue
+		if ending.get("type") == "auto_redirect" and ending.has("consequence"):
+			if _patch_consequence(ending["consequence"], selected_uuids):
+				modified = true
+		elif ending.get("type") == "choices" and ending.has("choices"):
+			for choice in ending["choices"]:
+				if choice is Dictionary and choice.has("consequence"):
+					if _patch_consequence(choice["consequence"], selected_uuids):
+						modified = true
+	if modified:
+		var updated_yaml = YamlParser.dict_to_yaml(scene_dict)
+		var f = FileAccess.open(scene_path, FileAccess.WRITE)
+		if f:
+			f.store_string(updated_yaml)
+			f.close()
+	return modified
+
+
+## Convertit une conséquence redirect_chapter orpheline en to_be_continued.
+## Retourne true si la conséquence a été modifiée.
+func _patch_consequence(consequence: Dictionary, selected_uuids: Array) -> bool:
+	if consequence.get("type") != "redirect_chapter":
+		return false
+	var target = consequence.get("target", "")
+	if target == "" or selected_uuids.has(target):
+		return false
+	consequence["type"] = "to_be_continued"
+	consequence.erase("target")
+	return true
 
 
 func _find_godot() -> String:
@@ -979,6 +1118,55 @@ func _find_yaml_files_recursive(dir_path: String) -> Array:
 			result.append(full_path)
 		file_name = dir.get_next()
 	return result
+
+
+## Supprime les fichiers assets de story/assets/ qui ne sont référencés dans aucun fichier YAML.
+## Utilisé pour les exports desktop afin de ne pas embarquer d'assets inutilisés dans le PCK.
+func _remove_unused_assets(story_dir: String, log_path: String) -> void:
+	var yaml_files := _find_yaml_files_recursive(story_dir)
+	var all_yaml_content: Array = []
+	for yaml_path in yaml_files:
+		all_yaml_content.append(FileAccess.get_file_as_string(yaml_path))
+	var combined_yaml := "\n".join(PackedStringArray(all_yaml_content))
+
+	var asset_extensions := ["png", "jpg", "jpeg", "mp3", "ogg", "wav", "webp"]
+	var removed := 0
+
+	var assets_dir := story_dir + "/assets"
+	if not DirAccess.dir_exists_absolute(assets_dir):
+		return
+
+	removed = _remove_unreferenced_in_dir(assets_dir, combined_yaml, asset_extensions)
+
+	if removed > 0:
+		_append_log(log_path, "-> %d fichier(s) asset non reference(s) supprime(s)" % removed)
+
+
+## Parcourt récursivement un dossier et supprime les fichiers media non référencés dans le YAML.
+func _remove_unreferenced_in_dir(dir_path: String, yaml_content: String, extensions: Array) -> int:
+	var dir := DirAccess.open(dir_path)
+	if dir == null:
+		return 0
+	var removed := 0
+	var entries: Array = []
+	dir.list_dir_begin()
+	var entry := dir.get_next()
+	while entry != "":
+		if not entry.begins_with("."):
+			entries.append(entry)
+		entry = dir.get_next()
+	dir.list_dir_end()
+	for e in entries:
+		var name: String = str(e)
+		var full_path: String = dir_path + "/" + name
+		if DirAccess.dir_exists_absolute(full_path):
+			removed += _remove_unreferenced_in_dir(full_path, yaml_content, extensions)
+		else:
+			var ext: String = name.get_extension().to_lower()
+			if ext in extensions and not yaml_content.contains(name):
+				DirAccess.remove_absolute(full_path)
+				removed += 1
+	return removed
 
 
 func _append_log(log_path: String, message: String) -> void:
