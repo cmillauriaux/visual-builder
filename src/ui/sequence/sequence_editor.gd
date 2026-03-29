@@ -14,6 +14,7 @@ var _playing: bool = false
 var _play_index: int = -1
 var _visible_characters: int = 0
 var _text_fully_displayed: bool = false
+var _display_text_length: int = 0
 
 # --- Signaux ---
 signal dialogue_selected(index: int)
@@ -352,9 +353,15 @@ func advance_play() -> void:
 
 # --- Typewriter ---
 
+func set_display_text_length(length: int) -> void:
+	_display_text_length = length
+
 func _start_typewriter() -> void:
 	_visible_characters = 0
 	_text_fully_displayed = false
+	# Default to original text length; callers override via set_display_text_length()
+	if _play_index >= 0 and _play_index < _sequence.dialogues.size():
+		_display_text_length = _sequence.dialogues[_play_index].text.length()
 
 func is_text_fully_displayed() -> bool:
 	return _text_fully_displayed
@@ -365,17 +372,15 @@ func get_visible_characters() -> int:
 func skip_typewriter() -> void:
 	if not _playing or _play_index < 0:
 		return
-	var dlg = _sequence.dialogues[_play_index]
-	_visible_characters = dlg.text.length()
+	_visible_characters = _display_text_length
 	_text_fully_displayed = true
 
 func advance_typewriter() -> void:
 	if not _playing or _play_index < 0 or _text_fully_displayed:
 		return
-	var dlg = _sequence.dialogues[_play_index]
 	_visible_characters += 1
-	if _visible_characters >= dlg.text.length():
-		_visible_characters = dlg.text.length()
+	if _visible_characters >= _display_text_length:
+		_visible_characters = _display_text_length
 		_text_fully_displayed = true
 
 func skip_to_end() -> void:

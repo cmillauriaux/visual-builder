@@ -294,6 +294,25 @@ func test_typewriter_get_visible_text():
 	_editor.skip_typewriter()
 	assert_eq(_editor.get_visible_characters(), 5)
 
+func test_typewriter_uses_display_text_length():
+	_add_dialogue("A", "Bonjour")  # 7 chars original
+	_editor.load_sequence(_sequence)
+	_editor.start_play()
+	# Simulate translated text being longer (e.g. "Good morning" = 12 chars)
+	_editor.set_display_text_length(12)
+	_editor.skip_typewriter()
+	assert_eq(_editor.get_visible_characters(), 12)
+
+func test_typewriter_advance_uses_display_text_length():
+	_add_dialogue("A", "Salut")  # 5 chars original
+	_editor.load_sequence(_sequence)
+	_editor.start_play()
+	_editor.set_display_text_length(8)  # translated text is 8 chars
+	for i in range(8):
+		_editor.advance_typewriter()
+	assert_true(_editor.is_text_fully_displayed())
+	assert_eq(_editor.get_visible_characters(), 8)
+
 # --- Signaux dialogue_selected ---
 
 func test_dialogue_selected_signal():

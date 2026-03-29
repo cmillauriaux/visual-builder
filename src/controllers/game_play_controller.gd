@@ -371,6 +371,7 @@ func on_play_dialogue_changed(index: int) -> void:
 		display_text = result["text"]
 	_play_character_label.text = display_character
 	_play_text_label.text = display_text
+	_sequence_editor_ctrl.set_display_text_length(display_text.length())
 	add_history_entry(display_character, display_text)
 	_play_text_label.visible_characters = 0
 	# Dispatch after-dialogue to plugins

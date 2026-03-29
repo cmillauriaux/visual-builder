@@ -177,6 +177,7 @@ func on_play_dialogue_changed(index: int) -> void:
 	var dlg = seq.dialogues[index]
 	var display_character: String = _play_tr(dlg.character)
 	var display_text: String = _play_tr(dlg.text)
+	_sequence_editor_ctrl.set_display_text_length(display_text.length())
 	EventBus.play_dialogue_changed.emit(display_character, display_text, index)
 
 	# Play dialogue voice if available
