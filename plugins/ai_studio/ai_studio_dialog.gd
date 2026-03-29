@@ -1,7 +1,7 @@
 extends Window
 
 ## Studio IA : dialogue avancé de génération d'images par IA.
-## Trois onglets : Décliner, Expressions, Outpainting.
+## Six onglets : Décliner, Expressions, Outpainting, Upscale, Enhance, Upscale + Enhance.
 
 const ComfyUIConfig = preload("res://src/services/comfyui_config.gd")
 const ComfyUIClient = preload("res://src/services/comfyui_client.gd")
@@ -14,6 +14,9 @@ const ExpressionQueueService = preload("res://src/services/expression_queue_serv
 const DeclinerTab = preload("res://plugins/ai_studio/ai_studio_decliner_tab.gd")
 const ExpressionsTab = preload("res://plugins/ai_studio/ai_studio_expressions_tab.gd")
 const OutpaintTab = preload("res://plugins/ai_studio/ai_studio_outpaint_tab.gd")
+const UpscaleTab = preload("res://plugins/ai_studio/ai_studio_upscale_tab.gd")
+const EnhanceTab = preload("res://plugins/ai_studio/ai_studio_enhance_tab.gd")
+const UpscaleEnhanceTab = preload("res://plugins/ai_studio/ai_studio_upscale_enhance_tab.gd")
 
 const ELEMENTARY_EXPRESSIONS := [
 	"smile", "sad", "shy", "grumpy", "laughing out loud",
@@ -49,6 +52,9 @@ var _image_preview: Control
 var _decl_tab: RefCounted = null
 var _expr_tab: RefCounted = null
 var _outpaint_tab: RefCounted = null
+var _upscale_tab: RefCounted = null
+var _enhance_tab: RefCounted = null
+var _upscale_enhance_tab: RefCounted = null
 
 
 func _ready() -> void:
@@ -70,12 +76,18 @@ func setup(story, story_base_path: String) -> void:
 	_decl_tab.setup(story_base_path, has_story)
 	_expr_tab.setup(story_base_path, has_story)
 	_outpaint_tab.setup(story_base_path, has_story)
+	_upscale_tab.setup(story_base_path, has_story)
+	_enhance_tab.setup(story_base_path, has_story)
+	_upscale_enhance_tab.setup(story_base_path, has_story)
 
 
 func _on_close() -> void:
 	_decl_tab.cancel_generation()
 	_expr_tab.cancel_generation()
 	_outpaint_tab.cancel_generation()
+	_upscale_tab.cancel_generation()
+	_enhance_tab.cancel_generation()
+	_upscale_enhance_tab.cancel_generation()
 	queue_free()
 
 
@@ -147,17 +159,14 @@ func _build_ui() -> void:
 	_decl_tab = DeclinerTab.new()
 	_expr_tab = ExpressionsTab.new()
 	_outpaint_tab = OutpaintTab.new()
+	_upscale_tab = UpscaleTab.new()
+	_enhance_tab = EnhanceTab.new()
+	_upscale_enhance_tab = UpscaleEnhanceTab.new()
 
-	_decl_tab.initialize(self, _get_config, _negative_prompt_input,
-		_show_image_preview, _open_gallery_source_picker, _save_config, _resolve_unique_path)
-	_expr_tab.initialize(self, _get_config, _negative_prompt_input,
-		_show_image_preview, _open_gallery_source_picker, _save_config, _resolve_unique_path)
-	_outpaint_tab.initialize(self, _get_config, _negative_prompt_input,
-		_show_image_preview, _open_gallery_source_picker, _save_config, _resolve_unique_path)
-
-	_decl_tab.build_tab(_tab_container)
-	_expr_tab.build_tab(_tab_container)
-	_outpaint_tab.build_tab(_tab_container)
+	for tab in [_decl_tab, _expr_tab, _outpaint_tab, _upscale_tab, _enhance_tab, _upscale_enhance_tab]:
+		tab.initialize(self, _get_config, _negative_prompt_input,
+			_show_image_preview, _open_gallery_source_picker, _save_config, _resolve_unique_path)
+		tab.build_tab(_tab_container)
 
 	vbox.add_child(HSeparator.new())
 
@@ -243,13 +252,15 @@ func _update_all_generate_buttons() -> void:
 	_decl_tab.update_generate_button()
 	_expr_tab.update_generate_button()
 	_outpaint_tab.update_generate_button()
+	_upscale_tab.update_generate_button()
+	_enhance_tab.update_generate_button()
+	_upscale_enhance_tab.update_generate_button()
 
 
 func _update_cfg_hints() -> void:
 	var has_negative = _negative_prompt_input.text.strip_edges() != ""
-	_decl_tab.update_cfg_hint(has_negative)
-	_expr_tab.update_cfg_hint(has_negative)
-	_outpaint_tab.update_cfg_hint(has_negative)
+	for tab in [_decl_tab, _expr_tab, _outpaint_tab, _upscale_tab, _enhance_tab, _upscale_enhance_tab]:
+		tab.update_cfg_hint(has_negative)
 
 
 # ========================================================

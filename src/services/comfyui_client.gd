@@ -8,7 +8,7 @@ signal generation_completed(image: Image)
 signal generation_failed(error: String)
 signal generation_progress(status: String)
 
-enum WorkflowType { CREATION = 0, EXPRESSION = 1, OUTPAINT = 2 }
+enum WorkflowType { CREATION = 0, EXPRESSION = 1, OUTPAINT = 2, UPSCALE = 3, ENHANCE = 4, UPSCALE_ENHANCE = 5 }
 
 var _generating: bool = false
 var _prompt_id: String = ""
@@ -30,6 +30,8 @@ var _outpaint_right: int = 0
 var _outpaint_bottom: int = 0
 var _outpaint_feathering: int = 24
 var _outpaint_guidance: float = 40.0
+var _upscale_factor: float = 2.0
+var _enhance_shift: float = 3.0
 
 # --- Workflow template (Flux 2 Klein + BiRefNet) ---
 # Reproduit exactement Edit_Image_Transparent_API.json
@@ -515,6 +517,130 @@ const OUTPAINT_WORKFLOW_TEMPLATE: Dictionary = {
 }
 
 
+# --- Upscale / Enhance workflow template (z-image-turbo + RealESRGAN) ---
+# Base complète utilisée pour Upscale+Enhance. Les builders Upscale-only et
+# Enhance-only suppriment les nœuds non nécessaires.
+# Paramètres dynamiques : 77.inputs.image, 87:67.inputs.text, 87:69.inputs.seed/steps/cfg/denoise,
+#                         87:81.inputs.scale_by, 87:70.inputs.shift, 87:78.inputs.megapixels
+
+const UPSCALE_ENHANCE_WORKFLOW_TEMPLATE: Dictionary = {
+	"9": {
+		"class_type": "SaveImage",
+		"inputs": {
+			"filename_prefix": "z-image-upscaled",
+			"images": ["87:65", 0]
+		}
+	},
+	"77": {
+		"class_type": "LoadImage",
+		"inputs": {
+			"image": ""
+		}
+	},
+	"87:76": {
+		"class_type": "UpscaleModelLoader",
+		"inputs": {
+			"model_name": "RealESRGAN_x4plus.safetensors"
+		}
+	},
+	"87:78": {
+		"class_type": "ImageScaleToTotalPixels",
+		"inputs": {
+			"upscale_method": "lanczos",
+			"megapixels": 1,
+			"resolution_steps": 1,
+			"image": ["77", 0]
+		}
+	},
+	"87:79": {
+		"class_type": "ImageUpscaleWithModel",
+		"inputs": {
+			"upscale_model": ["87:76", 0],
+			"image": ["87:78", 0]
+		}
+	},
+	"87:81": {
+		"class_type": "ImageScaleBy",
+		"inputs": {
+			"upscale_method": "lanczos",
+			"scale_by": 0.5,
+			"image": ["87:79", 0]
+		}
+	},
+	"87:66": {
+		"class_type": "UNETLoader",
+		"inputs": {
+			"unet_name": "z_image_turbo_bf16.safetensors",
+			"weight_dtype": "default"
+		}
+	},
+	"87:62": {
+		"class_type": "CLIPLoader",
+		"inputs": {
+			"clip_name": "qwen_3_4b.safetensors",
+			"type": "lumina2",
+			"device": "default"
+		}
+	},
+	"87:63": {
+		"class_type": "VAELoader",
+		"inputs": {
+			"vae_name": "ae.safetensors"
+		}
+	},
+	"87:70": {
+		"class_type": "ModelSamplingAuraFlow",
+		"inputs": {
+			"shift": 3,
+			"model": ["87:66", 0]
+		}
+	},
+	"87:67": {
+		"class_type": "CLIPTextEncode",
+		"inputs": {
+			"text": "",
+			"clip": ["87:62", 0]
+		}
+	},
+	"87:71": {
+		"class_type": "CLIPTextEncode",
+		"inputs": {
+			"text": "",
+			"clip": ["87:62", 0]
+		}
+	},
+	"87:80": {
+		"class_type": "VAEEncode",
+		"inputs": {
+			"pixels": ["87:81", 0],
+			"vae": ["87:63", 0]
+		}
+	},
+	"87:69": {
+		"class_type": "KSampler",
+		"inputs": {
+			"seed": 0,
+			"steps": 5,
+			"cfg": 1,
+			"sampler_name": "dpmpp_2m_sde",
+			"scheduler": "beta",
+			"denoise": 0.2,
+			"model": ["87:70", 0],
+			"positive": ["87:67", 0],
+			"negative": ["87:71", 0],
+			"latent_image": ["87:80", 0]
+		}
+	},
+	"87:65": {
+		"class_type": "VAEDecode",
+		"inputs": {
+			"samples": ["87:69", 0],
+			"vae": ["87:63", 0]
+		}
+	}
+}
+
+
 func is_generating() -> bool:
 	return _generating
 
@@ -571,9 +697,64 @@ func _build_outpaint_workflow(filename: String, prompt_text: String, seed: int, 
 	return wf
 
 
+func _build_upscale_workflow(filename: String) -> Dictionary:
+	var wf = UPSCALE_ENHANCE_WORKFLOW_TEMPLATE.duplicate(true)
+	wf["77"]["inputs"]["image"] = filename
+	wf["87:81"]["inputs"]["scale_by"] = _upscale_factor / 4.0
+	# Image directement depuis le LoadImage (pas de normalisation megapixels)
+	wf["87:79"]["inputs"]["image"] = ["77", 0]
+	# Sauvegarder la sortie de l'upscale (pas de VAEDecode)
+	wf["9"]["inputs"]["images"] = ["87:81", 0]
+	# Supprimer les nœuds enhance + normalisation
+	for key in ["87:78", "87:66", "87:62", "87:63", "87:70", "87:67", "87:71", "87:80", "87:69", "87:65"]:
+		wf.erase(key)
+	return wf
+
+
+func _build_enhance_workflow(filename: String, prompt_text: String, seed: int, cfg: float, steps: int, denoise: float, negative_prompt: String) -> Dictionary:
+	var wf = UPSCALE_ENHANCE_WORKFLOW_TEMPLATE.duplicate(true)
+	wf["77"]["inputs"]["image"] = filename
+	wf["87:67"]["inputs"]["text"] = prompt_text
+	wf["87:69"]["inputs"]["seed"] = seed
+	wf["87:69"]["inputs"]["steps"] = steps
+	wf["87:69"]["inputs"]["cfg"] = cfg
+	wf["87:69"]["inputs"]["denoise"] = denoise
+	wf["87:70"]["inputs"]["shift"] = _enhance_shift
+	if negative_prompt.strip_edges() != "":
+		wf["87:71"]["inputs"]["text"] = negative_prompt
+	# Encoder l'image originale directement (pas d'upscale)
+	wf["87:80"]["inputs"]["pixels"] = ["77", 0]
+	# Supprimer les nœuds upscale
+	for key in ["87:76", "87:78", "87:79", "87:81"]:
+		wf.erase(key)
+	return wf
+
+
+func _build_upscale_enhance_workflow(filename: String, prompt_text: String, seed: int, cfg: float, steps: int, denoise: float, megapixels: float, negative_prompt: String) -> Dictionary:
+	var wf = UPSCALE_ENHANCE_WORKFLOW_TEMPLATE.duplicate(true)
+	wf["77"]["inputs"]["image"] = filename
+	wf["87:81"]["inputs"]["scale_by"] = _upscale_factor / 4.0
+	wf["87:78"]["inputs"]["megapixels"] = megapixels
+	wf["87:67"]["inputs"]["text"] = prompt_text
+	wf["87:69"]["inputs"]["seed"] = seed
+	wf["87:69"]["inputs"]["steps"] = steps
+	wf["87:69"]["inputs"]["cfg"] = cfg
+	wf["87:69"]["inputs"]["denoise"] = denoise
+	wf["87:70"]["inputs"]["shift"] = _enhance_shift
+	if negative_prompt.strip_edges() != "":
+		wf["87:71"]["inputs"]["text"] = negative_prompt
+	return wf
+
+
 func build_workflow(filename: String, prompt_text: String, seed: int, remove_background: bool = true, cfg: float = 1.0, steps: int = 4, workflow_type: int = WorkflowType.CREATION, denoise: float = 0.5, negative_prompt: String = "", face_box_size: int = 80, megapixels: float = 1.0, loras: Array = []) -> Dictionary:
 	if workflow_type == WorkflowType.OUTPAINT:
 		return _build_outpaint_workflow(filename, prompt_text, seed, cfg, steps, negative_prompt)
+	if workflow_type == WorkflowType.UPSCALE:
+		return _build_upscale_workflow(filename)
+	if workflow_type == WorkflowType.ENHANCE:
+		return _build_enhance_workflow(filename, prompt_text, seed, cfg, steps, denoise, negative_prompt)
+	if workflow_type == WorkflowType.UPSCALE_ENHANCE:
+		return _build_upscale_enhance_workflow(filename, prompt_text, seed, cfg, steps, denoise, megapixels, negative_prompt)
 	if workflow_type == WorkflowType.EXPRESSION:
 		return _build_expression_workflow(filename, prompt_text, seed, remove_background, cfg, steps, denoise, negative_prompt, face_box_size, megapixels)
 	var wf = WORKFLOW_TEMPLATE.duplicate(true)
@@ -729,6 +910,46 @@ func parse_history_response(json_str: String, prompt_id: String) -> Dictionary:
 	return {"status": "error", "error": "Aucune image dans les sorties"}
 
 # --- Full generation flow ---
+
+func generate_upscale_enhance(config: RefCounted, source_image_path: String, workflow_type: int, prompt_text: String, factor: float, denoise: float, steps: int, cfg: float, shift: float, megapixels: float, negative_prompt: String) -> void:
+	if _generating:
+		generation_failed.emit("Une génération est déjà en cours")
+		return
+
+	_generating = true
+	_cancelled = false
+	_config = config
+	_workflow_type = workflow_type
+	_cfg = cfg
+	_steps = steps
+	_denoise = denoise
+	_negative_prompt = negative_prompt
+	_remove_background = false
+	_megapixels = megapixels
+	_loras = []
+	_upscale_factor = factor
+	_enhance_shift = shift
+
+	generation_progress.emit("Chargement de l'image source...")
+
+	var file = FileAccess.open(source_image_path, FileAccess.READ)
+	if file == null:
+		_generating = false
+		generation_failed.emit("Impossible d'ouvrir l'image : " + source_image_path)
+		return
+
+	var file_bytes = file.get_buffer(file.get_length())
+	file.close()
+
+	var filename = source_image_path.get_file()
+
+	if _config.is_runpod():
+		generation_progress.emit("Envoi vers RunPod...")
+		_do_runpod_run(filename, file_bytes, prompt_text)
+	else:
+		generation_progress.emit("Upload de l'image vers ComfyUI...")
+		_do_upload(filename, file_bytes, prompt_text)
+
 
 func generate_outpaint(config: RefCounted, source_image_path: String, prompt_text: String, pad_left: int, pad_top: int, pad_right: int, pad_bottom: int, feathering: int, guidance: float, cfg: float, steps: int, negative_prompt: String) -> void:
 	if _generating:
