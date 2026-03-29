@@ -46,6 +46,8 @@ static func _rewrite_sequence_paths(sequence, new_base: String) -> void:
 	for dialogue in sequence.dialogues:
 		for fg in dialogue.foregrounds:
 			fg.image = _rewrite_path(fg.image, new_base, "foregrounds")
+		for lang in dialogue.voice_files:
+			dialogue.voice_files[lang] = _rewrite_path(dialogue.voice_files[lang], new_base, "voices")
 
 
 static func _rewrite_path(path: String, new_base: String, subfolder: String) -> String:

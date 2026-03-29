@@ -161,7 +161,7 @@ func _init():
 	# 6. Supprimer les assets orphelins (présents dans story/assets/ mais non référencés
 	#    dans les séquences et non nécessaires pour le menu). Sans cette étape, ces fichiers
 	#    (ex: variantes d'expressions inutilisées) gonflent inutilement le core PCK.
-	var cleanup_subdirs := ["assets/foregrounds", "assets/backgrounds", "assets/music"]
+	var cleanup_subdirs := ["assets/foregrounds", "assets/backgrounds", "assets/music", "assets/voices"]
 	var orphan_removed := 0
 	for subdir in cleanup_subdirs:
 		orphan_removed += _remove_orphan_assets(abs_story + "/" + subdir, abs_story, menu_assets)
@@ -339,3 +339,7 @@ func _collect_sequence_assets(sequence, assets: Array) -> void:
 		for fg in dialogue.foregrounds:
 			if fg.image != "":
 				assets.append(fg.image)
+		for lang in dialogue.voice_files:
+			var vf: String = dialogue.voice_files[lang]
+			if vf != "":
+				assets.append(vf)

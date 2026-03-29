@@ -147,6 +147,52 @@ func test_rewrite_full_story_roundtrip():
 	assert_eq(seq.dialogues[0].foregrounds[0].image, "res://story/assets/foregrounds/npc.png")
 	# Dialogue sans foreground inchangé
 	assert_eq(seq.dialogues[1].foregrounds.size(), 0)
+	# Voice files réécrites
+	assert_eq(seq.dialogues[0].voice_files["fr"], "res://story/assets/voices/dlg1_fr.mp3")
+
+
+# --- Tests de réécriture des voice_files des dialogues ---
+
+func test_rewrite_dialogue_voice_files_user_path():
+	var story = _create_story_with_background("")
+	story.chapters[0].scenes[0].sequences[0].dialogues[0].voice_files = {
+		"fr": "user://stories/test/assets/voices/dlg1_fr.mp3",
+		"en": "user://stories/test/assets/voices/dlg1_en.mp3"
+	}
+	StorySaver.save_story(story, _test_dir)
+
+	var result = StoryPathRewriter.rewrite_story_paths(_test_dir, "res://story")
+
+	assert_true(result)
+	var loaded = StorySaver.load_story(_test_dir)
+	var vf = loaded.chapters[0].scenes[0].sequences[0].dialogues[0].voice_files
+	assert_eq(vf["fr"], "res://story/assets/voices/dlg1_fr.mp3")
+	assert_eq(vf["en"], "res://story/assets/voices/dlg1_en.mp3")
+
+
+func test_rewrite_dialogue_voice_files_already_res():
+	var story = _create_story_with_background("")
+	story.chapters[0].scenes[0].sequences[0].dialogues[0].voice_files = {
+		"fr": "res://story/assets/voices/dlg1_fr.mp3"
+	}
+	StorySaver.save_story(story, _test_dir)
+
+	StoryPathRewriter.rewrite_story_paths(_test_dir, "res://story")
+
+	var loaded = StorySaver.load_story(_test_dir)
+	var vf = loaded.chapters[0].scenes[0].sequences[0].dialogues[0].voice_files
+	assert_eq(vf["fr"], "res://story/assets/voices/dlg1_fr.mp3")
+
+
+func test_rewrite_dialogue_voice_files_empty_dict():
+	var story = _create_story_with_background("")
+	# voice_files is empty by default
+	StorySaver.save_story(story, _test_dir)
+
+	StoryPathRewriter.rewrite_story_paths(_test_dir, "res://story")
+
+	var loaded = StorySaver.load_story(_test_dir)
+	assert_true(loaded.chapters[0].scenes[0].sequences[0].dialogues[0].voice_files.is_empty())
 
 
 # --- Test story introuvable ---
@@ -254,6 +300,7 @@ func _create_full_story() -> RefCounted:
 	dlg_fg.fg_name = "PNJ"
 	dlg_fg.image = "user://stories/aventure/assets/foregrounds/npc.png"
 	dlg1.foregrounds.append(dlg_fg)
+	dlg1.voice_files = {"fr": "user://stories/aventure/assets/voices/dlg1_fr.mp3"}
 	seq.dialogues.append(dlg1)
 
 	# Dialogue 2 sans foreground
