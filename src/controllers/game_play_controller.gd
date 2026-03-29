@@ -908,13 +908,15 @@ func _restore_music_volume() -> void:
 func _get_dialogue_voice_path(dlg) -> String:
 	var voice_files = dlg.get("voice_files")
 	if voice_files != null and voice_files is Dictionary and not voice_files.is_empty():
-		var ELConfig = load("res://plugins/voice_studio/elevenlabs_config.gd")
-		if ELConfig:
-			var cfg = ELConfig.new()
-			cfg.load_from()
-			var lang: String = cfg.get_language_code()
-			if lang != "" and voice_files.has(lang):
-				return voice_files[lang]
+		# Utiliser la langue du jeu (settings) — pas la config ElevenLabs (outil auteur)
+		var lang: String = ""
+		if _game and _game.get("_settings") != null and _game._settings.get("language") != null:
+			lang = str(_game._settings.language)
+		if lang != "" and voice_files.has(lang):
+			return voice_files[lang]
+		# Fallback: "default" key, then first available
+		if voice_files.has("default"):
+			return voice_files["default"]
 		for key in voice_files:
 			return voice_files[key]
 	var old_vf = dlg.get("voice_file")

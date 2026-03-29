@@ -20,7 +20,7 @@ class ExportResult:
 
 
 ## Exécute l'exportation pour une story donnée.
-func export_story(story: RefCounted, platform: String, output_path: String, story_path: String, quality: String = "hd", export_options: Dictionary = {}) -> ExportResult:
+func export_story(story: RefCounted, platform: String, output_path: String, story_path: String, quality: String = "hd", export_options: Dictionary = {}, language: String = "", partial_export: Dictionary = {}) -> ExportResult:
 	if story == null:
 		return ExportResult.new(false, output_path, "", "Aucune histoire chargée.")
 
@@ -81,7 +81,15 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 	if story.get("ui_theme_mode") != "custom":
 		story_exclude.append("ui")
 	_copy_dir_recursive(abs_story_dir, abs_temp_story, story_exclude)
-	
+
+	# 3b-extra. Filtrer les langues si une langue spécifique est demandée
+	if language != "":
+		_filter_i18n_language(abs_temp_story, language, log_path)
+
+	# 3b-extra. Filtrer les chapitres si export partiel
+	if not partial_export.is_empty():
+		_filter_partial_chapters(story, abs_temp_story, partial_export, log_path)
+
 	# 3b. Redimensionner les images si qualité SD ou Ultra SD
 	if quality == "sd":
 		_resize_story_images(abs_temp_story, 2, log_path)
@@ -235,9 +243,9 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 
 	# 8. Préparer le fichier de sortie
 	var export_ext = _get_export_extension(platform)
-	var safe_name = game_name.validate_filename().replace(" ", "_")
+	var safe_name = _build_export_name(game_name, story.version, language, partial_export, story)
 	var export_file = ""
-	
+
 	if platform == "web":
 		var web_dir = abs_output_path + "/" + safe_name + "_web"
 		if not DirAccess.dir_exists_absolute(web_dir):
@@ -301,6 +309,233 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 	else:
 		var error_reason = extract_export_error(log_path)
 		return ExportResult.new(false, abs_output_path, log_path, error_reason)
+
+
+## Construit le nom de fichier d'export avec langue, plage de chapitres et version.
+func _build_export_name(game_name: String, version: String, language: String, partial_export: Dictionary, story) -> String:
+	var safe = game_name.validate_filename().replace(" ", "_")
+	if language != "":
+		safe += "_" + language.validate_filename()
+	if not partial_export.is_empty():
+		var si: int = int(partial_export.get("start_idx", 0)) + 1
+		var ei: int = int(partial_export.get("end_idx", 0)) + 1
+		safe += "_ch%d_to_ch%d" % [si, ei]
+	safe += "_v" + version.validate_filename().replace(" ", "_")
+	return safe
+
+
+## Supprime les fichiers i18n qui ne correspondent pas à la langue sélectionnée.
+func _filter_i18n_language(story_dir: String, language: String, log_path: String) -> void:
+	var i18n_dir = story_dir + "/i18n"
+	if not DirAccess.dir_exists_absolute(i18n_dir):
+		return
+
+	var YamlParser = load("res://src/persistence/yaml_parser.gd")
+	var yaml_path = i18n_dir + "/languages.yaml"
+
+	# Lire la langue source depuis le languages.yaml AVANT suppression.
+	# CRITIQUE : "default" = langue dans laquelle le story est rédigé (souvent "fr").
+	# _reload_i18n n'applique les traductions que si _settings.language ≠ source_lang.
+	# Si on exporte en "en" et que source_lang devient "en" aussi, 0 traduction appliquée.
+	var source_lang: String = "fr"  # fallback sûr
+	if YamlParser != null and FileAccess.file_exists(yaml_path):
+		var existing = YamlParser.yaml_to_dict(FileAccess.get_file_as_string(yaml_path))
+		if existing != null and existing.has("default"):
+			source_lang = str(existing["default"])
+
+	# Supprimer les fichiers i18n des autres langues
+	var dir = DirAccess.open(i18n_dir)
+	if dir != null:
+		dir.list_dir_begin()
+		var entry = dir.get_next()
+		while entry != "":
+			if not dir.current_is_dir() and entry.ends_with(".yaml") and entry != "languages.yaml":
+				if entry.get_basename() != language:
+					DirAccess.remove_absolute(i18n_dir + "/" + entry)
+					_append_log(log_path, "→ i18n supprimé (langue non sélectionnée) : " + entry)
+			entry = dir.get_next()
+		dir.list_dir_end()
+
+	# Toujours écrire languages.yaml avec source_lang intact et languages = [language].
+	# Sans ce fichier explicite le jeu bootstrappe depuis les .yaml restants et peut
+	# déduire default=language → source_lang==_settings.language → 0 traduction.
+	if YamlParser != null:
+		var new_config = {"default": source_lang, "languages": [language]}
+		var f = FileAccess.open(yaml_path, FileAccess.WRITE)
+		if f:
+			f.store_string(YamlParser.dict_to_yaml(new_config))
+			f.close()
+		_append_log(log_path, "→ languages.yaml : source=%s, export=%s" % [source_lang, language])
+
+	# Filtrer les fichiers voice : ne garder que ceux de la langue sélectionnée.
+	# Parcourir les YAML de scènes pour collecter les voice_files à garder,
+	# puis supprimer les fichiers MP3 non référencés dans assets/voices/.
+	_filter_voice_files(story_dir, language, source_lang, log_path)
+
+
+## Filtre les fichiers audio voice pour ne garder que ceux de la langue sélectionnée.
+## Parcourt les scènes YAML, collecte les chemins voice à garder, supprime le reste.
+func _filter_voice_files(story_dir: String, language: String, source_lang: String, log_path: String) -> void:
+	var voices_dir = story_dir + "/assets/voices"
+	if not DirAccess.dir_exists_absolute(voices_dir):
+		return
+
+	# Collecter tous les fichiers voice existants
+	var all_voice_files: Dictionary = {}  # filename -> true
+	var dir = DirAccess.open(voices_dir)
+	if dir == null:
+		return
+	dir.list_dir_begin()
+	var entry = dir.get_next()
+	while entry != "":
+		if not dir.current_is_dir() and (entry.ends_with(".mp3") or entry.ends_with(".ogg") or entry.ends_with(".wav")):
+			all_voice_files[entry] = true
+		entry = dir.get_next()
+	dir.list_dir_end()
+
+	if all_voice_files.is_empty():
+		return
+
+	# Parcourir les scènes YAML pour collecter les voice_files à garder
+	var keep_files: Dictionary = {}  # filename -> true
+	var chapters_dir = story_dir + "/chapters"
+	if DirAccess.dir_exists_absolute(chapters_dir):
+		var ch_dir = DirAccess.open(chapters_dir)
+		if ch_dir != null:
+			ch_dir.list_dir_begin()
+			var ch_entry = ch_dir.get_next()
+			while ch_entry != "":
+				if ch_dir.current_is_dir() and not ch_entry.begins_with("."):
+					var scenes_dir = chapters_dir + "/" + ch_entry + "/scenes"
+					_collect_voice_files_to_keep(scenes_dir, language, source_lang, keep_files)
+				ch_entry = ch_dir.get_next()
+			ch_dir.list_dir_end()
+
+	# Supprimer les fichiers voice non référencés
+	var removed_count: int = 0
+	for filename in all_voice_files:
+		if not keep_files.has(filename):
+			DirAccess.remove_absolute(voices_dir + "/" + filename)
+			removed_count += 1
+	if removed_count > 0:
+		_append_log(log_path, "→ %d fichier(s) voice supprimé(s) (langue non sélectionnée)" % removed_count)
+	_append_log(log_path, "→ %d fichier(s) voice conservé(s)" % keep_files.size())
+
+
+## Parcourt les fichiers YAML d'un dossier de scènes et collecte les voice_files à garder.
+func _collect_voice_files_to_keep(scenes_dir: String, language: String, source_lang: String, keep_files: Dictionary) -> void:
+	if not DirAccess.dir_exists_absolute(scenes_dir):
+		return
+	var dir = DirAccess.open(scenes_dir)
+	if dir == null:
+		return
+	dir.list_dir_begin()
+	var entry = dir.get_next()
+	while entry != "":
+		if not dir.current_is_dir() and entry.ends_with(".yaml"):
+			var content = FileAccess.get_file_as_string(scenes_dir + "/" + entry)
+			_extract_voice_keeps_from_content(content, language, source_lang, keep_files)
+		entry = dir.get_next()
+	dir.list_dir_end()
+
+
+## Extrait les noms de fichiers voice à garder depuis le contenu YAML d'une scène.
+func _extract_voice_keeps_from_content(content: String, language: String, source_lang: String, keep_files: Dictionary) -> void:
+	# Chercher les blocs voice_files: { key: "path", ... } dans le texte brut
+	# Format: voice_files: { default: "assets/voices/uuid.mp3", en: "assets/voices/uuid_en.mp3" }
+	var pos: int = 0
+	while true:
+		var idx = content.find("voice_files:", pos)
+		if idx == -1:
+			break
+		# Trouver le bloc { ... }
+		var brace_start = content.find("{", idx)
+		if brace_start == -1:
+			break
+		var brace_end = content.find("}", brace_start)
+		if brace_end == -1:
+			break
+		var block = content.substr(brace_start + 1, brace_end - brace_start - 1)
+		# Parser les paires clé: "valeur"
+		# Ex: default: "assets/voices/uuid.mp3", en: "assets/voices/uuid_en.mp3"
+		var parts = block.split(",")
+		for part in parts:
+			part = part.strip_edges()
+			if part == "":
+				continue
+			var colon = part.find(":")
+			if colon == -1:
+				continue
+			var key = part.substr(0, colon).strip_edges()
+			var val = part.substr(colon + 1).strip_edges()
+			# Retirer les guillemets
+			val = val.trim_prefix("\"").trim_suffix("\"")
+			if val == "":
+				continue
+			var filename = val.get_file()
+			# Garder le fichier si c'est la langue sélectionnée ou si c'est "default"
+			# quand la langue sélectionnée est la langue source
+			if key == language:
+				keep_files[filename] = true
+			elif key == "default" and language == source_lang:
+				keep_files[filename] = true
+			elif key == "default" and not block.contains(language + ":"):
+				# Si la langue demandée n'a pas de fichier spécifique, garder le default
+				keep_files[filename] = true
+		pos = brace_end + 1
+
+
+## Filtre les chapitres selon l'intervalle partial_export {start_idx, end_idx}.
+## Supprime les dossiers de chapitres hors plage et met à jour story.yaml.
+func _filter_partial_chapters(story, story_dir: String, partial_export: Dictionary, log_path: String) -> void:
+	var start_idx: int = int(partial_export.get("start_idx", 0))
+	var end_idx: int = int(partial_export.get("end_idx", story.chapters.size() - 1))
+	if end_idx < start_idx:
+		end_idx = start_idx
+
+	# Collecter les UUIDs sélectionnés
+	var selected_uuids: Array = []
+	for i in story.chapters.size():
+		if i >= start_idx and i <= end_idx:
+			selected_uuids.append(story.chapters[i].uuid)
+
+	# Supprimer les dossiers de chapitres non sélectionnés
+	var chapters_dir = story_dir + "/chapters"
+	if DirAccess.dir_exists_absolute(chapters_dir):
+		var dir = DirAccess.open(chapters_dir)
+		if dir != null:
+			dir.list_dir_begin()
+			var entry = dir.get_next()
+			while entry != "":
+				if dir.current_is_dir() and not entry.begins_with("."):
+					if not selected_uuids.has(entry):
+						_remove_dir_recursive(chapters_dir + "/" + entry)
+						_append_log(log_path, "→ Chapitre exclu (export partiel) : " + entry)
+				entry = dir.get_next()
+			dir.list_dir_end()
+
+	# Mettre à jour story.yaml pour ne lister que les chapitres sélectionnés
+	var story_yaml_path = story_dir + "/story.yaml"
+	if not FileAccess.file_exists(story_yaml_path):
+		return
+	var YamlParser = load("res://src/persistence/yaml_parser.gd")
+	if YamlParser == null:
+		return
+	var content = FileAccess.get_file_as_string(story_yaml_path)
+	var story_dict = YamlParser.yaml_to_dict(content)
+	if story_dict == null or not story_dict.has("chapters"):
+		return
+	var filtered_chapters: Array = []
+	for ch in story_dict["chapters"]:
+		if ch is Dictionary and selected_uuids.has(ch.get("uuid", "")):
+			filtered_chapters.append(ch)
+	story_dict["chapters"] = filtered_chapters
+	var updated_yaml = YamlParser.dict_to_yaml(story_dict)
+	var f = FileAccess.open(story_yaml_path, FileAccess.WRITE)
+	if f:
+		f.store_string(updated_yaml)
+		f.close()
+	_append_log(log_path, "→ story.yaml mis à jour : %d chapitres conservés" % filtered_chapters.size())
 
 
 func _find_godot() -> String:

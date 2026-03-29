@@ -324,9 +324,16 @@ func _load_story_and_show_menu(path: String) -> void:
 	_pck_loader.setup(path, get_tree())
 	_story_play_ctrl.set_pck_loader(_pck_loader)
 
-	# Auto-détecter la langue si aucune préférence n'a été sauvegardée
+	# Auto-détecter la langue si aucune préférence n'a été sauvegardée,
+	# OU si la langue sauvegardée n'est pas disponible dans cet export
+	# (ex: export langue unique "en" alors que settings.cfg contient "fr").
 	if _settings.is_language_auto():
 		_auto_detect_language()
+	else:
+		var _lang_config = StoryI18nService.load_languages_config(_current_story_path)
+		var _available: Array = _lang_config.get("languages", ["fr"])
+		if not _available.has(_settings.language):
+			_auto_detect_language()
 
 	_reload_i18n()
 	_load_max_progression()
@@ -516,6 +523,8 @@ func _on_menu_button_pressed() -> void:
 
 func _on_pause_options() -> void:
 	_pause_menu.hide_menu()
+	if _pause_options_menu.has_method("setup_languages") and _current_story_path != "":
+		_pause_options_menu.setup_languages(_current_story_path)
 	if _settings:
 		_pause_options_menu.load_from_settings(_settings)
 	_pause_options_menu.visible = true

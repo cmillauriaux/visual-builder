@@ -268,6 +268,8 @@ func hide_menu() -> void:
 
 
 func _on_options_pressed() -> void:
+	if _options_menu.has_method("setup_languages") and _current_base_path != "":
+		_options_menu.setup_languages(_current_base_path)
 	if _settings:
 		_options_menu.load_from_settings(_settings)
 	_options_menu.visible = true

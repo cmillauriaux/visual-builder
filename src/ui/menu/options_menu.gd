@@ -10,7 +10,14 @@ const UIScale = preload("res://src/ui/themes/ui_scale.gd")
 signal closed
 signal applied
 
-const LANGUAGE_CODES := ["fr", "en"]
+const _LANG_NAMES: Dictionary = {
+	"fr": "Français", "en": "English", "es": "Español", "de": "Deutsch",
+	"it": "Italiano", "pt": "Português", "ja": "日本語", "zh": "中文",
+	"ko": "한국어", "ru": "Русский"
+}
+
+var _language_codes: Array = ["fr", "en"]
+var _language_section_node: Control = null
 
 # Contrôles
 var _close_button: Button
@@ -100,13 +107,13 @@ func build_ui() -> void:
 	_fx_volume_slider = _add_slider_row(content, "Volume effets")
 	_fx_enabled_check.toggled.connect(_on_fx_toggled)
 
-	content.add_child(HSeparator.new())
-
-	# Section Langue
-	_add_section_label(content, "Langue")
-	_language_option = _add_option_row(content, "Langue", ["Français", "English"])
-
-	content.add_child(HSeparator.new())
+	# Section Langue (VBoxContainer pour pouvoir cacher si une seule langue)
+	_language_section_node = VBoxContainer.new()
+	content.add_child(_language_section_node)
+	_language_section_node.add_child(HSeparator.new())
+	_add_section_label(_language_section_node, "Langue")
+	_language_option = _add_option_row(_language_section_node, "Langue", _lang_codes_to_labels())
+	_language_section_node.add_child(HSeparator.new())
 
 	# Section Gameplay
 	_add_section_label(content, "Gameplay")
@@ -152,7 +159,7 @@ func load_from_settings(settings: RefCounted) -> void:
 	_fx_volume_slider.editable = settings.fx_enabled
 
 	# Langue
-	var lang_idx = LANGUAGE_CODES.find(settings.language)
+	var lang_idx = _language_codes.find(settings.language)
 	_language_option.selected = max(lang_idx, 0)
 
 	# Auto-play
@@ -190,8 +197,8 @@ func apply_to_settings(settings: RefCounted, path: String = GameSettings.SETTING
 	settings.fx_enabled = _fx_enabled_check.button_pressed
 	settings.fx_volume = int(_fx_volume_slider.value)
 	var lang_idx = _language_option.selected
-	if lang_idx >= 0 and lang_idx < LANGUAGE_CODES.size():
-		settings.language = LANGUAGE_CODES[lang_idx]
+	if lang_idx >= 0 and lang_idx < _language_codes.size():
+		settings.language = _language_codes[lang_idx]
 	settings.auto_play_enabled = _auto_play_enabled_check.button_pressed
 	var delay_idx = _auto_play_delay_option.selected
 	if delay_idx >= 0 and delay_idx < AUTO_PLAY_DELAYS.size():
@@ -217,6 +224,32 @@ func _refresh_plugin_controls() -> void:
 	if _plugins_container == null or _game_plugin_manager == null:
 		return
 	_game_plugin_manager.inject_options_controls(_plugins_container, _current_settings)
+
+
+## Charge la liste des langues depuis languages.yaml et met à jour le dropdown.
+## À appeler avant load_from_settings() quand la story est connue.
+func setup_languages(story_path: String) -> void:
+	if _language_option == null or _language_section_node == null:
+		return
+	var config: Dictionary = StoryI18nService.load_languages_config(story_path)
+	var langs: Array = config.get("languages", ["fr", "en"])
+	if langs.is_empty():
+		langs = ["fr", "en"]
+	_language_codes = langs
+	_language_option.clear()
+	for lbl in _lang_codes_to_labels():
+		_language_option.add_item(lbl)
+	if _current_settings:
+		var idx: int = _language_codes.find(_current_settings.language)
+		_language_option.selected = max(idx, 0)
+	_language_section_node.visible = _language_codes.size() > 1
+
+
+func _lang_codes_to_labels() -> Array:
+	var result: Array = []
+	for code in _language_codes:
+		result.append(_LANG_NAMES.get(str(code), str(code).to_upper()))
+	return result
 
 
 func _on_close() -> void:

@@ -46,17 +46,17 @@ func on_export_pressed() -> void:
 	dialog.confirmed.connect(dialog.queue_free)
 	dialog.canceled.connect(dialog.queue_free)
 	_main.add_child(dialog)
-	dialog.setup(_main._editor_main._story)
+	dialog.setup(_main._editor_main._story, _main._get_story_base_path())
 	dialog.export_requested.connect(_on_export_requested)
 	dialog.popup_centered()
 
 
-func _on_export_requested(platform: String, output_path: String, quality: String, export_options: Dictionary = {}) -> void:
+func _on_export_requested(platform: String, output_path: String, quality: String, export_options: Dictionary = {}, language: String = "", partial_export: Dictionary = {}) -> void:
 	if _main._editor_main._story == null:
 		return
 
 	var story_path = _main._get_story_base_path()
-	var result = _main._export_service.export_story(_main._editor_main._story, platform, output_path, story_path, quality, export_options)
+	var result = _main._export_service.export_story(_main._editor_main._story, platform, output_path, story_path, quality, export_options, language, partial_export)
 	
 	if result.success:
 		_show_export_result(result.output_path, result.log_path)

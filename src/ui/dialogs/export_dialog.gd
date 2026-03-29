@@ -1,9 +1,9 @@
 extends ConfirmationDialog
 
 ## Dialogue d'export d'une story en jeu standalone.
-## Demande la plateforme cible et le dossier de destination.
+## Demande la plateforme cible, la langue, l'export partiel et le dossier de destination.
 
-signal export_requested(platform: String, output_path: String, quality: String, export_options: Dictionary)
+signal export_requested(platform: String, output_path: String, quality: String, export_options: Dictionary, language: String, partial_export: Dictionary)
 
 const PLATFORMS = ["Web (HTML5)", "macOS", "Linux", "Windows", "Android"]
 const PLATFORM_IDS = ["web", "macos", "linux", "windows", "android"]
@@ -12,12 +12,19 @@ const QUALITY_IDS = ["hd", "sd", "ultrasd"]
 
 var _quality_dropdown: OptionButton
 var _platform_dropdown: OptionButton
+var _language_dropdown: OptionButton
+var _partial_check: CheckBox
+var _partial_container: VBoxContainer
+var _start_chapter_dropdown: OptionButton
+var _end_chapter_dropdown: OptionButton
 var _path_edit: LineEdit
 var _browse_button: Button
 var _status_label: Label
 var _file_dialog: FileDialog
 var _export_options_container: VBoxContainer
 var _export_option_checks: Dictionary = {}  # key -> CheckBox
+
+var _chapter_uuids: Array = []  # Array[String] — order matches dropdowns
 
 
 func _init():
@@ -50,6 +57,47 @@ func _init():
 	for p in PLATFORMS:
 		_platform_dropdown.add_item(p)
 	vbox.add_child(_platform_dropdown)
+
+	# Langue
+	var language_label = Label.new()
+	language_label.text = tr("Langue")
+	vbox.add_child(language_label)
+
+	_language_dropdown = OptionButton.new()
+	_language_dropdown.name = "LanguageDropdown"
+	_language_dropdown.add_item(tr("Tous"))
+	vbox.add_child(_language_dropdown)
+
+	# Export partiel
+	_partial_check = CheckBox.new()
+	_partial_check.name = "PartialCheck"
+	_partial_check.text = tr("Exporter partiellement")
+	_partial_check.toggled.connect(_on_partial_toggled)
+	vbox.add_child(_partial_check)
+
+	_partial_container = VBoxContainer.new()
+	_partial_container.name = "PartialContainer"
+	_partial_container.add_theme_constant_override("separation", 4)
+	_partial_container.visible = false
+
+	var start_label = Label.new()
+	start_label.text = tr("Chapitre de départ")
+	_partial_container.add_child(start_label)
+
+	_start_chapter_dropdown = OptionButton.new()
+	_start_chapter_dropdown.name = "StartChapterDropdown"
+	_start_chapter_dropdown.item_selected.connect(_on_start_chapter_selected)
+	_partial_container.add_child(_start_chapter_dropdown)
+
+	var end_label = Label.new()
+	end_label.text = tr("Chapitre de fin")
+	_partial_container.add_child(end_label)
+
+	_end_chapter_dropdown = OptionButton.new()
+	_end_chapter_dropdown.name = "EndChapterDropdown"
+	_partial_container.add_child(_end_chapter_dropdown)
+
+	vbox.add_child(_partial_container)
 
 	# Dossier de destination
 	var path_label = Label.new()
@@ -92,7 +140,7 @@ func _init():
 	confirmed.connect(_on_confirmed)
 
 
-func setup(story) -> void:
+func setup(story, story_path: String = "") -> void:
 	if story == null:
 		_path_edit.text = ""
 		get_ok_button().disabled = true
@@ -103,7 +151,49 @@ func setup(story) -> void:
 	get_ok_button().disabled = (_path_edit.text == "")
 	_status_label.text = ""
 	_status_label.remove_theme_color_override("font_color")
+
+	_populate_language_dropdown(story_path)
+	_populate_chapter_dropdowns(story)
 	_populate_export_options()
+
+
+func _populate_language_dropdown(story_path: String) -> void:
+	_language_dropdown.clear()
+	_language_dropdown.add_item(tr("Tous"))
+	if story_path == "":
+		return
+	var StoryI18nService = load("res://src/services/story_i18n_service.gd")
+	if StoryI18nService == null:
+		return
+	var config: Dictionary = StoryI18nService.load_languages_config(story_path)
+	var languages = config.get("languages", [])
+	for lang in languages:
+		_language_dropdown.add_item(str(lang))
+
+
+func _populate_chapter_dropdowns(story) -> void:
+	_chapter_uuids.clear()
+	_start_chapter_dropdown.clear()
+	_end_chapter_dropdown.clear()
+	for i in story.chapters.size():
+		var ch = story.chapters[i]
+		var label: String = ch.chapter_name if ch.chapter_name != "" else "Chapitre %d" % (i + 1)
+		_start_chapter_dropdown.add_item(label)
+		_end_chapter_dropdown.add_item(label)
+		_chapter_uuids.append(ch.uuid)
+	# Default: end = last chapter
+	if _end_chapter_dropdown.item_count > 0:
+		_end_chapter_dropdown.selected = _end_chapter_dropdown.item_count - 1
+
+
+func _on_partial_toggled(pressed: bool) -> void:
+	_partial_container.visible = pressed
+
+
+func _on_start_chapter_selected(idx: int) -> void:
+	# Ensure end >= start
+	if _end_chapter_dropdown.selected < idx:
+		_end_chapter_dropdown.selected = idx
 
 
 func get_selected_quality() -> String:
@@ -118,6 +208,27 @@ func get_selected_platform() -> String:
 	if idx < 0 or idx >= PLATFORM_IDS.size():
 		return "web"
 	return PLATFORM_IDS[idx]
+
+
+func get_selected_language() -> String:
+	var idx = _language_dropdown.selected
+	if idx <= 0:
+		return ""
+	# idx 0 = "Tous", idx 1+ = actual language codes
+	return _language_dropdown.get_item_text(idx)
+
+
+func get_partial_export() -> Dictionary:
+	if not _partial_check.button_pressed:
+		return {}
+	var start_idx = _start_chapter_dropdown.selected
+	var end_idx = _end_chapter_dropdown.selected
+	if start_idx < 0 or end_idx < 0:
+		return {}
+	# Clamp end >= start
+	if end_idx < start_idx:
+		end_idx = start_idx
+	return {"start_idx": start_idx, "end_idx": end_idx}
 
 
 func get_output_path() -> String:
@@ -152,7 +263,14 @@ func get_export_options() -> Dictionary:
 
 
 func _on_confirmed() -> void:
-	export_requested.emit(get_selected_platform(), get_output_path(), get_selected_quality(), get_export_options())
+	export_requested.emit(
+		get_selected_platform(),
+		get_output_path(),
+		get_selected_quality(),
+		get_export_options(),
+		get_selected_language(),
+		get_partial_export()
+	)
 
 
 func _populate_export_options() -> void:
