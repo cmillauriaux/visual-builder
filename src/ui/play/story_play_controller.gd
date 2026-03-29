@@ -351,6 +351,32 @@ func get_current_scene():
 func get_current_chapter():
 	return _current_chapter
 
+
+## Met à jour la story en mémoire (après changement de langue).
+## Préserve la position courante (chapitre/scène/séquence) via les UUIDs.
+func update_story(new_story) -> void:
+	if new_story == null:
+		return
+	_story = new_story
+	if _current_chapter == null:
+		return
+	for ch in new_story.chapters:
+		if ch.uuid == _current_chapter.uuid:
+			_current_chapter = ch
+			if _current_scene == null:
+				return
+			for sc in ch.scenes:
+				if sc.uuid == _current_scene.uuid:
+					_current_scene = sc
+					if _current_sequence == null:
+						return
+					for seq in sc.sequences:
+						if seq.uuid == _current_sequence.uuid:
+							_current_sequence = seq
+							return
+					return
+			return
+
 # --- Variables ---
 
 func _init_variables_from_story(story) -> void:

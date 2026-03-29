@@ -359,6 +359,25 @@ func _reload_i18n() -> void:
 	else:
 		_i18n_dict = {}
 	_apply_ui_lang()
+	_update_play_story_references()
+
+
+func _update_play_story_references() -> void:
+	if _current_story == null or not _story_play_ctrl.is_playing():
+		return
+	_story_play_ctrl.update_story(_current_story)
+	var new_seq = _story_play_ctrl.get_current_sequence()
+	if new_seq == null:
+		return
+	_play_ctrl._current_playing_sequence = new_seq
+	_sequence_editor_ctrl._sequence = new_seq
+	# Rafraîchir le texte du dialogue courant
+	var play_idx: int = _sequence_editor_ctrl.get_play_dialogue_index()
+	if play_idx >= 0 and play_idx < new_seq.dialogues.size():
+		var dlg = new_seq.dialogues[play_idx]
+		_play_character_label.text = dlg.character
+		_play_text_label.text = dlg.text
+		_play_text_label.visible_characters = -1
 
 
 func _auto_detect_language() -> void:
