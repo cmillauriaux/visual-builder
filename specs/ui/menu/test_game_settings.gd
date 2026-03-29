@@ -11,8 +11,11 @@ func test_default_values():
 	assert_false(settings.fullscreen)
 	assert_true(settings.music_enabled)
 	assert_eq(settings.music_volume, 80)
+	assert_true(settings.voice_enabled)
+	assert_eq(settings.voice_volume, 100)
+	assert_eq(settings.voice_language, "")
 	assert_true(settings.fx_enabled)
-	assert_eq(settings.fx_volume, 80)
+	assert_eq(settings.fx_volume, 100)
 	assert_eq(settings.language, "")
 	assert_true(settings.autosave_enabled)
 
@@ -86,6 +89,21 @@ func test_save_all_settings_fields():
 	assert_eq(loaded.dialogue_opacity, 60)
 	assert_false(loaded.toolbar_visible)
 	assert_eq(loaded.ui_scale_mode, 2)
+	DirAccess.remove_absolute(path)
+
+
+func test_save_and_load_voice_settings():
+	var path = "user://test_settings_voice.cfg"
+	var settings = GameSettingsScript.new()
+	settings.voice_enabled = false
+	settings.voice_volume = 50
+	settings.voice_language = "en"
+	settings.save_settings(path)
+	var loaded = GameSettingsScript.new()
+	loaded.load_settings(path)
+	assert_false(loaded.voice_enabled)
+	assert_eq(loaded.voice_volume, 50)
+	assert_eq(loaded.voice_language, "en")
 	DirAccess.remove_absolute(path)
 
 

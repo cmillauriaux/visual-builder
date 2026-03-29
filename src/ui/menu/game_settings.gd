@@ -22,8 +22,11 @@ var resolution: Vector2i = Vector2i(1920, 1080)
 var fullscreen: bool = false
 var music_enabled: bool = true
 var music_volume: int = 80
+var voice_enabled: bool = true
+var voice_volume: int = 100
+var voice_language: String = ""  # "" = même langue que le texte
 var fx_enabled: bool = true
-var fx_volume: int = 80
+var fx_volume: int = 100
 var language: String = ""  # "" = auto-détection au premier lancement
 var auto_play_enabled: bool = false
 var auto_play_delay: float = 2.0
@@ -84,8 +87,11 @@ func load_settings(path: String = SETTINGS_PATH) -> void:
 	dialogue_opacity = cfg.get_value("display", "dialogue_opacity", 80)
 	music_enabled = cfg.get_value("audio", "music_enabled", true)
 	music_volume = cfg.get_value("audio", "music_volume", 80)
+	voice_enabled = cfg.get_value("audio", "voice_enabled", true)
+	voice_volume = cfg.get_value("audio", "voice_volume", 100)
+	voice_language = cfg.get_value("audio", "voice_language", "")
 	fx_enabled = cfg.get_value("audio", "fx_enabled", true)
-	fx_volume = cfg.get_value("audio", "fx_volume", 80)
+	fx_volume = cfg.get_value("audio", "fx_volume", 100)
 	language = cfg.get_value("general", "language", "")
 	auto_play_enabled = cfg.get_value("gameplay", "auto_play_enabled", false)
 	auto_play_delay = cfg.get_value("gameplay", "auto_play_delay", 2.0)
@@ -109,6 +115,9 @@ func save_settings(path: String = SETTINGS_PATH) -> void:
 	cfg.set_value("display", "dialogue_opacity", dialogue_opacity)
 	cfg.set_value("audio", "music_enabled", music_enabled)
 	cfg.set_value("audio", "music_volume", music_volume)
+	cfg.set_value("audio", "voice_enabled", voice_enabled)
+	cfg.set_value("audio", "voice_volume", voice_volume)
+	cfg.set_value("audio", "voice_language", voice_language)
 	cfg.set_value("audio", "fx_enabled", fx_enabled)
 	cfg.set_value("audio", "fx_volume", fx_volume)
 	cfg.set_value("general", "language", language)
@@ -148,6 +157,12 @@ func apply_settings() -> void:
 	if music_idx >= 0:
 		AudioServer.set_bus_mute(music_idx, not music_enabled)
 		AudioServer.set_bus_volume_db(music_idx, linear_to_db(music_volume / 100.0))
+
+	# Audio — Voice bus
+	var voice_idx = AudioServer.get_bus_index("Voice")
+	if voice_idx >= 0:
+		AudioServer.set_bus_mute(voice_idx, not voice_enabled)
+		AudioServer.set_bus_volume_db(voice_idx, linear_to_db(voice_volume / 100.0))
 
 	# Audio — FX bus
 	var fx_idx = AudioServer.get_bus_index("FX")

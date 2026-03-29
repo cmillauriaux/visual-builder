@@ -38,7 +38,7 @@ func setup(main: Control) -> void:
 	_visual_editor = main._visual_editor
 	# Voice player for dialogue voice files
 	_voice_player = AudioStreamPlayer.new()
-	_voice_player.bus = "Master"
+	_voice_player.bus = "Voice"
 	add_child(_voice_player)
 
 

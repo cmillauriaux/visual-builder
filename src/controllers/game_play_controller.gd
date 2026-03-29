@@ -37,6 +37,7 @@ var _skip_button: Button = null
 var _play_buttons_bar: HBoxContainer = null
 var _typewriter_speed: float = 0.03
 var _dialogue_opacity: float = 0.8
+var _voice_language: String = ""  # "" = same as text language
 var _skip_max_chapter_index: int = -1
 var _skip_max_scene_index: int = -1
 var _toolbar_visible: bool = true
@@ -82,6 +83,10 @@ func set_toolbar_visible(p_visible: bool) -> void:
 	_toolbar_visible = p_visible
 
 
+func set_voice_language(lang: String) -> void:
+	_voice_language = lang
+
+
 func get_auto_play_manager() -> RefCounted:
 	return _auto_play
 
@@ -112,7 +117,7 @@ func setup(game: Control) -> void:
 		_history_button = game._history_button
 	# Voice player for dialogue voice files
 	_voice_player = AudioStreamPlayer.new()
-	_voice_player.bus = "Master"
+	_voice_player.bus = "Voice"
 	add_child(_voice_player)
 	_auto_play = AutoPlayManagerScript.new()
 	_auto_play.setup(game.get_tree())
@@ -908,7 +913,10 @@ func _restore_music_volume() -> void:
 func _get_dialogue_voice_path(dlg) -> String:
 	var voice_files = dlg.get("voice_files")
 	if voice_files != null and voice_files is Dictionary and not voice_files.is_empty():
-		# Utiliser la langue du jeu (settings) — pas la config ElevenLabs (outil auteur)
+		# 1. Utiliser la langue voix si configurée
+		if _voice_language != "" and voice_files.has(_voice_language):
+			return voice_files[_voice_language]
+		# 2. Sinon utiliser la langue du texte
 		var lang: String = ""
 		if _game and _game.get("_settings") != null and _game._settings.get("language") != null:
 			lang = str(_game._settings.language)

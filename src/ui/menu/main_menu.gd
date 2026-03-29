@@ -42,6 +42,7 @@ var _settings: RefCounted
 var _current_story = null
 var _current_base_path: String = ""
 var _last_i18n_dict: Dictionary = {}
+var _voice_languages: Array = []
 
 
 func build_ui() -> void:
@@ -267,9 +268,15 @@ func hide_menu() -> void:
 	visible = false
 
 
+func set_voice_languages(langs: Array) -> void:
+	_voice_languages = langs
+
+
 func _on_options_pressed() -> void:
 	if _options_menu.has_method("setup_languages") and _current_base_path != "":
 		_options_menu.setup_languages(_current_base_path)
+	if _options_menu.has_method("setup_voice_languages"):
+		_options_menu.setup_voice_languages(_voice_languages)
 	if _settings:
 		_options_menu.load_from_settings(_settings)
 	_options_menu.visible = true

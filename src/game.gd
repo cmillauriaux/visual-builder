@@ -184,6 +184,7 @@ func _ready() -> void:
 	_play_ctrl.set_typewriter_speed(_settings.typewriter_speed)
 	_play_ctrl.set_dialogue_opacity(_settings.dialogue_opacity / 100.0)
 	_play_ctrl.set_toolbar_visible(_settings.toolbar_visible)
+	_play_ctrl.set_voice_language(_settings.voice_language)
 	_typewriter_timer.timeout.connect(_play_ctrl.on_typewriter_tick)
 	_story_play_ctrl.sequence_play_requested.connect(_play_ctrl.on_sequence_play_requested)
 	_story_play_ctrl.choice_display_requested.connect(_play_ctrl.on_choice_display_requested)
@@ -368,6 +369,29 @@ func _auto_detect_language() -> void:
 	_settings.language = LocaleDetector.resolve_language(detected, available, default_lang)
 
 
+## Scanne la story pour trouver les langues de voix disponibles.
+## Retourne un Array de codes langues (ex: ["en", "fr"]) triés.
+func _get_story_voice_languages(story) -> Array:
+	var langs: Dictionary = {}
+	if story == null:
+		return []
+	var chapters: Array = story.chapters if story.get("chapters") != null else []
+	for chapter in chapters:
+		var scenes: Array = chapter.scenes if chapter.get("scenes") != null else []
+		for scene in scenes:
+			var sequences: Array = scene.sequences if scene.get("sequences") != null else []
+			for seq in sequences:
+				var dialogues: Array = seq.dialogues if seq.get("dialogues") != null else []
+				for dlg in dialogues:
+					var vf = dlg.get("voice_files")
+					if vf != null and vf is Dictionary:
+						for key in vf:
+							langs[key] = true
+	var result: Array = langs.keys()
+	result.sort()
+	return result
+
+
 func _apply_ui_lang() -> void:
 	_menu_button.text = StoryI18nService.get_ui_string("☰ Menu", _i18n_dict)
 	if _story_selector_title:
@@ -412,6 +436,7 @@ func _on_options_applied() -> void:
 	_play_ctrl.set_dialogue_opacity(_settings.dialogue_opacity / 100.0)
 	_story_play_ctrl._autosave_enabled = _settings.autosave_enabled
 	_play_ctrl.set_toolbar_visible(_settings.toolbar_visible)
+	_play_ctrl.set_voice_language(_settings.voice_language)
 
 
 func _show_main_menu(story) -> void:
@@ -420,6 +445,7 @@ func _show_main_menu(story) -> void:
 	_game_over_screen.hide_screen()
 	_to_be_continued_screen.hide_screen()
 	_main_menu.setup(story, _current_story_path)
+	_main_menu.set_voice_languages(_get_story_voice_languages(story))
 	_main_menu.show_menu()
 	var patreon_url = story.patreon_url if story.get("patreon_url") != null else ""
 	var itchio_url = story.itchio_url if story.get("itchio_url") != null else ""
@@ -525,6 +551,8 @@ func _on_pause_options() -> void:
 	_pause_menu.hide_menu()
 	if _pause_options_menu.has_method("setup_languages") and _current_story_path != "":
 		_pause_options_menu.setup_languages(_current_story_path)
+	if _pause_options_menu.has_method("setup_voice_languages") and _current_story != null:
+		_pause_options_menu.setup_voice_languages(_get_story_voice_languages(_current_story))
 	if _settings:
 		_pause_options_menu.load_from_settings(_settings)
 	_pause_options_menu.visible = true

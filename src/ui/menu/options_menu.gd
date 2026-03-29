@@ -17,6 +17,7 @@ const _LANG_NAMES: Dictionary = {
 }
 
 var _language_codes: Array = ["fr", "en"]
+var _voice_language_codes: Array = []
 var _language_section_node: Control = null
 
 # Contrôles
@@ -26,6 +27,10 @@ var _resolution_option: OptionButton
 var _fullscreen_check: CheckButton
 var _music_enabled_check: CheckButton
 var _music_volume_slider: HSlider
+var _voice_enabled_check: CheckButton
+var _voice_volume_slider: HSlider
+var _voice_language_option: OptionButton
+var _voice_language_section: Control
 var _fx_enabled_check: CheckButton
 var _fx_volume_slider: HSlider
 var _language_option: OptionButton
@@ -103,8 +108,18 @@ func build_ui() -> void:
 	_music_enabled_check = _add_check_row(content, "Musique")
 	_music_volume_slider = _add_slider_row(content, "Volume musique")
 	_music_enabled_check.toggled.connect(_on_music_toggled)
+	_voice_enabled_check = _add_check_row(content, "Voix")
+	_voice_volume_slider = _add_slider_row(content, "Volume voix")
+	_voice_volume_slider.value = 100
+	_voice_enabled_check.toggled.connect(_on_voice_toggled)
+	# Langue voix (VBoxContainer pour pouvoir cacher si pas de voix multilingues)
+	_voice_language_section = VBoxContainer.new()
+	_voice_language_section.visible = false
+	content.add_child(_voice_language_section)
+	_voice_language_option = _add_option_row(_voice_language_section, "Langue voix", [])
 	_fx_enabled_check = _add_check_row(content, "Effets sonores")
 	_fx_volume_slider = _add_slider_row(content, "Volume effets")
+	_fx_volume_slider.value = 100
 	_fx_enabled_check.toggled.connect(_on_fx_toggled)
 
 	# Section Langue (VBoxContainer pour pouvoir cacher si une seule langue)
@@ -154,6 +169,13 @@ func load_from_settings(settings: RefCounted) -> void:
 	_music_enabled_check.button_pressed = settings.music_enabled
 	_music_volume_slider.value = settings.music_volume
 	_music_volume_slider.editable = settings.music_enabled
+	_voice_enabled_check.button_pressed = settings.voice_enabled
+	_voice_volume_slider.value = settings.voice_volume
+	_voice_volume_slider.editable = settings.voice_enabled
+	_voice_language_option.disabled = not settings.voice_enabled
+	if _voice_language_codes.size() > 0:
+		var vl_idx: int = _voice_language_codes.find(settings.voice_language)
+		_voice_language_option.selected = max(vl_idx, 0)
 	_fx_enabled_check.button_pressed = settings.fx_enabled
 	_fx_volume_slider.value = settings.fx_volume
 	_fx_volume_slider.editable = settings.fx_enabled
@@ -194,6 +216,13 @@ func apply_to_settings(settings: RefCounted, path: String = GameSettings.SETTING
 	settings.dialogue_opacity = int(_dialogue_opacity_slider.value)
 	settings.music_enabled = _music_enabled_check.button_pressed
 	settings.music_volume = int(_music_volume_slider.value)
+	settings.voice_enabled = _voice_enabled_check.button_pressed
+	settings.voice_volume = int(_voice_volume_slider.value)
+	var vl_idx = _voice_language_option.selected
+	if vl_idx >= 0 and vl_idx < _voice_language_codes.size():
+		settings.voice_language = _voice_language_codes[vl_idx]
+	else:
+		settings.voice_language = ""
 	settings.fx_enabled = _fx_enabled_check.button_pressed
 	settings.fx_volume = int(_fx_volume_slider.value)
 	var lang_idx = _language_option.selected
@@ -245,6 +274,21 @@ func setup_languages(story_path: String) -> void:
 	_language_section_node.visible = _language_codes.size() > 1
 
 
+## Configure la liste des langues de voix disponibles.
+## voice_langs: Array de codes langues pour lesquels des voix existent.
+func setup_voice_languages(voice_langs: Array) -> void:
+	if _voice_language_option == null or _voice_language_section == null:
+		return
+	_voice_language_codes = voice_langs
+	_voice_language_option.clear()
+	for code in voice_langs:
+		_voice_language_option.add_item(_LANG_NAMES.get(str(code), str(code).to_upper()))
+	if _current_settings and _voice_language_codes.size() > 0:
+		var idx: int = _voice_language_codes.find(_current_settings.voice_language)
+		_voice_language_option.selected = max(idx, 0)
+	_voice_language_section.visible = _voice_language_codes.size() > 1
+
+
 func _lang_codes_to_labels() -> Array:
 	var result: Array = []
 	for code in _language_codes:
@@ -266,6 +310,11 @@ func _on_apply() -> void:
 
 func _on_music_toggled(enabled: bool) -> void:
 	_music_volume_slider.editable = enabled
+
+
+func _on_voice_toggled(enabled: bool) -> void:
+	_voice_volume_slider.editable = enabled
+	_voice_language_option.disabled = not enabled
 
 
 func _on_fx_toggled(enabled: bool) -> void:
