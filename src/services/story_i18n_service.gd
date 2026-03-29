@@ -11,7 +11,7 @@ const YamlParser = preload("res://src/persistence/yaml_parser.gd")
 ## Chaînes fixes de l'interface utilisateur du jeu (incluses dans tous les fichiers i18n).
 const UI_STRINGS: Array[String] = [
 	# Bouton menu in-game
-	"☰ Menu",
+	"≡ Menu",
 	# Sélecteur d'histoires
 	"Sélectionnez une histoire",
 	"Aucune histoire trouvée",
@@ -174,6 +174,13 @@ static func extract_strings(story: RefCounted) -> Dictionary:
 	for notif in story.notifications:
 		_add(strings, notif.message)
 
+	# Plugin settings — launcher (textes affichés au joueur)
+	if story.plugin_settings.has("launcher"):
+		var launcher_cfg: Dictionary = story.plugin_settings["launcher"]
+		_add(strings, launcher_cfg.get("disclaimer_text", ""))
+		_add(strings, launcher_cfg.get("free_text_content", ""))
+		_add(strings, launcher_cfg.get("studio_logo_fallback_text", ""))
+
 	# Chapters → Scenes → Sequences → Dialogues / Choices
 	for chapter in story.chapters:
 		_add(strings, chapter.chapter_name)
@@ -246,6 +253,16 @@ static func apply_to_story(story: RefCounted, i18n_dict: Dictionary) -> void:
 
 	for notif in story.notifications:
 		notif.message = _tr(notif.message, i18n_dict)
+
+	# Plugin settings — launcher (textes affichés au joueur)
+	if story.plugin_settings.has("launcher"):
+		var launcher_cfg: Dictionary = story.plugin_settings["launcher"]
+		if launcher_cfg.has("disclaimer_text"):
+			launcher_cfg["disclaimer_text"] = _tr(launcher_cfg["disclaimer_text"], i18n_dict)
+		if launcher_cfg.has("free_text_content"):
+			launcher_cfg["free_text_content"] = _tr(launcher_cfg["free_text_content"], i18n_dict)
+		if launcher_cfg.has("studio_logo_fallback_text"):
+			launcher_cfg["studio_logo_fallback_text"] = _tr(launcher_cfg["studio_logo_fallback_text"], i18n_dict)
 
 	for chapter in story.chapters:
 		chapter.chapter_name = _tr(chapter.chapter_name, i18n_dict)
