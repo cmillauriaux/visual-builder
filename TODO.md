@@ -1,3 +1,0 @@
-- Système de plugin pour afficher des pages personnalisées (affinités)
-- Système pour afficher ou non une variable à l'écran (à l'origine, pendant le jeu)
-- 

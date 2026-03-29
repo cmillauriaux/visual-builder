@@ -1,4 +1,11 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(xargs grep:*)",
+      "Bash(find /c/Projets/visual-builder -path */i18n/*.yaml -type f)",
+      "Bash(find /c/Projets/visual-builder -name *.manifest.json -o -name manifest.json)"
+    ]
+  },
   "hooks": {
     "SessionStart": [
       {
