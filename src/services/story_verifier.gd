@@ -15,11 +15,15 @@ const SECONDS_PER_CHOICE := 5.0
 # Le regex est compile une seule fois (lazy-init) pour eviter de reconstruire
 # l'automate a chaque appel de _count_sequence_words.
 var _word_regex: RegEx = null
+var _audio_duration_cache: Dictionary = {}  # path -> float (seconds)
+var _story_base_path: String = ""
 
 
-func verify(story: RefCounted) -> Dictionary:
+func verify(story: RefCounted, story_base_path: String = "") -> Dictionary:
 	if story == null:
 		return _empty_report()
+	_story_base_path = story_base_path
+	_audio_duration_cache = {}
 
 	var all_nodes := _collect_all_nodes(story)
 	if all_nodes.is_empty():
@@ -449,6 +453,47 @@ func _count_sequence_words(seq) -> int:
 	var total := 0
 	for dlg in seq.dialogues:
 		total += _word_regex.search_all(dlg.text).size()
+	return total
+
+
+func _get_audio_duration(path: String) -> float:
+	if path == "":
+		return 0.0
+	if _audio_duration_cache.has(path):
+		return _audio_duration_cache[path]
+	var duration := 0.0
+	if FileAccess.file_exists(path):
+		var ext = path.get_extension().to_lower()
+		if ext == "ogg":
+			var bytes = FileAccess.get_file_as_bytes(path)
+			if not bytes.is_empty():
+				var stream = AudioStreamOggVorbis.load_from_buffer(bytes)
+				if stream:
+					duration = stream.get_length()
+		elif ext == "mp3":
+			var bytes = FileAccess.get_file_as_bytes(path)
+			if not bytes.is_empty():
+				var stream = AudioStreamMP3.new()
+				stream.data = bytes
+				duration = stream.get_length()
+	_audio_duration_cache[path] = duration
+	return duration
+
+
+func _compute_sequence_audio_duration(seq: RefCounted, story_base_path: String) -> float:
+	if story_base_path == "":
+		return 0.0
+	var total := 0.0
+	for dlg in seq.dialogues:
+		if dlg.voice_files.is_empty():
+			continue
+		# Take the first available language
+		var first_lang: String = dlg.voice_files.keys()[0]
+		var rel_path: String = dlg.voice_files[first_lang]
+		if rel_path == "":
+			continue
+		var abs_path: String = story_base_path + "/" + rel_path
+		total += _get_audio_duration(abs_path)
 	return total
 
 

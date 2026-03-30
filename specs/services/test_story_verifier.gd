@@ -985,3 +985,50 @@ func test_empty_report_has_chapter_timings():
 	var report = _verifier.verify(null)
 	assert_true(report.has("chapter_timings"))
 	assert_eq(report["chapter_timings"], [])
+
+
+# === Audio duration ===
+
+func test_get_audio_duration_returns_zero_for_empty_path():
+	assert_almost_eq(_verifier._get_audio_duration(""), 0.0, 0.01)
+
+func test_get_audio_duration_returns_zero_for_nonexistent_file():
+	assert_almost_eq(_verifier._get_audio_duration("/tmp/nonexistent_audio_file.mp3"), 0.0, 0.01)
+
+func test_get_audio_duration_caches_result():
+	# Call twice, second call should use cache
+	_verifier._get_audio_duration("/tmp/nonexistent_audio_file.mp3")
+	_verifier._get_audio_duration("/tmp/nonexistent_audio_file.mp3")
+	# If we got here without error, caching works
+	assert_true(_verifier._audio_duration_cache.has("/tmp/nonexistent_audio_file.mp3"))
+
+func test_compute_sequence_audio_duration_no_voice_files():
+	var seq = _make_sequence("NoVoice")
+	# Default dialogue has no voice_files
+	var duration = _verifier._compute_sequence_audio_duration(seq, "/tmp")
+	assert_almost_eq(duration, 0.0, 0.01)
+
+func test_compute_sequence_audio_duration_with_voice_files_nonexistent():
+	var seq = SequenceScript.new()
+	seq.seq_name = "WithVoice"
+	seq.position = Vector2(0, 0)
+	var dlg = DialogueScript.new()
+	dlg.character = "Narrator"
+	dlg.text = "Hello"
+	dlg.voice_files = {"fr": "assets/voices/test_fr.mp3"}
+	seq.dialogues.append(dlg)
+	var duration = _verifier._compute_sequence_audio_duration(seq, "/tmp")
+	# File doesn't exist, so duration = 0
+	assert_almost_eq(duration, 0.0, 0.01)
+
+func test_compute_sequence_audio_duration_empty_story_base_path():
+	var seq = SequenceScript.new()
+	seq.seq_name = "WithVoice"
+	seq.position = Vector2(0, 0)
+	var dlg = DialogueScript.new()
+	dlg.character = "Narrator"
+	dlg.text = "Hello"
+	dlg.voice_files = {"fr": "assets/voices/test_fr.mp3"}
+	seq.dialogues.append(dlg)
+	var duration = _verifier._compute_sequence_audio_duration(seq, "")
+	assert_almost_eq(duration, 0.0, 0.01)
