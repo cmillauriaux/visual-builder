@@ -245,6 +245,7 @@ func _on_browse_pressed() -> void:
 	_file_dialog = FileDialog.new()
 	_file_dialog.file_mode = FileDialog.FILE_MODE_OPEN_DIR
 	_file_dialog.access = FileDialog.ACCESS_FILESYSTEM
+	_file_dialog.current_dir = OS.get_system_dir(OS.SYSTEM_DIR_DESKTOP)
 	_file_dialog.dir_selected.connect(_on_dir_selected)
 	add_child(_file_dialog)
 	_file_dialog.popup_centered(Vector2i(700, 500))

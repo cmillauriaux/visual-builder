@@ -278,12 +278,10 @@ func _ready() -> void:
 	_quickload_yes_btn.pressed.connect(_do_quickload)
 	_quickload_no_btn.pressed.connect(_cancel_quickload)
 
-	# PWA install prompt
+	# PWA install prompt — build_ui et add_child différés dans show_if_needed
 	_pwa_install_prompt = Control.new()
 	_pwa_install_prompt.set_script(PwaInstallPromptScript)
-	_pwa_install_prompt.build_ui()
 	_pwa_install_prompt.closed.connect(_on_pwa_prompt_closed)
-	add_child(_pwa_install_prompt)
 
 	# Chercher si un chemin est forcé via override.cfg/settings
 	var override_path = ProjectSettings.get_setting("application/config/story_path", "")
@@ -343,7 +341,7 @@ func _load_story_and_show_menu(path: String) -> void:
 	_apply_game_ui_theme(story)
 	await _setup_game_plugins()
 	_show_main_menu(_current_story)
-	_pwa_install_prompt.show_if_needed(_settings.pwa_prompt_dismissed)
+	_pwa_install_prompt.show_if_needed(self, _settings.pwa_prompt_dismissed)
 
 
 func _reload_i18n() -> void:
@@ -1223,6 +1221,7 @@ func _show_toast(message: String) -> void:
 func _on_pwa_prompt_closed(dont_show_again: bool) -> void:
 	if dont_show_again:
 		_settings.pwa_prompt_dismissed = true
+		_settings.save_settings()
 
 
 # --- UI Theme ---

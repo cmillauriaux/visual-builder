@@ -16,12 +16,11 @@ signal closed(dont_show_again: bool)
 enum Platform { NONE, IOS, ANDROID }
 
 var _dont_show_check: CheckButton
-var _platform: int = Platform.NONE
+var _platform: Platform = Platform.NONE
 
 
 func build_ui() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	visible = false
 
 	# Fond semi-transparent
 	var bg = ColorRect.new()
@@ -90,8 +89,9 @@ func apply_ui_translations(i18n_dict: Dictionary) -> void:
 
 
 ## Affiche la popup si les conditions sont remplies.
+## build_ui() et add_child() ne sont appelés que si la popup doit s'afficher.
 ## Retourne true si la popup est affichée, false sinon.
-func show_if_needed(pwa_prompt_dismissed: bool) -> bool:
+func show_if_needed(parent: Node, pwa_prompt_dismissed: bool) -> bool:
 	if pwa_prompt_dismissed:
 		return false
 
@@ -102,16 +102,17 @@ func show_if_needed(pwa_prompt_dismissed: bool) -> bool:
 		return false
 
 	_platform = _detect_platform()
-	if _platform == Platform.NONE:
+	if not (_platform == Platform.IOS or _platform == Platform.ANDROID):
 		return false
 
+	build_ui()
 	_update_message()
-	visible = true
+	parent.add_child(self)
 	return true
 
 
 ## Détecte la plateforme mobile via le user-agent.
-static func _detect_platform() -> int:
+static func _detect_platform() -> Platform:
 	var ua := _get_user_agent()
 	if ua.is_empty():
 		return Platform.NONE
@@ -127,10 +128,10 @@ static func _get_user_agent() -> String:
 	if not ClassDB.class_exists(&"JavaScriptBridge"):
 		return ""
 	var bridge = Engine.get_singleton(&"JavaScriptBridge")
-	if bridge == null:
+	if not bridge:
 		return ""
 	var result = bridge.call(&"eval", "navigator.userAgent || \"\"")
-	if result == null:
+	if not result:
 		return ""
 	return str(result).to_lower()
 
@@ -140,13 +141,11 @@ static func _is_standalone() -> bool:
 	if not ClassDB.class_exists(&"JavaScriptBridge"):
 		return false
 	var bridge = Engine.get_singleton(&"JavaScriptBridge")
-	if bridge == null:
+	if not bridge:
 		return false
 	var js := "window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches"
 	var result = bridge.call(&"eval", js)
-	if result == null:
-		return false
-	return result == true
+	return bool(result)
 
 
 func _update_message() -> void:
@@ -160,9 +159,12 @@ func _update_message() -> void:
 
 
 func _on_ok_pressed() -> void:
-	visible = false
-	closed.emit(_dont_show_check.button_pressed)
+	var dont_show := _dont_show_check.button_pressed
+	var p := get_parent()
+	if p:
+		p.remove_child(self)
+	closed.emit(dont_show)
 
 
-func get_platform() -> int:
+func get_platform() -> Platform:
 	return _platform

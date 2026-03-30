@@ -277,7 +277,7 @@ static func _build_menu_button(game: Control) -> void:
 ## Génère une icône hamburger (3 lignes horizontales) comme ImageTexture.
 ## Fonctionne sur toutes les plateformes sans dépendance de police.
 static func _create_hamburger_icon(size: int, color: Color) -> ImageTexture:
-	var img := Image.create(size, size, false, Image.FORMAT_RGBA8)
+	var img: Image = Image.create_empty(size, size, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0, 0, 0, 0))
 	var line_h: int = maxi(1, roundi(size * 0.12))
 	var gap: int = roundi(size * 0.22)
