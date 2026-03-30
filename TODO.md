@@ -1,0 +1,3 @@
+- Générer des images "blink"
+- Revoir le police
+- Par défaut cacher la barre d'outils

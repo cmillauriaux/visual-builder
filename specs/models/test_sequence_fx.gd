@@ -190,3 +190,182 @@ func test_roundtrip():
 	assert_eq(restored.fx_type, fx.fx_type)
 	assert_eq(restored.duration, fx.duration)
 	assert_eq(restored.intensity, fx.intensity)
+
+
+## --- Nouveaux types zoom_in, zoom_out, pan_* ---
+
+
+func test_fx_type_zoom_in():
+	var fx = SequenceFx.new()
+	fx.fx_type = "zoom_in"
+	assert_eq(fx.fx_type, "zoom_in")
+
+
+func test_fx_type_zoom_out():
+	var fx = SequenceFx.new()
+	fx.fx_type = "zoom_out"
+	assert_eq(fx.fx_type, "zoom_out")
+
+
+func test_fx_type_pan_right():
+	var fx = SequenceFx.new()
+	fx.fx_type = "pan_right"
+	assert_eq(fx.fx_type, "pan_right")
+
+
+func test_fx_type_pan_left():
+	var fx = SequenceFx.new()
+	fx.fx_type = "pan_left"
+	assert_eq(fx.fx_type, "pan_left")
+
+
+func test_fx_type_pan_down():
+	var fx = SequenceFx.new()
+	fx.fx_type = "pan_down"
+	assert_eq(fx.fx_type, "pan_down")
+
+
+func test_fx_type_pan_up():
+	var fx = SequenceFx.new()
+	fx.fx_type = "pan_up"
+	assert_eq(fx.fx_type, "pan_up")
+
+
+## --- zoom_from / zoom_to ---
+
+
+func test_zoom_from_default():
+	var fx = SequenceFx.new()
+	assert_eq(fx.zoom_from, 1.0)
+
+
+func test_zoom_to_default():
+	var fx = SequenceFx.new()
+	assert_eq(fx.zoom_to, 1.5)
+
+
+func test_zoom_from_clamped_below_one():
+	var fx = SequenceFx.new()
+	fx.zoom_from = 0.5
+	assert_eq(fx.zoom_from, 1.0)
+
+
+func test_zoom_to_clamped_below_one():
+	var fx = SequenceFx.new()
+	fx.zoom_to = 0.0
+	assert_eq(fx.zoom_to, 1.0)
+
+
+func test_zoom_from_valid_value():
+	var fx = SequenceFx.new()
+	fx.zoom_from = 1.8
+	assert_almost_eq(fx.zoom_from, 1.8, 0.001)
+
+
+func test_zoom_to_valid_value():
+	var fx = SequenceFx.new()
+	fx.zoom_to = 2.5
+	assert_almost_eq(fx.zoom_to, 2.5, 0.001)
+
+
+func test_to_dict_includes_zoom_from_and_zoom_to():
+	var fx = SequenceFx.new()
+	fx.zoom_from = 1.2
+	fx.zoom_to = 2.0
+	var dict = fx.to_dict()
+	assert_almost_eq(dict["zoom_from"], 1.2, 0.001)
+	assert_almost_eq(dict["zoom_to"], 2.0, 0.001)
+
+
+func test_from_dict_restores_zoom_from_and_zoom_to():
+	var dict = {
+		"fx_type": "zoom_in",
+		"duration": 1.0,
+		"intensity": 1.0,
+		"zoom_from": 1.0,
+		"zoom_to": 1.5,
+	}
+	var fx = SequenceFx.from_dict(dict)
+	assert_almost_eq(fx.zoom_from, 1.0, 0.001)
+	assert_almost_eq(fx.zoom_to, 1.5, 0.001)
+
+
+func test_from_dict_zoom_from_defaults_to_one():
+	var dict = {"fx_type": "zoom_in"}
+	var fx = SequenceFx.from_dict(dict)
+	assert_almost_eq(fx.zoom_from, 1.0, 0.001)
+
+
+func test_from_dict_zoom_to_defaults_to_one_point_five():
+	var dict = {"fx_type": "zoom_in"}
+	var fx = SequenceFx.from_dict(dict)
+	assert_almost_eq(fx.zoom_to, 1.5, 0.001)
+
+
+func test_roundtrip_zoom_in():
+	var fx = SequenceFx.new()
+	fx.fx_type = "zoom_in"
+	fx.zoom_from = 1.0
+	fx.zoom_to = 2.0
+	fx.duration = 1.5
+	var dict = fx.to_dict()
+	var restored = SequenceFx.from_dict(dict)
+	assert_eq(restored.fx_type, "zoom_in")
+	assert_almost_eq(restored.zoom_from, 1.0, 0.001)
+	assert_almost_eq(restored.zoom_to, 2.0, 0.001)
+
+
+func test_roundtrip_pan_right():
+	var fx = SequenceFx.new()
+	fx.fx_type = "pan_right"
+	fx.zoom_from = 1.3
+	fx.intensity = 0.5
+	fx.duration = 2.0
+	var dict = fx.to_dict()
+	var restored = SequenceFx.from_dict(dict)
+	assert_eq(restored.fx_type, "pan_right")
+	assert_almost_eq(restored.zoom_from, 1.3, 0.001)
+	assert_almost_eq(restored.intensity, 0.5, 0.001)
+
+
+## --- continue_during_fx ---
+
+
+func test_continue_during_fx_default_false():
+	var fx = SequenceFx.new()
+	assert_false(fx.continue_during_fx)
+
+
+func test_continue_during_fx_set_true():
+	var fx = SequenceFx.new()
+	fx.continue_during_fx = true
+	assert_true(fx.continue_during_fx)
+
+
+func test_to_dict_includes_continue_during_fx():
+	var fx = SequenceFx.new()
+	fx.continue_during_fx = true
+	var dict = fx.to_dict()
+	assert_true(dict.has("continue_during_fx"))
+	assert_true(dict["continue_during_fx"])
+
+
+func test_from_dict_restores_continue_during_fx():
+	var dict = {"fx_type": "fade_in", "continue_during_fx": true}
+	var fx = SequenceFx.from_dict(dict)
+	assert_true(fx.continue_during_fx)
+
+
+func test_from_dict_continue_during_fx_defaults_to_false():
+	var dict = {"fx_type": "fade_in"}
+	var fx = SequenceFx.from_dict(dict)
+	assert_false(fx.continue_during_fx)
+
+
+func test_roundtrip_continue_during_fx():
+	var fx = SequenceFx.new()
+	fx.fx_type = "zoom_in"
+	fx.continue_during_fx = true
+	var dict = fx.to_dict()
+	var restored = SequenceFx.from_dict(dict)
+	assert_true(restored.continue_during_fx)

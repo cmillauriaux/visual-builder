@@ -5,8 +5,15 @@ var _fx_type: String = "fade_in"
 var _duration: float = 0.5
 var _intensity: float = 1.0
 var _color: Color = Color.WHITE
+var _zoom_from: float = 1.0
+var _zoom_to: float = 1.5
+var continue_during_fx: bool = false
 
-const VALID_FX_TYPES = ["screen_shake", "fade_in", "eyes_blink", "flash", "zoom", "vignette", "desaturation"]
+const VALID_FX_TYPES = [
+	"screen_shake", "fade_in", "eyes_blink", "flash", "zoom", "vignette", "desaturation",
+	"zoom_in", "zoom_out",
+	"pan_right", "pan_left", "pan_down", "pan_up",
+]
 
 var fx_type: String:
 	get:
@@ -34,6 +41,18 @@ var color: Color:
 		return _color
 	set(value):
 		_color = value
+
+var zoom_from: float:
+	get:
+		return _zoom_from
+	set(value):
+		_zoom_from = maxf(value, 1.0)
+
+var zoom_to: float:
+	get:
+		return _zoom_to
+	set(value):
+		_zoom_to = maxf(value, 1.0)
 
 
 func _init():
@@ -67,6 +86,9 @@ func to_dict() -> Dictionary:
 		"duration": duration,
 		"intensity": intensity,
 		"color": color.to_html(),
+		"zoom_from": zoom_from,
+		"zoom_to": zoom_to,
+		"continue_during_fx": continue_during_fx,
 	}
 
 
@@ -80,4 +102,7 @@ static func from_dict(d: Dictionary):
 	var color_str = d.get("color", "")
 	if color_str != "":
 		fx.color = Color.from_string(color_str, Color.WHITE)
+	fx.zoom_from = d.get("zoom_from", 1.0)
+	fx.zoom_to = d.get("zoom_to", 1.5)
+	fx.continue_during_fx = d.get("continue_during_fx", false)
 	return fx

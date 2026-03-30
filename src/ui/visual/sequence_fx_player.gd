@@ -10,6 +10,7 @@ var _fx_nodes: Array = []
 var _target: Control = null
 var _transform_target: Control = null
 var _transform_active: bool = false
+var _pre_applied: bool = false
 var _original_position: Vector2 = Vector2.ZERO
 var _original_scale: Vector2 = Vector2.ONE
 var _original_pivot: Vector2 = Vector2.ZERO
@@ -17,6 +18,9 @@ var _original_pivot: Vector2 = Vector2.ZERO
 ## FX persistants (restent jusqu'à la séquence suivante)
 const PERSISTENT_FX_TYPES = ["vignette", "desaturation"]
 var _persistent_fx: Dictionary = {}  # fx_type -> overlay node
+
+## Tweens des FX lancés en parallèle (continue_during_fx = true)
+var _detached_tweens: Array = []
 
 const VIGNETTE_SHADER = """
 shader_type canvas_item;
@@ -126,6 +130,45 @@ func _create_desaturation_immediate(fx, target: Control) -> void:
 	mat.shader = shader
 	overlay.material = mat
 	mat.set_shader_parameter("amount", minf(fx.intensity, 1.0))
+
+
+## Applique immédiatement l'état initial d'un FX zoom/pan pour éviter un flash visuel au démarrage.
+## Doit être appelé AVANT play_transition() pour que le canvas soit déjà dans l'état correct pendant
+## la transition d'ouverture.
+func pre_apply_initial_transform(fx_list: Array, transform_target: Control) -> void:
+	if transform_target == null or not is_instance_valid(transform_target):
+		return
+	_transform_target = transform_target
+	for fx in fx_list:
+		if fx.fx_type in ["zoom_in", "zoom_out"]:
+			_original_scale = transform_target.scale
+			_original_pivot = transform_target.pivot_offset
+			_original_position = transform_target.position
+			var scale_from: float = maxf(fx.zoom_from, 1.0)
+			transform_target.pivot_offset = transform_target.size / 2.0
+			transform_target.scale = Vector2(scale_from, scale_from)
+			_pre_applied = true
+			break
+		elif fx.fx_type in ["pan_right", "pan_left", "pan_down", "pan_up"]:
+			_original_scale = transform_target.scale
+			_original_pivot = transform_target.pivot_offset
+			_original_position = transform_target.position
+			var apply_zoom: float = maxf(fx.zoom_from, 1.001)
+			transform_target.pivot_offset = transform_target.size / 2.0
+			transform_target.scale = Vector2(apply_zoom, apply_zoom)
+			var extra_x: float = transform_target.size.x * (apply_zoom - 1.0) / 2.0
+			var extra_y: float = transform_target.size.y * (apply_zoom - 1.0) / 2.0
+			match fx.fx_type:
+				"pan_right":
+					transform_target.position = Vector2(_original_position.x + extra_x, _original_position.y)
+				"pan_left":
+					transform_target.position = Vector2(_original_position.x - extra_x, _original_position.y)
+				"pan_down":
+					transform_target.position = Vector2(_original_position.x, _original_position.y + extra_y)
+				"pan_up":
+					transform_target.position = Vector2(_original_position.x, _original_position.y - extra_y)
+			_pre_applied = true
+			break
 
 
 func play_fx_list(fx_list: Array, target: Control, transform_target: Control = null) -> void:
@@ -281,10 +324,22 @@ func _play_pixelate_out_transition(duration: float, target: Control) -> void:
 
 func stop_fx() -> void:
 	_stop_transient_fx()
+	# Restaurer le transform pré-appliqué si le tween n'était pas encore démarré
+	if _pre_applied:
+		var t = _transform_target if _transform_target and is_instance_valid(_transform_target) else _target
+		if t and is_instance_valid(t):
+			t.position = _original_position
+			t.scale = _original_scale
+			t.pivot_offset = _original_pivot
+		_pre_applied = false
 	_cleanup_persistent_fx()
 
 
 func _stop_transient_fx() -> void:
+	for tween in _detached_tweens:
+		if tween and tween.is_valid():
+			tween.kill()
+	_detached_tweens.clear()
 	if _current_tween and _current_tween.is_valid():
 		_current_tween.kill()
 		_current_tween = null
@@ -309,7 +364,16 @@ func _play_next(remaining: Array, target: Control) -> void:
 		fx_finished.emit()
 		return
 	var fx = remaining.pop_front()
-	_play_single_fx(fx, target, func(): _play_next(remaining, target))
+	if fx.continue_during_fx:
+		# Lancer le FX sans bloquer la chaîne : démarre l'animation et continue immédiatement
+		_play_single_fx(fx, target, func(): pass)
+		# Déplacer le tween vers la liste des détachés pour qu'il survive mais soit nettoyé par stop_fx
+		if _current_tween and _current_tween.is_valid():
+			_detached_tweens.append(_current_tween)
+			_current_tween = null
+		_play_next(remaining, target)
+	else:
+		_play_single_fx(fx, target, func(): _play_next(remaining, target))
 
 
 func _play_single_fx(fx, target: Control, on_done: Callable) -> void:
@@ -324,6 +388,10 @@ func _play_single_fx(fx, target: Control, on_done: Callable) -> void:
 			_play_flash(fx, target, on_done)
 		"zoom":
 			_play_zoom(fx, target, on_done)
+		"zoom_in", "zoom_out":
+			_play_zoom_animated(fx, target, on_done)
+		"pan_right", "pan_left", "pan_down", "pan_up":
+			_play_pan(fx, target, on_done)
 		"vignette":
 			_play_vignette(fx, target, on_done)
 		"desaturation":
@@ -459,6 +527,90 @@ func _play_zoom(fx, target: Control, on_done: Callable) -> void:
 	_current_tween.finished.connect(func():
 		t.scale = _original_scale
 		t.pivot_offset = _original_pivot
+		_transform_active = false
+		on_done.call()
+	)
+
+
+func _play_zoom_animated(fx, target: Control, on_done: Callable) -> void:
+	var t = _transform_target if _transform_target else target
+	_transform_active = true
+	if not _pre_applied:
+		# Sauvegarder l'état original seulement si pre_apply ne l'a pas déjà fait
+		_original_scale = t.scale
+		_original_pivot = t.pivot_offset
+		_original_position = t.position
+		t.pivot_offset = t.size / 2.0
+	_pre_applied = false
+
+	var scale_from: float = maxf(fx.zoom_from, 1.0)
+	var scale_to: float = maxf(fx.zoom_to, 1.0)
+	t.scale = Vector2(scale_from, scale_from)
+
+	# Capturer localement pour la closure (évite les problèmes si les membres sont écrasés par un FX concurrent)
+	var restore_scale: Vector2 = _original_scale
+	var restore_pivot: Vector2 = _original_pivot
+	var restore_pos: Vector2 = _original_position
+
+	_current_tween = create_tween()
+	_current_tween.tween_property(t, "scale", Vector2(scale_to, scale_to), fx.duration).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_QUAD)
+	_current_tween.finished.connect(func():
+		t.scale = restore_scale
+		t.pivot_offset = restore_pivot
+		t.position = restore_pos
+		_transform_active = false
+		on_done.call()
+	)
+
+
+func _play_pan(fx, target: Control, on_done: Callable) -> void:
+	var t = _transform_target if _transform_target else target
+	_transform_active = true
+	if not _pre_applied:
+		# Sauvegarder l'état original seulement si pre_apply ne l'a pas déjà fait
+		_original_scale = t.scale
+		_original_pivot = t.pivot_offset
+		_original_position = t.position
+		var apply_zoom: float = maxf(fx.zoom_from, 1.001)
+		t.pivot_offset = t.size / 2.0
+		t.scale = Vector2(apply_zoom, apply_zoom)
+	_pre_applied = false
+
+	var zoom: float = maxf(fx.zoom_from, 1.001)
+	var extra_x: float = t.size.x * (zoom - 1.0) / 2.0
+	var extra_y: float = t.size.y * (zoom - 1.0) / 2.0
+	var scroll: float = clampf(fx.intensity, 0.0, 1.0)
+
+	var start_pos: Vector2 = _original_position
+	var end_pos: Vector2 = _original_position
+
+	match fx.fx_type:
+		"pan_right":
+			start_pos = Vector2(_original_position.x + extra_x, _original_position.y)
+			end_pos = Vector2(_original_position.x + extra_x - 2.0 * extra_x * scroll, _original_position.y)
+		"pan_left":
+			start_pos = Vector2(_original_position.x - extra_x, _original_position.y)
+			end_pos = Vector2(_original_position.x - extra_x + 2.0 * extra_x * scroll, _original_position.y)
+		"pan_down":
+			start_pos = Vector2(_original_position.x, _original_position.y + extra_y)
+			end_pos = Vector2(_original_position.x, _original_position.y + extra_y - 2.0 * extra_y * scroll)
+		"pan_up":
+			start_pos = Vector2(_original_position.x, _original_position.y - extra_y)
+			end_pos = Vector2(_original_position.x, _original_position.y - extra_y + 2.0 * extra_y * scroll)
+
+	t.position = start_pos
+
+	# Capturer localement pour la closure (évite les problèmes si les membres sont écrasés par un FX concurrent)
+	var restore_scale: Vector2 = _original_scale
+	var restore_pivot: Vector2 = _original_pivot
+	var restore_pos: Vector2 = _original_position
+
+	_current_tween = create_tween()
+	_current_tween.tween_property(t, "position", end_pos, fx.duration).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
+	_current_tween.finished.connect(func():
+		t.scale = restore_scale
+		t.pivot_offset = restore_pivot
+		t.position = restore_pos
 		_transform_active = false
 		on_done.call()
 	)

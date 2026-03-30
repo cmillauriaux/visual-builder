@@ -193,6 +193,8 @@ func on_sequence_play_requested(seq) -> void:
 
 	# Appliquer les FX persistants immédiatement (visibles dès le début, y compris pendant la transition)
 	_sequence_fx_player.apply_persistent_fx(seq.fx, _visual_editor._fx_container)
+	# Pré-appliquer l'état initial des FX zoom/pan pour éviter un flash visuel au démarrage
+	_sequence_fx_player.pre_apply_initial_transform(seq.fx, _visual_editor._canvas)
 
 	if seq.transition_in_type != "none":
 		_sequence_fx_player.fx_finished.connect(_on_trans_in_finished_play_fx, CONNECT_ONE_SHOT)
