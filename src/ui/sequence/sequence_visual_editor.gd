@@ -122,11 +122,13 @@ func _ready() -> void:
 	_fg_container.size = DESIGN_RESOLUTION
 	_canvas.add_child(_fg_container)
 
-	# FX container — between Canvas and UI overlay, so FX affect only bg/fg, not UI
+	# FX container — covers full editor area so effects (desaturation, vignette, fade)
+	# apply to the entire visible surface, not just the canvas rect.
 	_fx_container = Control.new()
 	_fx_container.name = "FxContainer"
 	_fx_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_fx_container.z_index = FX_Z
+	_fx_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(_fx_container)
 
 	# Overlay container — positioned/sized to match the canvas screen rect (UI goes here)
@@ -256,11 +258,8 @@ func _apply_transform() -> void:
 		return
 	_canvas.position = _pan_offset
 	_canvas.scale = Vector2(_zoom, _zoom)
-	# Update FX and overlay containers to match canvas screen rect
+	# Update overlay container to match canvas screen rect (FX container uses PRESET_FULL_RECT)
 	var rect = get_canvas_rect()
-	if _fx_container != null:
-		_fx_container.position = rect.position
-		_fx_container.size = rect.size
 	if _overlay_container != null:
 		_overlay_container.position = rect.position
 		_overlay_container.size = rect.size
