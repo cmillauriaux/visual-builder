@@ -985,3 +985,142 @@ func test_empty_report_has_chapter_timings():
 	var report = _verifier.verify(null)
 	assert_true(report.has("chapter_timings"))
 	assert_eq(report["chapter_timings"], [])
+
+
+# === Audio duration ===
+
+func test_get_audio_duration_returns_zero_for_empty_path():
+	assert_almost_eq(_verifier._get_audio_duration(""), 0.0, 0.01)
+
+func test_get_audio_duration_returns_zero_for_nonexistent_file():
+	assert_almost_eq(_verifier._get_audio_duration("/tmp/nonexistent_audio_file.mp3"), 0.0, 0.01)
+
+func test_get_audio_duration_caches_result():
+	# Call twice, second call should use cache
+	_verifier._get_audio_duration("/tmp/nonexistent_audio_file.mp3")
+	_verifier._get_audio_duration("/tmp/nonexistent_audio_file.mp3")
+	# If we got here without error, caching works
+	assert_true(_verifier._audio_duration_cache.has("/tmp/nonexistent_audio_file.mp3"))
+
+func test_compute_sequence_audio_duration_no_voice_files():
+	var seq = _make_sequence("NoVoice")
+	# Default dialogue has no voice_files
+	var duration = _verifier._compute_sequence_audio_duration(seq, "/tmp")
+	assert_almost_eq(duration, 0.0, 0.01)
+
+func test_compute_sequence_audio_duration_with_voice_files_nonexistent():
+	var seq = SequenceScript.new()
+	seq.seq_name = "WithVoice"
+	seq.position = Vector2(0, 0)
+	var dlg = DialogueScript.new()
+	dlg.character = "Narrator"
+	dlg.text = "Hello"
+	dlg.voice_files = {"fr": "assets/voices/test_fr.mp3"}
+	seq.dialogues.append(dlg)
+	var duration = _verifier._compute_sequence_audio_duration(seq, "/tmp")
+	# File doesn't exist, so duration = 0
+	assert_almost_eq(duration, 0.0, 0.01)
+
+func test_compute_sequence_audio_duration_empty_story_base_path():
+	var seq = SequenceScript.new()
+	seq.seq_name = "WithVoice"
+	seq.position = Vector2(0, 0)
+	var dlg = DialogueScript.new()
+	dlg.character = "Narrator"
+	dlg.text = "Hello"
+	dlg.voice_files = {"fr": "assets/voices/test_fr.mp3"}
+	seq.dialogues.append(dlg)
+	var duration = _verifier._compute_sequence_audio_duration(seq, "")
+	assert_almost_eq(duration, 0.0, 0.01)
+
+
+# === Audio duration in simulation steps and timings ===
+
+func test_simulate_step_includes_audio_duration_key():
+	var story = _build_simple_story()
+	story.chapters[0].scenes[0].sequences[0].ending = _make_ending_auto("game_over", "")
+	var report = _verifier.verify(story)
+	var step = report["runs"][0]["path"][0]
+	assert_true(step.has("audio_duration"), "Step should have audio_duration key")
+	assert_almost_eq(step["audio_duration"], 0.0, 0.01)
+
+func test_compute_timings_includes_audio_fields():
+	var runs = [
+		{
+			"ending_reason": "game_over",
+			"path": [
+				{"chapter_name": "Ch1", "word_count": 10, "dialogue_count": 2, "type": "sequence", "audio_duration": 5.5},
+			]
+		}
+	]
+	var result = _verifier._compute_timings(runs)
+	var ch = result["chapters"][0]
+	assert_true(ch["game_over"].has("audio_min_seconds"))
+	assert_true(ch["game_over"].has("audio_max_seconds"))
+	assert_almost_eq(ch["game_over"]["audio_min_seconds"], 5.5, 0.01)
+	assert_almost_eq(ch["game_over"]["audio_max_seconds"], 5.5, 0.01)
+
+func test_compute_timings_audio_min_max_across_runs():
+	var runs = [
+		{
+			"ending_reason": "game_over",
+			"path": [
+				{"chapter_name": "Ch1", "word_count": 0, "dialogue_count": 0, "type": "sequence", "audio_duration": 3.0},
+			]
+		},
+		{
+			"ending_reason": "game_over",
+			"path": [
+				{"chapter_name": "Ch1", "word_count": 0, "dialogue_count": 0, "type": "sequence", "audio_duration": 10.0},
+			]
+		},
+	]
+	var result = _verifier._compute_timings(runs)
+	var ch = result["chapters"][0]
+	assert_almost_eq(ch["game_over"]["audio_min_seconds"], 3.0, 0.01)
+	assert_almost_eq(ch["game_over"]["audio_max_seconds"], 10.0, 0.01)
+
+func test_compute_timings_audio_in_total():
+	var runs = [
+		{
+			"ending_reason": "game_over",
+			"path": [
+				{"chapter_name": "Ch1", "word_count": 0, "dialogue_count": 0, "type": "sequence", "audio_duration": 7.0},
+				{"chapter_name": "Ch2", "word_count": 0, "dialogue_count": 0, "type": "sequence", "audio_duration": 3.0},
+			]
+		}
+	]
+	var result = _verifier._compute_timings(runs)
+	var total = result["total"]
+	assert_true(total["game_over"].has("audio_min_seconds"))
+	assert_almost_eq(total["game_over"]["audio_min_seconds"], 10.0, 0.01)
+	assert_almost_eq(total["game_over"]["audio_max_seconds"], 10.0, 0.01)
+
+func test_compute_timings_audio_zero_when_no_audio():
+	var runs = [
+		{
+			"ending_reason": "game_over",
+			"path": [
+				{"chapter_name": "Ch1", "word_count": 10, "dialogue_count": 1, "type": "sequence", "audio_duration": 0.0},
+			]
+		}
+	]
+	var result = _verifier._compute_timings(runs)
+	var ch = result["chapters"][0]
+	assert_almost_eq(ch["game_over"]["audio_min_seconds"], 0.0, 0.01)
+	assert_almost_eq(ch["game_over"]["audio_max_seconds"], 0.0, 0.01)
+
+func test_compute_timings_audio_choices_and_conditions_zero():
+	# Choices and conditions should contribute 0 audio_duration
+	var runs = [
+		{
+			"ending_reason": "game_over",
+			"path": [
+				{"chapter_name": "Ch1", "word_count": 0, "dialogue_count": 0, "type": "choice", "audio_duration": 0.0},
+				{"chapter_name": "Ch1", "word_count": 0, "dialogue_count": 0, "type": "condition", "audio_duration": 0.0},
+				{"chapter_name": "Ch1", "word_count": 0, "dialogue_count": 0, "type": "sequence", "audio_duration": 5.0},
+			]
+		}
+	]
+	var result = _verifier._compute_timings(runs)
+	assert_almost_eq(result["chapters"][0]["game_over"]["audio_min_seconds"], 5.0, 0.01)

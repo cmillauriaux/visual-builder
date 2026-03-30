@@ -46,12 +46,24 @@ func _append_total_timings(lines: PackedStringArray, total_timings: Dictionary) 
 			_format_duration(sub.get("min_seconds", 0.0)),
 			_format_duration(sub.get("max_seconds", 0.0)),
 		])
+		var audio_max: float = sub.get("audio_max_seconds", 0.0)
+		if audio_max > 0.0:
+			lines.append("  Histoire (Suite) audio : de %s a %s" % [
+				_format_duration(sub.get("audio_min_seconds", 0.0)),
+				_format_duration(sub.get("audio_max_seconds", 0.0)),
+			])
 	if total_timings.has("game_over"):
 		var sub: Dictionary = total_timings["game_over"]
 		lines.append("  Histoire (Game Over) : de %s a %s" % [
 			_format_duration(sub.get("min_seconds", 0.0)),
 			_format_duration(sub.get("max_seconds", 0.0)),
 		])
+		var audio_max: float = sub.get("audio_max_seconds", 0.0)
+		if audio_max > 0.0:
+			lines.append("  Histoire (Game Over) audio : de %s a %s" % [
+				_format_duration(sub.get("audio_min_seconds", 0.0)),
+				_format_duration(sub.get("audio_max_seconds", 0.0)),
+			])
 
 
 func _append_timings(lines: PackedStringArray, timings: Array) -> void:
@@ -68,6 +80,13 @@ func _append_timings(lines: PackedStringArray, timings: Array) -> void:
 				_format_duration(sub.get("min_seconds", 0.0)),
 				_format_duration(sub.get("max_seconds", 0.0)),
 			])
+			var audio_max: float = sub.get("audio_max_seconds", 0.0)
+			if audio_max > 0.0:
+				lines.append("  %s (Suite) audio : de %s a %s" % [
+					ch,
+					_format_duration(sub.get("audio_min_seconds", 0.0)),
+					_format_duration(sub.get("audio_max_seconds", 0.0)),
+				])
 		if timing.has("game_over"):
 			var sub: Dictionary = timing["game_over"]
 			lines.append("  %s (Game Over) : de %s a %s" % [
@@ -75,6 +94,13 @@ func _append_timings(lines: PackedStringArray, timings: Array) -> void:
 				_format_duration(sub.get("min_seconds", 0.0)),
 				_format_duration(sub.get("max_seconds", 0.0)),
 			])
+			var audio_max: float = sub.get("audio_max_seconds", 0.0)
+			if audio_max > 0.0:
+				lines.append("  %s (Game Over) audio : de %s a %s" % [
+					ch,
+					_format_duration(sub.get("audio_min_seconds", 0.0)),
+					_format_duration(sub.get("audio_max_seconds", 0.0)),
+				])
 
 
 func _append_orphans(lines: PackedStringArray, orphans: Array) -> void:

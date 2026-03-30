@@ -99,7 +99,7 @@ func _verify_story(story_path: String) -> bool:
 	print("")
 	print("=== Vérification de l'histoire ===")
 	var verifier = StoryVerifier.new()
-	var report = verifier.verify(story)
+	var report = verifier.verify(story, story_path)
 
 	print("Résultat global : " + ("✅ SUCCÈS" if report["success"] else "❌ ÉCHEC"))
 	print("Noeuds total    : " + str(report["all_nodes"]))

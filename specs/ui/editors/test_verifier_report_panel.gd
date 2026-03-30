@@ -168,6 +168,75 @@ func test_copy_button_does_not_crash_without_show_report():
 	assert_true(true)  # Ne doit pas crasher
 
 
+# === Audio timings UI ===
+
+func test_show_total_audio_timings_when_non_zero():
+	var report = _make_success_report()
+	report["total_timings"] = {
+		"continuation": {"min_seconds": 600.0, "max_seconds": 1200.0, "audio_min_seconds": 300.0, "audio_max_seconds": 900.0},
+	}
+	_panel.show_report(report)
+	var total_list = _panel._report_content.get_node_or_null("TotalTimingsList")
+	assert_not_null(total_list)
+	# 2 labels: text line + audio line
+	assert_eq(total_list.get_child_count(), 2)
+	var audio_label: Label = total_list.get_child(1)
+	assert_true(audio_label.text.contains("audio"), "Audio label doit contenir 'audio'")
+
+func test_hide_total_audio_timings_when_zero():
+	var report = _make_success_report()
+	report["total_timings"] = {
+		"continuation": {"min_seconds": 600.0, "max_seconds": 1200.0, "audio_min_seconds": 0.0, "audio_max_seconds": 0.0},
+	}
+	_panel.show_report(report)
+	var total_list = _panel._report_content.get_node_or_null("TotalTimingsList")
+	assert_not_null(total_list)
+	# Only 1 label (text line, no audio line)
+	assert_eq(total_list.get_child_count(), 1)
+
+func test_show_chapter_audio_timings_when_non_zero():
+	var report = _make_success_report()
+	report["chapter_timings"] = [
+		{
+			"chapter_name": "Chapitre 1",
+			"continuation": {"min_seconds": 150.0, "max_seconds": 315.0, "audio_min_seconds": 60.0, "audio_max_seconds": 200.0},
+		},
+	]
+	_panel.show_report(report)
+	var timing_list = _panel._report_content.get_node_or_null("ChapterTimingsList")
+	assert_not_null(timing_list)
+	# 2 labels: text + audio
+	assert_eq(timing_list.get_child_count(), 2)
+	var audio_label: Label = timing_list.get_child(1)
+	assert_true(audio_label.text.contains("audio"), "Audio label doit contenir 'audio'")
+
+func test_hide_chapter_audio_timings_when_zero():
+	var report = _make_success_report()
+	report["chapter_timings"] = [
+		{
+			"chapter_name": "Chapitre 1",
+			"continuation": {"min_seconds": 150.0, "max_seconds": 315.0, "audio_min_seconds": 0.0, "audio_max_seconds": 0.0},
+		},
+	]
+	_panel.show_report(report)
+	var timing_list = _panel._report_content.get_node_or_null("ChapterTimingsList")
+	assert_not_null(timing_list)
+	assert_eq(timing_list.get_child_count(), 1)
+
+func test_audio_label_color_is_light_blue():
+	var report = _make_success_report()
+	report["total_timings"] = {
+		"continuation": {"min_seconds": 600.0, "max_seconds": 1200.0, "audio_min_seconds": 300.0, "audio_max_seconds": 900.0},
+	}
+	_panel.show_report(report)
+	var total_list = _panel._report_content.get_node_or_null("TotalTimingsList")
+	var audio_label: Label = total_list.get_child(1)
+	var color = audio_label.get_theme_color("font_color")
+	# Light blue: Color(0.6, 0.85, 1.0)
+	assert_almost_eq(color.r, 0.6, 0.1)
+	assert_almost_eq(color.b, 1.0, 0.1)
+
+
 # === Helpers ===
 
 func _make_success_report() -> Dictionary:
