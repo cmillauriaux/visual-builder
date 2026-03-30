@@ -59,14 +59,14 @@ func build_ui() -> void:
 
 	_title_label = Label.new()
 	_title_label.text = StoryI18nService.get_ui_string("Sauvegardes", _i18n_dict)
-	_title_label.add_theme_font_size_override("font_size", UIScale.scale(28))
+	_title_label.add_theme_font_size_override("font_size", UIScale.scale(40))
 	_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(_title_label)
 
 	_close_btn = Button.new()
 	_close_btn.text = "✕"
 	_close_btn.custom_minimum_size = Vector2(UIScale.scale(50), UIScale.scale(50))
-	_close_btn.add_theme_font_size_override("font_size", UIScale.scale(24))
+	_close_btn.add_theme_font_size_override("font_size", UIScale.scale(32))
 	_close_btn.pressed.connect(func(): close_pressed.emit())
 	GameTheme.apply_close_style(_close_btn)
 	header.add_child(_close_btn)
@@ -193,7 +193,7 @@ func _refresh_auto_saves() -> void:
 		empty_lbl.text = StoryI18nService.get_ui_string("Aucune sauvegarde automatique", _i18n_dict)
 		empty_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		empty_lbl.add_theme_color_override("font_color", Color("#C4A882"))
-		empty_lbl.add_theme_font_size_override("font_size", UIScale.scale(18))
+		empty_lbl.add_theme_font_size_override("font_size", UIScale.scale(24))
 		_auto_content.add_child(empty_lbl)
 		return
 
@@ -218,7 +218,7 @@ func _refresh_quick_saves() -> void:
 		empty_lbl.text = StoryI18nService.get_ui_string("Aucune sauvegarde rapide", _i18n_dict)
 		empty_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		empty_lbl.add_theme_color_override("font_color", Color("#C4A882"))
-		empty_lbl.add_theme_font_size_override("font_size", UIScale.scale(18))
+		empty_lbl.add_theme_font_size_override("font_size", UIScale.scale(24))
 		_quick_content.add_child(empty_lbl)
 
 
@@ -258,21 +258,21 @@ func _build_autosave_card(entry: Dictionary, display_index: int) -> Control:
 
 	var chap_label := Label.new()
 	chap_label.text = data.get("chapter_name", "")
-	chap_label.add_theme_font_size_override("font_size", UIScale.scale(13))
+	chap_label.add_theme_font_size_override("font_size", UIScale.scale(20))
 	chap_label.add_theme_color_override("font_color", Color("#E8D5B5"))
 	chap_label.name = "AutoChapterLabel_%d" % display_index
 	info_vbox.add_child(chap_label)
 
 	var scene_label := Label.new()
 	scene_label.text = data.get("scene_name", "")
-	scene_label.add_theme_font_size_override("font_size", UIScale.scale(12))
+	scene_label.add_theme_font_size_override("font_size", UIScale.scale(18))
 	scene_label.add_theme_color_override("font_color", Color("#C4A882"))
 	scene_label.name = "AutoSceneLabel_%d" % display_index
 	info_vbox.add_child(scene_label)
 
 	var date_label := Label.new()
 	date_label.text = data.get("timestamp", "")
-	date_label.add_theme_font_size_override("font_size", UIScale.scale(11))
+	date_label.add_theme_font_size_override("font_size", UIScale.scale(16))
 	date_label.add_theme_color_override("font_color", Color("#A08060"))
 	date_label.name = "AutoDateLabel_%d" % display_index
 	info_vbox.add_child(date_label)
@@ -320,21 +320,21 @@ func _build_quicksave_card(data: Dictionary) -> Control:
 
 	var chap_label := Label.new()
 	chap_label.text = data.get("chapter_name", "")
-	chap_label.add_theme_font_size_override("font_size", UIScale.scale(13))
+	chap_label.add_theme_font_size_override("font_size", UIScale.scale(20))
 	chap_label.add_theme_color_override("font_color", Color("#E8D5B5"))
 	chap_label.name = "QuickChapterLabel"
 	info_vbox.add_child(chap_label)
 
 	var scene_label := Label.new()
 	scene_label.text = data.get("scene_name", "")
-	scene_label.add_theme_font_size_override("font_size", UIScale.scale(12))
+	scene_label.add_theme_font_size_override("font_size", UIScale.scale(18))
 	scene_label.add_theme_color_override("font_color", Color("#C4A882"))
 	scene_label.name = "QuickSceneLabel"
 	info_vbox.add_child(scene_label)
 
 	var date_label := Label.new()
 	date_label.text = data.get("timestamp", "")
-	date_label.add_theme_font_size_override("font_size", UIScale.scale(11))
+	date_label.add_theme_font_size_override("font_size", UIScale.scale(16))
 	date_label.add_theme_color_override("font_color", Color("#A08060"))
 	date_label.name = "QuickDateLabel"
 	info_vbox.add_child(date_label)
@@ -389,21 +389,21 @@ func _build_slot_card(entry: Dictionary) -> Control:
 
 		var chap_label := Label.new()
 		chap_label.text = data.get("chapter_name", "")
-		chap_label.add_theme_font_size_override("font_size", UIScale.scale(13))
+		chap_label.add_theme_font_size_override("font_size", UIScale.scale(20))
 		chap_label.add_theme_color_override("font_color", Color("#E8D5B5"))
 		chap_label.name = "ChapterLabel"
 		info_vbox.add_child(chap_label)
 
 		var scene_label := Label.new()
 		scene_label.text = data.get("scene_name", "")
-		scene_label.add_theme_font_size_override("font_size", UIScale.scale(12))
+		scene_label.add_theme_font_size_override("font_size", UIScale.scale(18))
 		scene_label.add_theme_color_override("font_color", Color("#C4A882"))
 		scene_label.name = "SceneLabel"
 		info_vbox.add_child(scene_label)
 
 		var date_label := Label.new()
 		date_label.text = data.get("timestamp", "")
-		date_label.add_theme_font_size_override("font_size", UIScale.scale(11))
+		date_label.add_theme_font_size_override("font_size", UIScale.scale(16))
 		date_label.add_theme_color_override("font_color", Color("#A08060"))
 		date_label.name = "DateLabel"
 		info_vbox.add_child(date_label)
@@ -497,7 +497,7 @@ func _show_confirm_dialog(message: String, on_yes: Callable) -> void:
 	var lbl := Label.new()
 	lbl.text = message
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	lbl.add_theme_font_size_override("font_size", UIScale.scale(18))
+	lbl.add_theme_font_size_override("font_size", UIScale.scale(24))
 	vbox.add_child(lbl)
 
 	var btn_row := HBoxContainer.new()

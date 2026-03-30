@@ -53,14 +53,14 @@ func build_ui(default_title: String = "") -> void:
 
 	_title_label = Label.new()
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_title_label.add_theme_font_size_override("font_size", UIScale.scale(64))
+	_title_label.add_theme_font_size_override("font_size", UIScale.scale(80))
 	_title_label.add_theme_color_override("font_color", Color.WHITE)
 	_title_label.text = _default_title
 	vbox.add_child(_title_label)
 
 	_subtitle_label = Label.new()
 	_subtitle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_subtitle_label.add_theme_font_size_override("font_size", UIScale.scale(24))
+	_subtitle_label.add_theme_font_size_override("font_size", UIScale.scale(36))
 	_subtitle_label.add_theme_color_override("font_color", Color(1, 1, 1, 0.8))
 	vbox.add_child(_subtitle_label)
 

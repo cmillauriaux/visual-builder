@@ -47,14 +47,14 @@ func build_ui() -> void:
 
 	_title_label = Label.new()
 	_title_label.text = StoryI18nService.get_ui_string("Chapitres / Scènes", _i18n_dict)
-	_title_label.add_theme_font_size_override("font_size", UIScale.scale(28))
+	_title_label.add_theme_font_size_override("font_size", UIScale.scale(40))
 	_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(_title_label)
 
 	_close_btn = Button.new()
 	_close_btn.text = "✕"
 	_close_btn.custom_minimum_size = Vector2(UIScale.scale(50), UIScale.scale(50))
-	_close_btn.add_theme_font_size_override("font_size", UIScale.scale(24))
+	_close_btn.add_theme_font_size_override("font_size", UIScale.scale(32))
 	_close_btn.pressed.connect(func(): close_pressed.emit())
 	GameTheme.apply_close_style(_close_btn)
 	header.add_child(_close_btn)
@@ -116,7 +116,7 @@ func _build_chapter_section(chapter, ch_idx: int, max_chapter_idx: int, max_scen
 	# En-tête du chapitre
 	var chap_label := Label.new()
 	chap_label.text = StoryI18nService.get_ui_string("Chapitre %d — %s", _i18n_dict) % [ch_idx + 1, chapter.chapter_name]
-	chap_label.add_theme_font_size_override("font_size", UIScale.scale(20))
+	chap_label.add_theme_font_size_override("font_size", UIScale.scale(28))
 	chap_label.add_theme_color_override("font_color", Color("#E8D5B5"))
 	chap_label.name = "ChapterHeader"
 	section.add_child(chap_label)
@@ -168,7 +168,7 @@ func _build_locked_scene(parent: FlowContainer, ch_idx: int, sc_idx: int) -> voi
 	var chap_lbl := Label.new()
 	chap_lbl.text = StoryI18nService.get_ui_string("Chapitre %d", _i18n_dict) % (ch_idx + 1)
 	chap_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	chap_lbl.add_theme_font_size_override("font_size", UIScale.scale(12))
+	chap_lbl.add_theme_font_size_override("font_size", UIScale.scale(18))
 	chap_lbl.add_theme_color_override("font_color", Color("#A08060"))
 	chap_lbl.name = "LockedChapterLabel"
 	inner.add_child(chap_lbl)
@@ -176,7 +176,7 @@ func _build_locked_scene(parent: FlowContainer, ch_idx: int, sc_idx: int) -> voi
 	var scene_lbl := Label.new()
 	scene_lbl.text = "??????"
 	scene_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	scene_lbl.add_theme_font_size_override("font_size", UIScale.scale(16))
+	scene_lbl.add_theme_font_size_override("font_size", UIScale.scale(24))
 	scene_lbl.add_theme_color_override("font_color", Color("#6B5A45"))
 	scene_lbl.name = "LockedSceneLabel"
 	inner.add_child(scene_lbl)

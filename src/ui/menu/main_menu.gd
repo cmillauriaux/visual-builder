@@ -103,13 +103,13 @@ func build_ui() -> void:
 
 	_title_label = Label.new()
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_title_label.add_theme_font_size_override("font_size", UIScale.scale(36))
+	_title_label.add_theme_font_size_override("font_size", UIScale.scale(48))
 	_title_label.add_theme_color_override("font_color", Color.WHITE)
 	label_vbox.add_child(_title_label)
 
 	_subtitle_label = Label.new()
 	_subtitle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_subtitle_label.add_theme_font_size_override("font_size", UIScale.scale(18))
+	_subtitle_label.add_theme_font_size_override("font_size", UIScale.scale(26))
 	_subtitle_label.add_theme_color_override("font_color", Color(1, 1, 1, 0.8))
 	label_vbox.add_child(_subtitle_label)
 
@@ -163,7 +163,7 @@ func build_ui() -> void:
 	_loading_label = Label.new()
 	_loading_label.text = StoryI18nService.get_ui_string("Chargement...", _last_i18n_dict)
 	_loading_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_loading_label.add_theme_font_size_override("font_size", UIScale.scale(28))
+	_loading_label.add_theme_font_size_override("font_size", UIScale.scale(40))
 	_loading_label.add_theme_color_override("font_color", Color.WHITE)
 	_loading_overlay.add_child(_loading_label)
 
@@ -183,7 +183,7 @@ func build_ui() -> void:
 		if release_date != "":
 			parts.append(release_date)
 		edition_label.text = " — ".join(parts)
-		edition_label.add_theme_font_size_override("font_size", UIScale.scale(12))
+		edition_label.add_theme_font_size_override("font_size", UIScale.scale(16))
 		edition_label.add_theme_color_override("font_color", Color(1, 1, 1, 0.5))
 		edition_label.offset_right = -UIScale.scale(8)
 		edition_label.offset_bottom = -UIScale.scale(6)

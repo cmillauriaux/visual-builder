@@ -61,7 +61,7 @@ static func _build_play_overlay(game: Control) -> void:
 	game._play_overlay.add_child(play_vbox)
 
 	game._play_character_label = Label.new()
-	game._play_character_label.add_theme_font_size_override("font_size", UIScale.scale(20))
+	game._play_character_label.add_theme_font_size_override("font_size", UIScale.scale(28))
 	game._play_character_label.add_theme_color_override("font_color", Color("#5C3A1E"))
 	play_vbox.add_child(game._play_character_label)
 
@@ -128,13 +128,13 @@ static func _build_play_overlay(game: Control) -> void:
 	
 	game._play_title_label = Label.new()
 	game._play_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	game._play_title_label.add_theme_font_size_override("font_size", UIScale.scale(48))
+	game._play_title_label.add_theme_font_size_override("font_size", UIScale.scale(64))
 	game._play_title_label.add_theme_color_override("font_color", Color.WHITE)
 	title_vbox.add_child(game._play_title_label)
 
 	game._play_subtitle_label = Label.new()
 	game._play_subtitle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	game._play_subtitle_label.add_theme_font_size_override("font_size", UIScale.scale(24))
+	game._play_subtitle_label.add_theme_font_size_override("font_size", UIScale.scale(36))
 	game._play_subtitle_label.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8))
 	title_vbox.add_child(game._play_subtitle_label)
 
@@ -206,7 +206,7 @@ static func _build_loading_overlay(game: Control) -> void:
 	game._loading_overlay_label = Label.new()
 	game._loading_overlay_label.text = "Chargement..."
 	game._loading_overlay_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	game._loading_overlay_label.add_theme_font_size_override("font_size", UIScale.scale(28))
+	game._loading_overlay_label.add_theme_font_size_override("font_size", UIScale.scale(40))
 	game._loading_overlay_label.add_theme_color_override("font_color", Color.WHITE)
 	center.add_child(game._loading_overlay_label)
 
@@ -239,7 +239,7 @@ static func _build_quickload_confirm(game: Control) -> void:
 	game._quickload_confirm_label = Label.new()
 	game._quickload_confirm_label.text = "Charger la sauvegarde rapide ?"
 	game._quickload_confirm_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	game._quickload_confirm_label.add_theme_font_size_override("font_size", UIScale.scale(20))
+	game._quickload_confirm_label.add_theme_font_size_override("font_size", UIScale.scale(28))
 	vbox.add_child(game._quickload_confirm_label)
 
 	var hbox := HBoxContainer.new()
@@ -335,7 +335,7 @@ static func _build_story_selector(game: Control) -> void:
 	game._story_selector_title = Label.new()
 	game._story_selector_title.text = "Sélectionnez une histoire"
 	game._story_selector_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	game._story_selector_title.add_theme_font_size_override("font_size", UIScale.scale(24))
+	game._story_selector_title.add_theme_font_size_override("font_size", UIScale.scale(36))
 	vbox.add_child(game._story_selector_title)
 
 	var separator = HSeparator.new()

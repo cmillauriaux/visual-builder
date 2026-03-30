@@ -72,7 +72,7 @@ func build_ui() -> void:
 	var title_label = Label.new()
 	title_label.text = "Options"
 	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title_label.add_theme_font_size_override("font_size", UIScale.scale(22))
+	title_label.add_theme_font_size_override("font_size", UIScale.scale(32))
 	title_bar.add_child(title_label)
 	_ui_label_pairs.append([title_label, "Options"])
 
@@ -343,7 +343,7 @@ func apply_ui_translations(i18n_dict: Dictionary) -> void:
 func _add_section_label(parent: Control, text: String) -> Label:
 	var label = Label.new()
 	label.text = text
-	label.add_theme_font_size_override("font_size", UIScale.scale(18))
+	label.add_theme_font_size_override("font_size", UIScale.scale(24))
 	label.add_theme_color_override("font_color", GameTheme.COLOR_TEXT_SECONDARY)
 	parent.add_child(label)
 	_ui_label_pairs.append([label, text])

@@ -97,7 +97,7 @@ static func _setup_button(theme: Theme, story_ui_path: String = "") -> void:
 	theme.set_color("font_focus_color", "Button", COLOR_BUTTON_TEXT)
 	theme.set_color("font_pressed_color", "Button", Color("#5C3A1E"))
 	theme.set_color("font_disabled_color", "Button", Color(0.5, 0.4, 0.3, 0.5))
-	theme.set_font_size("font_size", "Button", UIScale.scale(16))
+	theme.set_font_size("font_size", "Button", UIScale.scale(24))
 
 
 static func _setup_option_button(theme: Theme, story_ui_path: String = "") -> void:
@@ -112,7 +112,7 @@ static func _setup_option_button(theme: Theme, story_ui_path: String = "") -> vo
 	theme.set_color("font_color", "OptionButton", COLOR_BUTTON_TEXT)
 	theme.set_color("font_hover_color", "OptionButton", COLOR_BUTTON_TEXT)
 	theme.set_color("font_pressed_color", "OptionButton", Color("#5C3A1E"))
-	theme.set_font_size("font_size", "OptionButton", UIScale.scale(16))
+	theme.set_font_size("font_size", "OptionButton", UIScale.scale(24))
 
 
 static func _setup_panel_container(theme: Theme, story_ui_path: String = "") -> void:
@@ -124,12 +124,12 @@ static func _setup_panel_container(theme: Theme, story_ui_path: String = "") -> 
 
 static func _setup_label(theme: Theme) -> void:
 	theme.set_color("font_color", "Label", COLOR_TEXT_DARK)
-	theme.set_font_size("font_size", "Label", UIScale.scale(16))
+	theme.set_font_size("font_size", "Label", UIScale.scale(24))
 
 
 static func _setup_rich_text_label(theme: Theme) -> void:
 	theme.set_color("default_color", "RichTextLabel", COLOR_TEXT_DARK)
-	theme.set_font_size("normal_font_size", "RichTextLabel", UIScale.scale(16))
+	theme.set_font_size("normal_font_size", "RichTextLabel", UIScale.scale(24))
 
 
 static func _setup_check_button(theme: Theme, story_ui_path: String = "") -> void:
@@ -140,7 +140,7 @@ static func _setup_check_button(theme: Theme, story_ui_path: String = "") -> voi
 	if checked:
 		theme.set_icon("checked", "CheckButton", checked)
 	theme.set_color("font_color", "CheckButton", COLOR_TEXT_DARK)
-	theme.set_font_size("font_size", "CheckButton", UIScale.scale(16))
+	theme.set_font_size("font_size", "CheckButton", UIScale.scale(24))
 
 
 static func _setup_separator(theme: Theme) -> void:
@@ -254,7 +254,7 @@ static func apply_tab_container_style(tab: TabContainer) -> void:
 	tab.add_theme_color_override("font_hovered_color", Color("#F0E4CC"))
 
 	# --- Taille de police ---
-	tab.add_theme_font_size_override("font_size", UIScale.scale(16))
+	tab.add_theme_font_size_override("font_size", UIScale.scale(24))
 
 
 ## Applique un style coloré personnalisé à un bouton de lien externe.
