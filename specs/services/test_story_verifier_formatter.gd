@@ -174,6 +174,67 @@ func test_format_duration_seconds_only():
 	assert_true(text.contains("45 sec"), "Duration < 60s doit afficher en secondes")
 
 
+# === Audio timings ===
+
+func test_total_timings_audio_present_when_non_zero():
+	var report := _make_success_report()
+	report["total_timings"] = {
+		"continuation": {"min_seconds": 600.0, "max_seconds": 1200.0, "audio_min_seconds": 300.0, "audio_max_seconds": 900.0},
+	}
+	var text: String = _formatter.format(report)
+	assert_true(text.contains("Histoire (Suite) audio : de 5 min a 15 min"), "Audio total continuation doit apparaitre")
+
+func test_total_timings_audio_absent_when_zero():
+	var report := _make_success_report()
+	report["total_timings"] = {
+		"continuation": {"min_seconds": 600.0, "max_seconds": 1200.0, "audio_min_seconds": 0.0, "audio_max_seconds": 0.0},
+	}
+	var text: String = _formatter.format(report)
+	assert_false(text.contains("audio"), "Audio total ne doit pas apparaitre si duree = 0")
+
+func test_total_timings_game_over_audio():
+	var report := _make_success_report()
+	report["total_timings"] = {
+		"game_over": {"min_seconds": 60.0, "max_seconds": 120.0, "audio_min_seconds": 30.0, "audio_max_seconds": 90.0},
+	}
+	var text: String = _formatter.format(report)
+	assert_true(text.contains("Histoire (Game Over) audio : de 30 sec a 1 min 30 sec"), "Audio total game_over doit apparaitre")
+
+func test_chapter_timings_audio_present_when_non_zero():
+	var report := _make_success_report()
+	report["chapter_timings"] = [
+		{
+			"chapter_name": "Chapitre 1",
+			"continuation": {"min_seconds": 150.0, "max_seconds": 315.0, "audio_min_seconds": 60.0, "audio_max_seconds": 200.0},
+		},
+	]
+	var text: String = _formatter.format(report)
+	assert_true(text.contains("Chapitre 1 (Suite) audio : de 1 min a 3 min 20 sec"), "Audio chapitre continuation doit apparaitre")
+
+func test_chapter_timings_audio_absent_when_zero():
+	var report := _make_success_report()
+	report["chapter_timings"] = [
+		{
+			"chapter_name": "Chapitre 1",
+			"continuation": {"min_seconds": 150.0, "max_seconds": 315.0, "audio_min_seconds": 0.0, "audio_max_seconds": 0.0},
+		},
+	]
+	var text: String = _formatter.format(report)
+	assert_false(text.contains("audio"), "Audio chapitre ne doit pas apparaitre si duree = 0")
+
+func test_chapter_timings_audio_absent_when_keys_missing():
+	# Backward-compat: old reports without audio keys
+	var report := _make_success_report()
+	report["chapter_timings"] = [
+		{
+			"chapter_name": "Chapitre 1",
+			"continuation": {"min_seconds": 150.0, "max_seconds": 315.0},
+		},
+	]
+	var text: String = _formatter.format(report)
+	assert_false(text.contains("audio"), "Audio ne doit pas apparaitre si les cles audio sont absentes")
+
+
 # === Helpers ===
 
 func _make_success_report() -> Dictionary:
