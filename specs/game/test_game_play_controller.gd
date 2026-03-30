@@ -373,6 +373,57 @@ func test_set_toolbar_visible_stores_value() -> void:
 	assert_true(_game._play_ctrl._toolbar_visible, "toolbar_visible should be true")
 
 
+# --- toolbar toggle button ---
+
+func test_toolbar_toggle_button_exists() -> void:
+	assert_not_null(_game._toolbar_toggle_button, "toolbar toggle button should exist")
+	assert_is(_game._toolbar_toggle_button, Button)
+
+
+func test_toggle_button_click_shows_toolbar() -> void:
+	_game._play_ctrl.set_toolbar_visible(false)
+	_game._play_ctrl._on_toolbar_toggle_pressed()
+	assert_true(_game._play_ctrl._toolbar_visible, "toolbar should be visible after toggle")
+
+
+func test_toggle_button_click_hides_toolbar() -> void:
+	_game._play_ctrl.set_toolbar_visible(true)
+	_game._play_ctrl._on_toolbar_toggle_pressed()
+	assert_false(_game._play_ctrl._toolbar_visible, "toolbar should be hidden after toggle")
+
+
+func test_toggle_button_updates_text_to_close() -> void:
+	_game._play_ctrl.set_toolbar_visible(false)
+	_game._play_ctrl._on_toolbar_toggle_pressed()
+	assert_eq(_game._toolbar_toggle_button.text, "×", "should show close icon when toolbar visible")
+
+
+func test_toggle_button_updates_text_to_hamburger() -> void:
+	_game._play_ctrl.set_toolbar_visible(true)
+	_game._play_ctrl._on_toolbar_toggle_pressed()
+	assert_eq(_game._toolbar_toggle_button.text, "≡", "should show hamburger when toolbar hidden")
+
+
+func test_toggle_updates_play_buttons_bar_visibility() -> void:
+	_game._play_ctrl.set_toolbar_visible(false)
+	_game._play_ctrl._on_toolbar_toggle_pressed()
+	assert_true(_game._play_buttons_bar.visible, "bar should be visible after toggle on")
+	_game._play_ctrl._on_toolbar_toggle_pressed()
+	assert_false(_game._play_buttons_bar.visible, "bar should be hidden after toggle off")
+
+
+func test_set_toolbar_visible_does_not_change_bar_visibility() -> void:
+	_game._play_buttons_bar.visible = false
+	_game._play_ctrl.set_toolbar_visible(true)
+	assert_false(_game._play_buttons_bar.visible, "set_toolbar_visible should not show bar directly")
+
+
+func test_toggle_emits_toolbar_toggled_signal() -> void:
+	watch_signals(_game._play_ctrl)
+	_game._play_ctrl._on_toolbar_toggle_pressed()
+	assert_signal_emitted(_game._play_ctrl, "toolbar_toggled")
+
+
 # --- is_scene_available (static, pure logic) ---
 
 func test_is_scene_available_returns_false_when_no_progression() -> void:

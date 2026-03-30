@@ -60,6 +60,7 @@ var _history_button: Button
 var _quicksave_button: Button
 var _quickload_button: Button
 var _play_buttons_bar: HBoxContainer
+var _toolbar_toggle_button: Button
 var _pause_menu: Control
 
 # UI — Save/Load menu
@@ -193,6 +194,7 @@ func _ready() -> void:
 	_sequence_editor_ctrl.play_dialogue_changed.connect(_play_ctrl.on_play_dialogue_changed)
 	_sequence_editor_ctrl.play_stopped.connect(_play_ctrl.on_play_stopped)
 	_play_ctrl.play_finished_show_menu.connect(_on_play_finished_return)
+	_play_ctrl.toolbar_toggled.connect(_on_toolbar_toggled)
 
 	# Connecter le signal scene_entered pour mettre à jour la disponibilité du Skip
 	_story_play_ctrl.scene_entered.connect(_on_scene_entered_update_skip)
@@ -458,6 +460,11 @@ func _on_options_applied() -> void:
 	_play_ctrl.set_voice_language(_settings.voice_language)
 
 
+func _on_toolbar_toggled(p_visible: bool) -> void:
+	_settings.toolbar_visible = p_visible
+	_settings.save_settings()
+
+
 func _show_main_menu(story) -> void:
 	_story_selector.visible = false
 	_menu_button.visible = false
@@ -690,11 +697,14 @@ func _hide_play_ui_for_menu() -> void:
 		"choice_overlay": _choice_overlay.visible,
 		"play_buttons_bar": _play_buttons_bar.visible if _play_buttons_bar else false,
 		"menu_button": _menu_button.visible,
+		"toolbar_toggle": _toolbar_toggle_button.visible if _toolbar_toggle_button else false,
 	}
 	_play_overlay.visible = false
 	_choice_overlay.visible = false
 	if _play_buttons_bar:
 		_play_buttons_bar.visible = false
+	if _toolbar_toggle_button:
+		_toolbar_toggle_button.visible = false
 	_menu_button.visible = false
 
 
@@ -704,6 +714,8 @@ func _restore_play_ui_after_menu() -> void:
 	if _play_buttons_bar:
 		_play_buttons_bar.visible = _play_ui_state_before_menu.get("play_buttons_bar", false) and _settings.toolbar_visible
 	_menu_button.visible = _play_ui_state_before_menu.get("menu_button", false)
+	if _toolbar_toggle_button:
+		_toolbar_toggle_button.visible = _play_ui_state_before_menu.get("toolbar_toggle", false)
 	_play_ui_state_before_menu = {}
 
 

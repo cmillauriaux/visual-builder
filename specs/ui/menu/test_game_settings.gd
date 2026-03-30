@@ -19,6 +19,10 @@ func test_default_values():
 	assert_eq(settings.language, "")
 	assert_true(settings.autosave_enabled)
 
+func test_toolbar_visible_defaults_to_false():
+	var settings = GameSettingsScript.new()
+	assert_false(settings.toolbar_visible, "toolbar_visible should default to false")
+
 func test_get_ui_scale_factor():
 	var settings = GameSettingsScript.new()
 	settings.ui_scale_mode = 0

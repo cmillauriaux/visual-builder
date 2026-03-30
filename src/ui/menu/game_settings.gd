@@ -34,7 +34,7 @@ var typewriter_speed: float = 0.03
 var dialogue_opacity: int = 80
 var autosave_enabled: bool = true
 var ui_scale_mode: int = -1  # -1 = pas encore initialisé, utilise le défaut plateforme
-var toolbar_visible: bool = true
+var toolbar_visible: bool = false
 var pwa_prompt_dismissed: bool = false
 var game_plugins_enabled: Dictionary = {}  # plugin_name -> bool
 
@@ -93,7 +93,7 @@ func load_settings(path: String = SETTINGS_PATH) -> void:
 	typewriter_speed = cfg.get_value("gameplay", "typewriter_speed", 0.03)
 	autosave_enabled = cfg.get_value("gameplay", "autosave_enabled", true)
 	ui_scale_mode = cfg.get_value("display", "ui_scale_mode", get_default_ui_scale_mode())
-	toolbar_visible = cfg.get_value("display", "toolbar_visible", true)
+	toolbar_visible = cfg.get_value("display", "toolbar_visible", false)
 	pwa_prompt_dismissed = cfg.get_value("display", "pwa_prompt_dismissed", false)
 	var plugins_json: String = cfg.get_value("plugins", "enabled_states", "")
 	if plugins_json != "":

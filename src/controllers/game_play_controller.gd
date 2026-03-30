@@ -41,6 +41,7 @@ var _voice_language: String = ""  # "" = same as text language
 var _skip_max_chapter_index: int = -1
 var _skip_max_scene_index: int = -1
 var _toolbar_visible: bool = true
+var _toolbar_toggle_button: Button = null
 
 var _game_plugin_manager: Node = null
 var _plugin_ctx: RefCounted = null
@@ -51,6 +52,7 @@ var _history_panel: Control = null
 var _history_open: bool = false
 
 signal play_finished_show_menu()
+signal toolbar_toggled(visible: bool)
 
 
 func set_i18n(dict: Dictionary) -> void:
@@ -81,6 +83,15 @@ func set_auto_play_enabled(enabled: bool) -> void:
 
 func set_toolbar_visible(p_visible: bool) -> void:
 	_toolbar_visible = p_visible
+	if _toolbar_toggle_button:
+		_toolbar_toggle_button.text = "×" if _toolbar_visible else "≡"
+
+
+func _on_toolbar_toggle_pressed() -> void:
+	set_toolbar_visible(not _toolbar_visible)
+	if _play_buttons_bar:
+		_play_buttons_bar.visible = _toolbar_visible
+	toolbar_toggled.emit(_toolbar_visible)
 
 
 func set_voice_language(lang: String) -> void:
@@ -115,6 +126,9 @@ func setup(game: Control) -> void:
 		_play_buttons_bar = game._play_buttons_bar
 	if game.get("_history_button") != null:
 		_history_button = game._history_button
+	if game.get("_toolbar_toggle_button") != null:
+		_toolbar_toggle_button = game._toolbar_toggle_button
+		_toolbar_toggle_button.pressed.connect(_on_toolbar_toggle_pressed)
 	# Voice player for dialogue voice files
 	_voice_player = AudioStreamPlayer.new()
 	_voice_player.bus = "Voice"
@@ -240,12 +254,15 @@ func _start_sequence_actually() -> void:
 		_sequence_editor_ctrl.start_play()
 	if _sequence_editor_ctrl.is_playing():
 		_play_overlay.visible = true
-		if _play_buttons_bar:
-			_play_buttons_bar.visible = _toolbar_visible
-			_game.move_child(_play_buttons_bar, -1)
 		if not _play_overlay.get_parent():
 			_game.add_child(_play_overlay)
 		_game.move_child(_play_overlay, _game.get_child_count() - 1)
+		if _play_buttons_bar:
+			_play_buttons_bar.visible = _toolbar_visible
+			_game.move_child(_play_buttons_bar, -1)
+		if _toolbar_toggle_button:
+			_toolbar_toggle_button.visible = true
+			_game.move_child(_toolbar_toggle_button, -1)
 		if _typewriter_speed == 0.0:
 			_sequence_editor_ctrl.skip_typewriter()
 			_play_text_label.visible_characters = _sequence_editor_ctrl.get_visible_characters()
@@ -506,6 +523,8 @@ func _handle_play_stopped() -> void:
 	_play_overlay.visible = false
 	if _play_buttons_bar:
 		_play_buttons_bar.visible = false
+	if _toolbar_toggle_button:
+		_toolbar_toggle_button.visible = false
 	_typewriter_timer.stop()
 	if _auto_play:
 		_auto_play.stop_timer()
@@ -865,6 +884,8 @@ func _cleanup_play() -> void:
 	_menu_button.visible = false
 	if _play_buttons_bar:
 		_play_buttons_bar.visible = false
+	if _toolbar_toggle_button:
+		_toolbar_toggle_button.visible = false
 	_play_overlay.visible = false
 	_typewriter_timer.stop()
 	if _play_overlay.get_parent():

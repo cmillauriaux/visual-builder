@@ -158,6 +158,20 @@ static func _build_play_buttons_bar(game: Control) -> void:
 	game._play_buttons_bar.add_child(game._history_button)
 	game.add_child(game._play_buttons_bar)
 
+	# Toggle button — small floating overlay at bottom-right to show/hide toolbar
+	game._toolbar_toggle_button = Button.new()
+	game._toolbar_toggle_button.text = "≡"
+	game._toolbar_toggle_button.visible = false
+	game._toolbar_toggle_button.z_index = SequenceVisualEditorScript.UI_OVERLAY_Z
+	game._toolbar_toggle_button.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	var btn_s := roundi(32 * s)
+	game._toolbar_toggle_button.offset_left = -btn_s - roundi(8 * s)
+	game._toolbar_toggle_button.offset_right = -roundi(8 * s)
+	game._toolbar_toggle_button.offset_top = -roundi(156 * s)
+	game._toolbar_toggle_button.offset_bottom = -roundi(156 * s) + btn_s
+	game._toolbar_toggle_button.mouse_filter = Control.MOUSE_FILTER_STOP
+	game.add_child(game._toolbar_toggle_button)
+
 
 static func _build_toast_overlay(game: Control) -> void:
 	var s := UIScale.get_scale()
