@@ -535,7 +535,7 @@ func on_verify_pressed() -> void:
 	if _main._editor_main._story == null:
 		return
 	var verifier = StoryVerifierScript.new()
-	var report = verifier.verify(_main._editor_main._story)
+	var report = verifier.verify(_main._editor_main._story, _main._get_story_base_path())
 	_main._verifier_report_panel.show_report(report)
 	_main._verifier_report_panel.visible = true
 	_main._chapter_graph_view.visible = false
