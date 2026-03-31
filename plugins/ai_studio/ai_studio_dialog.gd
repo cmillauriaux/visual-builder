@@ -1,7 +1,7 @@
 extends Window
 
 ## Studio IA : dialogue avancé de génération d'images par IA.
-## Six onglets : Décliner, Expressions, Outpainting, Upscale, Enhance, Upscale + Enhance.
+## Sept onglets : Décliner, Expressions, Blink, Outpainting, Upscale, Enhance, Upscale + Enhance.
 
 const ComfyUIConfig = preload("res://src/services/comfyui_config.gd")
 const ComfyUIClient = preload("res://src/services/comfyui_client.gd")
@@ -13,6 +13,7 @@ const ExpressionQueueService = preload("res://src/services/expression_queue_serv
 
 const DeclinerTab = preload("res://plugins/ai_studio/ai_studio_decliner_tab.gd")
 const ExpressionsTab = preload("res://plugins/ai_studio/ai_studio_expressions_tab.gd")
+const BlinkTab = preload("res://plugins/ai_studio/ai_studio_blink_tab.gd")
 const OutpaintTab = preload("res://plugins/ai_studio/ai_studio_outpaint_tab.gd")
 const UpscaleTab = preload("res://plugins/ai_studio/ai_studio_upscale_tab.gd")
 const EnhanceTab = preload("res://plugins/ai_studio/ai_studio_enhance_tab.gd")
@@ -51,6 +52,7 @@ var _image_preview: Control
 # Tab controllers
 var _decl_tab: RefCounted = null
 var _expr_tab: RefCounted = null
+var _blink_tab: RefCounted = null
 var _outpaint_tab: RefCounted = null
 var _upscale_tab: RefCounted = null
 var _enhance_tab: RefCounted = null
@@ -75,6 +77,7 @@ func setup(story, story_base_path: String) -> void:
 	var has_story = story_base_path != ""
 	_decl_tab.setup(story_base_path, has_story)
 	_expr_tab.setup(story_base_path, has_story)
+	_blink_tab.setup(story_base_path, has_story)
 	_outpaint_tab.setup(story_base_path, has_story)
 	_upscale_tab.setup(story_base_path, has_story)
 	_enhance_tab.setup(story_base_path, has_story)
@@ -84,6 +87,7 @@ func setup(story, story_base_path: String) -> void:
 func _on_close() -> void:
 	_decl_tab.cancel_generation()
 	_expr_tab.cancel_generation()
+	_blink_tab.cancel_generation()
 	_outpaint_tab.cancel_generation()
 	_upscale_tab.cancel_generation()
 	_enhance_tab.cancel_generation()
@@ -158,12 +162,13 @@ func _build_ui() -> void:
 
 	_decl_tab = DeclinerTab.new()
 	_expr_tab = ExpressionsTab.new()
+	_blink_tab = BlinkTab.new()
 	_outpaint_tab = OutpaintTab.new()
 	_upscale_tab = UpscaleTab.new()
 	_enhance_tab = EnhanceTab.new()
 	_upscale_enhance_tab = UpscaleEnhanceTab.new()
 
-	for tab in [_decl_tab, _expr_tab, _outpaint_tab, _upscale_tab, _enhance_tab, _upscale_enhance_tab]:
+	for tab in [_decl_tab, _expr_tab, _blink_tab, _outpaint_tab, _upscale_tab, _enhance_tab, _upscale_enhance_tab]:
 		tab.initialize(self, _get_config, _negative_prompt_input,
 			_show_image_preview, _open_gallery_source_picker, _save_config, _resolve_unique_path)
 		tab.build_tab(_tab_container)
@@ -190,6 +195,7 @@ func _build_ui() -> void:
 	_image_preview.delete_requested.connect(_expr_tab._on_delete_item)
 	add_child(_image_preview)
 	_expr_tab.set_image_preview(_image_preview)
+	_blink_tab.set_image_preview(_image_preview)
 
 
 # ========================================================
@@ -251,6 +257,7 @@ func _apply_provider_ui(provider: int) -> void:
 func _update_all_generate_buttons() -> void:
 	_decl_tab.update_generate_button()
 	_expr_tab.update_generate_button()
+	_blink_tab.update_generate_button()
 	_outpaint_tab.update_generate_button()
 	_upscale_tab.update_generate_button()
 	_enhance_tab.update_generate_button()
@@ -259,7 +266,7 @@ func _update_all_generate_buttons() -> void:
 
 func _update_cfg_hints() -> void:
 	var has_negative = _negative_prompt_input.text.strip_edges() != ""
-	for tab in [_decl_tab, _expr_tab, _outpaint_tab, _upscale_tab, _enhance_tab, _upscale_enhance_tab]:
+	for tab in [_decl_tab, _expr_tab, _blink_tab, _outpaint_tab, _upscale_tab, _enhance_tab, _upscale_enhance_tab]:
 		tab.update_cfg_hint(has_negative)
 
 
