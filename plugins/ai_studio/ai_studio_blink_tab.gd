@@ -391,14 +391,18 @@ func _open_multi_gallery() -> void:
 	images.sort()
 
 	for path in images:
-		var container = Panel.new()
-		container.custom_minimum_size = Vector2(120, 150)
-		container.mouse_filter = Control.MOUSE_FILTER_STOP
+		var container = PanelContainer.new()
+		container.custom_minimum_size = Vector2(120, 160)
 
 		var cv = VBoxContainer.new()
-		cv.set_anchors_preset(Control.PRESET_FULL_RECT)
 		cv.alignment = BoxContainer.ALIGNMENT_CENTER
 		container.add_child(cv)
+
+		var cb = CheckBox.new()
+		cb.text = path.get_file()
+		cb.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		cb.button_pressed = path in _selected_sources
+		cv.add_child(cb)
 
 		var tex_rect = TextureRect.new()
 		tex_rect.custom_minimum_size = Vector2(100, 100)
@@ -408,20 +412,13 @@ func _open_multi_gallery() -> void:
 		tex_rect.texture = GalleryCacheService.get_texture(path)
 		cv.add_child(tex_rect)
 
-		var lbl = Label.new()
-		lbl.text = path.get_file()
-		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		lbl.add_theme_font_size_override("font_size", 10)
-		lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		cv.add_child(lbl)
+		# Click anywhere on the panel toggles the checkbox
+		container.gui_input.connect(func(event: InputEvent):
+			if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+				cb.button_pressed = not cb.button_pressed
+		)
 
-		var cb = CheckBox.new()
-		cb.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		# Pre-check if already selected
-		cb.button_pressed = path in _selected_sources
-		cv.add_child(cb)
 		checkbox_map[path] = cb
-
 		grid.add_child(container)
 
 	# Bottom buttons

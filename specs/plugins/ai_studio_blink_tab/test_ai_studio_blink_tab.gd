@@ -250,3 +250,42 @@ func test_selected_grid_cleared_when_empty_selection() -> void:
 	# queue_free() is deferred — wait a frame for nodes to be removed
 	await get_tree().process_frame
 	assert_eq(tab._selected_grid.get_child_count(), 0)
+
+
+func test_open_multi_gallery_does_not_crash() -> void:
+	# Regression: _open_multi_gallery used to set horizontal_alignment on CheckBox
+	# which is an invalid property, causing a fatal script error.
+	var d = _make_tab()
+	var tab: BlinkTab = d["tab"]
+	var parent_window: Window = d["parent_window"]
+
+	# Create a temp directory with a test image so the gallery has content
+	var temp_dir = ProjectSettings.globalize_path("user://test_blink_gallery")
+	DirAccess.make_dir_recursive_absolute(temp_dir + "/assets/foregrounds")
+	var img = Image.create(32, 32, false, Image.FORMAT_RGBA8)
+	img.fill(Color.BLUE)
+	img.save_png(temp_dir + "/assets/foregrounds/test_char.png")
+
+	tab.setup(temp_dir, true)
+
+	# Click the Gallery button — this triggers _open_multi_gallery
+	tab._gallery_btn.emit_signal("pressed")
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	# Find the gallery window that was opened
+	var gallery_window: Window = null
+	for child in parent_window.get_children():
+		if child is Window and child.title == "Choisir les images sources":
+			gallery_window = child
+			break
+
+	assert_not_null(gallery_window, "Gallery window should have opened without error")
+
+	# Cleanup
+	if gallery_window and is_instance_valid(gallery_window):
+		gallery_window.queue_free()
+	DirAccess.remove_absolute(temp_dir + "/assets/foregrounds/test_char.png")
+	DirAccess.remove_absolute(temp_dir + "/assets/foregrounds")
+	DirAccess.remove_absolute(temp_dir + "/assets")
+	DirAccess.remove_absolute(temp_dir)
