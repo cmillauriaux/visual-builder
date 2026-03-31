@@ -125,6 +125,8 @@ func enter_fullscreen() -> void:
 	_main._sequence_content.remove_child(_main._visual_editor)
 	_previous_fullscreen_layer.add_child(_main._visual_editor)
 	_main._visual_editor.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var viewport_size = _main.get_viewport().get_visible_rect().size
+	_main._visual_editor.size = viewport_size
 
 	# Ajouter le play overlay au conteneur de superposition du visual editor
 	if _main._play_overlay.get_parent():

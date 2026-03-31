@@ -500,6 +500,7 @@ func on_story_play_sequence_requested(seq) -> void:
 
 	# Appliquer les FX persistants immédiatement
 	_sequence_fx_player.apply_persistent_fx(seq.fx, _visual_editor._fx_container)
+	_sequence_fx_player.pre_apply_initial_transform(seq.fx, _visual_editor._canvas)
 
 	if seq.transition_in_type != "none":
 		_sequence_fx_player.fx_finished.connect(_on_trans_in_finished_play_fx, CONNECT_ONE_SHOT)
