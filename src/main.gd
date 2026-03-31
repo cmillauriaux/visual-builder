@@ -168,31 +168,6 @@ func _ready() -> void:
 	_setup_plugins()
 
 	update_view()
-	call_deferred("_debug_auto_load")
-
-
-func _debug_auto_load() -> void:
-	_nav_ctrl._on_load_dir_selected("/Users/cedric/projects/perso/visual-builder/stories/epreuve-du-heros")
-	await get_tree().process_frame
-	await get_tree().process_frame
-	_editor_main.navigate_to_chapter("e3298e3f-fc76-4c8f-891c-8e6ba1013fc4")
-	_editor_main.navigate_to_scene("7bafcb49-791c-4b18-fa6b-df3961b93c6c")
-	_editor_main.navigate_to_sequence("7e303ff2-4334-4459-81c4-6a9e39139f22")
-	if _editor_main._current_sequence:
-		load_sequence_editors(_editor_main._current_sequence)
-	refresh_current_view()
-	# Wait 5 seconds so the screenshot script can sync timing
-	await get_tree().create_timer(5.0).timeout
-	print("DEBUG: PLAY STARTING NOW")
-	_play_ctrl.on_play_pressed()
-	print("DEBUG: Canvas scale after play: %s" % _visual_editor._canvas.scale)
-	print("DEBUG: Preview mode: %s" % _visual_editor._is_preview_mode)
-	await get_tree().process_frame
-	print("DEBUG: Canvas scale frame+1: %s" % _visual_editor._canvas.scale)
-	await get_tree().process_frame
-	print("DEBUG: Canvas scale frame+2: %s" % _visual_editor._canvas.scale)
-	await get_tree().process_frame
-	print("DEBUG: Canvas scale frame+3: %s" % _visual_editor._canvas.scale)
 
 
 func _setup_controllers() -> void:

@@ -188,6 +188,8 @@ func _on_play_started(_mode: String) -> void:
 
 func _on_play_stopped() -> void:
 	_is_preview_mode = false
+	if _auto_fit_enabled:
+		apply_auto_fit()
 
 # --- Auto-fit ---
 
@@ -204,6 +206,10 @@ func compute_auto_fit() -> Dictionary:
 
 func apply_auto_fit() -> void:
 	if not _auto_fit_enabled:
+		return
+	# During play, the FX player owns the canvas transform (zoom/pan effects).
+	# Resizing or reparenting can trigger apply_auto_fit and overwrite FX state.
+	if _is_preview_mode:
 		return
 	var result = compute_auto_fit()
 	_zoom = result["zoom"]
