@@ -7,6 +7,8 @@ const ForegroundScript = preload("res://src/models/foreground.gd")
 const PlacementGridScript = preload("res://src/ui/visual/placement_grid.gd")
 const ForegroundClipboardScript = preload("res://src/ui/visual/foreground_clipboard.gd")
 const TextureLoaderScript = preload("res://src/ui/shared/texture_loader.gd")
+const ForegroundBlinkPlayerScript = preload("res://src/ui/visual/foreground_blink_player.gd")
+const BlinkManifestServiceScript = preload("res://src/services/blink_manifest_service.gd")
 
 const DESIGN_RESOLUTION = Vector2(1920, 1080)
 const FX_Z := 101        # Un cran au-dessus du max fg.z_order (100)
@@ -35,6 +37,10 @@ var _snap_enabled: bool = false
 
 # --- Foreground clipboard ---
 var _fg_clipboard = ForegroundClipboardScript.new()
+
+# --- Blink ---
+var _blink_manifest: Dictionary = {}  # Cached blink manifest {source.png: source_blink.png}
+var _blink_manifest_loaded: bool = false
 
 # --- Foreground interaction ---
 var _fg_visual_map: Dictionary = {}   # uuid → Control wrapper
@@ -507,6 +513,9 @@ func _update_single_fg_visual(fg) -> void:
 	wrapper.set_meta("fg_flip_h", fg.flip_h)
 	wrapper.set_meta("fg_flip_v", fg.flip_v)
 
+	# Blink player — attacher si une image _blink existe dans le manifest
+	_setup_blink_player(wrapper, fg.image, tex)
+
 	_update_fg_non_visual_props(wrapper, fg)
 
 
@@ -816,6 +825,7 @@ func load_sequence(sequence) -> void:
 	_auto_fit_enabled = true
 	_selected_fg_uuids.clear()
 	_hidden_fg_uuids.clear()
+	_blink_manifest_loaded = false  # Recharger le manifest blink à chaque séquence
 	kill_all_fg_tweens()
 	_dragging_fg = false
 	_resizing_fg = false
@@ -1052,3 +1062,55 @@ func _show_inherit_confirmation() -> void:
 
 func _on_inherit_confirmed() -> void:
 	inherited_foreground_edit_confirmed.emit()
+
+
+# --- Blink ---
+
+func _ensure_blink_manifest_loaded() -> void:
+	if _blink_manifest_loaded:
+		return
+	var story_path = TextureLoaderScript.base_dir
+	if story_path == "":
+		# Fallback: try res://story for game/export context
+		if ResourceLoader.exists("res://story/assets/foregrounds/blink_manifest.yaml"):
+			story_path = "res://story"
+		else:
+			_blink_manifest = {}
+			_blink_manifest_loaded = true
+			return
+	_blink_manifest = BlinkManifestServiceScript.load_manifest(story_path)
+	_blink_manifest_loaded = true
+
+
+func _setup_blink_player(wrapper: Control, image_path: String, normal_texture: Texture2D) -> void:
+	_ensure_blink_manifest_loaded()
+	var image_filename = image_path.get_file()
+	var blink_filename: String = _blink_manifest.get(image_filename, "")
+
+	var existing_player = wrapper.get_node_or_null("BlinkPlayer")
+
+	if blink_filename == "" or normal_texture == null:
+		# No blink — remove player if present
+		if existing_player:
+			existing_player.stop_blink()
+			existing_player.queue_free()
+		return
+
+	# Load blink texture
+	var blink_path = image_path.get_base_dir().path_join(blink_filename)
+	var blink_texture = _load_texture(blink_path)
+	if blink_texture == null:
+		if existing_player:
+			existing_player.stop_blink()
+			existing_player.queue_free()
+		return
+
+	var tex_rect: TextureRect = wrapper.get_node("Texture")
+	if existing_player:
+		existing_player.update_textures(normal_texture, blink_texture)
+	else:
+		var player = Node.new()
+		player.set_script(ForegroundBlinkPlayerScript)
+		player.name = "BlinkPlayer"
+		wrapper.add_child(player)
+		player.setup(tex_rect, normal_texture, blink_texture)

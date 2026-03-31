@@ -9,6 +9,7 @@ extends SceneTree
 ## - Supprime les assets chapitres du dossier story/ (reste dans les PCK)
 
 const StorySaver = preload("res://src/persistence/story_saver.gd")
+const BlinkManifestService = preload("res://src/services/blink_manifest_service.gd")
 
 ## Taille max par PCK en octets (19 Mo pour rester sous la limite Cloudflare de 20 Mo)
 const MAX_PCK_SIZE := 19 * 1024 * 1024
@@ -36,6 +37,9 @@ func _init():
 		quit(1)
 		return
 
+	# 0. Charger le manifest blink pour inclure les images _blink
+	var blink_manifest := BlinkManifestService.load_manifest(ProjectSettings.globalize_path(story_folder))
+
 	# 1. Collecter les assets par chapitre
 	var chapter_assets := {}  # uuid -> Array[String] (relative paths)
 	var menu_assets := _collect_menu_assets(story)
@@ -44,7 +48,7 @@ func _init():
 		var assets := []
 		for scene in chapter.scenes:
 			for sequence in scene.sequences:
-				_collect_sequence_assets(sequence, assets)
+				_collect_sequence_assets(sequence, assets, blink_manifest)
 		# Dédupliquer et exclure les assets menu (normaliser pour comparer correctement)
 		# Les assets partagés entre chapitres sont volontairement dupliqués dans chaque
 		# chapter PCK pour rester sous la limite de taille Cloudflare (20 Mo/fichier).
@@ -256,6 +260,8 @@ func _collect_menu_assets(story) -> Dictionary:
 		assets[_normalize_path(story.to_be_continued_background)] = true
 	if story.get("app_icon") and story.app_icon != "":
 		assets[_normalize_path(story.app_icon)] = true
+	# Le manifest blink doit rester dans le core PCK (pas dans les chapter PCK)
+	assets[_normalize_path("assets/foregrounds/blink_manifest.yaml")] = true
 	return assets
 
 
@@ -323,7 +329,7 @@ func _remove_orphan_assets(dir_path: String, abs_story: String, menu_assets: Dic
 	return removed
 
 
-func _collect_sequence_assets(sequence, assets: Array) -> void:
+func _collect_sequence_assets(sequence, assets: Array, blink_manifest: Dictionary) -> void:
 	if sequence.background != "":
 		assets.append(sequence.background)
 	if sequence.music != "":
@@ -334,12 +340,22 @@ func _collect_sequence_assets(sequence, assets: Array) -> void:
 	for fg in sequence.foregrounds:
 		if fg.image != "":
 			assets.append(fg.image)
+			_append_blink_asset(fg.image, blink_manifest, assets)
 
 	for dialogue in sequence.dialogues:
 		for fg in dialogue.foregrounds:
 			if fg.image != "":
 				assets.append(fg.image)
+				_append_blink_asset(fg.image, blink_manifest, assets)
 		for lang in dialogue.voice_files:
 			var vf: String = dialogue.voice_files[lang]
 			if vf != "":
 				assets.append(vf)
+
+
+func _append_blink_asset(image_path: String, blink_manifest: Dictionary, assets: Array) -> void:
+	var filename = image_path.get_file()
+	var blink_filename: String = blink_manifest.get(filename, "")
+	if blink_filename != "":
+		var blink_path = image_path.get_base_dir().path_join(blink_filename)
+		assets.append(blink_path)
