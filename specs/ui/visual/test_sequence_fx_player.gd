@@ -1154,7 +1154,7 @@ func test_pre_apply_saves_original_scale() -> void:
 	assert_almost_eq(_player._original_scale.x, 1.0, 0.001, "original scale should be saved before pre-apply")
 
 
-func test_pre_apply_then_play_restores_original_scale() -> void:
+func test_pre_apply_then_play_keeps_final_zoom_state() -> void:
 	_target.scale = Vector2.ONE
 	var fx = SequenceFx.new()
 	fx.fx_type = "zoom_in"
@@ -1165,7 +1165,7 @@ func test_pre_apply_then_play_restores_original_scale() -> void:
 	watch_signals(_player)
 	_player.play_fx_list([fx], _target, _target)
 	await _player.fx_finished
-	assert_almost_eq(_target.scale.x, 1.0, 0.001, "scale should be restored to original after FX")
+	assert_almost_eq(_target.scale.x, 2.0, 0.001, "scale should stay at zoom_to after FX completes")
 
 
 func test_pre_apply_stop_restores_scale() -> void:

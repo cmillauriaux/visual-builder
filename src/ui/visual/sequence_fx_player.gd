@@ -555,10 +555,8 @@ func _play_zoom_animated(fx, target: Control, on_done: Callable) -> void:
 	_current_tween = create_tween()
 	_current_tween.tween_property(t, "scale", Vector2(scale_to, scale_to), fx.duration).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_QUAD)
 	_current_tween.finished.connect(func():
-		t.scale = restore_scale
-		t.pivot_offset = restore_pivot
-		t.position = restore_pos
-		_transform_active = false
+		# Keep canvas at final zoom state for the rest of the sequence.
+		# stop_fx() will restore the original transform when play ends.
 		on_done.call()
 	)
 
@@ -608,10 +606,8 @@ func _play_pan(fx, target: Control, on_done: Callable) -> void:
 	_current_tween = create_tween()
 	_current_tween.tween_property(t, "position", end_pos, fx.duration).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
 	_current_tween.finished.connect(func():
-		t.scale = restore_scale
-		t.pivot_offset = restore_pivot
-		t.position = restore_pos
-		_transform_active = false
+		# Keep canvas at final pan state for the rest of the sequence.
+		# stop_fx() will restore the original transform when play ends.
 		on_done.call()
 	)
 
