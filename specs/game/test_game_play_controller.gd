@@ -552,3 +552,62 @@ func test_set_auto_play_enabled_no_change_when_already_matching() -> void:
 	var mgr = _game._play_ctrl.get_auto_play_manager()
 	_game._play_ctrl.set_auto_play_enabled(false)
 	assert_false(mgr.enabled, "should remain disabled when already disabled")
+
+
+# --- Auto-play waits for voice ---
+
+func test_try_start_auto_play_waits_for_voice() -> void:
+	var mgr = _game._play_ctrl.get_auto_play_manager()
+	mgr.toggle()
+	mgr.delay = 0.1
+	# Simulate voice playing
+	_game._play_ctrl._voice_player.stream = AudioStreamGenerator.new()
+	_game._play_ctrl._voice_player.play()
+	watch_signals(mgr)
+	_game._play_ctrl._try_start_auto_play_timer()
+	# Timer should NOT have started yet (voice is playing)
+	assert_true(_game._play_ctrl._voice_auto_play_connected, "should be waiting for voice")
+	_game._play_ctrl._voice_player.stop()
+	_game._play_ctrl._cancel_voice_auto_play_wait()
+
+
+func test_try_start_auto_play_immediate_when_no_voice() -> void:
+	var mgr = _game._play_ctrl.get_auto_play_manager()
+	mgr.toggle()
+	mgr.delay = 0.1
+	# No voice playing — timer should start immediately
+	watch_signals(mgr)
+	_game._play_ctrl._try_start_auto_play_timer()
+	assert_false(_game._play_ctrl._voice_auto_play_connected, "should not wait for voice")
+	await get_tree().create_timer(0.2).timeout
+	assert_signal_emitted(mgr, "auto_advance_requested")
+
+
+func test_cancel_voice_auto_play_wait_disconnects() -> void:
+	var mgr = _game._play_ctrl.get_auto_play_manager()
+	mgr.toggle()
+	# Simulate voice playing and connect
+	_game._play_ctrl._voice_player.stream = AudioStreamGenerator.new()
+	_game._play_ctrl._voice_player.play()
+	_game._play_ctrl._try_start_auto_play_timer()
+	assert_true(_game._play_ctrl._voice_auto_play_connected)
+	# Cancel should disconnect
+	_game._play_ctrl._cancel_voice_auto_play_wait()
+	assert_false(_game._play_ctrl._voice_auto_play_connected)
+	_game._play_ctrl._voice_player.stop()
+
+
+func test_on_play_dialogue_changed_cancels_voice_wait() -> void:
+	var mgr = _game._play_ctrl.get_auto_play_manager()
+	mgr.toggle()
+	var seq = _create_sequence_with_dialogue("Alice", "Hello")
+	_game._sequence_editor_ctrl.load_sequence(seq)
+	_game._sequence_editor_ctrl.start_play()
+	# Simulate voice playing and waiting
+	_game._play_ctrl._voice_player.stream = AudioStreamGenerator.new()
+	_game._play_ctrl._voice_player.play()
+	_game._play_ctrl._try_start_auto_play_timer()
+	assert_true(_game._play_ctrl._voice_auto_play_connected)
+	# Changing dialogue should cancel the wait
+	_game._play_ctrl.on_play_dialogue_changed(0)
+	assert_false(_game._play_ctrl._voice_auto_play_connected)

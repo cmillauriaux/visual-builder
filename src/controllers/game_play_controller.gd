@@ -42,6 +42,7 @@ var _skip_max_chapter_index: int = -1
 var _skip_max_scene_index: int = -1
 var _toolbar_visible: bool = true
 var _toolbar_toggle_button: Button = null
+var _voice_auto_play_connected: bool = false
 
 var _game_plugin_manager: Node = null
 var _plugin_ctx: RefCounted = null
@@ -198,12 +199,15 @@ func on_sequence_play_requested(seq) -> void:
 	_seen_fg_uuids = {}
 	_current_playing_sequence = seq
 
-	# Préparer les visuels d'ouverture : n'afficher que les foregrounds statiques
-	# du premier dialogue pour éviter un flash des foregrounds animés pendant la transition.
+	# Nettoyer les transitions précédentes AVANT de charger les visuels
+	# (sinon stop_fx restaure le canvas de la séquence précédente par-dessus le nouvel auto-fit)
+	_sequence_fx_player.stop_fx()
+
+	# Préparer les visuels d'ouverture
 	_prepare_opening_visuals()
 
-	# Nettoyer les transitions précédentes (ex: reste de pixelisation ou fondu)
-	_sequence_fx_player.stop_fx()
+	# Bloquer apply_auto_fit pendant le play pour que les FX zoom/pan ne soient pas écrasés
+	_visual_editor._is_preview_mode = true
 
 	# Appliquer les FX persistants immédiatement (visibles dès le début, y compris pendant la transition)
 	_sequence_fx_player.apply_persistent_fx(seq.fx, _visual_editor._fx_container)
@@ -266,8 +270,7 @@ func _start_sequence_actually() -> void:
 		if _typewriter_speed == 0.0:
 			_sequence_editor_ctrl.skip_typewriter()
 			_play_text_label.visible_characters = _sequence_editor_ctrl.get_visible_characters()
-			if _auto_play and _auto_play.enabled:
-				_auto_play.start_timer()
+			_try_start_auto_play_timer()
 		else:
 			_typewriter_timer.start()
 	else:
@@ -374,9 +377,10 @@ func on_play_dialogue_changed(index: int) -> void:
 	var seq = _sequence_editor_ctrl.get_sequence()
 	if seq == null or index < 0 or index >= seq.dialogues.size():
 		return
-	# Stop any pending auto-play timer from the previous dialogue
+	# Stop any pending auto-play timer/voice wait from the previous dialogue
 	if _auto_play:
 		_auto_play.stop_timer()
+		_cancel_voice_auto_play_wait()
 	var dlg = seq.dialogues[index]
 	_play_dialogue_voice(dlg)
 	var display_character: String = dlg.character
@@ -400,8 +404,7 @@ func on_play_dialogue_changed(index: int) -> void:
 	if _typewriter_speed == 0.0:
 		_sequence_editor_ctrl.skip_typewriter()
 		_play_text_label.visible_characters = _sequence_editor_ctrl.get_visible_characters()
-		if _auto_play and _auto_play.enabled:
-			_auto_play.start_timer()
+		_try_start_auto_play_timer()
 	else:
 		_typewriter_timer.start()
 
@@ -555,7 +558,7 @@ func on_typewriter_tick() -> void:
 	_play_text_label.visible_characters = _sequence_editor_ctrl.get_visible_characters()
 	if _sequence_editor_ctrl.is_text_fully_displayed() and _auto_play and _auto_play.enabled:
 		_typewriter_timer.stop()
-		_auto_play.start_timer()
+		_try_start_auto_play_timer()
 
 
 # --- Input ---
@@ -591,6 +594,7 @@ func _input(event: InputEvent) -> void:
 				return
 		if _auto_play:
 			_auto_play.stop_timer()
+			_cancel_voice_auto_play_wait()
 		if not _sequence_editor_ctrl.is_text_fully_displayed():
 			_sequence_editor_ctrl.skip_typewriter()
 			_play_text_label.visible_characters = _sequence_editor_ctrl.get_visible_characters()
@@ -622,14 +626,40 @@ func _on_auto_play_toggled(active: bool) -> void:
 			_auto_play_button.add_theme_color_override("font_color", Color(0.2, 0.8, 0.2))
 		else:
 			_auto_play_button.remove_theme_color_override("font_color")
-	# If toggled on while text is already fully displayed, start timer immediately
 	if active and _sequence_editor_ctrl.is_playing() and _sequence_editor_ctrl.is_text_fully_displayed():
-		_auto_play.start_timer()
+		_try_start_auto_play_timer()
+	elif not active:
+		_cancel_voice_auto_play_wait()
 
 
 func toggle_auto_play() -> void:
 	if _auto_play:
 		_auto_play.toggle()
+
+
+## Starts auto-play timer, waiting for voice to finish first if still playing.
+func _try_start_auto_play_timer() -> void:
+	if not _auto_play or not _auto_play.enabled:
+		return
+	if _voice_player and _voice_player.playing:
+		if not _voice_auto_play_connected:
+			_voice_player.finished.connect(_on_voice_finished_for_auto_play, CONNECT_ONE_SHOT)
+			_voice_auto_play_connected = true
+	else:
+		_auto_play.start_timer()
+
+
+func _on_voice_finished_for_auto_play() -> void:
+	_voice_auto_play_connected = false
+	if _auto_play and _auto_play.enabled and _sequence_editor_ctrl.is_playing() and _sequence_editor_ctrl.is_text_fully_displayed():
+		_auto_play.start_timer()
+
+
+func _cancel_voice_auto_play_wait() -> void:
+	if _voice_auto_play_connected and _voice_player:
+		if _voice_player.finished.is_connected(_on_voice_finished_for_auto_play):
+			_voice_player.finished.disconnect(_on_voice_finished_for_auto_play)
+		_voice_auto_play_connected = false
 
 
 # --- Skip ---
@@ -876,6 +906,8 @@ func _cleanup_play() -> void:
 		_game._play_title_overlay.get_parent().remove_child(_game._play_title_overlay)
 	if _sequence_fx_player:
 		_sequence_fx_player.stop_fx()
+	if _visual_editor:
+		_visual_editor._is_preview_mode = false
 	if _music_player:
 		_music_player.stop_music()
 	_stop_dialogue_voice()
