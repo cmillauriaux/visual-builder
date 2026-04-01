@@ -246,7 +246,7 @@ func build_tab(tab_container: TabContainer) -> void:
 
 	_face_box_slider = HSlider.new()
 	_face_box_slider.min_value = 0
-	_face_box_slider.max_value = 50
+	_face_box_slider.max_value = 150
 	_face_box_slider.step = 5
 	_face_box_slider.value = 30
 	_face_box_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL

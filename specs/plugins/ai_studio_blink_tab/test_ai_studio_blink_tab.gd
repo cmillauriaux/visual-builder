@@ -273,7 +273,7 @@ func test_eye_expand_slider_range() -> void:
 	var d = _make_tab()
 	var tab: BlinkTab = d["tab"]
 	assert_eq(int(tab._face_box_slider.min_value), 0)
-	assert_eq(int(tab._face_box_slider.max_value), 50)
+	assert_eq(int(tab._face_box_slider.max_value), 150)
 
 
 func test_open_multi_gallery_does_not_crash() -> void:

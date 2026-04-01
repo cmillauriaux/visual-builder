@@ -219,7 +219,16 @@ func test_build_blink_workflow_has_img2img():
 	var client = ComfyUIClientScript.new()
 	var wf = client.build_workflow("test.png", "blink", 42, true, 1.0, 4, 6, 0.55, "", 15)
 	assert_true(wf.has("split_sigmas"))
-	assert_eq(wf["75:64"]["inputs"]["latent_image"], ["75:79:78", 0])
+	# latent_image goes through SetLatentNoiseMask, not directly from VAEEncode
+	assert_eq(wf["75:64"]["inputs"]["latent_image"], ["set_noise_mask", 0])
+
+func test_build_blink_workflow_has_noise_mask():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("test.png", "blink", 42, true, 1.0, 4, 6, 0.55, "", 15)
+	assert_true(wf.has("set_noise_mask"))
+	assert_eq(wf["set_noise_mask"]["class_type"], "SetLatentNoiseMask")
+	assert_eq(wf["set_noise_mask"]["inputs"]["samples"], ["75:79:78", 0])
+	assert_eq(wf["set_noise_mask"]["inputs"]["mask"], ["102", 0])
 
 func test_build_blink_workflow_blur_proportional():
 	var client = ComfyUIClientScript.new()
@@ -228,8 +237,13 @@ func test_build_blink_workflow_blur_proportional():
 	assert_true(kernel >= 11, "kernel should be >= 11")
 	assert_eq(kernel % 2, 1, "kernel should be odd")
 
-func test_build_blink_workflow_no_bg_removal():
+func test_build_blink_workflow_preserves_original_alpha():
 	var client = ComfyUIClientScript.new()
-	var wf = client.build_workflow("test.png", "blink", 42, false, 1.0, 4, 6, 0.55, "", 15)
-	assert_eq(wf["9"]["inputs"]["images"][0], "103")
+	var wf = client.build_workflow("test.png", "blink", 42, true, 1.0, 4, 6, 0.55, "", 15)
+	# BiRefNet never used — alpha comes from original image
 	assert_false(wf.has("106"))
+	assert_true(wf.has("join_alpha"))
+	assert_eq(wf["join_alpha"]["class_type"], "JoinImageWithAlpha")
+	assert_eq(wf["join_alpha"]["inputs"]["image"], ["103", 0])
+	assert_eq(wf["join_alpha"]["inputs"]["alpha"], ["76", 1])
+	assert_eq(wf["9"]["inputs"]["images"], ["join_alpha", 0])

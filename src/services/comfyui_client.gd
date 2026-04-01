@@ -866,8 +866,8 @@ func _build_blink_workflow(filename: String, prompt_text: String, seed: int, rem
 	wf["101"]["inputs"]["expand"] = eye_expand
 	# Blur proportionnel (référence : kernel=21 sigma=10 pour expand=15)
 	# Plancher minimum : kernel≥11 sigma≥5 pour un fondu suffisant
-	var blur_kernel: int = max(11, roundi(eye_expand * 21.0 / 15.0)) | 1  # toujours impair
-	var blur_sigma: float = maxf(5.0, eye_expand * 10.0 / 15.0)
+	var blur_kernel: int = min(99, max(11, roundi(eye_expand * 21.0 / 15.0))) | 1  # impair, max 99
+	var blur_sigma: float = minf(50.0, maxf(5.0, eye_expand * 10.0 / 15.0))
 	wf["102"]["inputs"]["kernel_size"] = blur_kernel
 	wf["102"]["inputs"]["sigma"] = blur_sigma
 	wf["76"]["inputs"]["image"] = filename
@@ -877,8 +877,17 @@ func _build_blink_workflow(filename: String, prompt_text: String, seed: int, rem
 	wf["75:62"]["inputs"]["steps"] = steps
 	wf["75:80"]["inputs"]["megapixels"] = megapixels
 	_apply_negative_prompt(wf, negative_prompt)
-	# img2img : partir de l'image source encodée
-	wf["75:64"]["inputs"]["latent_image"] = ["75:79:78", 0]
+	# img2img : partir de l'image source encodée avec masque de bruit
+	# SetLatentNoiseMask : le KSampler ne dénoise QUE dans la zone masquée (yeux)
+	# → pixel-perfect en dehors du masque
+	wf["set_noise_mask"] = {
+		"class_type": "SetLatentNoiseMask",
+		"inputs": {
+			"samples": ["75:79:78", 0],
+			"mask": ["102", 0]
+		}
+	}
+	wf["75:64"]["inputs"]["latent_image"] = ["set_noise_mask", 0]
 	# SplitSigmas : contrôle du denoise
 	var split_step = max(1, roundi(steps * (1.0 - denoise)))
 	wf["split_sigmas"] = {
@@ -890,9 +899,18 @@ func _build_blink_workflow(filename: String, prompt_text: String, seed: int, rem
 	}
 	wf["75:64"]["inputs"]["sigmas"] = ["split_sigmas", 1]
 	wf.erase("75:66")
-	if not remove_background:
-		wf["9"]["inputs"]["images"] = ["103", 0]
-		wf.erase("106")
+	# Blink : toujours préserver l'alpha original de l'image source (pas de BiRefNet)
+	# LoadImage (node 76) sortie 1 = canal alpha original
+	# On recolle les yeux générés (node 103) avec l'alpha d'origine → pixel-perfect
+	wf.erase("106")
+	wf["join_alpha"] = {
+		"class_type": "JoinImageWithAlpha",
+		"inputs": {
+			"image": ["103", 0],
+			"alpha": ["76", 1]
+		}
+	}
+	wf["9"]["inputs"]["images"] = ["join_alpha", 0]
 	return wf
 
 
