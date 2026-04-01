@@ -50,20 +50,25 @@ static func _build_visual_editor(game: Control) -> void:
 
 static func _build_play_overlay(game: Control) -> void:
 	var s := UIScale.get_scale()
-	game._play_overlay = PanelContainer.new()
+	game._play_overlay = Control.new()
 	game._play_overlay.visible = false
 	game._play_overlay.z_index = SequenceVisualEditorScript.UI_OVERLAY_Z
 	game._play_overlay.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	game._play_overlay.offset_top = -roundi(150 * s)
 	game._play_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 
-	var play_vbox = VBoxContainer.new()
-	game._play_overlay.add_child(play_vbox)
+	# Dialogue panel — brown background
+	game._play_dialogue_panel = PanelContainer.new()
+	game._play_dialogue_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	game._play_overlay.add_child(game._play_dialogue_panel)
 
-	game._play_character_label = Label.new()
-	game._play_character_label.add_theme_font_size_override("font_size", UIScale.scale(28))
-	game._play_character_label.add_theme_color_override("font_color", Color("#5C3A1E"))
-	play_vbox.add_child(game._play_character_label)
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", roundi(16 * s))
+	margin.add_theme_constant_override("margin_right", roundi(16 * s))
+	game._play_dialogue_panel.add_child(margin)
+
+	var play_vbox = VBoxContainer.new()
+	margin.add_child(play_vbox)
 
 	game._play_text_label = RichTextLabel.new()
 	game._play_text_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -71,6 +76,31 @@ static func _build_play_overlay(game: Control) -> void:
 	game._play_text_label.fit_content = true
 	game._play_text_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	play_vbox.add_child(game._play_text_label)
+
+	# Character name box — floats above the dialogue panel top border
+	game._play_character_box = PanelContainer.new()
+	game._play_character_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var btn_tex = load(GameTheme.ASSETS_PATH + "button_brown.png")
+	if btn_tex:
+		game._play_character_box.add_theme_stylebox_override("panel",
+			GameTheme._make_button_stylebox(btn_tex, Color(1, 1, 1, 1)))
+	game._play_character_box.anchor_left = 0
+	game._play_character_box.anchor_right = 0
+	game._play_character_box.anchor_top = 0
+	game._play_character_box.anchor_bottom = 0
+	var char_left = roundi(24 * s)
+	game._play_character_box.offset_left = char_left
+	game._play_character_box.offset_right = char_left
+	game._play_character_box.offset_top = -roundi(28 * s)
+	game._play_character_box.offset_bottom = -roundi(28 * s)
+	game._play_character_box.grow_horizontal = Control.GROW_DIRECTION_END
+	game._play_character_box.grow_vertical = Control.GROW_DIRECTION_END
+	game._play_overlay.add_child(game._play_character_box)
+
+	game._play_character_label = Label.new()
+	game._play_character_label.add_theme_font_size_override("font_size", UIScale.scale(20))
+	game._play_character_label.add_theme_color_override("font_color", GameTheme.COLOR_BUTTON_TEXT)
+	game._play_character_box.add_child(game._play_character_label)
 
 	# Boutons de jeu — créés ici, ajoutés dans _build_play_buttons_bar() à la fin
 	var btn_size := Vector2(UIScale.scale(120), UIScale.scale(30))

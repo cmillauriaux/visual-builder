@@ -109,7 +109,9 @@ var _toast_label: Label
 var _toast_generation: int = 0
 
 # UI — Play overlay
-var _play_overlay: PanelContainer
+var _play_overlay: Control
+var _play_dialogue_panel: PanelContainer
+var _play_character_box: PanelContainer
 var _play_character_label: Label
 var _play_text_label: RichTextLabel
 var _typewriter_timer: Timer

@@ -18,6 +18,7 @@ func setup(main: Control) -> void:
 
 func _on_play_dialogue_changed(character: String, text: String, _index: int) -> void:
 	_main._play_character_label.text = character
+	_main._play_character_box.visible = character != ""
 	_main._play_text_label.text = text
 	_main._play_text_label.visible_characters = 0
 

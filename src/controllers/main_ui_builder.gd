@@ -28,6 +28,7 @@ const VariableDetailsOverlayScript = preload("res://src/ui/play/variable_details
 const StoryMapViewScript = preload("res://src/views/story_map_view.gd")
 
 const MainTheme = preload("res://src/ui/themes/editor_main.tres")
+const GameTheme = preload("res://src/ui/themes/game_theme.gd")
 
 
 static func build(main: Control) -> void:
@@ -470,24 +471,53 @@ static func _build_verifier_panel(main: Control) -> void:
 
 
 static func _build_play_overlay(main: Control) -> void:
-	main._play_overlay = PanelContainer.new()
+	main._play_overlay = Control.new()
 	main._play_overlay.visible = false
 	main._play_overlay.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	main._play_overlay.offset_top = -150
 	main._play_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 
-	var play_vbox = VBoxContainer.new()
-	main._play_overlay.add_child(play_vbox)
+	# Dialogue panel — brown background
+	main._play_dialogue_panel = PanelContainer.new()
+	main._play_dialogue_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	main._play_overlay.add_child(main._play_dialogue_panel)
 
-	main._play_character_label = Label.new()
-	# Size is now handled by theme
-	play_vbox.add_child(main._play_character_label)
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 16)
+	margin.add_theme_constant_override("margin_right", 16)
+	main._play_dialogue_panel.add_child(margin)
+
+	var play_vbox = VBoxContainer.new()
+	margin.add_child(play_vbox)
 
 	main._play_text_label = RichTextLabel.new()
 	main._play_text_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	main._play_text_label.bbcode_enabled = false
 	main._play_text_label.fit_content = true
 	play_vbox.add_child(main._play_text_label)
+
+	# Character name box — floats above the dialogue panel top border
+	main._play_character_box = PanelContainer.new()
+	main._play_character_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var btn_tex = load(GameTheme.ASSETS_PATH + "button_brown.png")
+	if btn_tex:
+		main._play_character_box.add_theme_stylebox_override("panel",
+			GameTheme._make_button_stylebox(btn_tex, Color(1, 1, 1, 1)))
+	main._play_character_box.anchor_left = 0
+	main._play_character_box.anchor_right = 0
+	main._play_character_box.anchor_top = 0
+	main._play_character_box.anchor_bottom = 0
+	var char_left = 24
+	main._play_character_box.offset_left = char_left
+	main._play_character_box.offset_right = char_left
+	main._play_character_box.offset_top = -28
+	main._play_character_box.offset_bottom = -28
+	main._play_character_box.grow_horizontal = Control.GROW_DIRECTION_END
+	main._play_character_box.grow_vertical = Control.GROW_DIRECTION_END
+	main._play_overlay.add_child(main._play_character_box)
+
+	main._play_character_label = Label.new()
+	main._play_character_box.add_child(main._play_character_label)
 
 	# Typewriter timer
 	main._typewriter_timer = Timer.new()

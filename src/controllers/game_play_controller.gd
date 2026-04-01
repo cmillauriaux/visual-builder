@@ -13,7 +13,9 @@ var _story_play_ctrl: Node
 var _foreground_transition: Node
 var _sequence_fx_player: Node
 var _visual_editor: Control
-var _play_overlay: PanelContainer
+var _play_overlay: Control
+var _play_dialogue_panel: PanelContainer
+var _play_character_box: PanelContainer
 var _play_character_label: Label
 var _play_text_label: RichTextLabel
 var _typewriter_timer: Timer
@@ -73,8 +75,8 @@ func set_typewriter_speed(speed: float) -> void:
 
 func set_dialogue_opacity(value: float) -> void:
 	_dialogue_opacity = value
-	if _play_overlay:
-		_play_overlay.self_modulate.a = value
+	if _play_dialogue_panel:
+		_play_dialogue_panel.self_modulate.a = value
 
 
 func set_auto_play_enabled(enabled: bool) -> void:
@@ -111,6 +113,8 @@ func setup(game: Control) -> void:
 	_sequence_fx_player = game._sequence_fx_player
 	_visual_editor = game._visual_editor
 	_play_overlay = game._play_overlay
+	_play_dialogue_panel = game._play_dialogue_panel
+	_play_character_box = game._play_character_box
 	_play_character_label = game._play_character_label
 	_play_text_label = game._play_text_label
 	_typewriter_timer = game._typewriter_timer
@@ -393,6 +397,8 @@ func on_play_dialogue_changed(index: int) -> void:
 		display_character = result["character"]
 		display_text = result["text"]
 	_play_character_label.text = display_character
+	if _play_character_box:
+		_play_character_box.visible = display_character != ""
 	_play_text_label.text = display_text
 	_sequence_editor_ctrl.set_display_text_length(display_text.length())
 	add_history_entry(display_character, display_text)

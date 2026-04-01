@@ -42,7 +42,9 @@ var _music_player: Node
 var _visual_editor: Control
 
 # UI — Play overlay
-var _play_overlay: PanelContainer
+var _play_overlay: Control
+var _play_dialogue_panel: PanelContainer
+var _play_character_box: PanelContainer
 var _play_character_label: Label
 var _play_text_label: RichTextLabel
 var _typewriter_timer: Timer
@@ -378,6 +380,7 @@ func _update_play_story_references() -> void:
 	if play_idx >= 0 and play_idx < new_seq.dialogues.size():
 		var dlg = new_seq.dialogues[play_idx]
 		_play_character_label.text = dlg.character
+		_play_character_box.visible = dlg.character != ""
 		_play_text_label.text = dlg.text
 		_play_text_label.visible_characters = -1
 

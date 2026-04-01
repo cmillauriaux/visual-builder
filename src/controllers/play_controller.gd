@@ -588,12 +588,12 @@ func _input(event: InputEvent) -> void:
 
 # --- UI Theme helpers ---
 
-func _apply_play_ui_theme(play_overlay: PanelContainer, choice_overlay: CenterContainer, story_ui_path: String) -> void:
+func _apply_play_ui_theme(play_overlay: Control, choice_overlay: CenterContainer, story_ui_path: String) -> void:
 	var theme = GameTheme.create_theme(story_ui_path)
 	play_overlay.theme = theme
 	choice_overlay.theme = theme
 
 
-func _clear_play_ui_theme(play_overlay: PanelContainer, choice_overlay: CenterContainer) -> void:
+func _clear_play_ui_theme(play_overlay: Control, choice_overlay: CenterContainer) -> void:
 	play_overlay.theme = null
 	choice_overlay.theme = null
