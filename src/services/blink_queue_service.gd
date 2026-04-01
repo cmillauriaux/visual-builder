@@ -102,8 +102,9 @@ func remove_item(index: int) -> void:
 
 
 static func _build_blink_filename(source_path: String) -> String:
-	var base := source_path.get_basename()
-	var ext := source_path.get_extension()
+	var filename := source_path.get_file()
+	var base := filename.get_basename()
+	var ext := filename.get_extension()
 	if ext == "":
 		return base + "_blink"
 	return base + "_blink." + ext

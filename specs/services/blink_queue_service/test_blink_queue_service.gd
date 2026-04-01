@@ -21,7 +21,7 @@ func test_build_queue_sets_source_path():
 func test_build_queue_sets_blink_filename():
 	var svc = BlinkQueueServiceScript.new()
 	svc.build_queue(["res://img/hero_smile.png"])
-	assert_eq(svc.get_items()[0]["blink_filename"], "res://img/hero_smile_blink.png")
+	assert_eq(svc.get_items()[0]["blink_filename"], "hero_smile_blink.png")
 
 
 func test_build_queue_sets_prompt():
@@ -206,7 +206,7 @@ func test_build_blink_filename_with_extension():
 func test_build_blink_filename_nested_path():
 	assert_eq(
 		BlinkQueueServiceScript._build_blink_filename("res://characters/hero_smile.png"),
-		"res://characters/hero_smile_blink.png"
+		"hero_smile_blink.png"
 	)
 
 
