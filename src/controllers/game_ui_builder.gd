@@ -158,7 +158,7 @@ static func _build_play_buttons_bar(game: Control) -> void:
 	game._play_buttons_bar.add_child(game._history_button)
 	game.add_child(game._play_buttons_bar)
 
-	# Toggle button — positioned above the dialogue panel, right-aligned
+	# Toggle button — inside the dialogue panel, top-right with padding from border
 	game._toolbar_toggle_button = Button.new()
 	game._toolbar_toggle_button.text = "▲"
 	game._toolbar_toggle_button.visible = false
@@ -166,12 +166,13 @@ static func _build_play_buttons_bar(game: Control) -> void:
 	game._toolbar_toggle_button.mouse_filter = Control.MOUSE_FILTER_STOP
 	game._toolbar_toggle_button.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	var btn_s := roundi(30 * s)
-	var margin := roundi(8 * s)
-	game._toolbar_toggle_button.offset_left = -btn_s - margin
-	game._toolbar_toggle_button.offset_right = -margin
-	# Place between toolbar row and dialogue panel frame (toolbar: -188*s to -150*s)
-	game._toolbar_toggle_button.offset_top = -roundi(185 * s)
-	game._toolbar_toggle_button.offset_bottom = -roundi(185 * s) + btn_s
+	var pad_top := roundi(10 * s)
+	var pad_right := roundi(32 * s)  # space from the right border
+	game._toolbar_toggle_button.offset_left = -btn_s - pad_right
+	game._toolbar_toggle_button.offset_right = -pad_right
+	# _play_overlay.offset_top = -150*s; place button inside with padding from top border
+	game._toolbar_toggle_button.offset_top = -roundi(150 * s) + pad_top
+	game._toolbar_toggle_button.offset_bottom = -roundi(150 * s) + pad_top + btn_s
 	game.add_child(game._toolbar_toggle_button)
 
 
