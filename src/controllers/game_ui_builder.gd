@@ -158,20 +158,20 @@ static func _build_play_buttons_bar(game: Control) -> void:
 	game._play_buttons_bar.add_child(game._history_button)
 	game.add_child(game._play_buttons_bar)
 
-	# Toggle button — positioned at top-right of dialogue panel area
+	# Toggle button — positioned above the dialogue panel, right-aligned
 	game._toolbar_toggle_button = Button.new()
-	game._toolbar_toggle_button.text = "≡"
+	game._toolbar_toggle_button.text = "▲"
 	game._toolbar_toggle_button.visible = false
 	game._toolbar_toggle_button.z_index = SequenceVisualEditorScript.UI_OVERLAY_Z
 	game._toolbar_toggle_button.mouse_filter = Control.MOUSE_FILTER_STOP
 	game._toolbar_toggle_button.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	var btn_s := roundi(30 * s)
-	# Aligned with top-right of _play_overlay (which has offset_top = -150*s)
-	var margin := roundi(14 * s)
+	var margin := roundi(8 * s)
 	game._toolbar_toggle_button.offset_left = -btn_s - margin
 	game._toolbar_toggle_button.offset_right = -margin
-	game._toolbar_toggle_button.offset_top = -roundi(146 * s)
-	game._toolbar_toggle_button.offset_bottom = -roundi(146 * s) + btn_s
+	# Place between toolbar row and dialogue panel frame (toolbar: -188*s to -150*s)
+	game._toolbar_toggle_button.offset_top = -roundi(185 * s)
+	game._toolbar_toggle_button.offset_bottom = -roundi(185 * s) + btn_s
 	game.add_child(game._toolbar_toggle_button)
 
 

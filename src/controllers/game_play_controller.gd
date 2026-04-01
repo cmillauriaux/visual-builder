@@ -85,7 +85,7 @@ func set_auto_play_enabled(enabled: bool) -> void:
 func set_toolbar_visible(p_visible: bool) -> void:
 	_toolbar_visible = p_visible
 	if _toolbar_toggle_button:
-		_toolbar_toggle_button.text = "×" if _toolbar_visible else "≡"
+		_toolbar_toggle_button.text = "▼" if _toolbar_visible else "▲"
 
 
 func _on_toolbar_toggle_pressed() -> void:

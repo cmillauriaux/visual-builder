@@ -395,13 +395,13 @@ func test_toggle_button_click_hides_toolbar() -> void:
 func test_toggle_button_updates_text_to_close() -> void:
 	_game._play_ctrl.set_toolbar_visible(false)
 	_game._play_ctrl._on_toolbar_toggle_pressed()
-	assert_eq(_game._toolbar_toggle_button.text, "×", "should show close icon when toolbar visible")
+	assert_eq(_game._toolbar_toggle_button.text, "▼", "should show down arrow when toolbar visible")
 
 
 func test_toggle_button_updates_text_to_hamburger() -> void:
 	_game._play_ctrl.set_toolbar_visible(true)
 	_game._play_ctrl._on_toolbar_toggle_pressed()
-	assert_eq(_game._toolbar_toggle_button.text, "≡", "should show hamburger when toolbar hidden")
+	assert_eq(_game._toolbar_toggle_button.text, "▲", "should show up arrow when toolbar hidden")
 
 
 func test_toggle_updates_play_buttons_bar_visibility() -> void:
