@@ -32,6 +32,7 @@ var _denoise_slider: HSlider
 var _denoise_value_label: Label
 var _megapixels_slider: HSlider
 var _megapixels_value_label: Label
+var _eye_zone_dropdown: OptionButton
 var _face_box_slider: HSlider
 var _face_box_value_label: Label
 var _generate_btn: Button
@@ -186,13 +187,13 @@ func build_tab(tab_container: TabContainer) -> void:
 	_denoise_slider.min_value = 0.1
 	_denoise_slider.max_value = 1.0
 	_denoise_slider.step = 0.05
-	_denoise_slider.value = 0.55
+	_denoise_slider.value = 0.8
 	_denoise_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_denoise_slider.value_changed.connect(func(val: float): _denoise_value_label.text = str(snapped(val, 0.05)))
 	denoise_hbox.add_child(_denoise_slider)
 
 	_denoise_value_label = Label.new()
-	_denoise_value_label.text = "0.55"
+	_denoise_value_label.text = "0.8"
 	_denoise_value_label.custom_minimum_size.x = 32
 	denoise_hbox.add_child(_denoise_value_label)
 
@@ -219,26 +220,41 @@ func build_tab(tab_container: TabContainer) -> void:
 	_megapixels_value_label.custom_minimum_size.x = 32
 	mp_hbox.add_child(_megapixels_value_label)
 
-	# --- Face box size slider ---
+	# --- Eye zone dropdown ---
+	var eye_zone_hbox = HBoxContainer.new()
+	eye_zone_hbox.add_theme_constant_override("separation", 8)
+	vbox.add_child(eye_zone_hbox)
+
+	var eye_zone_label = Label.new()
+	eye_zone_label.text = "Zone ciblée :"
+	eye_zone_hbox.add_child(eye_zone_label)
+
+	_eye_zone_dropdown = OptionButton.new()
+	_eye_zone_dropdown.add_item("Yeux seuls", 0)
+	_eye_zone_dropdown.add_item("Yeux + sourcils", 1)
+	_eye_zone_dropdown.selected = 1
+	eye_zone_hbox.add_child(_eye_zone_dropdown)
+
+	# --- Eye mask expansion slider ---
 	var face_box_hbox = HBoxContainer.new()
 	face_box_hbox.add_theme_constant_override("separation", 8)
 	vbox.add_child(face_box_hbox)
 
 	var face_box_label = Label.new()
-	face_box_label.text = "Zone visage :"
+	face_box_label.text = "Extension masque :"
 	face_box_hbox.add_child(face_box_label)
 
 	_face_box_slider = HSlider.new()
-	_face_box_slider.min_value = 10
-	_face_box_slider.max_value = 200
+	_face_box_slider.min_value = 0
+	_face_box_slider.max_value = 50
 	_face_box_slider.step = 5
-	_face_box_slider.value = 10
+	_face_box_slider.value = 30
 	_face_box_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_face_box_slider.value_changed.connect(func(val: float): _face_box_value_label.text = str(int(val)))
 	face_box_hbox.add_child(_face_box_slider)
 
 	_face_box_value_label = Label.new()
-	_face_box_value_label.text = "10"
+	_face_box_value_label.text = "30"
 	_face_box_value_label.custom_minimum_size.x = 32
 	face_box_hbox.add_child(_face_box_value_label)
 
@@ -386,20 +402,48 @@ func _open_multi_gallery() -> void:
 	var checkbox_map: Dictionary = {}
 
 	var images: Array = []
-	images.append_array(GalleryCacheService.get_file_list(_story_base_path + "/assets/foregrounds", ["png", "jpg", "jpeg", "webp"]))
-	images.append_array(GalleryCacheService.get_file_list(_story_base_path + "/assets/backgrounds", ["png", "jpg", "jpeg", "webp"]))
+	var foreground_paths: Array = GalleryCacheService.get_file_list(_story_base_path + "/assets/foregrounds", ["png", "jpg", "jpeg", "webp"])
+	var background_paths: Array = GalleryCacheService.get_file_list(_story_base_path + "/assets/backgrounds", ["png", "jpg", "jpeg", "webp"])
+	images.append_array(foreground_paths)
+	images.append_array(background_paths)
 	images.sort()
+
+	# Load blink manifest to determine which foregrounds already have a blink
+	var blink_manifest := BlinkManifestService.load_manifest(_story_base_path)
+	var background_set := {}
+	for bp in background_paths:
+		background_set[bp] = true
 
 	for path in images:
 		var container = PanelContainer.new()
 		container.custom_minimum_size = Vector2(120, 160)
+
+		# Determine blink status for border color
+		var filename = path.get_file()
+		var is_background = background_set.has(path)
+		var is_blink_file = filename.contains("_blink.")
+		var is_irrelevant = is_background or is_blink_file
+
+		if not is_irrelevant:
+			var border_style = StyleBoxFlat.new()
+			border_style.set_border_width_all(3)
+			border_style.bg_color = Color(0.15, 0.15, 0.15, 1.0)
+			border_style.corner_radius_top_left = 4
+			border_style.corner_radius_top_right = 4
+			border_style.corner_radius_bottom_left = 4
+			border_style.corner_radius_bottom_right = 4
+			if blink_manifest.has(filename):
+				border_style.border_color = Color(0.2, 0.8, 0.2, 1.0) # Green
+			else:
+				border_style.border_color = Color(0.9, 0.2, 0.2, 1.0) # Red
+			container.add_theme_stylebox_override("panel", border_style)
 
 		var cv = VBoxContainer.new()
 		cv.alignment = BoxContainer.ALIGNMENT_CENTER
 		container.add_child(cv)
 
 		var cb = CheckBox.new()
-		cb.text = path.get_file()
+		cb.text = filename
 		cb.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		cb.button_pressed = path in _selected_sources
 		cv.add_child(cb)
@@ -411,6 +455,10 @@ func _open_multi_gallery() -> void:
 		tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		tex_rect.texture = GalleryCacheService.get_texture(path)
 		cv.add_child(tex_rect)
+
+		# Make irrelevant images (backgrounds, blink files) semi-transparent
+		if is_irrelevant:
+			container.modulate.a = 0.4
 
 		# Click anywhere on the panel toggles the checkbox
 		container.gui_input.connect(func(event: InputEvent):
@@ -550,12 +598,13 @@ func _process_next_item() -> void:
 	_client.generation_progress.connect(_on_item_progress)
 
 	var config = _get_config_fn.call()
-	var workflow_type: int = ComfyUIClient.WorkflowType.EXPRESSION
+	var workflow_type: int = ComfyUIClient.WorkflowType.BLINK
 	var cfg_value = _cfg_slider.value
 	var steps_value = int(_steps_slider.value)
 	var denoise_value = _denoise_slider.value
 	var face_box_value = int(_face_box_slider.value)
 	var neg_prompt = _neg_input.text.strip_edges()
+	_client._eye_zone_mode = "eyes_and_brows" if _eye_zone_dropdown.selected == 1 else "eyes_only"
 	_client.generate(config, item["source_path"], item["prompt"], true, cfg_value, steps_value, workflow_type, denoise_value, neg_prompt, face_box_value, _megapixels_slider.value)
 
 
@@ -571,6 +620,10 @@ func _on_item_completed(image: Image) -> void:
 
 func _on_item_failed(error: String) -> void:
 	var idx = _queue.get_current_index()
+	var item_name = ""
+	if _queue and idx >= 0 and idx < _queue.get_items().size():
+		item_name = _queue.get_items()[idx].get("blink_filename", "")
+	print("[BlinkTab] generation FAILED for '%s' (index %d): %s" % [item_name, idx, error])
 	_queue.mark_failed(idx, error)
 	_update_grid_cell_status(idx)
 	_update_status()
@@ -627,6 +680,7 @@ func _set_inputs_enabled(enabled: bool) -> void:
 		_gallery_btn.disabled = true
 	else:
 		_gallery_btn.disabled = not enabled
+	_eye_zone_dropdown.disabled = not enabled
 	_denoise_slider.editable = enabled
 	_megapixels_slider.editable = enabled
 	_face_box_slider.editable = enabled
@@ -754,7 +808,8 @@ func _build_preview_collection() -> Array:
 		var item = queue_items[i]
 		if item["status"] == BlinkQueueService.ItemStatus.COMPLETED and item["image"] != null:
 			var tex = ImageTexture.create_from_image(item["image"])
-			items.append({"texture": tex, "filename": item["blink_filename"], "index": i})
+			var source_tex = GalleryCacheService.get_texture(item["source_path"])
+			items.append({"texture": tex, "source_texture": source_tex, "filename": item["blink_filename"], "index": i})
 	return items
 
 

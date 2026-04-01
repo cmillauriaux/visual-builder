@@ -26,6 +26,10 @@ var _current_collection_index: int = -1
 var _collection_mode: bool = false
 var _regenerating: bool = false
 
+# Blink alternation
+var _blink_timer: Timer
+var _showing_source: bool = false
+
 func _ready() -> void:
 	visible = false
 	mouse_filter = Control.MOUSE_FILTER_STOP
@@ -118,10 +122,18 @@ func _ready() -> void:
 	_delete_btn.pressed.connect(_on_delete_pressed)
 	_nav_bar.add_child(_delete_btn)
 
+	# Blink alternation timer
+	_blink_timer = Timer.new()
+	_blink_timer.one_shot = false
+	_blink_timer.wait_time = 1.5
+	_blink_timer.timeout.connect(_on_blink_timer_timeout)
+	add_child(_blink_timer)
+
 
 func show_preview(texture: Texture2D, filename: String) -> void:
 	if texture == null:
 		return
+	_stop_blink_alternation()
 	_collection_mode = false
 	_collection_items = []
 	_current_collection_index = -1
@@ -170,6 +182,7 @@ func _display_current_item() -> void:
 	_regenerate_btn.disabled = false
 	_delete_btn.disabled = false
 	_update_nav_buttons()
+	_start_blink_alternation()
 
 
 func _update_nav_buttons() -> void:
@@ -177,6 +190,46 @@ func _update_nav_buttons() -> void:
 	_counter_label.text = "%d / %d" % [_current_collection_index + 1, total]
 	_prev_btn.disabled = (_current_collection_index <= 0)
 	_next_btn.disabled = (_current_collection_index >= total - 1)
+
+
+func _start_blink_alternation() -> void:
+	_showing_source = false
+	if _current_collection_index >= 0 and _current_collection_index < _collection_items.size():
+		var item = _collection_items[_current_collection_index]
+		if item.has("source_texture") and item["source_texture"] != null:
+			_regenerate_btn.visible = true
+			_delete_btn.visible = true
+			_blink_timer.start()
+			return
+	_blink_timer.stop()
+
+
+func _stop_blink_alternation() -> void:
+	_blink_timer.stop()
+	_showing_source = false
+	_regenerate_btn.visible = true
+	_delete_btn.visible = true
+
+
+func _on_blink_timer_timeout() -> void:
+	if _current_collection_index < 0 or _current_collection_index >= _collection_items.size():
+		_blink_timer.stop()
+		return
+	var item = _collection_items[_current_collection_index]
+	if not item.has("source_texture") or item["source_texture"] == null:
+		_blink_timer.stop()
+		return
+	_showing_source = not _showing_source
+	if _showing_source:
+		_texture_rect.texture = item["source_texture"]
+		_filename_label.text = item["filename"] + " — Original"
+		_regenerate_btn.visible = false
+		_delete_btn.visible = false
+	else:
+		_texture_rect.texture = item["texture"]
+		_filename_label.text = item["filename"]
+		_regenerate_btn.visible = true
+		_delete_btn.visible = true
 
 
 func _on_prev_pressed() -> void:
@@ -194,6 +247,7 @@ func _on_next_pressed() -> void:
 func _on_regenerate_pressed() -> void:
 	if _current_collection_index < 0 or _current_collection_index >= _collection_items.size():
 		return
+	_stop_blink_alternation()
 	var item = _collection_items[_current_collection_index]
 	var original_index = item["index"]
 	_regenerating = true
@@ -215,6 +269,7 @@ func update_current_image(texture: Texture2D) -> void:
 	_regenerating = false
 	_regenerate_btn.disabled = false
 	_delete_btn.disabled = false
+	_start_blink_alternation()
 
 
 func _on_delete_pressed() -> void:
@@ -247,6 +302,7 @@ func is_regenerating() -> bool:
 
 
 func _close() -> void:
+	_stop_blink_alternation()
 	visible = false
 	_texture_rect.texture = null
 	_collection_mode = false

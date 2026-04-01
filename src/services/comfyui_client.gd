@@ -8,7 +8,12 @@ signal generation_completed(image: Image)
 signal generation_failed(error: String)
 signal generation_progress(status: String)
 
-enum WorkflowType { CREATION = 0, EXPRESSION = 1, OUTPAINT = 2, UPSCALE = 3, ENHANCE = 4, UPSCALE_ENHANCE = 5 }
+
+func _fail(error: String) -> void:
+	print("[ComfyUI] FAILED: ", error)
+	generation_failed.emit(error)
+
+enum WorkflowType { CREATION = 0, EXPRESSION = 1, OUTPAINT = 2, UPSCALE = 3, ENHANCE = 4, UPSCALE_ENHANCE = 5, BLINK = 6 }
 
 var _generating: bool = false
 var _prompt_id: String = ""
@@ -32,6 +37,7 @@ var _outpaint_feathering: int = 24
 var _outpaint_guidance: float = 40.0
 var _upscale_factor: float = 2.0
 var _enhance_shift: float = 3.0
+var _eye_zone_mode: String = "eyes_only"  # "eyes_only" ou "eyes_and_brows"
 
 # --- Workflow template (Flux 2 Klein + BiRefNet) ---
 # Reproduit exactement Edit_Image_Transparent_API.json
@@ -755,6 +761,8 @@ func build_workflow(filename: String, prompt_text: String, seed: int, remove_bac
 		return _build_enhance_workflow(filename, prompt_text, seed, cfg, steps, denoise, negative_prompt)
 	if workflow_type == WorkflowType.UPSCALE_ENHANCE:
 		return _build_upscale_enhance_workflow(filename, prompt_text, seed, cfg, steps, denoise, megapixels, negative_prompt)
+	if workflow_type == WorkflowType.BLINK:
+		return _build_blink_workflow(filename, prompt_text, seed, remove_background, cfg, steps, denoise, negative_prompt, face_box_size, megapixels)
 	if workflow_type == WorkflowType.EXPRESSION:
 		return _build_expression_workflow(filename, prompt_text, seed, remove_background, cfg, steps, denoise, negative_prompt, face_box_size, megapixels)
 	var wf = WORKFLOW_TEMPLATE.duplicate(true)
@@ -810,6 +818,83 @@ func _build_expression_workflow(filename: String, prompt_text: String, seed: int
 		wf["9"]["inputs"]["images"] = ["103", 0]
 		wf.erase("106")
 	return wf
+
+
+func _build_blink_workflow(filename: String, prompt_text: String, seed: int, remove_background: bool, cfg: float, steps: int, denoise: float = 0.5, negative_prompt: String = "", eye_expand: int = 15, megapixels: float = 1.0) -> Dictionary:
+	var wf = EXPRESSION_WORKFLOW_TEMPLATE.duplicate(true)
+	# Remplacer YOLO face detection par BiSeNet face parsing (yeux uniquement)
+	# Package : Bwebbfx/ComfyUI_FaceParsing
+	wf.erase("99")
+	wf.erase("100")
+	wf["110"] = {
+		"class_type": "FaceParsingLoader",
+		"inputs": {
+			"backbone": "resnet18",
+			"device": "auto"
+		}
+	}
+	wf["111"] = {
+		"class_type": "FaceParsingInfer",
+		"inputs": {
+			"image": ["76", 0],
+			"model": ["110", 0],
+			"keep_resolution": true,
+			"preview": false
+		}
+	}
+	# FacePartMask : sélectionner les régions des yeux (et optionnellement sourcils)
+	var part_inputs: Dictionary = {
+		"seg_map": ["111", 0],
+		"as_soft": false
+	}
+	if _eye_zone_mode == "eyes_and_brows":
+		part_inputs["num_parts"] = 4
+		part_inputs["part_1"] = "l_eye"
+		part_inputs["part_2"] = "r_eye"
+		part_inputs["part_3"] = "l_brow"
+		part_inputs["part_4"] = "r_brow"
+	else:
+		part_inputs["num_parts"] = 2
+		part_inputs["part_1"] = "l_eye"
+		part_inputs["part_2"] = "r_eye"
+	wf["112"] = {
+		"class_type": "FacePartMask",
+		"inputs": part_inputs
+	}
+	# Rewire GrowMask vers le masque BiSeNet
+	wf["101"]["inputs"]["mask"] = ["112", 0]
+	wf["101"]["inputs"]["expand"] = eye_expand
+	# Blur proportionnel (référence : kernel=21 sigma=10 pour expand=15)
+	# Plancher minimum : kernel≥11 sigma≥5 pour un fondu suffisant
+	var blur_kernel: int = max(11, roundi(eye_expand * 21.0 / 15.0)) | 1  # toujours impair
+	var blur_sigma: float = maxf(5.0, eye_expand * 10.0 / 15.0)
+	wf["102"]["inputs"]["kernel_size"] = blur_kernel
+	wf["102"]["inputs"]["sigma"] = blur_sigma
+	wf["76"]["inputs"]["image"] = filename
+	wf["75:74"]["inputs"]["text"] = prompt_text
+	wf["75:73"]["inputs"]["noise_seed"] = seed
+	wf["75:63"]["inputs"]["cfg"] = cfg
+	wf["75:62"]["inputs"]["steps"] = steps
+	wf["75:80"]["inputs"]["megapixels"] = megapixels
+	_apply_negative_prompt(wf, negative_prompt)
+	# img2img : partir de l'image source encodée
+	wf["75:64"]["inputs"]["latent_image"] = ["75:79:78", 0]
+	# SplitSigmas : contrôle du denoise
+	var split_step = max(1, roundi(steps * (1.0 - denoise)))
+	wf["split_sigmas"] = {
+		"class_type": "SplitSigmas",
+		"inputs": {
+			"sigmas": ["75:62", 0],
+			"step": split_step
+		}
+	}
+	wf["75:64"]["inputs"]["sigmas"] = ["split_sigmas", 1]
+	wf.erase("75:66")
+	if not remove_background:
+		wf["9"]["inputs"]["images"] = ["103", 0]
+		wf.erase("106")
+	return wf
+
 
 func _apply_negative_prompt(wf: Dictionary, negative_prompt: String) -> void:
 	if negative_prompt.strip_edges() == "":
@@ -913,7 +998,7 @@ func parse_history_response(json_str: String, prompt_id: String) -> Dictionary:
 
 func generate_upscale_enhance(config: RefCounted, source_image_path: String, workflow_type: int, prompt_text: String, factor: float, denoise: float, steps: int, cfg: float, shift: float, megapixels: float, negative_prompt: String) -> void:
 	if _generating:
-		generation_failed.emit("Une génération est déjà en cours")
+		_fail("Une génération est déjà en cours")
 		return
 
 	_generating = true
@@ -935,7 +1020,7 @@ func generate_upscale_enhance(config: RefCounted, source_image_path: String, wor
 	var file = FileAccess.open(source_image_path, FileAccess.READ)
 	if file == null:
 		_generating = false
-		generation_failed.emit("Impossible d'ouvrir l'image : " + source_image_path)
+		_fail("Impossible d'ouvrir l'image : " + source_image_path)
 		return
 
 	var file_bytes = file.get_buffer(file.get_length())
@@ -953,7 +1038,7 @@ func generate_upscale_enhance(config: RefCounted, source_image_path: String, wor
 
 func generate_outpaint(config: RefCounted, source_image_path: String, prompt_text: String, pad_left: int, pad_top: int, pad_right: int, pad_bottom: int, feathering: int, guidance: float, cfg: float, steps: int, negative_prompt: String) -> void:
 	if _generating:
-		generation_failed.emit("Une génération est déjà en cours")
+		_fail("Une génération est déjà en cours")
 		return
 
 	_generating = true
@@ -979,7 +1064,7 @@ func generate_outpaint(config: RefCounted, source_image_path: String, prompt_tex
 	var file = FileAccess.open(source_image_path, FileAccess.READ)
 	if file == null:
 		_generating = false
-		generation_failed.emit("Impossible d'ouvrir l'image : " + source_image_path)
+		_fail("Impossible d'ouvrir l'image : " + source_image_path)
 		return
 
 	var file_bytes = file.get_buffer(file.get_length())
@@ -997,7 +1082,7 @@ func generate_outpaint(config: RefCounted, source_image_path: String, prompt_tex
 
 func generate(config: RefCounted, source_image_path: String, prompt_text: String, remove_background: bool = true, cfg: float = 1.0, steps: int = 4, workflow_type: int = WorkflowType.CREATION, denoise: float = 0.5, negative_prompt: String = "", face_box_size: int = 80, megapixels: float = 1.0, loras: Array = []) -> void:
 	if _generating:
-		generation_failed.emit("Une génération est déjà en cours")
+		_fail("Une génération est déjà en cours")
 		return
 
 	_generating = true
@@ -1019,7 +1104,7 @@ func generate(config: RefCounted, source_image_path: String, prompt_text: String
 	var file = FileAccess.open(source_image_path, FileAccess.READ)
 	if file == null:
 		_generating = false
-		generation_failed.emit("Impossible d'ouvrir l'image : " + source_image_path)
+		_fail("Impossible d'ouvrir l'image : " + source_image_path)
 		return
 
 	var file_bytes = file.get_buffer(file.get_length())
@@ -1078,17 +1163,17 @@ func _do_runpod_run(filename: String, file_bytes: PackedByteArray, prompt_text: 
 			return
 		if result != HTTPRequest.RESULT_SUCCESS or code != 200:
 			_generating = false
-			generation_failed.emit("Erreur RunPod /run (HTTP %d)" % code)
+			_fail("Erreur RunPod /run (HTTP %d)" % code)
 			return
 		var resp = JSON.parse_string(body_bytes.get_string_from_utf8())
 		if resp == null:
 			_generating = false
-			generation_failed.emit("Réponse RunPod invalide")
+			_fail("Réponse RunPod invalide")
 			return
 		var job_id: String = resp.get("id", "")
 		if job_id == "":
 			_generating = false
-			generation_failed.emit("Pas de job ID dans la réponse RunPod")
+			_fail("Pas de job ID dans la réponse RunPod")
 			return
 		generation_progress.emit("Job RunPod soumis, traitement en cours...")
 		_do_runpod_poll(job_id)
@@ -1112,12 +1197,12 @@ func _do_runpod_poll(job_id: String) -> void:
 			return
 		if result != HTTPRequest.RESULT_SUCCESS:
 			_generating = false
-			generation_failed.emit("Erreur polling RunPod")
+			_fail("Erreur polling RunPod")
 			return
 		var resp = JSON.parse_string(body_bytes.get_string_from_utf8())
 		if resp == null:
 			_generating = false
-			generation_failed.emit("Réponse statut RunPod invalide")
+			_fail("Réponse statut RunPod invalide")
 			return
 		var status: String = resp.get("status", "")
 		if status == "COMPLETED":
@@ -1127,24 +1212,24 @@ func _do_runpod_poll(job_id: String) -> void:
 			var images = output.get("images", [])
 			if images.size() == 0:
 				_generating = false
-				generation_failed.emit("Aucune image dans la sortie RunPod")
+				_fail("Aucune image dans la sortie RunPod")
 				return
 			var b64: String = images[0].get("data", "")
 			if b64 == "":
 				_generating = false
-				generation_failed.emit("Image vide dans la sortie RunPod")
+				_fail("Image vide dans la sortie RunPod")
 				return
 			var image_bytes = Marshalls.base64_to_raw(b64)
 			var image = Image.new()
 			if image.load_png_from_buffer(image_bytes) != OK:
 				_generating = false
-				generation_failed.emit("Impossible de décoder l'image RunPod")
+				_fail("Impossible de décoder l'image RunPod")
 				return
 			_generating = false
 			generation_completed.emit(image)
 		elif status == "FAILED":
 			_generating = false
-			generation_failed.emit("Job RunPod échoué : " + str(resp.get("error", "erreur inconnue")))
+			_fail("Job RunPod échoué : " + str(resp.get("error", "erreur inconnue")))
 		else:
 			generation_progress.emit("RunPod : " + status + "...")
 			get_tree().create_timer(5.0).timeout.connect(func(): _do_runpod_poll(job_id))
@@ -1172,7 +1257,7 @@ func _do_upload(filename: String, file_bytes: PackedByteArray, prompt_text: Stri
 			return
 		if result != HTTPRequest.RESULT_SUCCESS or code != 200:
 			_generating = false
-			generation_failed.emit("Erreur upload (code %d, result %d)" % [code, result])
+			_fail("Erreur upload (code %d, result %d)" % [code, result])
 			return
 		generation_progress.emit("Image uploadée. Lancement du workflow...")
 		_do_prompt(filename, prompt_text)
@@ -1239,13 +1324,13 @@ func _do_prompt(filename: String, prompt_text: String) -> void:
 			_generating = false
 			var response_str = body.get_string_from_utf8()
 			print("[ComfyUI] ERREUR prompt (code %d) : %s" % [code, response_str])
-			generation_failed.emit("Erreur prompt (code %d) : %s" % [code, response_str.left(500)])
+			_fail("Erreur prompt (code %d) : %s" % [code, response_str.left(500)])
 			return
 		var response_str = body.get_string_from_utf8()
 		_prompt_id = parse_prompt_response(response_str)
 		if _prompt_id.is_empty():
 			_generating = false
-			generation_failed.emit("Réponse invalide du serveur (pas de prompt_id)")
+			_fail("Réponse invalide du serveur (pas de prompt_id)")
 			return
 		generation_progress.emit("Génération en cours...")
 		_start_polling()
@@ -1292,7 +1377,7 @@ func _poll_history() -> void:
 			_stop_polling()
 			_generating = false
 			var error_msg = parsed.get("error", "Erreur inconnue")
-			generation_failed.emit("Erreur workflow : %s" % error_msg)
+			_fail("Erreur workflow : %s" % error_msg)
 	)
 
 	http.request(url, PackedStringArray(headers))
@@ -1319,7 +1404,7 @@ func _do_download(filename: String) -> void:
 		if _cancelled:
 			return
 		if result != HTTPRequest.RESULT_SUCCESS or code != 200:
-			generation_failed.emit("Erreur téléchargement (code %d)" % code)
+			_fail("Erreur téléchargement (code %d)" % code)
 			return
 		print("[ComfyUI] received %d bytes" % body.size())
 		var image = Image.new()
@@ -1329,7 +1414,7 @@ func _do_download(filename: String) -> void:
 		if err != OK:
 			err = image.load_webp_from_buffer(body)
 		if err != OK:
-			generation_failed.emit("Impossible de décoder l'image reçue")
+			_fail("Impossible de décoder l'image reçue")
 			return
 		generation_completed.emit(image)
 	)

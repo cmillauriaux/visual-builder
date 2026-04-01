@@ -181,3 +181,55 @@ func test_build_workflow_creation_multiple_loras_chain_correctly():
 	assert_eq(wf["lora_1"]["inputs"]["clip"], ["lora_0", 1])
 	assert_eq(wf["75:63"]["inputs"]["model"], ["lora_1", 0])
 	assert_eq(wf["75:74"]["inputs"]["clip"], ["lora_1", 1])
+
+
+# --- Blink workflow (BiSeNet face parsing) ---
+
+func test_build_blink_workflow_uses_bisenet():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("test.png", "blink", 42, true, 1.0, 4, 6, 0.55, "", 15)
+	assert_false(wf.has("99"), "YOLO node should be removed")
+	assert_false(wf.has("100"), "BboxDetector node should be removed")
+	assert_eq(wf["110"]["class_type"], "FaceParsingLoader")
+	assert_eq(wf["111"]["class_type"], "FaceParsingInfer")
+	assert_eq(wf["112"]["class_type"], "FacePartMask")
+
+func test_build_blink_workflow_default_eyes_only():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("test.png", "blink", 42, true, 1.0, 4, 6, 0.55, "", 15)
+	assert_eq(wf["112"]["inputs"]["num_parts"], 2)
+	assert_eq(wf["112"]["inputs"]["part_1"], "l_eye")
+	assert_eq(wf["112"]["inputs"]["part_2"], "r_eye")
+
+func test_build_blink_workflow_eyes_and_brows():
+	var client = ComfyUIClientScript.new()
+	client._eye_zone_mode = "eyes_and_brows"
+	var wf = client.build_workflow("test.png", "blink", 42, true, 1.0, 4, 6, 0.55, "", 15)
+	assert_eq(wf["112"]["inputs"]["num_parts"], 4)
+	assert_eq(wf["112"]["inputs"]["part_3"], "l_brow")
+	assert_eq(wf["112"]["inputs"]["part_4"], "r_brow")
+
+func test_build_blink_workflow_mask_rewired():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("test.png", "blink", 42, true, 1.0, 4, 6, 0.55, "", 15)
+	assert_eq(wf["101"]["inputs"]["mask"], ["112", 0])
+	assert_eq(wf["101"]["inputs"]["expand"], 15)
+
+func test_build_blink_workflow_has_img2img():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("test.png", "blink", 42, true, 1.0, 4, 6, 0.55, "", 15)
+	assert_true(wf.has("split_sigmas"))
+	assert_eq(wf["75:64"]["inputs"]["latent_image"], ["75:79:78", 0])
+
+func test_build_blink_workflow_blur_proportional():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("test.png", "blink", 42, true, 1.0, 4, 6, 0.55, "", 15)
+	var kernel = wf["102"]["inputs"]["kernel_size"]
+	assert_true(kernel >= 11, "kernel should be >= 11")
+	assert_eq(kernel % 2, 1, "kernel should be odd")
+
+func test_build_blink_workflow_no_bg_removal():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("test.png", "blink", 42, false, 1.0, 4, 6, 0.55, "", 15)
+	assert_eq(wf["9"]["inputs"]["images"][0], "103")
+	assert_false(wf.has("106"))

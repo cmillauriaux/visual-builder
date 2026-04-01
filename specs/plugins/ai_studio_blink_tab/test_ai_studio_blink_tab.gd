@@ -252,6 +252,30 @@ func test_selected_grid_cleared_when_empty_selection() -> void:
 	assert_eq(tab._selected_grid.get_child_count(), 0)
 
 
+func test_build_tab_creates_eye_zone_dropdown() -> void:
+	var d = _make_tab()
+	var tab: BlinkTab = d["tab"]
+	assert_not_null(tab._eye_zone_dropdown)
+	assert_true(tab._eye_zone_dropdown is OptionButton)
+	assert_eq(tab._eye_zone_dropdown.item_count, 2)
+	assert_eq(tab._eye_zone_dropdown.get_item_text(0), "Yeux seuls")
+	assert_eq(tab._eye_zone_dropdown.get_item_text(1), "Yeux + sourcils")
+	assert_eq(tab._eye_zone_dropdown.selected, 1)
+
+
+func test_eye_expand_slider_default_value() -> void:
+	var d = _make_tab()
+	var tab: BlinkTab = d["tab"]
+	assert_eq(int(tab._face_box_slider.value), 30)
+
+
+func test_eye_expand_slider_range() -> void:
+	var d = _make_tab()
+	var tab: BlinkTab = d["tab"]
+	assert_eq(int(tab._face_box_slider.min_value), 0)
+	assert_eq(int(tab._face_box_slider.max_value), 50)
+
+
 func test_open_multi_gallery_does_not_crash() -> void:
 	# Regression: _open_multi_gallery used to set horizontal_alignment on CheckBox
 	# which is an invalid property, causing a fatal script error.
@@ -289,3 +313,131 @@ func test_open_multi_gallery_does_not_crash() -> void:
 	DirAccess.remove_absolute(temp_dir + "/assets/foregrounds")
 	DirAccess.remove_absolute(temp_dir + "/assets")
 	DirAccess.remove_absolute(temp_dir)
+
+
+# --- Helper to create a temp gallery with known images ---
+
+func _make_gallery_env(foregrounds: Array = [], backgrounds: Array = [], manifest_content: String = "") -> Dictionary:
+	var temp_dir = ProjectSettings.globalize_path("user://test_blink_gallery_border")
+	DirAccess.make_dir_recursive_absolute(temp_dir + "/assets/foregrounds")
+	DirAccess.make_dir_recursive_absolute(temp_dir + "/assets/backgrounds")
+
+	var img = Image.create(32, 32, false, Image.FORMAT_RGBA8)
+	img.fill(Color.BLUE)
+
+	for fname in foregrounds:
+		img.save_png(temp_dir + "/assets/foregrounds/" + fname)
+	for fname in backgrounds:
+		img.save_png(temp_dir + "/assets/backgrounds/" + fname)
+
+	if manifest_content != "":
+		var f = FileAccess.open(temp_dir + "/assets/foregrounds/blink_manifest.yaml", FileAccess.WRITE)
+		f.store_string(manifest_content)
+		f.close()
+
+	return {"temp_dir": temp_dir}
+
+
+func _open_gallery_and_get_grid(tab, parent_window: Window) -> GridContainer:
+	tab._gallery_btn.emit_signal("pressed")
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var gallery_window: Window = null
+	for child in parent_window.get_children():
+		if child is Window and child.title == "Choisir les images sources":
+			gallery_window = child
+			break
+	if gallery_window == null:
+		return null
+	# Find the GridContainer inside the gallery
+	var scroll = gallery_window.get_child(0).get_child(0).get_child(0) # margin > vbox > scroll
+	return scroll.get_child(0) as GridContainer
+
+
+func _cleanup_gallery_env(temp_dir: String, parent_window: Window) -> void:
+	for child in parent_window.get_children():
+		if child is Window and child.title == "Choisir les images sources":
+			child.queue_free()
+	# Remove all files in temp dirs
+	for subdir in ["assets/foregrounds", "assets/backgrounds"]:
+		var dir = DirAccess.open(temp_dir + "/" + subdir)
+		if dir:
+			dir.list_dir_begin()
+			var fname = dir.get_next()
+			while fname != "":
+				if not dir.current_is_dir():
+					DirAccess.remove_absolute(temp_dir + "/" + subdir + "/" + fname)
+				fname = dir.get_next()
+			dir.list_dir_end()
+		DirAccess.remove_absolute(temp_dir + "/" + subdir)
+	DirAccess.remove_absolute(temp_dir + "/assets")
+	DirAccess.remove_absolute(temp_dir)
+
+
+func test_gallery_foreground_without_blink_has_red_border() -> void:
+	var env = _make_gallery_env(["hero.png"])
+	var d = _make_tab()
+	var tab: BlinkTab = d["tab"]
+	tab.setup(env["temp_dir"], true)
+	var grid = await _open_gallery_and_get_grid(tab, d["parent_window"])
+	assert_not_null(grid)
+	assert_eq(grid.get_child_count(), 1)
+	var panel: PanelContainer = grid.get_child(0)
+	var style = panel.get_theme_stylebox("panel") as StyleBoxFlat
+	assert_not_null(style, "Should have a custom style")
+	assert_almost_eq(style.border_color.r, 0.9, 0.1, "Red border")
+	assert_almost_eq(style.border_color.g, 0.2, 0.1, "Red border")
+	_cleanup_gallery_env(env["temp_dir"], d["parent_window"])
+
+
+func test_gallery_foreground_with_blink_has_green_border() -> void:
+	var manifest = "blinks:\n  hero.png: hero_blink.png\n"
+	var env = _make_gallery_env(["hero.png", "hero_blink.png"], [], manifest)
+	var d = _make_tab()
+	var tab: BlinkTab = d["tab"]
+	tab.setup(env["temp_dir"], true)
+	var grid = await _open_gallery_and_get_grid(tab, d["parent_window"])
+	assert_not_null(grid)
+	# Find the hero.png panel (not hero_blink.png)
+	var hero_panel: PanelContainer = null
+	for child in grid.get_children():
+		var cb = child.get_child(0).get_child(0) as CheckBox
+		if cb.text == "hero.png":
+			hero_panel = child
+			break
+	assert_not_null(hero_panel)
+	var style = hero_panel.get_theme_stylebox("panel") as StyleBoxFlat
+	assert_not_null(style)
+	assert_almost_eq(style.border_color.g, 0.8, 0.1, "Green border")
+	_cleanup_gallery_env(env["temp_dir"], d["parent_window"])
+
+
+func test_gallery_blink_file_is_semi_transparent() -> void:
+	var env = _make_gallery_env(["hero.png", "hero_blink.png"])
+	var d = _make_tab()
+	var tab: BlinkTab = d["tab"]
+	tab.setup(env["temp_dir"], true)
+	var grid = await _open_gallery_and_get_grid(tab, d["parent_window"])
+	assert_not_null(grid)
+	var blink_panel: PanelContainer = null
+	for child in grid.get_children():
+		var cb = child.get_child(0).get_child(0) as CheckBox
+		if cb.text == "hero_blink.png":
+			blink_panel = child
+			break
+	assert_not_null(blink_panel)
+	assert_almost_eq(blink_panel.modulate.a, 0.4, 0.05, "Blink file should be semi-transparent")
+	_cleanup_gallery_env(env["temp_dir"], d["parent_window"])
+
+
+func test_gallery_background_is_semi_transparent() -> void:
+	var env = _make_gallery_env([], ["sky.png"])
+	var d = _make_tab()
+	var tab: BlinkTab = d["tab"]
+	tab.setup(env["temp_dir"], true)
+	var grid = await _open_gallery_and_get_grid(tab, d["parent_window"])
+	assert_not_null(grid)
+	assert_eq(grid.get_child_count(), 1)
+	var panel: PanelContainer = grid.get_child(0)
+	assert_almost_eq(panel.modulate.a, 0.4, 0.05, "Background should be semi-transparent")
+	_cleanup_gallery_env(env["temp_dir"], d["parent_window"])

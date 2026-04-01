@@ -353,3 +353,112 @@ func test_show_preview_hides_nav_bar():
 	var tex = ImageTexture.create_from_image(img)
 	_popup.show_preview(tex, "single.png")
 	assert_false(_popup._nav_bar.visible)
+
+# --- Blink alternation ---
+
+func _make_blink_collection() -> Array:
+	var items: Array = []
+	for i in range(2):
+		var blink_img = Image.create(2, 2, false, Image.FORMAT_RGB8)
+		var blink_tex = ImageTexture.create_from_image(blink_img)
+		var source_img = Image.create(4, 4, false, Image.FORMAT_RGB8)
+		var source_tex = ImageTexture.create_from_image(source_img)
+		items.append({"texture": blink_tex, "source_texture": source_tex, "filename": "char_%d_blink.png" % i, "index": i})
+	return items
+
+func test_has_blink_timer():
+	assert_not_null(_popup._blink_timer)
+	assert_is(_popup._blink_timer, Timer)
+
+func test_blink_timer_not_one_shot():
+	assert_false(_popup._blink_timer.one_shot)
+
+func test_blink_timer_wait_time():
+	assert_almost_eq(_popup._blink_timer.wait_time, 1.5, 0.01)
+
+func test_showing_source_initially_false():
+	assert_false(_popup._showing_source)
+
+func test_blink_alternation_starts_on_collection_with_source_texture():
+	_popup.show_collection(_make_blink_collection(), 0)
+	assert_false(_popup._blink_timer.is_stopped())
+
+func test_blink_alternation_does_not_start_without_source_texture():
+	_popup.show_collection(_make_collection(), 0)
+	assert_true(_popup._blink_timer.is_stopped())
+
+func test_blink_timer_timeout_shows_original():
+	var items = _make_blink_collection()
+	_popup.show_collection(items, 0)
+	_popup._on_blink_timer_timeout()
+	assert_true(_popup._showing_source)
+	assert_eq(_popup._texture_rect.texture, items[0]["source_texture"])
+	assert_string_contains(_popup._filename_label.text, "Original")
+
+func test_blink_timer_timeout_hides_regen_delete():
+	_popup.show_collection(_make_blink_collection(), 0)
+	_popup._on_blink_timer_timeout()
+	assert_false(_popup._regenerate_btn.visible)
+	assert_false(_popup._delete_btn.visible)
+
+func test_blink_timer_double_timeout_shows_blink_again():
+	var items = _make_blink_collection()
+	_popup.show_collection(items, 0)
+	_popup._on_blink_timer_timeout()  # -> original
+	_popup._on_blink_timer_timeout()  # -> blink
+	assert_false(_popup._showing_source)
+	assert_eq(_popup._texture_rect.texture, items[0]["texture"])
+	assert_eq(_popup._filename_label.text, "char_0_blink.png")
+	assert_true(_popup._regenerate_btn.visible)
+	assert_true(_popup._delete_btn.visible)
+
+func test_stop_blink_alternation_restores_buttons():
+	_popup.show_collection(_make_blink_collection(), 0)
+	_popup._on_blink_timer_timeout()  # hide buttons
+	assert_false(_popup._regenerate_btn.visible)
+	_popup._stop_blink_alternation()
+	assert_true(_popup._regenerate_btn.visible)
+	assert_true(_popup._delete_btn.visible)
+	assert_true(_popup._blink_timer.is_stopped())
+
+func test_close_stops_blink_alternation():
+	_popup.show_collection(_make_blink_collection(), 0)
+	assert_false(_popup._blink_timer.is_stopped())
+	_popup._close()
+	assert_true(_popup._blink_timer.is_stopped())
+	assert_false(_popup._showing_source)
+
+func test_regenerate_stops_blink_alternation():
+	_popup.show_collection(_make_blink_collection(), 0)
+	assert_false(_popup._blink_timer.is_stopped())
+	_popup._on_regenerate_pressed()
+	assert_true(_popup._blink_timer.is_stopped())
+	assert_true(_popup._regenerate_btn.visible)
+
+func test_navigation_restarts_blink_alternation():
+	var items = _make_blink_collection()
+	_popup.show_collection(items, 0)
+	_popup._on_blink_timer_timeout()  # showing original
+	assert_true(_popup._showing_source)
+	_popup._on_next_pressed()
+	# After navigation, should reset to blink view and restart timer
+	assert_false(_popup._showing_source)
+	assert_false(_popup._blink_timer.is_stopped())
+
+func test_show_preview_stops_blink_alternation():
+	_popup.show_collection(_make_blink_collection(), 0)
+	assert_false(_popup._blink_timer.is_stopped())
+	var img = Image.create(2, 2, false, Image.FORMAT_RGB8)
+	var tex = ImageTexture.create_from_image(img)
+	_popup.show_preview(tex, "single.png")
+	assert_true(_popup._blink_timer.is_stopped())
+
+func test_update_current_image_restarts_alternation():
+	var items = _make_blink_collection()
+	_popup.show_collection(items, 0)
+	_popup._on_regenerate_pressed()
+	assert_true(_popup._blink_timer.is_stopped())
+	var new_img = Image.create(4, 4, false, Image.FORMAT_RGB8)
+	var new_tex = ImageTexture.create_from_image(new_img)
+	_popup.update_current_image(new_tex)
+	assert_false(_popup._blink_timer.is_stopped())

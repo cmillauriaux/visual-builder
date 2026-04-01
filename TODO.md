@@ -1,2 +1,1 @@
-- Générer des images "blink"
-- Par défaut cacher la barre d'outils
+
