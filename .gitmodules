@@ -1,3 +1,6 @@
 [submodule "plugins/ai_studio"]
 	path = plugins/ai_studio
 	url = git@github.com:Raccoons-Studio/visual-builder-aistudio.git
+[submodule "plugins/voice_studio"]
+	path = plugins/voice_studio
+	url = git@github.com:Raccoons-Studio/visual-builder-voicestudio.git
