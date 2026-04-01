@@ -266,7 +266,7 @@ func test_build_tab_creates_eye_zone_dropdown() -> void:
 func test_eye_expand_slider_default_value() -> void:
 	var d = _make_tab()
 	var tab: BlinkTab = d["tab"]
-	assert_eq(int(tab._face_box_slider.value), 30)
+	assert_eq(int(tab._face_box_slider.value), 100)
 
 
 func test_eye_expand_slider_range() -> void:

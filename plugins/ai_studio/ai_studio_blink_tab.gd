@@ -164,13 +164,13 @@ func build_tab(tab_container: TabContainer) -> void:
 	_steps_slider.min_value = 1
 	_steps_slider.max_value = 50
 	_steps_slider.step = 1
-	_steps_slider.value = 4
+	_steps_slider.value = 8
 	_steps_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_steps_slider.value_changed.connect(func(val: float): _steps_value_label.text = str(int(val)))
 	steps_hbox.add_child(_steps_slider)
 
 	_steps_value_label = Label.new()
-	_steps_value_label.text = "4"
+	_steps_value_label.text = "8"
 	_steps_value_label.custom_minimum_size.x = 32
 	steps_hbox.add_child(_steps_value_label)
 
@@ -187,13 +187,13 @@ func build_tab(tab_container: TabContainer) -> void:
 	_denoise_slider.min_value = 0.1
 	_denoise_slider.max_value = 1.0
 	_denoise_slider.step = 0.05
-	_denoise_slider.value = 0.8
+	_denoise_slider.value = 0.85
 	_denoise_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_denoise_slider.value_changed.connect(func(val: float): _denoise_value_label.text = str(snapped(val, 0.05)))
 	denoise_hbox.add_child(_denoise_slider)
 
 	_denoise_value_label = Label.new()
-	_denoise_value_label.text = "0.8"
+	_denoise_value_label.text = "0.85"
 	_denoise_value_label.custom_minimum_size.x = 32
 	denoise_hbox.add_child(_denoise_value_label)
 
@@ -248,13 +248,13 @@ func build_tab(tab_container: TabContainer) -> void:
 	_face_box_slider.min_value = 0
 	_face_box_slider.max_value = 150
 	_face_box_slider.step = 5
-	_face_box_slider.value = 30
+	_face_box_slider.value = 100
 	_face_box_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_face_box_slider.value_changed.connect(func(val: float): _face_box_value_label.text = str(int(val)))
 	face_box_hbox.add_child(_face_box_slider)
 
 	_face_box_value_label = Label.new()
-	_face_box_value_label.text = "30"
+	_face_box_value_label.text = "100"
 	_face_box_value_label.custom_minimum_size.x = 32
 	face_box_hbox.add_child(_face_box_value_label)
 
