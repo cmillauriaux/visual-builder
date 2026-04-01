@@ -38,6 +38,12 @@ var _outpaint_guidance: float = 40.0
 var _upscale_factor: float = 2.0
 var _enhance_shift: float = 3.0
 var _eye_zone_mode: String = "eyes_only"  # "eyes_only" ou "eyes_and_brows"
+var _debug_mask: bool = false
+var _mask_feather: int = 10
+var _detection_scale: float = 1.0
+var _backbone: String = "resnet18"
+var _detection_model: String = "bisenet"  # "bisenet" ou nom de fichier YOLO .pt
+var _detection_threshold: float = 0.3
 
 # --- Workflow template (Flux 2 Klein + BiRefNet) ---
 # Reproduit exactement Edit_Image_Transparent_API.json
@@ -822,54 +828,110 @@ func _build_expression_workflow(filename: String, prompt_text: String, seed: int
 
 func _build_blink_workflow(filename: String, prompt_text: String, seed: int, remove_background: bool, cfg: float, steps: int, denoise: float = 0.5, negative_prompt: String = "", eye_expand: int = 15, megapixels: float = 1.0) -> Dictionary:
 	var wf = EXPRESSION_WORKFLOW_TEMPLATE.duplicate(true)
-	# Remplacer YOLO face detection par BiSeNet face parsing (yeux uniquement)
-	# Package : Bwebbfx/ComfyUI_FaceParsing
 	wf.erase("99")
 	wf.erase("100")
-	wf["110"] = {
-		"class_type": "FaceParsingLoader",
-		"inputs": {
-			"backbone": "resnet18",
-			"device": "auto"
+
+	# --- Détection des yeux : BiSeNet ou YOLO ---
+	var detect_image_ref = ["76", 0]
+	if _detection_scale > 1.0:
+		wf["fp_upscale"] = {
+			"class_type": "ImageScaleBy",
+			"inputs": {
+				"image": ["76", 0],
+				"upscale_method": "lanczos",
+				"scale_by": _detection_scale
+			}
 		}
-	}
-	wf["111"] = {
-		"class_type": "FaceParsingInfer",
-		"inputs": {
-			"image": ["76", 0],
-			"model": ["110", 0],
-			"keep_resolution": true,
-			"preview": false
+		detect_image_ref = ["fp_upscale", 0]
+
+	var raw_mask_ref: Array  # référence vers le masque brut avant grow/blur
+	if _detection_model == "bisenet":
+		# BiSeNet face parsing
+		wf["110"] = {
+			"class_type": "FaceParsingLoader",
+			"inputs": { "backbone": _backbone, "device": "auto" }
 		}
-	}
-	# FacePartMask : sélectionner les régions des yeux (et optionnellement sourcils)
-	var part_inputs: Dictionary = {
-		"seg_map": ["111", 0],
-		"as_soft": false
-	}
-	if _eye_zone_mode == "eyes_and_brows":
-		part_inputs["num_parts"] = 4
-		part_inputs["part_1"] = "l_eye"
-		part_inputs["part_2"] = "r_eye"
-		part_inputs["part_3"] = "l_brow"
-		part_inputs["part_4"] = "r_brow"
+		wf["111"] = {
+			"class_type": "FaceParsingInfer",
+			"inputs": {
+				"image": detect_image_ref,
+				"model": ["110", 0],
+				"keep_resolution": true,
+				"preview": false
+			}
+		}
+		var part_inputs: Dictionary = { "seg_map": ["111", 0], "as_soft": false }
+		if _eye_zone_mode == "eyes_and_brows":
+			part_inputs["num_parts"] = 4
+			part_inputs["part_1"] = "l_eye"
+			part_inputs["part_2"] = "r_eye"
+			part_inputs["part_3"] = "l_brow"
+			part_inputs["part_4"] = "r_brow"
+		else:
+			part_inputs["num_parts"] = 2
+			part_inputs["part_1"] = "l_eye"
+			part_inputs["part_2"] = "r_eye"
+		wf["112"] = { "class_type": "FacePartMask", "inputs": part_inputs }
+		raw_mask_ref = ["112", 0]
 	else:
-		part_inputs["num_parts"] = 2
-		part_inputs["part_1"] = "l_eye"
-		part_inputs["part_2"] = "r_eye"
-	wf["112"] = {
-		"class_type": "FacePartMask",
-		"inputs": part_inputs
-	}
-	# Rewire GrowMask vers le masque BiSeNet
-	wf["101"]["inputs"]["mask"] = ["112", 0]
+		# YOLO eye detection (ultralytics .pt model)
+		wf["99"] = {
+			"class_type": "UltralyticsDetectorProvider",
+			"inputs": { "model_name": "bbox/" + _detection_model }
+		}
+		wf["100"] = {
+			"class_type": "BboxDetectorCombined_v2",
+			"inputs": {
+				"bbox_detector": ["99", 0],
+				"image": detect_image_ref,
+				"threshold": _detection_threshold,
+				"dilation": 0
+			}
+		}
+		raw_mask_ref = ["100", 0]
+
+	# Si upscalé, rescaler le masque à la taille originale
+	var mask_output_ref = raw_mask_ref
+	if _detection_scale > 1.0:
+		wf["fp_get_orig_size"] = {
+			"class_type": "GetImageSize",
+			"inputs": { "image": ["76", 0] }
+		}
+		wf["fp_mask_to_img"] = {
+			"class_type": "MaskToImage",
+			"inputs": { "mask": raw_mask_ref }
+		}
+		wf["fp_scale_mask"] = {
+			"class_type": "ImageScale",
+			"inputs": {
+				"image": ["fp_mask_to_img", 0],
+				"upscale_method": "lanczos",
+				"width": ["fp_get_orig_size", 0],
+				"height": ["fp_get_orig_size", 1],
+				"crop": "disabled"
+			}
+		}
+		wf["fp_img_to_mask"] = {
+			"class_type": "ImageToMask",
+			"inputs": { "image": ["fp_scale_mask", 0], "channel": "red" }
+		}
+		mask_output_ref = ["fp_img_to_mask", 0]
+	# Rewire GrowMask vers le masque
+	wf["101"]["inputs"]["mask"] = mask_output_ref
 	wf["101"]["inputs"]["expand"] = eye_expand
-	# Blur proportionnel (référence : kernel=21 sigma=10 pour expand=15)
-	# Plancher minimum : kernel≥11 sigma≥5 pour un fondu suffisant
-	var blur_kernel: int = min(99, max(11, roundi(eye_expand * 21.0 / 15.0))) | 1  # impair, max 99
-	var blur_sigma: float = minf(50.0, maxf(5.0, eye_expand * 10.0 / 15.0))
-	wf["102"]["inputs"]["kernel_size"] = blur_kernel
-	wf["102"]["inputs"]["sigma"] = blur_sigma
+	# Fondu masque contrôlé par _mask_feather (0 = bord dur, 100 = très doux)
+	var final_mask_node: String
+	if _mask_feather <= 0:
+		# Pas de blur — supprimer le node et rewirer directement
+		wf.erase("102")
+		final_mask_node = "101"
+	else:
+		var blur_kernel: int = min(99, max(3, _mask_feather)) | 1  # impair, max 99
+		var blur_sigma: float = minf(50.0, maxf(1.0, _mask_feather * 0.5))
+		wf["102"]["inputs"]["kernel_size"] = blur_kernel
+		wf["102"]["inputs"]["sigma"] = blur_sigma
+		final_mask_node = "102"
+	wf["103"]["inputs"]["mask"] = [final_mask_node, 0]
 	wf["76"]["inputs"]["image"] = filename
 	wf["75:74"]["inputs"]["text"] = prompt_text
 	wf["75:73"]["inputs"]["noise_seed"] = seed
@@ -884,7 +946,7 @@ func _build_blink_workflow(filename: String, prompt_text: String, seed: int, rem
 		"class_type": "SetLatentNoiseMask",
 		"inputs": {
 			"samples": ["75:79:78", 0],
-			"mask": ["102", 0]
+			"mask": [final_mask_node, 0]
 		}
 	}
 	wf["75:64"]["inputs"]["latent_image"] = ["set_noise_mask", 0]
@@ -910,7 +972,15 @@ func _build_blink_workflow(filename: String, prompt_text: String, seed: int, rem
 			"alpha": ["76", 1]
 		}
 	}
-	wf["9"]["inputs"]["images"] = ["join_alpha", 0]
+	if _debug_mask:
+		# Debug : exporter le masque en image au lieu du résultat
+		wf["debug_mask_to_image"] = {
+			"class_type": "MaskToImage",
+			"inputs": { "mask": [final_mask_node, 0] }
+		}
+		wf["9"]["inputs"]["images"] = ["debug_mask_to_image", 0]
+	else:
+		wf["9"]["inputs"]["images"] = ["join_alpha", 0]
 	return wf
 
 

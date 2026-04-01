@@ -3,10 +3,9 @@ extends Node
 ## Gère l'animation périodique de clignement des yeux d'un foreground.
 ## Attaché à un foreground wrapper (Control avec un enfant TextureRect nommé "Texture").
 
-const BLINK_INTERVAL_BASE := 5.0      # Intervalle moyen entre deux clignements (secondes)
+const BLINK_INTERVAL_BASE := 3.0      # Intervalle moyen entre deux clignements (secondes)
 const BLINK_INTERVAL_RANDOM := 1.0    # Variation aléatoire ± (secondes)
-const BLINK_FADE_DURATION := 0.075    # Durée du fondu entrée/sortie (secondes)
-const BLINK_HOLD_DURATION := 0.15     # Durée de maintien les yeux fermés (secondes)
+const BLINK_HOLD_DURATION := 0.3      # Durée de maintien les yeux fermés (secondes)
 
 var _texture_rect: TextureRect = null  # Le TextureRect du foreground
 var _normal_texture: Texture2D = null  # Texture yeux ouverts
@@ -55,9 +54,8 @@ func stop_blink() -> void:
 	_kill_current_tween()
 	_is_blinking = false
 
-	# Restaurer l'état visuel normal
+	# Restaurer la texture normale
 	if _texture_rect != null and is_instance_valid(_texture_rect):
-		_texture_rect.modulate.a = 1.0
 		if _normal_texture != null:
 			_texture_rect.texture = _normal_texture
 
@@ -85,32 +83,20 @@ func _do_blink() -> void:
 
 	_current_tween = create_tween()
 
-	# Étape 1 : fondu sortant (yeux ouverts → invisible)
-	_current_tween.tween_property(_texture_rect, "modulate:a", 0.0, BLINK_FADE_DURATION)
-
-	# Étape 2 : swap vers texture yeux fermés (via callback)
+	# Swap instantané vers texture yeux fermés
 	_current_tween.tween_callback(func():
 		if is_instance_valid(_texture_rect) and _blink_texture != null:
 			_texture_rect.texture = _blink_texture
 	)
 
-	# Étape 3 : fondu entrant (yeux fermés → visible)
-	_current_tween.tween_property(_texture_rect, "modulate:a", 1.0, BLINK_FADE_DURATION)
-
-	# Étape 4 : maintien yeux fermés
+	# Maintien yeux fermés
 	_current_tween.tween_interval(BLINK_HOLD_DURATION)
 
-	# Étape 5 : fondu sortant (yeux fermés → invisible)
-	_current_tween.tween_property(_texture_rect, "modulate:a", 0.0, BLINK_FADE_DURATION)
-
-	# Étape 6 : swap vers texture normale (via callback)
+	# Swap instantané vers texture normale
 	_current_tween.tween_callback(func():
 		if is_instance_valid(_texture_rect) and _normal_texture != null:
 			_texture_rect.texture = _normal_texture
 	)
-
-	# Étape 7 : fondu entrant (yeux ouverts → visible)
-	_current_tween.tween_property(_texture_rect, "modulate:a", 1.0, BLINK_FADE_DURATION)
 
 	# Fin : réinitialiser l'état et replanifier
 	_current_tween.finished.connect(func():

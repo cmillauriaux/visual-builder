@@ -35,6 +35,14 @@ var _megapixels_value_label: Label
 var _eye_zone_dropdown: OptionButton
 var _face_box_slider: HSlider
 var _face_box_value_label: Label
+var _mask_feather_slider: HSlider
+var _mask_feather_value_label: Label
+var _detection_scale_slider: HSlider
+var _detection_scale_value_label: Label
+var _model_dropdown: OptionButton
+var _threshold_slider: HSlider
+var _threshold_value_label: Label
+var _debug_mask_checkbox: CheckBox
 var _generate_btn: Button
 var _cancel_btn: Button
 var _status_label: Label
@@ -235,6 +243,48 @@ func build_tab(tab_container: TabContainer) -> void:
 	_eye_zone_dropdown.selected = 1
 	eye_zone_hbox.add_child(_eye_zone_dropdown)
 
+	# --- Model dropdown ---
+	var model_hbox = HBoxContainer.new()
+	model_hbox.add_theme_constant_override("separation", 8)
+	vbox.add_child(model_hbox)
+
+	var model_label = Label.new()
+	model_label.text = "Modèle :"
+	model_hbox.add_child(model_label)
+
+	_model_dropdown = OptionButton.new()
+	_model_dropdown.add_item("BiSeNet (resnet18)")
+	_model_dropdown.add_item("eye_furry_v1.pt")
+	_model_dropdown.add_item("Eyeful_v1.pt")
+	_model_dropdown.add_item("Eyeful_v2-Paired.pt")
+	_model_dropdown.add_item("Eyes.pt")
+	_model_dropdown.add_item("full_eyes_detect_v1.pt")
+	_model_dropdown.selected = 0
+	model_hbox.add_child(_model_dropdown)
+
+	# --- Threshold slider (YOLO only) ---
+	var threshold_hbox = HBoxContainer.new()
+	threshold_hbox.add_theme_constant_override("separation", 8)
+	vbox.add_child(threshold_hbox)
+
+	var threshold_label = Label.new()
+	threshold_label.text = "Sensibilité :"
+	threshold_hbox.add_child(threshold_label)
+
+	_threshold_slider = HSlider.new()
+	_threshold_slider.min_value = 0.1
+	_threshold_slider.max_value = 0.9
+	_threshold_slider.step = 0.05
+	_threshold_slider.value = 0.3
+	_threshold_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_threshold_slider.value_changed.connect(func(val: float): _threshold_value_label.text = str(snapped(val, 0.05)))
+	threshold_hbox.add_child(_threshold_slider)
+
+	_threshold_value_label = Label.new()
+	_threshold_value_label.text = "0.3"
+	_threshold_value_label.custom_minimum_size.x = 32
+	threshold_hbox.add_child(_threshold_value_label)
+
 	# --- Eye mask expansion slider ---
 	var face_box_hbox = HBoxContainer.new()
 	face_box_hbox.add_theme_constant_override("separation", 8)
@@ -257,6 +307,57 @@ func build_tab(tab_container: TabContainer) -> void:
 	_face_box_value_label.text = "100"
 	_face_box_value_label.custom_minimum_size.x = 32
 	face_box_hbox.add_child(_face_box_value_label)
+
+	# --- Mask feather slider ---
+	var feather_hbox = HBoxContainer.new()
+	feather_hbox.add_theme_constant_override("separation", 8)
+	vbox.add_child(feather_hbox)
+
+	var feather_label = Label.new()
+	feather_label.text = "Fondu masque :"
+	feather_hbox.add_child(feather_label)
+
+	_mask_feather_slider = HSlider.new()
+	_mask_feather_slider.min_value = 0
+	_mask_feather_slider.max_value = 100
+	_mask_feather_slider.step = 5
+	_mask_feather_slider.value = 10
+	_mask_feather_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_mask_feather_slider.value_changed.connect(func(val: float): _mask_feather_value_label.text = str(int(val)))
+	feather_hbox.add_child(_mask_feather_slider)
+
+	_mask_feather_value_label = Label.new()
+	_mask_feather_value_label.text = "10"
+	_mask_feather_value_label.custom_minimum_size.x = 32
+	feather_hbox.add_child(_mask_feather_value_label)
+
+	# --- Detection scale slider ---
+	var detect_hbox = HBoxContainer.new()
+	detect_hbox.add_theme_constant_override("separation", 8)
+	vbox.add_child(detect_hbox)
+
+	var detect_label = Label.new()
+	detect_label.text = "Scale détection :"
+	detect_hbox.add_child(detect_label)
+
+	_detection_scale_slider = HSlider.new()
+	_detection_scale_slider.min_value = 1.0
+	_detection_scale_slider.max_value = 3.0
+	_detection_scale_slider.step = 0.5
+	_detection_scale_slider.value = 1.0
+	_detection_scale_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_detection_scale_slider.value_changed.connect(func(val: float): _detection_scale_value_label.text = str(snapped(val, 0.5)))
+	detect_hbox.add_child(_detection_scale_slider)
+
+	_detection_scale_value_label = Label.new()
+	_detection_scale_value_label.text = "1.0"
+	_detection_scale_value_label.custom_minimum_size.x = 32
+	detect_hbox.add_child(_detection_scale_value_label)
+
+	# --- Debug mask checkbox ---
+	_debug_mask_checkbox = CheckBox.new()
+	_debug_mask_checkbox.text = "Debug mask"
+	vbox.add_child(_debug_mask_checkbox)
 
 	vbox.add_child(HSeparator.new())
 
@@ -605,6 +706,16 @@ func _process_next_item() -> void:
 	var face_box_value = int(_face_box_slider.value)
 	var neg_prompt = _neg_input.text.strip_edges()
 	_client._eye_zone_mode = "eyes_and_brows" if _eye_zone_dropdown.selected == 1 else "eyes_only"
+	_client._debug_mask = _debug_mask_checkbox.button_pressed
+	_client._mask_feather = int(_mask_feather_slider.value)
+	_client._detection_scale = _detection_scale_slider.value
+	var model_text = _model_dropdown.get_item_text(_model_dropdown.selected)
+	if model_text.begins_with("BiSeNet"):
+		_client._detection_model = "bisenet"
+		_client._backbone = "resnet18"
+	else:
+		_client._detection_model = model_text
+	_client._detection_threshold = _threshold_slider.value
 	_client.generate(config, item["source_path"], item["prompt"], true, cfg_value, steps_value, workflow_type, denoise_value, neg_prompt, face_box_value, _megapixels_slider.value)
 
 
@@ -684,6 +795,11 @@ func _set_inputs_enabled(enabled: bool) -> void:
 	_denoise_slider.editable = enabled
 	_megapixels_slider.editable = enabled
 	_face_box_slider.editable = enabled
+	_mask_feather_slider.editable = enabled
+	_detection_scale_slider.editable = enabled
+	_model_dropdown.disabled = not enabled
+	_threshold_slider.editable = enabled
+	_debug_mask_checkbox.disabled = not enabled
 
 
 # --- Results grid ---
