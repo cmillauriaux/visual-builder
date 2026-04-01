@@ -10,6 +10,7 @@ var _texture_rect: TextureRect = null
 
 
 func before_each() -> void:
+	ForegroundBlinkPlayerScript.reset_shared_timer()
 	_player = Node.new()
 	_player.set_script(ForegroundBlinkPlayerScript)
 	add_child(_player)
@@ -237,6 +238,50 @@ func test_method_update_textures_exists() -> void:
 
 func test_method_stop_blink_exists() -> void:
 	assert_true(_player.has_method("stop_blink"))
+
+
+# --- Shared blink timer ---
+
+func test_shared_last_blink_msec_starts_at_zero() -> void:
+	assert_eq(ForegroundBlinkPlayerScript._shared_last_blink_msec, 0)
+
+
+func test_reset_shared_timer_clears_msec() -> void:
+	ForegroundBlinkPlayerScript._shared_last_blink_msec = 12345
+	ForegroundBlinkPlayerScript.reset_shared_timer()
+	assert_eq(ForegroundBlinkPlayerScript._shared_last_blink_msec, 0)
+
+
+func test_new_player_uses_shorter_wait_when_shared_timer_set() -> void:
+	# Simulate a blink that happened 3 seconds ago
+	ForegroundBlinkPlayerScript._shared_last_blink_msec = Time.get_ticks_msec() - 3000
+	var normal = _make_texture()
+	var blink = _make_texture()
+	_player.setup(_texture_rect, normal, blink)
+	# Remaining should be interval(4-6) - 3s elapsed → roughly 1-3s, never a full 4-6s
+	assert_true(_player._timer.wait_time < 4.0,
+		"wait_time should be shorter than full interval when shared timer is recent")
+
+
+func test_new_player_blinks_soon_when_overdue() -> void:
+	# Simulate a blink that happened long ago (well past any interval)
+	# Use max(1, ...) to avoid negative values if engine just started
+	ForegroundBlinkPlayerScript._shared_last_blink_msec = maxi(1, Time.get_ticks_msec() - 10000)
+	var normal = _make_texture()
+	var blink = _make_texture()
+	_player.setup(_texture_rect, normal, blink)
+	# Should not wait the full interval (4-6s)
+	assert_true(_player._timer.wait_time < 4.0,
+		"wait_time should be shorter than full interval when overdue")
+
+
+func test_reset_shared_timer_makes_full_interval() -> void:
+	ForegroundBlinkPlayerScript.reset_shared_timer()
+	var normal = _make_texture()
+	var blink = _make_texture()
+	_player.setup(_texture_rect, normal, blink)
+	assert_true(_player._timer.wait_time >= 4.0,
+		"wait_time should be full interval after reset")
 
 
 # --- Helper ---

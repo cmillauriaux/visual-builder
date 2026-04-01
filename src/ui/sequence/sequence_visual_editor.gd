@@ -832,6 +832,7 @@ func load_sequence(sequence) -> void:
 	_selected_fg_uuids.clear()
 	_hidden_fg_uuids.clear()
 	_blink_manifest_loaded = false  # Recharger le manifest blink à chaque séquence
+	ForegroundBlinkPlayerScript.reset_shared_timer()
 	kill_all_fg_tweens()
 	_dragging_fg = false
 	_resizing_fg = false

@@ -3,9 +3,12 @@ extends Node
 ## Gère l'animation périodique de clignement des yeux d'un foreground.
 ## Attaché à un foreground wrapper (Control avec un enfant TextureRect nommé "Texture").
 
-const BLINK_INTERVAL_BASE := 3.0      # Intervalle moyen entre deux clignements (secondes)
+const BLINK_INTERVAL_BASE := 5.0      # Intervalle moyen entre deux clignements (secondes)
 const BLINK_INTERVAL_RANDOM := 1.0    # Variation aléatoire ± (secondes)
-const BLINK_HOLD_DURATION := 0.3      # Durée de maintien les yeux fermés (secondes)
+const BLINK_HOLD_DURATION := 0.2      # Durée de maintien les yeux fermés (secondes)
+
+## Shared blink timing — new players inherit the schedule instead of restarting a full 5s wait.
+static var _shared_last_blink_msec: int = 0
 
 var _texture_rect: TextureRect = null  # Le TextureRect du foreground
 var _normal_texture: Texture2D = null  # Texture yeux ouverts
@@ -60,13 +63,26 @@ func stop_blink() -> void:
 			_texture_rect.texture = _normal_texture
 
 
+static func reset_shared_timer() -> void:
+	_shared_last_blink_msec = 0
+
+
 func _schedule_next_blink() -> void:
 	if _timer == null or not is_instance_valid(_timer):
 		return
 	if _blink_texture == null:
 		return
-	var wait_time = BLINK_INTERVAL_BASE + randf_range(-BLINK_INTERVAL_RANDOM, BLINK_INTERVAL_RANDOM)
-	_timer.wait_time = wait_time
+	var interval = BLINK_INTERVAL_BASE + randf_range(-BLINK_INTERVAL_RANDOM, BLINK_INTERVAL_RANDOM)
+	# If a blink already happened in this sequence, compute remaining time
+	if _shared_last_blink_msec > 0:
+		var elapsed = (Time.get_ticks_msec() - _shared_last_blink_msec) / 1000.0
+		var remaining = interval - elapsed
+		if remaining <= 0.0:
+			# Overdue — blink soon with a small natural delay
+			remaining = randf_range(0.1, 0.5)
+		_timer.wait_time = remaining
+	else:
+		_timer.wait_time = interval
 	_timer.start()
 
 
@@ -79,6 +95,7 @@ func _do_blink() -> void:
 		return
 
 	_is_blinking = true
+	_shared_last_blink_msec = Time.get_ticks_msec()
 	_kill_current_tween()
 
 	_current_tween = create_tween()
