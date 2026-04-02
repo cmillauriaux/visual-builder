@@ -400,6 +400,7 @@ entry_point: "ch-001"
 menu_title: "The Cursed Forest"
 menu_subtitle: "An interactive adventure"
 menu_background: "menu_bg.png"
+menu_music: "main_theme.ogg"
 chapters:
   - uuid: "ch-001"
     name: "Chapter 1 -- Into the Forest"
@@ -437,10 +438,19 @@ connections:
 | `menu_title` | no | Title displayed on the game menu screen |
 | `menu_subtitle` | no | Subtitle displayed on the game menu screen |
 | `menu_background` | no | Menu background image filename (in `assets/backgrounds/`) |
+| `menu_music` | no | Background music for the main menu (in `assets/music/`) |
 | `chapters` | yes | List of chapter headers (see below) |
 | `variables` | no | Global story variables |
 | `notifications` | no | Notifications triggered by variable changes |
 | `connections` | no | Links between chapters (for the graph editor) |
+| `game_over_title` | no | Title text for the game over screen |
+| `game_over_subtitle` | no | Subtitle text for the game over screen |
+| `game_over_background` | no | Background image for the game over screen |
+| `to_be_continued_title` | no | Title text for the "to be continued" screen |
+| `to_be_continued_subtitle` | no | Subtitle text for the "to be continued" screen |
+| `to_be_continued_background` | no | Background image for the "to be continued" screen |
+| `app_icon` | no | Application icon image (in `assets/icons/`) |
+| `plugin_settings` | no | Per-plugin configuration (see [Plugin Configuration](#plugin-configuration)) |
 
 Each entry in the `chapters` list is a header containing the chapter's `uuid`, `name`, `subtitle`, `position`, and `entry_point`. The full chapter definition lives in its own file (see [Chapters](#chapters)).
 
@@ -935,6 +945,12 @@ variables:
 |-------|:--------:|-------------|
 | `name` | yes | Variable name (unique identifier) |
 | `initial_value` | yes | Starting value (always a string) |
+| `description` | no | Description text shown to the player |
+| `image` | no | Image displayed alongside the variable (in `assets/`) |
+| `show_on_main` | no | If `true`, display this variable on the main game HUD |
+| `show_on_details` | no | If `true`, display this variable in the details overlay |
+| `visibility_mode` | no | `"always"` (default) or `"variable"` (show only when a condition is met) |
+| `visibility_variable` | no | When `visibility_mode` is `"variable"`, the variable name that controls visibility |
 
 ### Usage
 

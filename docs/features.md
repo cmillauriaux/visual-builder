@@ -223,6 +223,7 @@ A scrollable history panel lets readers review all previously read dialogues and
 ### Save and Load
 
 - 6 persistent save slots displayed in a 3x2 grid
+- 10 autosave slots (rotating, newest first)
 - Each slot shows an auto-captured screenshot thumbnail
 - Quick save and quick load shortcuts
 

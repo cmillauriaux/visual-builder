@@ -54,7 +54,7 @@ Whether you are a solo writer prototyping a short narrative or a small team prod
 - Create your own plugins with a simple GDScript API
 
 ### Gameplay
-- Save and load with 6 slots plus quick save
+- Save and load with 6 manual slots, 10 autosaves, and quick save
 - Auto-play and skip modes
 - Dialogue history log
 - Typewriter text effect with configurable speed
