@@ -20,8 +20,8 @@ var _logged_in: bool = false
 var _event_queue: Array = []
 var _flush_timer: float = 0.0
 var _http_login: HTTPRequest
-var _http_events: HTTPRequest
 var _pending_login: bool = false
+var _pending_events: int = 0
 
 
 func configure(title_id: String, enabled: bool) -> void:
@@ -53,6 +53,7 @@ func login_anonymous() -> void:
 	if _http_login == null:
 		_http_login = HTTPRequest.new()
 		_http_login.name = "HttpLogin"
+		_http_login.accept_gzip = false
 		add_child(_http_login)
 	_http_login.request_completed.connect(_on_login_completed, CONNECT_ONE_SHOT)
 	_http_login.request(url, ["Content-Type: application/json"], HTTPClient.METHOD_POST, body)
@@ -80,17 +81,20 @@ func flush() -> void:
 	var events_to_send = _event_queue.slice(0, MAX_BATCH_SIZE)
 	_event_queue = _event_queue.slice(MAX_BATCH_SIZE)
 	_flush_timer = 0.0
-	var url = "https://%s.playfabapi.com/Event/WriteTelemetryEvents" % _title_id
-	var body = JSON.stringify({"Events": events_to_send})
-	if _http_events == null:
-		_http_events = HTTPRequest.new()
-		_http_events.name = "HttpEvents"
-		add_child(_http_events)
-	_http_events.request_completed.connect(_on_events_completed, CONNECT_ONE_SHOT)
-	_http_events.request(url, [
+	var url = "https://%s.playfabapi.com/Event/WriteEvents" % _title_id
+	var headers = [
 		"Content-Type: application/json",
 		"X-EntityToken: " + _entity_token,
-	], HTTPClient.METHOD_POST, body)
+	]
+	_pending_events += events_to_send.size()
+	for i in range(events_to_send.size()):
+		var http = HTTPRequest.new()
+		http.name = "HttpEvent_%d" % i
+		http.accept_gzip = false
+		add_child(http)
+		http.request_completed.connect(_on_single_event_completed.bind(http), CONNECT_ONE_SHOT)
+		var body = JSON.stringify({"Events": [events_to_send[i]]})
+		http.request(url, headers, HTTPClient.METHOD_POST, body)
 
 
 func _process(delta: float) -> void:
@@ -137,13 +141,15 @@ func _on_login_completed(result: int, response_code: int, _headers: PackedString
 		push_warning("PlayFab login: no entity token in response")
 
 
-func _on_events_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+func _on_single_event_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, http: HTTPRequest) -> void:
 	if result != HTTPRequest.RESULT_SUCCESS or response_code != 200:
 		var error_detail = ""
 		var err_json = JSON.parse_string(body.get_string_from_utf8())
 		if err_json is Dictionary:
 			error_detail = " — %s: %s" % [err_json.get("error", ""), err_json.get("errorMessage", "")]
-		push_warning("PlayFab events flush failed: HTTP %d%s" % [response_code, error_detail])
+		push_warning("PlayFab event failed: HTTP %d%s" % [response_code, error_detail])
+	_pending_events -= 1
+	http.queue_free()
 
 
 # --- Device ID ---

@@ -105,17 +105,25 @@ func test_on_login_completed_no_entity_token():
 	assert_false(svc._logged_in)
 
 
-func test_on_events_completed_failure():
+func test_on_single_event_completed_failure():
 	var svc = PlayFabAnalyticsServiceScript.new()
+	var http = HTTPRequest.new()
+	svc.add_child(http)
+	svc._pending_events = 1
 	var body = JSON.stringify({"error": "Unauthorized", "errorMessage": "Token expired"}).to_utf8_buffer()
-	svc._on_events_completed(HTTPRequest.RESULT_SUCCESS, 401, [], body)
-	pass_test("_on_events_completed with failure should not crash")
+	svc._on_single_event_completed(HTTPRequest.RESULT_SUCCESS, 401, [], body, http)
+	assert_eq(svc._pending_events, 0)
+	svc.free()
 
 
-func test_on_events_completed_success():
+func test_on_single_event_completed_success():
 	var svc = PlayFabAnalyticsServiceScript.new()
-	svc._on_events_completed(HTTPRequest.RESULT_SUCCESS, 200, [], "{}".to_utf8_buffer())
-	pass_test("_on_events_completed with success should not crash")
+	var http = HTTPRequest.new()
+	svc.add_child(http)
+	svc._pending_events = 1
+	svc._on_single_event_completed(HTTPRequest.RESULT_SUCCESS, 200, [], "{}".to_utf8_buffer(), http)
+	assert_eq(svc._pending_events, 0)
+	svc.free()
 
 
 func test_load_or_create_device_id_creates_file():
