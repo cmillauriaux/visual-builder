@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (C) 2026 Raccoons Studio
+
 extends Node
 
 ## Gère la logique de lecture en mode jeu standalone (sans éditeur).
@@ -997,5 +1000,3 @@ func _get_dialogue_voice_path(dlg) -> String:
 	if old_vf != null and old_vf is String and old_vf != "":
 		return old_vf
 	return ""
-
-

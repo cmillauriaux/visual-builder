@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (C) 2026 Raccoons Studio
+
 extends VBoxContainer
 
 ## Mini-panel de propriétés de transition pour un foreground sélectionné.

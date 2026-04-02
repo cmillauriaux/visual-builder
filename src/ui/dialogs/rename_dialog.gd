@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (C) 2026 Raccoons Studio
+
 extends ConfirmationDialog
 
 ## Dialogue de renommage pour les noeuds de graphe.

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (C) 2026 Raccoons Studio
+
 extends Node
 
 ## Service de lecture audio pour le jeu standalone.

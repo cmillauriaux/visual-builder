@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (C) 2026 Raccoons Studio
+
 extends Control
 
 ## Popup d'invitation à installer la PWA sur iOS / Android.

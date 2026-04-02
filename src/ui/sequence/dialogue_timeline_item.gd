@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (C) 2026 Raccoons Studio
+
 extends PanelContainer
 
 ## Vignette individuelle dans la timeline des dialogues.

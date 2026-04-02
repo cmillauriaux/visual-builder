@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (C) 2026 Raccoons Studio
+
 extends Node
 
 ## Gère l'état de l'interface utilisateur (UI) globale : visibilité des panels,

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (C) 2026 Raccoons Studio
+
 extends RefCounted
 
 ## Presse-papiers interne pour copier/coller les paramètres de positionnement d'un foreground.

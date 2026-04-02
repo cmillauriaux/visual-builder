@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (C) 2026 Raccoons Studio
+
 extends GraphEdit
 
 ## Vue Map complète de la story — affiche tous les chapitres, scènes, séquences

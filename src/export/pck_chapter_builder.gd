@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (C) 2026 Raccoons Studio
+
 extends SceneTree
 
 ## Script headless pour découper les assets d'une story en PCK par chapitre.

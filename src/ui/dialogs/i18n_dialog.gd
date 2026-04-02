@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (C) 2026 Raccoons Studio
+
 extends AcceptDialog
 
 ## Dialog affichant les résultats d'une opération i18n (vérification ou regénération).

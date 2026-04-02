@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (C) 2026 Raccoons Studio
+
 extends Control
 
 ## Écran de fin plein-écran (Game Over ou To Be Continued).

@@ -8,3 +8,6 @@ build/.superpowers/
 build/
 .superpowers/.worktrees/
 .superpowers/brainstorm/
+
+# Pro plugins (proprietary, distributed separately)
+plugins-pro/

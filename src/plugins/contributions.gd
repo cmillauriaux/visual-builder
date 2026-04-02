@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (C) 2026 Raccoons Studio
+
 ## Value objects for plugin contributions.
 ## Each inner class represents one type of integration point a plugin can offer.
 

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (C) 2026 Raccoons Studio
+
 extends RefCounted
 
 ## Logique de grille de placement et de snapping pour les foregrounds.

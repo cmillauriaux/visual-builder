@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (C) 2026 Raccoons Studio
+
 ## Value objects pour les contributions des plugins in-game.
 ## Chaque classe représente un type de point d'intégration.
 

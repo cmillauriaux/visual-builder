@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (C) 2026 Raccoons Studio
+
 extends RefCounted
 
 ## Service de détection et nettoyage des images non utilisées dans la galerie.

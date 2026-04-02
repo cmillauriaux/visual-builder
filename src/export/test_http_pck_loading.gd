@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (C) 2026 Raccoons Studio
+
 extends SceneTree
 
 ## Teste le flux complet : HTTPRequest download → user:// → load_resource_pack.

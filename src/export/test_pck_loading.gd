@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (C) 2026 Raccoons Studio
+
 extends SceneTree
 
 ## Test script pour vérifier que load_resource_pack fonctionne avec les chapter PCK.

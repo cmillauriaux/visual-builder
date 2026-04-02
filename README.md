@@ -88,9 +88,29 @@ Pre-built binaries for Windows and macOS are available on the [Releases](https:/
 - **Story Format**: YAML
 - **Testing**: GUT (Godot Unit Test) framework
 
-## License
+## License & Pro Edition
 
-TBD
+### Open Source (AGPL-3.0)
+
+The core of Frame Novel Studio is licensed under the **GNU Affero General Public License v3.0** (AGPL-3.0-only). See the [LICENSE](LICENSE) file for the full text.
+
+**What this means if you fork this project:**
+
+- You **must** open-source any modifications under the same AGPL-3.0 license
+- You **must** make your source code available to all users, including those accessing it over a network
+- You **may not** sell or distribute a closed-source derivative
+
+### Pro Edition
+
+A **Pro Edition** with additional proprietary plugins is available via subscription. Pro plugins are distributed separately and are not part of this open source repository.
+
+Learn more: [LIEN_PRO]
+
+### Commercial License
+
+For enterprises that need to integrate Frame Novel Studio into proprietary products without AGPL-3.0 obligations, a commercial license is available.
+
+Contact: [EMAIL] — See [COMMERCIAL_LICENSE.md](COMMERCIAL_LICENSE.md) for details.
 
 ## Contributing
 

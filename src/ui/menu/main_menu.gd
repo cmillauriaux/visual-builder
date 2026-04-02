@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (C) 2026 Raccoons Studio
+
 extends Control
 
 ## Menu principal du jeu : background, titre, sous-titre et boutons d'action.

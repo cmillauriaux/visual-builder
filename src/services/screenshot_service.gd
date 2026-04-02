@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (C) 2026 Raccoons Studio
+
 extends Node
 
 ## Service de capture d'écran basse résolution pour les sauvegardes.

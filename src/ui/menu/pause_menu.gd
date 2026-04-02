@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (C) 2026 Raccoons Studio
+
 extends Control
 
 ## Menu pause in-game : overlay avec options reprendre, sauvegarder, charger, nouvelle partie, quitter.
