@@ -160,8 +160,8 @@ func test_apply_close_style() -> void:
 		var style = btn.get_theme_stylebox("normal")
 		assert_not_null(style, "Close button should have normal override")
 		assert_true(style is StyleBoxTexture)
-		var close_tex = load(GameTheme.ASSETS_PATH + "button_red_close.png")
-		assert_eq((style as StyleBoxTexture).texture, close_tex)
+		var red_tex = load(GameTheme.ASSETS_PATH + "button_red.png")
+		assert_eq((style as StyleBoxTexture).texture, red_tex)
 	else:
 		assert_false(has_override, "No override applied (headless mode, texture not available)")
 	remove_child(btn)

@@ -226,7 +226,7 @@ func test_close_button_emits_signal() -> void:
 	assert_not_null(header)
 	var close_btn: Button = null
 	for child in header.get_children():
-		if child is Button:
+		if child is Button and child.text == "✕":
 			close_btn = child
 			break
 	assert_not_null(close_btn, "Doit trouver le bouton fermer")

@@ -63,17 +63,9 @@ static func apply_danger_style(button: Button, story_ui_path: String = "") -> vo
 
 
 ## Applique le style "close" (bouton rouge avec X) à un bouton spécifique.
+## Utilise button_red.png (texture unie) pour éviter le tiling du X de button_red_close.png.
 static func apply_close_style(button: Button, story_ui_path: String = "") -> void:
-	var tex = _resolve_asset("button_red_close.png", story_ui_path)
-	if tex == null:
-		return
-	button.add_theme_stylebox_override("normal", _make_button_stylebox(tex, Color(1, 1, 1, 1)))
-	button.add_theme_stylebox_override("hover", _make_button_stylebox(tex, Color(1.15, 1.15, 1.15, 1)))
-	button.add_theme_stylebox_override("pressed", _make_button_stylebox(tex, Color(0.85, 0.85, 0.85, 1)))
-	button.add_theme_stylebox_override("disabled", _make_button_stylebox(tex, Color(0.7, 0.7, 0.7, 0.6)))
-	button.add_theme_color_override("font_color", COLOR_TEXT_WHITE)
-	button.add_theme_color_override("font_hover_color", COLOR_TEXT_WHITE)
-	button.add_theme_color_override("font_pressed_color", Color(0.9, 0.9, 0.9, 1))
+	apply_danger_style(button, story_ui_path)
 
 
 ## Applique le style panel_brown_dark à un PanelContainer spécifique.
