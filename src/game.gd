@@ -144,6 +144,9 @@ const _PENDING_RESTORE_PATH := "user://_pending_options_restore.json"
 
 
 func _ready() -> void:
+	# Forcer le ratio 16:9 avec bandes noires sur les écrans non-conformes (iPhone, etc.)
+	get_tree().root.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_KEEP
+
 	# Charger les réglages
 	_settings = GameSettings.new()
 	_settings.load_settings()
