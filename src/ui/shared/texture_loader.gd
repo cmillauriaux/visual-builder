@@ -12,7 +12,7 @@ static var base_dir: String = ""
 static func load_texture(path: String) -> Texture2D:
 	if path == "":
 		return null
-	
+
 	var full_path = path
 	if not path.is_absolute_path() and not path.begins_with("res://") and base_dir != "":
 		full_path = base_dir.path_join(path)

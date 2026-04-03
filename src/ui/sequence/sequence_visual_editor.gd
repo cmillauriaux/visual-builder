@@ -499,7 +499,8 @@ func _update_single_fg_visual(fg) -> void:
 		tex_rect.flip_v = fg.flip_v
 		wrapper.size = fg_size
 	else:
-		# Placeholder size for testing / missing images
+		# Effacer l'ancienne texture pour ne pas afficher une image obsolète
+		tex_rect.texture = null
 		var fg_size = Vector2(100, 100) * fg.scale
 		tex_rect.size = fg_size
 		wrapper.size = fg_size
@@ -515,7 +516,11 @@ func _update_single_fg_visual(fg) -> void:
 	wrapper.z_index = fg.z_order
 
 	# Stocker les propriétés visuelles pour le matching (réutilisation des wrappers)
-	wrapper.set_meta("fg_image", fg.image)
+	# Ne PAS mettre à jour fg_image si le chargement a échoué, pour forcer un rechargement
+	if tex:
+		wrapper.set_meta("fg_image", fg.image)
+	else:
+		wrapper.remove_meta("fg_image")
 	wrapper.set_meta("fg_anchor_bg", fg.anchor_bg)
 	wrapper.set_meta("fg_anchor_fg", fg.anchor_fg)
 	wrapper.set_meta("fg_scale", fg.scale)
@@ -1102,6 +1107,9 @@ func _setup_blink_player(wrapper: Control, image_path: String, normal_texture: T
 	if blink_filename == "" or normal_texture == null:
 		# No blink — remove player if present
 		if existing_player:
+			# Empêcher stop_blink() de restaurer l'ancienne _normal_texture
+			# (le bon texture a déjà été assigné par _update_single_fg_visual)
+			existing_player._normal_texture = null
 			existing_player.stop_blink()
 			existing_player.queue_free()
 		return
