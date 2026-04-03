@@ -129,6 +129,11 @@ func on_quickload(ctx: RefCounted, story_title: String) -> void:
 	pass
 
 
+## Appelé quand le menu principal est affiché pour la première fois (une fois par session).
+func on_main_menu_displayed(ctx: RefCounted, platform: String, app_version: String, story_version: String) -> void:
+	pass
+
+
 # --- Contributions UI ---
 
 ## Retourne les boutons à ajouter dans la toolbar au-dessus du dialogue.

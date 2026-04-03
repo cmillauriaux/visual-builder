@@ -57,6 +57,8 @@ class TestPlugin extends RefCounted:
 	func get_toolbar_buttons() -> Array: return []
 	func get_overlay_panels() -> Array: return []
 	func get_options_controls() -> Array: return []
+	func on_main_menu_displayed(ctx, platform: String, app_version: String, story_version: String):
+		calls.append("main_menu_displayed")
 
 
 # --- Tests enregistrement ---
@@ -398,6 +400,7 @@ class _UpperPlugin extends RefCounted:
 	func get_toolbar_buttons() -> Array: return []
 	func get_overlay_panels() -> Array: return []
 	func get_options_controls() -> Array: return []
+	func on_main_menu_displayed(_ctx, _p: String, _av: String, _sv: String): pass
 
 
 class _PrefixPlugin extends RefCounted:
@@ -420,6 +423,7 @@ class _PrefixPlugin extends RefCounted:
 	func get_toolbar_buttons() -> Array: return []
 	func get_overlay_panels() -> Array: return []
 	func get_options_controls() -> Array: return []
+	func on_main_menu_displayed(_ctx, _p: String, _av: String, _sv: String): pass
 
 
 class _ToolbarPlugin extends RefCounted:
@@ -445,6 +449,7 @@ class _ToolbarPlugin extends RefCounted:
 		return [btn]
 	func get_overlay_panels() -> Array: return []
 	func get_options_controls() -> Array: return []
+	func on_main_menu_displayed(_ctx, _p: String, _av: String, _sv: String): pass
 
 
 class _OverlayPlugin extends RefCounted:
@@ -470,6 +475,7 @@ class _OverlayPlugin extends RefCounted:
 		def.create_panel = func(_ctx): return Label.new()
 		return [def]
 	func get_options_controls() -> Array: return []
+	func on_main_menu_displayed(_ctx, _p: String, _av: String, _sv: String): pass
 
 
 class _FakeSettings extends RefCounted:
