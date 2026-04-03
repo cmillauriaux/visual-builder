@@ -273,7 +273,12 @@ func _show_code_popup(ctx: RefCounted) -> void:
 	if purchase_url != "":
 		var link_btn := Button.new()
 		link_btn.text = "Obtenir le jeu complet"
-		link_btn.pressed.connect(func(): OS.shell_open(purchase_url))
+		link_btn.pressed.connect(func():
+			OS.shell_open(purchase_url)
+			if ctx.emit_game_event.is_valid():
+				ctx.emit_game_event.call("premium_code_purchase_link", {"url": purchase_url})
+				ctx.emit_game_event.call("external_link_opened", {"link_type": "itchio", "context": "premium_code"})
+		)
 		vbox.add_child(link_btn)
 
 	# Bouton retour
@@ -289,6 +294,7 @@ func _show_code_popup(ctx: RefCounted) -> void:
 	vbox.add_child(back_btn)
 
 	# Logique de validation
+	var chapter_uuid: String = ctx.current_chapter.uuid if ctx.current_chapter else ""
 	var on_validate := func():
 		var code := code_input.text.strip_edges()
 		if code == "":
@@ -297,12 +303,16 @@ func _show_code_popup(ctx: RefCounted) -> void:
 			return
 		if _is_code_valid(code):
 			_add_validated_code(code)
+			if ctx.emit_game_event.is_valid():
+				ctx.emit_game_event.call("premium_code_attempt", {"success": true, "chapter_uuid": chapter_uuid})
 			overlay.get_tree().paused = false
 			overlay.queue_free()
 			_popup = null
 		else:
 			error_label.text = "Code invalide."
 			error_label.visible = true
+			if ctx.emit_game_event.is_valid():
+				ctx.emit_game_event.call("premium_code_attempt", {"success": false, "chapter_uuid": chapter_uuid})
 
 	validate_btn.pressed.connect(on_validate)
 	code_input.text_submitted.connect(func(_t): on_validate.call())
