@@ -161,6 +161,17 @@ func on_quickload(_ctx: RefCounted, story_title: String) -> void:
 	})
 
 
+func on_main_menu_displayed(_ctx: RefCounted, platform: String, app_version: String, story_version: String) -> void:
+	if _service == null or not _service.is_active():
+		return
+	_service.track_event("main_menu_displayed", {
+		"platform": platform,
+		"app_version": app_version,
+		"story_version": story_version,
+		"story_title": _story_title,
+	})
+
+
 func get_options_controls() -> Array:
 	var def := GameContributions.GameOptionsControlDef.new()
 	def.create_control = _create_options_control

@@ -193,6 +193,13 @@ func test_on_quickload_safe_without_service():
 	ctx.game_node.queue_free()
 
 
+func test_on_main_menu_displayed_safe_without_service():
+	var ctx = _create_context()
+	_plugin.on_main_menu_displayed(ctx, "macOS", "1.2.0", "1.0.0")
+	assert_null(_plugin.get_service())
+	ctx.game_node.queue_free()
+
+
 # --- Options controls ---
 
 func test_options_controls_has_entry():
