@@ -31,6 +31,7 @@ var _options_button: Button
 var _new_game_button: Button
 var _patreon_button: Button
 var _itchio_button: Button
+var _links_hbox: HBoxContainer
 var _quit_button: Button
 
 
@@ -96,17 +97,23 @@ func build_ui() -> void:
 	_new_game_button.pressed.connect(func(): new_game_pressed.emit())
 	vbox.add_child(_new_game_button)
 
+	_links_hbox = HBoxContainer.new()
+	_links_hbox.visible = false
+	vbox.add_child(_links_hbox)
+
 	_patreon_button = _create_menu_button("Patreon")
 	_patreon_button.pressed.connect(_on_patreon_pressed)
+	_patreon_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	GameTheme.apply_link_style(_patreon_button, Color("#FF424D"))
 	_patreon_button.visible = false
-	vbox.add_child(_patreon_button)
+	_links_hbox.add_child(_patreon_button)
 
 	_itchio_button = _create_menu_button("itch.io")
 	_itchio_button.pressed.connect(_on_itchio_pressed)
+	_itchio_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	GameTheme.apply_link_style(_itchio_button, Color("#FA5C5C"))
 	_itchio_button.visible = false
-	vbox.add_child(_itchio_button)
+	_links_hbox.add_child(_itchio_button)
 
 	_quit_button = _create_menu_button("Quitter")
 	_quit_button.pressed.connect(func(): quit_pressed.emit())
@@ -147,6 +154,7 @@ func set_external_links(patreon_url: String, itchio_url: String) -> void:
 	_itchio_url = itchio_url
 	_patreon_button.visible = patreon_url != ""
 	_itchio_button.visible = itchio_url != ""
+	_links_hbox.visible = _patreon_button.visible or _itchio_button.visible
 
 
 func _on_patreon_pressed() -> void:

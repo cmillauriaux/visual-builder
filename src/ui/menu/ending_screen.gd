@@ -23,6 +23,7 @@ var _subtitle_label: Label
 var _load_autosave_button: Button
 var _patreon_button: Button
 var _itchio_button: Button
+var _links_hbox: HBoxContainer
 var _back_button: Button
 
 var _patreon_url: String = ""
@@ -76,17 +77,23 @@ func build_ui(default_title: String = "") -> void:
 	_load_autosave_button.visible = false
 	vbox.add_child(_load_autosave_button)
 
+	_links_hbox = HBoxContainer.new()
+	_links_hbox.visible = false
+	vbox.add_child(_links_hbox)
+
 	_patreon_button = _create_button(StoryI18nService.get_ui_string("Patreon", _i18n_dict))
 	_patreon_button.pressed.connect(_on_patreon_pressed)
+	_patreon_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	GameTheme.apply_link_style(_patreon_button, Color("#FF424D"))
 	_patreon_button.visible = false
-	vbox.add_child(_patreon_button)
+	_links_hbox.add_child(_patreon_button)
 
 	_itchio_button = _create_button(StoryI18nService.get_ui_string("itch.io", _i18n_dict))
 	_itchio_button.pressed.connect(_on_itchio_pressed)
+	_itchio_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	GameTheme.apply_link_style(_itchio_button, Color("#FA5C5C"))
 	_itchio_button.visible = false
-	vbox.add_child(_itchio_button)
+	_links_hbox.add_child(_itchio_button)
 
 	_back_button = _create_button(StoryI18nService.get_ui_string("Retour au menu principal", _i18n_dict))
 	_back_button.pressed.connect(func(): back_to_menu_pressed.emit())
@@ -125,6 +132,7 @@ func setup(title: String, subtitle: String, background: String, base_path: Strin
 	_itchio_url = itchio_url
 	_patreon_button.visible = patreon_url != ""
 	_itchio_button.visible = itchio_url != ""
+	_links_hbox.visible = _patreon_button.visible or _itchio_button.visible
 
 
 func set_load_autosave_visible(visible: bool) -> void:
