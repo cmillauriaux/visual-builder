@@ -200,6 +200,13 @@ func test_on_main_menu_displayed_safe_without_service():
 	ctx.game_node.queue_free()
 
 
+func test_on_game_event_safe_without_service():
+	var ctx = _create_context()
+	_plugin.on_game_event(ctx, "options_changed", {"language": "fr"})
+	assert_null(_plugin.get_service())
+	ctx.game_node.queue_free()
+
+
 # --- Options controls ---
 
 func test_options_controls_has_entry():

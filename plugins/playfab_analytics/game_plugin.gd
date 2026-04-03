@@ -172,6 +172,12 @@ func on_main_menu_displayed(_ctx: RefCounted, platform: String, app_version: Str
 	})
 
 
+func on_game_event(_ctx: RefCounted, event_name: String, data: Dictionary) -> void:
+	if _service == null or not _service.is_active():
+		return
+	_service.track_event(event_name, data)
+
+
 func get_options_controls() -> Array:
 	var def := GameContributions.GameOptionsControlDef.new()
 	def.create_control = _create_options_control
