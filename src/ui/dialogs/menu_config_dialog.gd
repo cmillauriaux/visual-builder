@@ -5,7 +5,7 @@ extends ConfirmationDialog
 
 ## Dialogue de configuration du jeu (menu, analytics, liens, écrans de fin).
 
-signal menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_background: String, menu_music: String, patreon_url: String, itchio_url: String, game_over_title: String, game_over_subtitle: String, game_over_background: String, to_be_continued_title: String, to_be_continued_subtitle: String, to_be_continued_background: String, app_icon: String, show_title_banner: bool, ui_theme_mode: String, plugin_settings: Dictionary)
+signal menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_background: String, menu_music: String, patreon_url: String, itchio_url: String, game_over_title: String, game_over_subtitle: String, game_over_background: String, to_be_continued_title: String, to_be_continued_subtitle: String, to_be_continued_background: String, app_icon: String, show_title_banner: bool, ui_theme_mode: String, plugin_settings: Dictionary, platform_settings: Dictionary)
 
 const ImagePickerDialogScript = preload("res://src/ui/dialogs/image_picker_dialog.gd")
 const AudioPickerDialogScript = preload("res://src/ui/dialogs/audio_picker_dialog.gd")
@@ -48,6 +48,10 @@ var _ui_theme_mode: String = "default"
 var _plugins_container: VBoxContainer
 var _plugin_controls: Dictionary = {}  # plugin_name -> Control (editor config root)
 var _game_plugins: Array = []  # loaded VBGamePlugin instances for editor config
+# Platform settings
+var _ios_team_id_edit: LineEdit
+var _ios_bundle_id_edit: LineEdit
+var _android_package_edit: LineEdit
 var _story = null
 var _story_base_path: String = ""
 var _current_menu_music: String = ""
@@ -223,6 +227,57 @@ func _init():
 	_plugins_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	plugins_scroll.add_child(_plugins_container)
 	tabs.add_child(plugins_scroll)
+
+	# ── Onglet Plateformes ───────────────────────────────────────────────────
+	var plat_scroll = ScrollContainer.new()
+	plat_scroll.name = "Plateformes"
+	plat_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	var plat_vbox = VBoxContainer.new()
+	plat_vbox.name = "PlatformesContent"
+	plat_vbox.add_theme_constant_override("separation", 4)
+	plat_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+	var ios_section = Label.new()
+	ios_section.text = "iOS"
+	ios_section.add_theme_font_size_override("font_size", 16)
+	plat_vbox.add_child(ios_section)
+
+	var ios_team_lbl = Label.new()
+	ios_team_lbl.text = tr("App Store Team ID")
+	plat_vbox.add_child(ios_team_lbl)
+
+	_ios_team_id_edit = LineEdit.new()
+	_ios_team_id_edit.name = "iOSTeamIdEdit"
+	_ios_team_id_edit.placeholder_text = "XXXXXXXXXX"
+	plat_vbox.add_child(_ios_team_id_edit)
+
+	var ios_bundle_lbl = Label.new()
+	ios_bundle_lbl.text = tr("Bundle Identifier")
+	plat_vbox.add_child(ios_bundle_lbl)
+
+	_ios_bundle_id_edit = LineEdit.new()
+	_ios_bundle_id_edit.name = "iOSBundleIdEdit"
+	_ios_bundle_id_edit.placeholder_text = "com.example.mygame"
+	plat_vbox.add_child(_ios_bundle_id_edit)
+
+	plat_vbox.add_child(HSeparator.new())
+
+	var android_section = Label.new()
+	android_section.text = "Android"
+	android_section.add_theme_font_size_override("font_size", 16)
+	plat_vbox.add_child(android_section)
+
+	var android_pkg_lbl = Label.new()
+	android_pkg_lbl.text = tr("Package Name")
+	plat_vbox.add_child(android_pkg_lbl)
+
+	_android_package_edit = LineEdit.new()
+	_android_package_edit.name = "AndroidPackageEdit"
+	_android_package_edit.placeholder_text = "com.example.mygame"
+	plat_vbox.add_child(_android_package_edit)
+
+	plat_scroll.add_child(plat_vbox)
+	tabs.add_child(plat_scroll)
 
 	# ── Onglet Liens ─────────────────────────────────────────────────────────
 	var liens_vbox = VBoxContainer.new()
@@ -440,10 +495,11 @@ func _init():
 	# Titres des onglets (après ajout des enfants)
 	tabs.set_tab_title(0, tr("Menu"))
 	tabs.set_tab_title(1, tr("Plugins"))
-	tabs.set_tab_title(2, tr("Liens"))
-	tabs.set_tab_title(3, tr("Game Over"))
-	tabs.set_tab_title(4, tr("À suivre"))
-	tabs.set_tab_title(5, tr("Thème UI"))
+	tabs.set_tab_title(2, tr("Plateformes"))
+	tabs.set_tab_title(3, tr("Liens"))
+	tabs.set_tab_title(4, tr("Game Over"))
+	tabs.set_tab_title(5, tr("À suivre"))
+	tabs.set_tab_title(6, tr("Thème UI"))
 
 	add_child(tabs)
 	confirmed.connect(_on_confirmed)
@@ -475,6 +531,11 @@ func setup(story, story_base_path: String = "") -> void:
 	_refresh_ui_theme_assets_list()
 	_current_menu_music = story.menu_music if story.get("menu_music") != null else ""
 	_update_menu_music_label()
+	var ios_settings: Dictionary = story.platform_settings.get("ios", {}) if story.get("platform_settings") != null else {}
+	_ios_team_id_edit.text = ios_settings.get("team_id", "")
+	_ios_bundle_id_edit.text = ios_settings.get("bundle_identifier", "")
+	var android_settings: Dictionary = story.platform_settings.get("android", {}) if story.get("platform_settings") != null else {}
+	_android_package_edit.text = android_settings.get("package_name", "")
 	_update_preview()
 	_update_game_over_preview()
 	_update_tbc_preview()
@@ -526,6 +587,22 @@ func get_show_title_banner() -> bool:
 
 func get_ui_theme_mode() -> String:
 	return _ui_theme_mode
+
+func get_platform_settings() -> Dictionary:
+	var result: Dictionary = {}
+	var ios: Dictionary = {}
+	if _ios_team_id_edit.text.strip_edges() != "":
+		ios["team_id"] = _ios_team_id_edit.text.strip_edges()
+	if _ios_bundle_id_edit.text.strip_edges() != "":
+		ios["bundle_identifier"] = _ios_bundle_id_edit.text.strip_edges()
+	if not ios.is_empty():
+		result["ios"] = ios
+	var android: Dictionary = {}
+	if _android_package_edit.text.strip_edges() != "":
+		android["package_name"] = _android_package_edit.text.strip_edges()
+	if not android.is_empty():
+		result["android"] = android
+	return result
 
 
 # ── Utilitaires chemins ──────────────────────────────────────────────────────
@@ -728,7 +805,7 @@ func _on_confirmed() -> void:
 		_game_over_title_edit.text, _game_over_subtitle_edit.text, _game_over_bg_edit.text,
 		_to_be_continued_title_edit.text, _to_be_continued_subtitle_edit.text, _to_be_continued_bg_edit.text,
 		_app_icon_edit.text, _show_title_banner_check.button_pressed,
-		_ui_theme_mode, _collect_plugin_settings()
+		_ui_theme_mode, _collect_plugin_settings(), get_platform_settings()
 	)
 
 

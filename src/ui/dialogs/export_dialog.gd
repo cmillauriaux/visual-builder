@@ -8,8 +8,8 @@ extends ConfirmationDialog
 
 signal export_requested(platform: String, output_path: String, quality: String, export_options: Dictionary, language: String, partial_export: Dictionary)
 
-const PLATFORMS = ["Web (HTML5)", "macOS", "Linux", "Windows", "Android"]
-const PLATFORM_IDS = ["web", "macos", "linux", "windows", "android"]
+const PLATFORMS = ["Web (HTML5)", "macOS", "Linux", "Windows", "Android", "iOS"]
+const PLATFORM_IDS = ["web", "macos", "linux", "windows", "android", "ios"]
 const QUALITIES = ["HD", "SD", "Ultra SD"]
 const QUALITY_IDS = ["hd", "sd", "ultrasd"]
 

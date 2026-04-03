@@ -486,7 +486,7 @@ func on_menu_config_requested() -> void:
 	_menu_config_dialog.popup_centered_ratio(0.85)
 
 
-func _on_menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_background: String, menu_music: String = "", patreon_url: String = "", itchio_url: String = "", game_over_title: String = "", game_over_subtitle: String = "", game_over_background: String = "", to_be_continued_title: String = "", to_be_continued_subtitle: String = "", to_be_continued_background: String = "", app_icon: String = "", show_title_banner: bool = true, ui_theme_mode: String = "default", plugin_settings: Dictionary = {}) -> void:
+func _on_menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_background: String, menu_music: String = "", patreon_url: String = "", itchio_url: String = "", game_over_title: String = "", game_over_subtitle: String = "", game_over_background: String = "", to_be_continued_title: String = "", to_be_continued_subtitle: String = "", to_be_continued_background: String = "", app_icon: String = "", show_title_banner: bool = true, ui_theme_mode: String = "default", plugin_settings: Dictionary = {}, platform_settings: Dictionary = {}) -> void:
 	_main._editor_main._story.menu_title = menu_title
 	_main._editor_main._story.menu_subtitle = menu_subtitle
 	_main._editor_main._story.menu_background = menu_background
@@ -503,6 +503,7 @@ func _on_menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_b
 	_main._editor_main._story.show_title_banner = show_title_banner
 	_main._editor_main._story.ui_theme_mode = ui_theme_mode
 	_main._editor_main._story.plugin_settings = plugin_settings
+	_main._editor_main._story.platform_settings = platform_settings
 	EventBus.story_modified.emit()
 
 

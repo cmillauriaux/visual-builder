@@ -32,6 +32,9 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 		return ExportResult.new(false, output_path, "", "Binaire Godot introuvable. Veuillez définir GODOT_PATH dans .env.")
 
 	var game_name = story.menu_title if story.menu_title != "" else story.title
+	# iOS/Xcode ne supporte pas certains caractères dans le nom de projet
+	if platform == "ios":
+		game_name = game_name.replace("&", "and")
 	if story_path == "":
 		return ExportResult.new(false, output_path, "", "Veuillez sauvegarder l'histoire avant de l'exporter.")
 
@@ -195,7 +198,7 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 	if project_content.find("[rendering]") == -1:
 		project_content += "\n[rendering]\n"
 
-	if platform == "macos" or platform == "android":
+	if platform == "macos" or platform == "android" or platform == "ios":
 		if project_content.find("textures/vram_compression/import_etc2_astc") != -1:
 			project_content = project_content.replace("textures/vram_compression/import_etc2_astc=false", "textures/vram_compression/import_etc2_astc=true")
 		else:
@@ -243,6 +246,17 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 				preset_content = preset_content.replace("include_filter=\"", "include_filter=\"*.json,")
 		else:
 			preset_content = preset_content.replace("[preset.0]", "[preset.0]\ninclude_filter=\"*.yaml, *.json\"")
+		# Injecter les platform_settings de la story dans le preset
+		var plat_cfg: Dictionary = story.platform_settings.get(platform, {}) if story.get("platform_settings") != null else {}
+		if platform == "ios":
+			if plat_cfg.get("team_id", "") != "":
+				preset_content = preset_content.replace("application/app_store_team_id=\"\"", "application/app_store_team_id=\"" + plat_cfg["team_id"] + "\"")
+			if plat_cfg.get("bundle_identifier", "") != "":
+				preset_content = preset_content.replace("application/bundle_identifier=\"com.visualnovel.game\"", "application/bundle_identifier=\"" + plat_cfg["bundle_identifier"] + "\"")
+		elif platform == "android":
+			if plat_cfg.get("package_name", "") != "":
+				preset_content = preset_content.replace("package/unique_name=\"com.visualnovel.game\"", "package/unique_name=\"" + plat_cfg["package_name"] + "\"")
+
 		var f_preset = FileAccess.open(preset_dst, FileAccess.WRITE)
 		if f_preset:
 			f_preset.store_string(preset_content)
@@ -787,6 +801,7 @@ func _get_export_extension(platform: String) -> String:
 		"linux": return "x86_64"
 		"windows": return "exe"
 		"android": return "apk"
+		"ios": return "ipa"
 	return "bin"
 
 
@@ -797,6 +812,7 @@ func _get_preset_name(platform: String) -> String:
 		"linux": return "Linux"
 		"windows": return "Windows"
 		"android": return "Android"
+		"ios": return "iOS"
 	return ""
 
 

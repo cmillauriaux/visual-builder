@@ -25,6 +25,7 @@ var menu_subtitle: String = ""
 var menu_background: String = ""
 var menu_music: String = ""
 var plugin_settings: Dictionary = {}  # plugin_name -> Dictionary of settings
+var platform_settings: Dictionary = {}  # platform_id -> Dictionary of settings
 var patreon_url: String = ""
 var itchio_url: String = ""
 var game_over_title: String = ""
@@ -119,6 +120,7 @@ func to_dict() -> Dictionary:
 		"menu_background": menu_background,
 		"menu_music": menu_music,
 		"plugin_settings": plugin_settings,
+		"platform_settings": platform_settings,
 		"links": {
 			"patreon": patreon_url,
 			"itchio": itchio_url,
@@ -181,6 +183,9 @@ static func from_dict(d: Dictionary):
 			"title_id": pf.get("title_id", ""),
 			"enabled": pf.get("enabled", false),
 		}
+
+	if d.has("platform_settings"):
+		story.platform_settings = d["platform_settings"]
 
 	if d.has("links"):
 		var links = d["links"]
