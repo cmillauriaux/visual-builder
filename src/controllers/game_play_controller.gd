@@ -629,6 +629,11 @@ func _on_auto_advance() -> void:
 
 
 func _on_auto_play_toggled(active: bool) -> void:
+	if _game_plugin_manager and _plugin_ctx:
+		_game_plugin_manager.dispatch_on_game_event(_plugin_ctx, "auto_play_toggled", {
+			"enabled": active,
+			"delay": _auto_play.delay if _auto_play else 0.0,
+		})
 	if _auto_play_button:
 		_auto_play_button.text = StoryI18nService.get_ui_string("Auto [ON]" if active else "Auto", _i18n)
 		if active:
@@ -700,6 +705,15 @@ func execute_skip() -> void:
 		return
 	if not _sequence_editor_ctrl.is_playing():
 		return
+	if _game_plugin_manager and _plugin_ctx:
+		var ch = _story_play_ctrl.get_current_chapter() if _story_play_ctrl else null
+		var sc = _story_play_ctrl.get_current_scene() if _story_play_ctrl else null
+		var seq = _story_play_ctrl.get_current_sequence() if _story_play_ctrl else null
+		_game_plugin_manager.dispatch_on_game_event(_plugin_ctx, "skip_used", {
+			"chapter": ch.chapter_name if ch else "",
+			"scene": sc.scene_name if sc else "",
+			"sequence": seq.seq_name if seq else "",
+		})
 	_typewriter_timer.stop()
 	if _auto_play:
 		_auto_play.stop_timer()
@@ -736,6 +750,10 @@ func open_history() -> void:
 	_history_open = true
 	_update_history_button_text()
 	_show_history_panel()
+	if _game_plugin_manager and _plugin_ctx:
+		_game_plugin_manager.dispatch_on_game_event(_plugin_ctx, "history_opened", {
+			"entry_count": _dialogue_history.size(),
+		})
 
 
 ## Ferme le panneau d'historique.
