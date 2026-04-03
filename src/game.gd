@@ -242,6 +242,10 @@ func _ready() -> void:
 	_game_over_screen.back_to_menu_pressed.connect(_on_play_finished_return)
 	_to_be_continued_screen.back_to_menu_pressed.connect(_on_play_finished_return)
 	_game_over_screen.load_last_autosave_pressed.connect(_on_game_over_load_autosave)
+	_main_menu.external_link_opened.connect(_on_external_link_opened)
+	_pause_menu.external_link_opened.connect(_on_external_link_opened)
+	_game_over_screen.external_link_opened.connect(_on_external_link_opened)
+	_to_be_continued_screen.external_link_opened.connect(_on_external_link_opened)
 
 	# Connecter les signaux du menu pause
 	_pause_menu.resume_pressed.connect(_on_pause_resume)
@@ -468,6 +472,26 @@ func _on_options_applied() -> void:
 	_story_play_ctrl._autosave_enabled = _settings.autosave_enabled
 	_play_ctrl.set_toolbar_visible(_settings.toolbar_visible)
 	_play_ctrl.set_voice_language(_settings.voice_language)
+	if _game_plugin_manager:
+		var ctx = _build_game_plugin_context()
+		_game_plugin_manager.dispatch_on_game_event(ctx, "options_changed", {
+			"music_enabled": _settings.music_enabled,
+			"music_volume": _settings.music_volume,
+			"voice_enabled": _settings.voice_enabled,
+			"voice_volume": _settings.voice_volume,
+			"voice_language": _settings.voice_language,
+			"fx_enabled": _settings.fx_enabled,
+			"fx_volume": _settings.fx_volume,
+			"language": _settings.language,
+			"fullscreen": _settings.fullscreen,
+			"auto_play_enabled": _settings.auto_play_enabled,
+			"auto_play_delay": _settings.auto_play_delay,
+			"typewriter_speed": _settings.typewriter_speed,
+			"dialogue_opacity": _settings.dialogue_opacity,
+			"autosave_enabled": _settings.autosave_enabled,
+			"ui_scale_mode": _settings.ui_scale_mode,
+			"toolbar_visible": _settings.toolbar_visible,
+		})
 
 
 func _on_toolbar_toggled(p_visible: bool) -> void:
@@ -563,6 +587,18 @@ func _on_quit() -> void:
 
 
 func _on_play_finished_return() -> void:
+	if _game_plugin_manager:
+		var ending_type := ""
+		if _game_over_screen.visible:
+			ending_type = "game_over"
+		elif _to_be_continued_screen.visible:
+			ending_type = "to_be_continued"
+		if ending_type != "":
+			var ctx = _build_game_plugin_context()
+			_game_plugin_manager.dispatch_on_game_event(ctx, "ending_screen_action", {
+				"type": ending_type,
+				"action": "back_to_menu",
+			})
 	_game_over_screen.hide_screen()
 	_to_be_continued_screen.hide_screen()
 	if _current_story:
@@ -572,6 +608,12 @@ func _on_play_finished_return() -> void:
 
 
 func _on_game_over_load_autosave() -> void:
+	if _game_plugin_manager:
+		var ctx = _build_game_plugin_context()
+		_game_plugin_manager.dispatch_on_game_event(ctx, "ending_screen_action", {
+			"type": "game_over",
+			"action": "load_autosave",
+		})
 	_game_over_screen.hide_screen()
 	var autosaves := GameSaveManager.list_autosaves()
 	if autosaves.is_empty():
@@ -909,6 +951,11 @@ func _on_load_slot(slot_index: int) -> void:
 func _on_delete_slot(slot_index: int) -> void:
 	GameSaveManager.delete_save(slot_index)
 	_save_load_menu.refresh()
+	if _game_plugin_manager:
+		var ctx = _build_game_plugin_context()
+		_game_plugin_manager.dispatch_on_game_event(ctx, "save_deleted", {
+			"slot_index": slot_index,
+		})
 
 
 func _on_save_load_close() -> void:
@@ -1169,6 +1216,10 @@ func _on_analytics_story_finished(reason: String) -> void:
 	if _game_plugin_manager:
 		var ctx = _build_game_plugin_context()
 		_game_plugin_manager.dispatch_on_story_finished(ctx, reason)
+		if reason == "game_over" or reason == "to_be_continued":
+			_game_plugin_manager.dispatch_on_game_event(ctx, "ending_screen_displayed", {
+				"type": reason,
+			})
 
 
 # --- Quicksave / Quickload ---
@@ -1260,9 +1311,24 @@ func _show_toast(message: String) -> void:
 # --- PWA Install Prompt ---
 
 func _on_pwa_prompt_closed(dont_show_again: bool) -> void:
+	if _game_plugin_manager:
+		var ctx = _build_game_plugin_context()
+		_game_plugin_manager.dispatch_on_game_event(ctx, "pwa_prompt_response", {
+			"dismissed": dont_show_again,
+			"platform": _get_platform_string(),
+		})
 	if dont_show_again:
 		_settings.pwa_prompt_dismissed = true
 		_settings.save_settings()
+
+
+func _on_external_link_opened(link_type: String, context: String) -> void:
+	if _game_plugin_manager:
+		var ctx = _build_game_plugin_context()
+		_game_plugin_manager.dispatch_on_game_event(ctx, "external_link_opened", {
+			"link_type": link_type,
+			"context": context,
+		})
 
 
 # --- UI Theme ---
