@@ -134,6 +134,11 @@ func on_main_menu_displayed(ctx: RefCounted, platform: String, app_version: Stri
 	pass
 
 
+## Hook générique pour les événements analytics (options, liens, écrans de fin, etc.).
+func on_game_event(ctx: RefCounted, event_name: String, data: Dictionary) -> void:
+	pass
+
+
 # --- Contributions UI ---
 
 ## Retourne les boutons à ajouter dans la toolbar au-dessus du dialogue.

@@ -59,6 +59,8 @@ class TestPlugin extends RefCounted:
 	func get_options_controls() -> Array: return []
 	func on_main_menu_displayed(ctx, platform: String, app_version: String, story_version: String):
 		calls.append("main_menu_displayed")
+	func on_game_event(ctx, event_name: String, data: Dictionary):
+		calls.append("game_event:" + event_name)
 
 
 # --- Tests enregistrement ---
@@ -248,6 +250,21 @@ func test_dispatch_on_main_menu_displayed_skips_disabled():
 	assert_does_not_have(p.calls, "main_menu_displayed")
 
 
+func test_dispatch_on_game_event():
+	var p = TestPlugin.new("a")
+	_manager.register_plugin(p)
+	_manager.dispatch_on_game_event(_create_context(), "options_changed", {"language": "fr"})
+	assert_has(p.calls, "game_event:options_changed")
+
+
+func test_dispatch_on_game_event_skips_disabled():
+	var p = TestPlugin.new("a")
+	_manager.register_plugin(p)
+	_manager.set_plugin_enabled("a", false)
+	_manager.dispatch_on_game_event(_create_context(), "options_changed", {"language": "fr"})
+	assert_does_not_have(p.calls, "game_event:options_changed")
+
+
 # --- Tests scan résilient ---
 
 func test_scan_nonexistent_directory_does_not_crash():
@@ -416,6 +433,7 @@ class _UpperPlugin extends RefCounted:
 	func get_overlay_panels() -> Array: return []
 	func get_options_controls() -> Array: return []
 	func on_main_menu_displayed(_ctx, _p: String, _av: String, _sv: String): pass
+	func on_game_event(_ctx, _e: String, _d: Dictionary): pass
 
 
 class _PrefixPlugin extends RefCounted:
@@ -439,6 +457,7 @@ class _PrefixPlugin extends RefCounted:
 	func get_overlay_panels() -> Array: return []
 	func get_options_controls() -> Array: return []
 	func on_main_menu_displayed(_ctx, _p: String, _av: String, _sv: String): pass
+	func on_game_event(_ctx, _e: String, _d: Dictionary): pass
 
 
 class _ToolbarPlugin extends RefCounted:
@@ -465,6 +484,7 @@ class _ToolbarPlugin extends RefCounted:
 	func get_overlay_panels() -> Array: return []
 	func get_options_controls() -> Array: return []
 	func on_main_menu_displayed(_ctx, _p: String, _av: String, _sv: String): pass
+	func on_game_event(_ctx, _e: String, _d: Dictionary): pass
 
 
 class _OverlayPlugin extends RefCounted:
@@ -491,6 +511,7 @@ class _OverlayPlugin extends RefCounted:
 		return [def]
 	func get_options_controls() -> Array: return []
 	func on_main_menu_displayed(_ctx, _p: String, _av: String, _sv: String): pass
+	func on_game_event(_ctx, _e: String, _d: Dictionary): pass
 
 
 class _FakeSettings extends RefCounted:

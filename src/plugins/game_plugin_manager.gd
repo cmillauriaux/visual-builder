@@ -275,6 +275,11 @@ func dispatch_on_main_menu_displayed(ctx: RefCounted, platform: String, app_vers
 		plugin.on_main_menu_displayed(ctx, platform, app_version, story_version)
 
 
+func dispatch_on_game_event(ctx: RefCounted, event_name: String, data: Dictionary) -> void:
+	for plugin in _get_active_plugins():
+		plugin.on_game_event(ctx, event_name, data)
+
+
 # --- UI injection ---
 
 ## Injecte les boutons toolbar des plugins actifs dans le container.
