@@ -270,6 +270,11 @@ func dispatch_on_quickload(ctx: RefCounted, story_title: String) -> void:
 		plugin.on_quickload(ctx, story_title)
 
 
+func dispatch_on_main_menu_displayed(ctx: RefCounted, platform: String, app_version: String, story_version: String) -> void:
+	for plugin in _get_active_plugins():
+		plugin.on_main_menu_displayed(ctx, platform, app_version, story_version)
+
+
 # --- UI injection ---
 
 ## Injecte les boutons toolbar des plugins actifs dans le container.

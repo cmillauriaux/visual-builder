@@ -233,6 +233,21 @@ func test_dispatch_on_after_choice():
 	assert_has(p.calls, "after_choice")
 
 
+func test_dispatch_on_main_menu_displayed():
+	var p = TestPlugin.new("a")
+	_manager.register_plugin(p)
+	_manager.dispatch_on_main_menu_displayed(_create_context(), "macOS", "1.2.0", "1.0.0")
+	assert_has(p.calls, "main_menu_displayed")
+
+
+func test_dispatch_on_main_menu_displayed_skips_disabled():
+	var p = TestPlugin.new("a")
+	_manager.register_plugin(p)
+	_manager.set_plugin_enabled("a", false)
+	_manager.dispatch_on_main_menu_displayed(_create_context(), "macOS", "1.2.0", "1.0.0")
+	assert_does_not_have(p.calls, "main_menu_displayed")
+
+
 # --- Tests scan résilient ---
 
 func test_scan_nonexistent_directory_does_not_crash():
