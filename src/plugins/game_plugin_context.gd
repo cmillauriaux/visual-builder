@@ -32,3 +32,7 @@ var game_node: Control = null
 
 ## Référence aux paramètres du jeu (GameSettings)
 var settings: RefCounted = null
+
+## Callable pour émettre un game event depuis un plugin.
+## Signature : func(event_name: String, data: Dictionary) -> void
+var emit_game_event: Callable = Callable()

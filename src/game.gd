@@ -1069,6 +1069,9 @@ func _build_game_plugin_context() -> RefCounted:
 		ctx.current_sequence = _story_play_ctrl.get_current_sequence()
 		if _story_play_ctrl.get("_variables") != null:
 			ctx.variables = _story_play_ctrl._variables
+	ctx.emit_game_event = func(event_name: String, data: Dictionary):
+		if _game_plugin_manager:
+			_game_plugin_manager.dispatch_on_game_event(ctx, event_name, data)
 	return ctx
 
 
