@@ -200,7 +200,7 @@ static func _build_play_buttons_bar(game: Control) -> void:
 	game._toolbar_toggle_button.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	var btn_s := roundi(30 * s)
 	var pad_top := roundi(10 * s)
-	var pad_right := roundi(32 * s)  # space from the right border
+	var pad_right := roundi(12 * s)  # space from the right border
 	game._toolbar_toggle_button.offset_left = -btn_s - pad_right
 	game._toolbar_toggle_button.offset_right = -pad_right
 	# _play_overlay.offset_top = -150*s; place button inside with padding from top border
@@ -211,13 +211,16 @@ static func _build_play_buttons_bar(game: Control) -> void:
 
 static func _build_toast_overlay(game: Control) -> void:
 	var s := UIScale.get_scale()
+	var safe := _get_safe_area_margins()
+	var margin_top := maxf(8.0, safe["top"] + 4.0)
+	var margin_right := maxf(8.0, safe["right"] + 4.0)
 	game._toast_overlay = PanelContainer.new()
 	game._toast_overlay.visible = false
 	game._toast_overlay.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	game._toast_overlay.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	game._toast_overlay.grow_vertical = Control.GROW_DIRECTION_END
-	game._toast_overlay.offset_top = roundi(8 * s)
-	game._toast_overlay.offset_right = -roundi(8 * s)
+	game._toast_overlay.offset_top = roundi(margin_top * s)
+	game._toast_overlay.offset_right = -roundi(margin_right * s)
 	game._toast_overlay.custom_minimum_size = Vector2(UIScale.scale(300), 0)
 	game._toast_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	game._toast_overlay.z_index = 100
@@ -310,15 +313,18 @@ static func _build_quickload_confirm(game: Control) -> void:
 
 static func _build_menu_button(game: Control) -> void:
 	var s := UIScale.get_scale()
+	var safe := _get_safe_area_margins()
+	var margin_top := maxf(10.0, safe["top"] + 4.0)
+	var margin_right := maxf(10.0, safe["right"] + 4.0)
 	game._menu_button = Button.new()
 	game._menu_button.z_index = SequenceVisualEditorScript.UI_OVERLAY_Z
 	game._menu_button.text = "Menu"
 	game._menu_button.icon = _create_hamburger_icon(roundi(16 * s), GameTheme.COLOR_BUTTON_TEXT)
 	game._menu_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-	game._menu_button.offset_left = -roundi(100 * s)
-	game._menu_button.offset_right = -roundi(10 * s)
-	game._menu_button.offset_top = roundi(10 * s)
-	game._menu_button.offset_bottom = roundi(40 * s)
+	game._menu_button.offset_left = -roundi((margin_right + 130) * s)
+	game._menu_button.offset_right = -roundi(margin_right * s)
+	game._menu_button.offset_top = roundi(margin_top * s)
+	game._menu_button.offset_bottom = roundi((margin_top + 40) * s)
 	game._menu_button.visible = false
 	game._menu_button.process_mode = Node.PROCESS_MODE_ALWAYS
 	game.add_child(game._menu_button)
@@ -517,3 +523,41 @@ static func _build_variable_display(game: Control) -> void:
 	game._variable_details_overlay.set_script(VariableDetailsOverlayScript)
 	game._variable_details_overlay.build_ui()
 	game.add_child(game._variable_details_overlay)
+
+
+## Returns safe area margins in viewport coordinates, accounting for stretch mode
+## and pillarbox/letterbox bars. Falls back to zero on platforms without safe area.
+static func _get_safe_area_margins() -> Dictionary:
+	var screen_size := DisplayServer.window_get_size()
+	if screen_size.x <= 0 or screen_size.y <= 0:
+		return {"top": 0.0, "right": 0.0, "bottom": 0.0, "left": 0.0}
+
+	var safe_rect := DisplayServer.get_display_safe_area()
+	var margin_top := float(safe_rect.position.y)
+	var margin_right := float(screen_size.x - safe_rect.end.x)
+	var margin_bottom := float(screen_size.y - safe_rect.end.y)
+	var margin_left := float(safe_rect.position.x)
+
+	var vp_w: float = ProjectSettings.get_setting("display/window/size/viewport_width", 1920)
+	var vp_h: float = ProjectSettings.get_setting("display/window/size/viewport_height", 1080)
+	var screen_aspect := float(screen_size.x) / float(screen_size.y)
+	var vp_aspect := vp_w / vp_h
+
+	var content_scale: float
+	var bar_x := 0.0
+	var bar_y := 0.0
+	if screen_aspect > vp_aspect:
+		# Pillarboxed (iPhone landscape — screen wider than 16:9)
+		content_scale = float(screen_size.y) / vp_h
+		bar_x = (float(screen_size.x) - vp_w * content_scale) / 2.0
+	else:
+		# Letterboxed (screen taller than 16:9)
+		content_scale = float(screen_size.x) / vp_w
+		bar_y = (float(screen_size.y) - vp_h * content_scale) / 2.0
+
+	return {
+		"top": maxf(0.0, margin_top - bar_y) / content_scale,
+		"right": maxf(0.0, margin_right - bar_x) / content_scale,
+		"bottom": maxf(0.0, margin_bottom - bar_y) / content_scale,
+		"left": maxf(0.0, margin_left - bar_x) / content_scale,
+	}

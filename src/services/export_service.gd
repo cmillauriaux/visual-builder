@@ -272,6 +272,9 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 		if not DirAccess.dir_exists_absolute(web_dir):
 			DirAccess.make_dir_recursive_absolute(web_dir)
 		export_file = web_dir + "/index.html"
+	elif platform == "ios":
+		# iOS : exporter le projet Xcode seulement, puis patcher et builder
+		export_file = abs_output_path + "/" + safe_name
 	else:
 		export_file = abs_output_path + "/" + safe_name + "." + export_ext
 
@@ -280,10 +283,15 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 
 	# Import d'abord (nécessaire pour générer .godot/)
 	OS.execute(godot_bin, ["--path", abs_temp_project, "--headless", "--import"], output, true)
-	
+
 	# Export release
 	var export_args = ["--path", abs_temp_project, "--headless", "--export-release", preset_name, export_file]
 	var exit_code = OS.execute(godot_bin, export_args, output, true)
+
+	# 9a. iOS : patcher le projet Xcode (SwiftUICore) et builder le .ipa
+	# Godot génère le .xcodeproj à plat dans abs_output_path avec son propre nom
+	if platform == "ios" and exit_code == 0:
+		_patch_ios_xcode_project(abs_output_path, log_path)
 	
 	# Écrire l'output de Godot dans le log
 	var f_log = FileAccess.open(log_path, FileAccess.READ_WRITE)
@@ -1372,3 +1380,75 @@ func _get_excluded_plugin_folders(export_options: Dictionary) -> Array:
 			entry = dir.get_next()
 		dir.list_dir_end()
 	return excluded
+
+
+## Patch le projet Xcode généré par Godot pour Xcode 16+/26 (SwiftUICore).
+## xcode_path peut être :
+##   - un dossier contenant un .xcodeproj (ex: /tmp/export/)
+##   - un chemin de base dont le .xcodeproj est un frère (ex: /tmp/MyGame → /tmp/MyGame.xcodeproj)
+func _patch_ios_xcode_project(xcode_path: String, log_path: String) -> void:
+	var xcodeproj := ""
+
+	# Cas 1 : le chemin + ".xcodeproj" existe directement (Godot export_project_only)
+	if DirAccess.dir_exists_absolute(xcode_path + ".xcodeproj"):
+		xcodeproj = xcode_path + ".xcodeproj"
+	else:
+		# Cas 2 : chercher un .xcodeproj dans le dossier donné
+		var dir = DirAccess.open(xcode_path)
+		if dir == null:
+			_append_log(log_path, "ERREUR: impossible d'ouvrir " + xcode_path)
+			return
+		dir.list_dir_begin()
+		var entry = dir.get_next()
+		while entry != "":
+			if entry.ends_with(".xcodeproj"):
+				xcodeproj = xcode_path + "/" + entry
+				break
+			entry = dir.get_next()
+		dir.list_dir_end()
+
+	if xcodeproj == "":
+		_append_log(log_path, "ERREUR: aucun .xcodeproj trouvé dans " + xcode_path)
+		return
+
+	var pbxproj_path = xcodeproj + "/project.pbxproj"
+	var f = FileAccess.open(pbxproj_path, FileAccess.READ)
+	if f == null:
+		_append_log(log_path, "ERREUR: impossible de lire " + pbxproj_path)
+		return
+	var content = f.get_as_text()
+	f.close()
+
+	if content.find("LD_CLASSIC_2620") >= 0:
+		_append_log(log_path, "→ Xcode project déjà patché (ld_classic Xcode 26)")
+		return
+
+	# Godot 4.6 utilise SwiftUI dans libgodot.a. Xcode 26+ interdit le linkage
+	# direct de SwiftUICore (framework privé). L'ancien linker (-ld_classic) contourne
+	# ce check. Godot a déjà LD_CLASSIC_15xx pour Xcode 15, on ajoute Xcode 26.
+	var ld_classic_entries := '"LD_CLASSIC_2600" = "-ld_classic";\n'
+	ld_classic_entries += '\t\t\t\t"LD_CLASSIC_2610" = "-ld_classic";\n'
+	ld_classic_entries += '\t\t\t\t"LD_CLASSIC_2620" = "-ld_classic";'
+	content = content.replace('"LD_CLASSIC_1510" = "-ld_classic";', '"LD_CLASSIC_1510" = "-ld_classic";\n\t\t\t\t' + ld_classic_entries)
+
+	if content.find("LD_CLASSIC_2620") < 0:
+		_append_log(log_path, "→ Xcode project: LD_CLASSIC_1510 non trouvé, patch ignoré")
+		return
+
+	var fw = FileAccess.open(pbxproj_path, FileAccess.WRITE)
+	if fw:
+		fw.store_string(content)
+		fw.close()
+		_append_log(log_path, "→ Xcode project patché: ajout LD_CLASSIC pour Xcode 26")
+
+
+## Build le .ipa depuis le projet Xcode exporté.
+func _build_ios_ipa(xcode_dir: String, ipa_path: String, log_path: String) -> int:
+	var script_path = ProjectSettings.globalize_path("res://scripts/build_ios_xcode.sh")
+	var output = []
+	var exit_code = OS.execute("bash", [script_path, xcode_dir, ipa_path], output, true)
+	for line in output:
+		_append_log(log_path, line)
+	if exit_code != 0:
+		_append_log(log_path, "ERREUR: build iOS échoué (code " + str(exit_code) + ")")
+	return exit_code

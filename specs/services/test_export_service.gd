@@ -480,3 +480,114 @@ func test_extract_voice_keeps_empty_block():
 	var content = "dialogues:\n  - voice_files: {}\n  - voice_files:\n      en: \"assets/voices/valid_en.mp3\"\n"
 	service._extract_voice_keeps_from_content(content, "en", "fr", keep)
 	assert_true(keep.has("valid_en.mp3"), "Should handle empty inline then parse next block")
+
+
+# --- Tests _patch_ios_xcode_project ---
+
+func _create_fake_xcode_project(pbxproj_content: String) -> Dictionary:
+	var temp_dir = ProjectSettings.globalize_path("user://test_ios_patch_" + str(Time.get_ticks_msec()))
+	DirAccess.make_dir_recursive_absolute(temp_dir + "/MyGame.xcodeproj")
+	var f = FileAccess.open(temp_dir + "/MyGame.xcodeproj/project.pbxproj", FileAccess.WRITE)
+	f.store_string(pbxproj_content)
+	f.close()
+	var log_path = temp_dir + "/test.log"
+	f = FileAccess.open(log_path, FileAccess.WRITE)
+	f.close()
+	return {"dir": temp_dir, "log": log_path, "pbxproj": temp_dir + "/MyGame.xcodeproj/project.pbxproj"}
+
+
+func test_patch_ios_adds_ld_classic_for_xcode26():
+	var service = ExportServiceScript.new()
+	# Format réel généré par Godot 4.6 : LD_CLASSIC pour Xcode 15.x
+	var pbx_content = """
+		buildSettings = {
+			"LD_CLASSIC_1500" = "-ld_classic";
+			"LD_CLASSIC_1501" = "-ld_classic";
+			"LD_CLASSIC_1510" = "-ld_classic";
+			OTHER_LDFLAGS = "$(LD_CLASSIC_$(XCODE_VERSION_ACTUAL))  ";
+			PRODUCT_NAME = MyGame;
+		};
+	"""
+	var ctx = _create_fake_xcode_project(pbx_content)
+	service._patch_ios_xcode_project(ctx["dir"], ctx["log"])
+	var patched = FileAccess.get_file_as_string(ctx["pbxproj"])
+	assert_true(patched.find("LD_CLASSIC_2620") >= 0, "Should add LD_CLASSIC_2620 for Xcode 26")
+	assert_true(patched.find("LD_CLASSIC_2600") >= 0, "Should add LD_CLASSIC_2600 for Xcode 26")
+	assert_true(patched.find("LD_CLASSIC_1510") >= 0, "Should keep existing LD_CLASSIC entries")
+	service._remove_dir_recursive(ctx["dir"])
+
+
+func test_patch_ios_no_ld_classic_1510_does_nothing():
+	var service = ExportServiceScript.new()
+	# Si le pbxproj n'a pas de LD_CLASSIC_1510, le patch ne s'applique pas
+	var pbx_content = """
+		buildSettings = {
+			PRODUCT_NAME = MyGame;
+		};
+	"""
+	var ctx = _create_fake_xcode_project(pbx_content)
+	service._patch_ios_xcode_project(ctx["dir"], ctx["log"])
+	var patched = FileAccess.get_file_as_string(ctx["pbxproj"])
+	assert_true(patched.find("LD_CLASSIC_2620") < 0, "Should not add LD_CLASSIC without existing entries")
+	service._remove_dir_recursive(ctx["dir"])
+
+
+func test_patch_ios_skips_already_patched():
+	var service = ExportServiceScript.new()
+	var pbx_content = """
+		buildSettings = {
+			"LD_CLASSIC_1510" = "-ld_classic";
+			"LD_CLASSIC_2620" = "-ld_classic";
+		};
+	"""
+	var ctx = _create_fake_xcode_project(pbx_content)
+	service._patch_ios_xcode_project(ctx["dir"], ctx["log"])
+	var patched = FileAccess.get_file_as_string(ctx["pbxproj"])
+	# Vérifier qu'on n'a pas dupliqué
+	var count = 0
+	var pos = patched.find("LD_CLASSIC_2620")
+	while pos >= 0:
+		count += 1
+		pos = patched.find("LD_CLASSIC_2620", pos + 1)
+	assert_eq(count, 1, "Should not duplicate LD_CLASSIC_2620")
+	service._remove_dir_recursive(ctx["dir"])
+
+
+func test_patch_ios_no_xcodeproj_logs_error():
+	var service = ExportServiceScript.new()
+	var temp_dir = ProjectSettings.globalize_path("user://test_ios_noproj_" + str(Time.get_ticks_msec()))
+	DirAccess.make_dir_recursive_absolute(temp_dir)
+	var log_path = temp_dir + "/test.log"
+	var f = FileAccess.open(log_path, FileAccess.WRITE)
+	f.close()
+	service._patch_ios_xcode_project(temp_dir, log_path)
+	var log_content = FileAccess.get_file_as_string(log_path)
+	assert_true(log_content.find("aucun .xcodeproj") >= 0, "Should log error when no xcodeproj found")
+	service._remove_dir_recursive(temp_dir)
+
+
+func test_patch_ios_finds_sibling_xcodeproj():
+	# Simule le layout Godot : /tmp/MyGame → /tmp/MyGame.xcodeproj/
+	var service = ExportServiceScript.new()
+	var temp_dir = ProjectSettings.globalize_path("user://test_ios_sibling_" + str(Time.get_ticks_msec()))
+	var base_path = temp_dir + "/MyGame"
+	DirAccess.make_dir_recursive_absolute(temp_dir)
+	# Créer le .xcodeproj comme frère (pas dans un sous-dossier)
+	DirAccess.make_dir_recursive_absolute(base_path + ".xcodeproj")
+	var pbx_content = """
+		buildSettings = {
+			"LD_CLASSIC_1510" = "-ld_classic";
+			PRODUCT_NAME = MyGame;
+		};
+	"""
+	var f = FileAccess.open(base_path + ".xcodeproj/project.pbxproj", FileAccess.WRITE)
+	f.store_string(pbx_content)
+	f.close()
+	var log_path = temp_dir + "/test.log"
+	f = FileAccess.open(log_path, FileAccess.WRITE)
+	f.close()
+	# Appeler avec le chemin de base (sans .xcodeproj)
+	service._patch_ios_xcode_project(base_path, log_path)
+	var patched = FileAccess.get_file_as_string(base_path + ".xcodeproj/project.pbxproj")
+	assert_true(patched.find("LD_CLASSIC_2620") >= 0, "Should patch sibling xcodeproj with LD_CLASSIC for Xcode 26")
+	service._remove_dir_recursive(temp_dir)

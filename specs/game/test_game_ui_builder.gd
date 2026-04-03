@@ -129,3 +129,27 @@ func test_builds_loading_overlay_bg() -> void:
 func test_setup_loading_overlay_image_with_null_clears_texture() -> void:
 	_game._setup_loading_overlay_image(null)
 	assert_null(_game._loading_overlay_bg.texture, "texture should be null when story is null")
+
+
+func test_get_safe_area_margins_returns_dict_with_four_keys() -> void:
+	var margins = GameUIBuilder._get_safe_area_margins()
+	assert_has(margins, "top")
+	assert_has(margins, "right")
+	assert_has(margins, "bottom")
+	assert_has(margins, "left")
+
+
+func test_get_safe_area_margins_returns_non_negative_values() -> void:
+	var margins = GameUIBuilder._get_safe_area_margins()
+	assert_true(margins["top"] >= 0.0, "top margin should be >= 0")
+	assert_true(margins["right"] >= 0.0, "right margin should be >= 0")
+	assert_true(margins["bottom"] >= 0.0, "bottom margin should be >= 0")
+	assert_true(margins["left"] >= 0.0, "left margin should be >= 0")
+
+
+func test_menu_button_has_minimum_margin_from_edges() -> void:
+	# Le bouton menu doit avoir au minimum 10px de marge (avant scaling)
+	var s = _game._menu_button.offset_right
+	# offset_right est négatif (marge depuis le bord droit)
+	assert_true(s <= -10, "menu button should be at least 10px from right edge (offset_right=%s)" % s)
+	assert_true(_game._menu_button.offset_top >= 10, "menu button should be at least 10px from top edge")
