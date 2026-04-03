@@ -15,6 +15,7 @@ var _i18n_dict: Dictionary = {}
 
 signal back_to_menu_pressed
 signal load_last_autosave_pressed
+signal external_link_opened(link_type: String, context: String)
 
 var _default_title: String = ""
 var _background: TextureRect
@@ -150,11 +151,13 @@ func hide_screen() -> void:
 func _on_patreon_pressed() -> void:
 	if _patreon_url != "":
 		OS.shell_open(_patreon_url)
+		external_link_opened.emit("patreon", "ending")
 
 
 func _on_itchio_pressed() -> void:
 	if _itchio_url != "":
 		OS.shell_open(_itchio_url)
+		external_link_opened.emit("itchio", "ending")
 
 
 func _create_button(text: String) -> Button:

@@ -17,6 +17,7 @@ signal load_game_pressed
 signal chapters_scenes_pressed
 signal options_applied
 signal quit_pressed
+signal external_link_opened(link_type: String, context: String)
 
 # UI
 var _background: TextureRect
@@ -322,11 +323,13 @@ func update_loading_text(text: String) -> void:
 func _on_patreon_pressed() -> void:
 	if _current_story and _current_story.patreon_url != "":
 		OS.shell_open(_current_story.patreon_url)
+		external_link_opened.emit("patreon", "main_menu")
 
 
 func _on_itchio_pressed() -> void:
 	if _current_story and _current_story.itchio_url != "":
 		OS.shell_open(_current_story.itchio_url)
+		external_link_opened.emit("itchio", "main_menu")
 
 
 func _create_menu_button(text: String) -> Button:

@@ -19,6 +19,7 @@ signal options_pressed
 signal new_game_pressed
 signal quit_pressed
 signal chapters_scenes_pressed
+signal external_link_opened(link_type: String, context: String)
 
 # UI
 var _overlay: ColorRect
@@ -160,11 +161,13 @@ func set_external_links(patreon_url: String, itchio_url: String) -> void:
 func _on_patreon_pressed() -> void:
 	if _patreon_url != "":
 		OS.shell_open(_patreon_url)
+		external_link_opened.emit("patreon", "pause")
 
 
 func _on_itchio_pressed() -> void:
 	if _itchio_url != "":
 		OS.shell_open(_itchio_url)
+		external_link_opened.emit("itchio", "pause")
 
 
 func _create_menu_button(text: String) -> Button:
