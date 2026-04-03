@@ -139,6 +139,7 @@ var _settings: RefCounted
 var _i18n_dict: Dictionary = {}
 var _cached_max_progression: Dictionary = {"chapter": -1, "scene": -1}
 var _play_ui_state_before_menu: Dictionary = {}
+var _main_menu_event_sent: bool = false
 
 const _PENDING_RESTORE_PATH := "user://_pending_options_restore.json"
 
@@ -505,6 +506,13 @@ func _show_main_menu(story) -> void:
 	if _music_player and story.get("menu_music") != null and story.menu_music != "":
 		var music_path = MusicPlayer._resolve_path(story.menu_music, _current_story_path)
 		_music_player.play_menu_music(music_path)
+	if not _main_menu_event_sent and _game_plugin_manager:
+		_main_menu_event_sent = true
+		var ctx = _build_game_plugin_context()
+		var platform = _get_platform_string()
+		var app_version = ProjectSettings.get_setting("application/config/version", "")
+		var story_version = _current_story.version if _current_story and _current_story.get("version") != null else ""
+		_game_plugin_manager.dispatch_on_main_menu_displayed(ctx, platform, app_version, story_version)
 
 
 ## Précharge un PCK chapitre sur le web en affichant la progression dans le menu.
@@ -1062,6 +1070,15 @@ func _build_game_plugin_context() -> RefCounted:
 		if _story_play_ctrl.get("_variables") != null:
 			ctx.variables = _story_play_ctrl._variables
 	return ctx
+
+
+func _get_platform_string() -> String:
+	var os_name := OS.get_name()
+	if os_name == "Web":
+		if GameSettings._is_mobile_browser():
+			return "Web_mobile"
+		return "Web_desktop"
+	return os_name
 
 
 func _setup_game_plugins() -> void:
