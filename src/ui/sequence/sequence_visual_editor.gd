@@ -325,6 +325,12 @@ func _update_visual() -> void:
 func _load_texture(path: String):
 	return TextureLoaderScript.load_texture(path)
 
+
+## Returns the image quality divisor from export settings (1=HD, 2=SD, 4=USD).
+## Used to compensate for downscaled textures in SD/USD exports.
+func _get_image_quality_divisor() -> float:
+	return float(ProjectSettings.get_setting("application/config/image_quality_divisor", 1))
+
 # --- Foreground visuals ---
 
 ## UUIDs dont l'opacité est gérée par une transition en cours (ne pas écraser)
@@ -491,9 +497,12 @@ func _update_single_fg_visual(fg) -> void:
 	# Load texture — seulement si l'image a changé
 	var tex_rect: TextureRect = wrapper.get_node("Texture")
 	var tex = _load_texture(fg.image)
+	# Compensate for downscaled textures in SD/USD exports:
+	# Anchors were computed with HD texture sizes, so we scale up by the quality divisor.
+	var quality_div: float = _get_image_quality_divisor()
 	if tex:
 		tex_rect.texture = tex
-		var fg_size = tex.get_size() * fg.scale
+		var fg_size = tex.get_size() * fg.scale * quality_div
 		tex_rect.size = fg_size
 		tex_rect.flip_h = fg.flip_h
 		tex_rect.flip_v = fg.flip_v
@@ -506,9 +515,10 @@ func _update_single_fg_visual(fg) -> void:
 		wrapper.size = fg_size
 
 	# Position via anchor system
+	# Recover HD bg_size by multiplying current texture size by quality divisor
 	var bg_size = Vector2(1920, 1080)  # default
 	if _bg_rect and _bg_rect.texture:
-		bg_size = _bg_rect.texture.get_size()
+		bg_size = _bg_rect.texture.get_size() * quality_div
 	var fg_size = wrapper.size
 	wrapper.position = fg.anchor_bg * bg_size - fg.anchor_fg * fg_size
 
@@ -630,14 +640,14 @@ func _on_fg_gui_input(event: InputEvent, uuid: String) -> void:
 		if wrapper:
 			var delta = (mm.global_position - _drag_start_pos) / _zoom
 			wrapper.position = _drag_start_wrapper_pos + delta
-			# Recompute anchor_bg from new position
+			# Recompute anchor_bg from new position (use HD bg_size for consistency)
 			var fg = find_foreground(uuid)
 			if fg:
-				var bg_size = Vector2(1920, 1080)
+				var drag_bg_size = Vector2(1920, 1080)
 				if _bg_rect and _bg_rect.texture:
-					bg_size = _bg_rect.texture.get_size()
+					drag_bg_size = _bg_rect.texture.get_size() * _get_image_quality_divisor()
 				var fg_size = wrapper.size
-				fg.anchor_bg = (wrapper.position + fg.anchor_fg * fg_size) / bg_size
+				fg.anchor_bg = (wrapper.position + fg.anchor_fg * fg_size) / drag_bg_size
 		accept_event()
 
 func _on_resize_handle_input(event: InputEvent, uuid: String) -> void:
@@ -747,8 +757,10 @@ func _update_grid_overlay() -> void:
 	var has_bg = _bg_rect != null and _bg_rect.visible and _bg_rect.texture != null
 	_grid_overlay.visible = _grid_visible and has_bg
 	if _grid_overlay.visible:
-		var bg_size = _bg_rect.texture.get_size()
-		_grid_overlay.size = bg_size
+		var grid_bg_size = DESIGN_RESOLUTION
+		if _bg_rect and _bg_rect.texture:
+			grid_bg_size = _bg_rect.texture.get_size() * _get_image_quality_divisor()
+		_grid_overlay.size = grid_bg_size
 		_grid_overlay.queue_redraw()
 
 func _on_grid_draw() -> void:
@@ -777,10 +789,10 @@ func _apply_snap_to_foreground(uuid: String) -> void:
 	var fg = find_foreground(uuid)
 	if fg == null:
 		return
-	var bg_size = Vector2(1920, 1080)
+	var snap_bg_size = DESIGN_RESOLUTION
 	if _bg_rect and _bg_rect.texture:
-		bg_size = _bg_rect.texture.get_size()
-	fg.anchor_bg = _placement_grid.snap_position(fg.anchor_bg, bg_size)
+		snap_bg_size = _bg_rect.texture.get_size() * _get_image_quality_divisor()
+	fg.anchor_bg = _placement_grid.snap_position(fg.anchor_bg, snap_bg_size)
 
 # --- Foreground clipboard ---
 

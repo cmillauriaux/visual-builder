@@ -151,6 +151,7 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 		_rewrite_paths_direct(abs_temp_story, "res://story", log_path)
 
 	# 5. Configurer project.godot et override.cfg
+	var image_quality_divisor = {"hd": 1, "sd": 2, "ultrasd": 4}.get(quality, 1)
 	var project_godot_path = abs_temp_project + "/project.godot"
 	var project_content = FileAccess.get_file_as_string(project_godot_path)
 	project_content = project_content.replace('run/main_scene="res://src/main.tscn"', 'run/main_scene="res://src/game.tscn"')
@@ -159,7 +160,7 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 	# Ajouter une propriété personnalisée pour le chemin de la story
 	if project_content.find("[application]") == -1:
 		project_content += "\n[application]\n"
-	project_content = project_content.replace("[application]", "[application]\nconfig/story_path=\"res://story\"")
+	project_content = project_content.replace("[application]", "[application]\nconfig/story_path=\"res://story\"\nconfig/image_quality_divisor=" + str(image_quality_divisor))
 
 	# Boot splash : utiliser le menu_background de la story
 	if boot_splash_res_path != "":
@@ -225,6 +226,7 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 		f_ov.store_line("config/edition=\"" + edition_label + "\"")
 		f_ov.store_line("config/version=\"" + story.version + "\"")
 		f_ov.store_line("config/release_date=\"" + release_date + "\"")
+		f_ov.store_line("config/image_quality_divisor=" + str(image_quality_divisor))
 		f_ov.close()
 
 	# 6. (Anciennement modification de game.tscn, maintenant inutile avec override.cfg)
