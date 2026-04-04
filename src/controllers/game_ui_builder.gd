@@ -107,31 +107,32 @@ static func _build_play_overlay(game: Control) -> void:
 
 	# Boutons de jeu — créés ici, ajoutés dans _build_play_buttons_bar() à la fin
 	var btn_size := Vector2(UIScale.scale(120), UIScale.scale(30))
+	var btn_font_size := UIScale.scale(16)
 	game._quicksave_button = Button.new()
-	game._quicksave_button.text = "Save (F5)"
+	game._quicksave_button.text = "Save (F)"
 	game._quicksave_button.custom_minimum_size = btn_size
-	game._quicksave_button.clip_text = true
+	game._quicksave_button.add_theme_font_size_override("font_size", btn_font_size)
 
 	game._quickload_button = Button.new()
-	game._quickload_button.text = "Load (F9)"
+	game._quickload_button.text = "Load (F)"
 	game._quickload_button.custom_minimum_size = btn_size
-	game._quickload_button.clip_text = true
+	game._quickload_button.add_theme_font_size_override("font_size", btn_font_size)
 
 	game._auto_play_button = Button.new()
 	game._auto_play_button.text = "Auto"
 	game._auto_play_button.custom_minimum_size = btn_size
-	game._auto_play_button.clip_text = true
+	game._auto_play_button.add_theme_font_size_override("font_size", btn_font_size)
 
 	game._skip_button = Button.new()
 	game._skip_button.text = "Skip (S)"
 	game._skip_button.custom_minimum_size = btn_size
-	game._skip_button.clip_text = true
+	game._skip_button.add_theme_font_size_override("font_size", btn_font_size)
 	game._skip_button.disabled = true
 
 	game._history_button = Button.new()
-	game._history_button.text = "Histo (H)"
+	game._history_button.text = "History"
 	game._history_button.custom_minimum_size = btn_size
-	game._history_button.clip_text = true
+	game._history_button.add_theme_font_size_override("font_size", btn_font_size)
 	game._history_button.disabled = true
 
 	# Typewriter timer
@@ -191,21 +192,22 @@ static func _build_play_buttons_bar(game: Control) -> void:
 	game._play_buttons_bar.add_child(game._history_button)
 	game.add_child(game._play_buttons_bar)
 
-	# Toggle button — inside the dialogue panel, top-right with padding from border
+	# Toggle button — inside the dialogue panel, top-right aligned with panel border
 	game._toolbar_toggle_button = Button.new()
-	game._toolbar_toggle_button.text = "▲"
+	game._toolbar_toggle_button.text = "▼"
+	game._toolbar_toggle_button.add_theme_font_size_override("font_size", UIScale.scale(16))
 	game._toolbar_toggle_button.visible = false
 	game._toolbar_toggle_button.z_index = SequenceVisualEditorScript.UI_OVERLAY_Z
 	game._toolbar_toggle_button.mouse_filter = Control.MOUSE_FILTER_STOP
 	game._toolbar_toggle_button.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	var btn_s := roundi(30 * s)
+	var toggle_s := roundi(24 * s)
+	var pad_inside := roundi(GameTheme.PANEL_CONTENT_MARGIN * s)  # inside the panel border
 	var pad_top := roundi(10 * s)
-	var pad_right := roundi(12 * s)  # space from the right border
-	game._toolbar_toggle_button.offset_left = -btn_s - pad_right
-	game._toolbar_toggle_button.offset_right = -pad_right
+	game._toolbar_toggle_button.offset_left = -toggle_s - pad_inside
+	game._toolbar_toggle_button.offset_right = -pad_inside
 	# _play_overlay.offset_top = -150*s; place button inside with padding from top border
 	game._toolbar_toggle_button.offset_top = -roundi(150 * s) + pad_top
-	game._toolbar_toggle_button.offset_bottom = -roundi(150 * s) + pad_top + btn_s
+	game._toolbar_toggle_button.offset_bottom = -roundi(150 * s) + pad_top + toggle_s
 	game.add_child(game._toolbar_toggle_button)
 
 
