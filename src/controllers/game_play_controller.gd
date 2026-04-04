@@ -9,6 +9,7 @@ extends Node
 const StoryI18nService = preload("res://src/services/story_i18n_service.gd")
 const AutoPlayManagerScript = preload("res://src/services/auto_play_manager.gd")
 const UIScale = preload("res://src/ui/themes/ui_scale.gd")
+const GameTheme = preload("res://src/ui/themes/game_theme.gd")
 
 var _game: Control
 var _sequence_editor_ctrl: Control
@@ -90,7 +91,9 @@ func set_auto_play_enabled(enabled: bool) -> void:
 func set_toolbar_visible(p_visible: bool) -> void:
 	_toolbar_visible = p_visible
 	if _toolbar_toggle_button:
-		_toolbar_toggle_button.text = "▼" if _toolbar_visible else "▲"
+		_toolbar_toggle_button.icon = GameTheme.create_arrow_icon(
+			roundi(14 * UIScale.get_scale()), GameTheme.COLOR_BUTTON_TEXT, _toolbar_visible
+		)
 
 
 func _on_toolbar_toggle_pressed() -> void:

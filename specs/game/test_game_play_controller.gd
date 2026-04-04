@@ -392,16 +392,18 @@ func test_toggle_button_click_hides_toolbar() -> void:
 	assert_false(_game._play_ctrl._toolbar_visible, "toolbar should be hidden after toggle")
 
 
-func test_toggle_button_updates_text_to_close() -> void:
+func test_toggle_button_updates_icon_when_visible() -> void:
 	_game._play_ctrl.set_toolbar_visible(false)
 	_game._play_ctrl._on_toolbar_toggle_pressed()
-	assert_eq(_game._toolbar_toggle_button.text, "▼", "should show down arrow when toolbar visible")
+	assert_eq(_game._toolbar_toggle_button.text, "", "button should use icon, not text")
+	assert_not_null(_game._toolbar_toggle_button.icon, "should have an icon when toolbar visible")
 
 
-func test_toggle_button_updates_text_to_hamburger() -> void:
+func test_toggle_button_updates_icon_when_hidden() -> void:
 	_game._play_ctrl.set_toolbar_visible(true)
 	_game._play_ctrl._on_toolbar_toggle_pressed()
-	assert_eq(_game._toolbar_toggle_button.text, "▲", "should show up arrow when toolbar hidden")
+	assert_eq(_game._toolbar_toggle_button.text, "", "button should use icon, not text")
+	assert_not_null(_game._toolbar_toggle_button.icon, "should have an icon when toolbar hidden")
 
 
 func test_toggle_updates_play_buttons_bar_visibility() -> void:

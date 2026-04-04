@@ -80,7 +80,8 @@ func build_ui() -> void:
 	_ui_label_pairs.append([title_label, "Options"])
 
 	_close_button = Button.new()
-	_close_button.text = "✕"
+	_close_button.icon = GameTheme.create_close_icon(UIScale.scale(24), Color.WHITE)
+	_close_button.text = ""
 	_close_button.pressed.connect(_on_close)
 	GameTheme.apply_close_style(_close_button)
 	title_bar.add_child(_close_button)

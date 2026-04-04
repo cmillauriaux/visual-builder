@@ -55,9 +55,9 @@ func build_ui() -> void:
 	header.add_child(_title_label)
 
 	_close_btn = Button.new()
-	_close_btn.text = "✕"
+	_close_btn.icon = GameTheme.create_close_icon(UIScale.scale(24), Color.WHITE)
+	_close_btn.text = ""
 	_close_btn.custom_minimum_size = Vector2(UIScale.scale(50), UIScale.scale(50))
-	_close_btn.add_theme_font_size_override("font_size", UIScale.scale(32))
 	_close_btn.pressed.connect(func(): close_pressed.emit())
 	GameTheme.apply_close_style(_close_btn)
 	header.add_child(_close_btn)

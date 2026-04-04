@@ -194,8 +194,8 @@ static func _build_play_buttons_bar(game: Control) -> void:
 
 	# Toggle button — inside the dialogue panel, top-right aligned with panel border
 	game._toolbar_toggle_button = Button.new()
-	game._toolbar_toggle_button.text = "▼"
-	game._toolbar_toggle_button.add_theme_font_size_override("font_size", UIScale.scale(16))
+	game._toolbar_toggle_button.icon = GameTheme.create_arrow_icon(roundi(14 * s), GameTheme.COLOR_BUTTON_TEXT, true)
+	game._toolbar_toggle_button.text = ""
 	game._toolbar_toggle_button.visible = false
 	game._toolbar_toggle_button.z_index = SequenceVisualEditorScript.UI_OVERLAY_Z
 	game._toolbar_toggle_button.mouse_filter = Control.MOUSE_FILTER_STOP

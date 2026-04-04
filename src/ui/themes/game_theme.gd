@@ -108,6 +108,8 @@ static func _setup_option_button(theme: Theme, story_ui_path: String = "") -> vo
 	theme.set_color("font_hover_color", "OptionButton", COLOR_BUTTON_TEXT)
 	theme.set_color("font_pressed_color", "OptionButton", Color("#5C3A1E"))
 	theme.set_font_size("font_size", "OptionButton", UIScale.scale(24))
+	# Flèche déroulante générée programmatiquement (compatible web sans fallback police)
+	theme.set_icon("arrow", "OptionButton", create_arrow_icon(UIScale.scale(14), COLOR_BUTTON_TEXT, true))
 
 
 static func _setup_panel_container(theme: Theme, story_ui_path: String = "") -> void:
@@ -312,3 +314,36 @@ static func _make_panel_stylebox(tex: Texture2D) -> StyleBoxTexture:
 	style.axis_stretch_horizontal = StyleBoxTexture.AXIS_STRETCH_MODE_TILE_FIT
 	style.axis_stretch_vertical = StyleBoxTexture.AXIS_STRETCH_MODE_TILE_FIT
 	return style
+
+
+# --- Icônes générées programmatiquement (compatibles web sans fallback police) ---
+
+## Génère une icône X (fermer) comme ImageTexture.
+static func create_close_icon(size: int, color: Color) -> ImageTexture:
+	var img := Image.create_empty(size, size, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var thickness := maxi(1, roundi(size * 0.15))
+	for i in range(size):
+		for t in range(-thickness, thickness + 1):
+			var j := i + t
+			if j >= 0 and j < size:
+				img.set_pixel(i, j, color)
+				img.set_pixel(size - 1 - i, j, color)
+	return ImageTexture.create_from_image(img)
+
+
+## Génère une icône flèche (triangle) comme ImageTexture.
+## pointing_down=true → ▼ (base en haut), false → ▲ (base en bas).
+static func create_arrow_icon(size: int, color: Color, pointing_down: bool) -> ImageTexture:
+	var img := Image.create_empty(size, size, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var cx := size / 2
+	for y in range(size):
+		var progress: float = float(y) / maxf(size - 1, 1)
+		if pointing_down:
+			progress = 1.0 - progress
+		var half := roundi(progress * cx)
+		for x in range(cx - half, cx + half + 1):
+			if x >= 0 and x < size:
+				img.set_pixel(x, y, color)
+	return ImageTexture.create_from_image(img)
