@@ -591,3 +591,191 @@ func test_patch_ios_finds_sibling_xcodeproj():
 	var patched = FileAccess.get_file_as_string(base_path + ".xcodeproj/project.pbxproj")
 	assert_true(patched.find("LD_CLASSIC_2620") >= 0, "Should patch sibling xcodeproj with LD_CLASSIC for Xcode 26")
 	service._remove_dir_recursive(temp_dir)
+
+
+# --- Tests _convert_images_to_webp ---
+
+func _create_test_image(path: String, width: int = 64, height: int = 64, has_alpha: bool = false) -> void:
+	var img = Image.create(width, height, false, Image.FORMAT_RGBA8 if has_alpha else Image.FORMAT_RGB8)
+	img.fill(Color(0.5, 0.3, 0.1, 0.8 if has_alpha else 1.0))
+	var ext = path.get_extension().to_lower()
+	if ext == "png":
+		img.save_png(path)
+	elif ext == "jpg" or ext == "jpeg":
+		img.save_jpg(path)
+	elif ext == "webp":
+		img.save_webp(path, true, 0.85)
+
+
+func _create_webp_test_dir() -> String:
+	var temp_dir = ProjectSettings.globalize_path("user://test_webp_" + str(Time.get_ticks_msec()))
+	DirAccess.make_dir_recursive_absolute(temp_dir + "/assets/backgrounds")
+	DirAccess.make_dir_recursive_absolute(temp_dir + "/assets/foregrounds")
+	DirAccess.make_dir_recursive_absolute(temp_dir + "/chapters/ch1/scenes")
+	return temp_dir
+
+
+func test_convert_images_to_webp_converts_png():
+	var service = ExportServiceScript.new()
+	var temp_dir = _create_webp_test_dir()
+	var log_path = temp_dir + "/test.log"
+	var f = FileAccess.open(log_path, FileAccess.WRITE)
+	f.close()
+
+	# Créer un PNG de test
+	_create_test_image(temp_dir + "/assets/backgrounds/forest.png", 128, 128)
+
+	# Créer un YAML qui le référence
+	f = FileAccess.open(temp_dir + "/chapters/ch1/scenes/s1.yaml", FileAccess.WRITE)
+	f.store_string('sequences:\n  - background: "assets/backgrounds/forest.png"\n')
+	f.close()
+
+	service._convert_images_to_webp(temp_dir, log_path)
+
+	# Le PNG doit avoir été supprimé
+	assert_false(FileAccess.file_exists(temp_dir + "/assets/backgrounds/forest.png"), "PNG should be deleted")
+	# Le WebP doit exister
+	assert_true(FileAccess.file_exists(temp_dir + "/assets/backgrounds/forest.webp"), "WebP should be created")
+	# Le WebP doit être chargeable
+	var img = Image.new()
+	assert_eq(img.load(temp_dir + "/assets/backgrounds/forest.webp"), OK, "WebP should be loadable")
+
+	service._remove_dir_recursive(temp_dir)
+
+
+func test_convert_images_to_webp_converts_jpg():
+	var service = ExportServiceScript.new()
+	var temp_dir = _create_webp_test_dir()
+	var log_path = temp_dir + "/test.log"
+	var f = FileAccess.open(log_path, FileAccess.WRITE)
+	f.close()
+
+	_create_test_image(temp_dir + "/assets/foregrounds/hero.jpg", 64, 64)
+
+	f = FileAccess.open(temp_dir + "/chapters/ch1/scenes/s1.yaml", FileAccess.WRITE)
+	f.store_string('sequences:\n  - foregrounds:\n      - image: "assets/foregrounds/hero.jpg"\n')
+	f.close()
+
+	service._convert_images_to_webp(temp_dir, log_path)
+
+	assert_false(FileAccess.file_exists(temp_dir + "/assets/foregrounds/hero.jpg"), "JPG should be deleted")
+	assert_true(FileAccess.file_exists(temp_dir + "/assets/foregrounds/hero.webp"), "WebP should be created")
+
+	service._remove_dir_recursive(temp_dir)
+
+
+func test_convert_images_to_webp_skips_existing_webp():
+	var service = ExportServiceScript.new()
+	var temp_dir = _create_webp_test_dir()
+	var log_path = temp_dir + "/test.log"
+	var f = FileAccess.open(log_path, FileAccess.WRITE)
+	f.close()
+
+	_create_test_image(temp_dir + "/assets/backgrounds/sky.webp", 64, 64)
+
+	# Mémoriser la taille originale
+	var fa = FileAccess.open(temp_dir + "/assets/backgrounds/sky.webp", FileAccess.READ)
+	var original_size = fa.get_length()
+	fa.close()
+
+	service._convert_images_to_webp(temp_dir, log_path)
+
+	# Le fichier doit toujours exister et ne pas avoir été re-converti
+	assert_true(FileAccess.file_exists(temp_dir + "/assets/backgrounds/sky.webp"), "WebP should still exist")
+	fa = FileAccess.open(temp_dir + "/assets/backgrounds/sky.webp", FileAccess.READ)
+	assert_eq(fa.get_length(), original_size, "WebP size should be unchanged (not re-converted)")
+	fa.close()
+
+	service._remove_dir_recursive(temp_dir)
+
+
+func test_convert_images_to_webp_updates_yaml_refs():
+	var service = ExportServiceScript.new()
+	var temp_dir = _create_webp_test_dir()
+	var log_path = temp_dir + "/test.log"
+	var f = FileAccess.open(log_path, FileAccess.WRITE)
+	f.close()
+
+	_create_test_image(temp_dir + "/assets/backgrounds/forest.png", 64, 64)
+	_create_test_image(temp_dir + "/assets/foregrounds/hero.png", 64, 64, true)
+
+	f = FileAccess.open(temp_dir + "/chapters/ch1/scenes/s1.yaml", FileAccess.WRITE)
+	f.store_string('sequences:\n  - uuid: "seq1"\n    background: "assets/backgrounds/forest.png"\n    foregrounds:\n      - image: "assets/foregrounds/hero.png"\n    dialogues:\n      - text: "Hello world"\n')
+	f.close()
+
+	service._convert_images_to_webp(temp_dir, log_path)
+
+	var content = FileAccess.get_file_as_string(temp_dir + "/chapters/ch1/scenes/s1.yaml")
+	assert_true(content.find("forest.webp") >= 0, "YAML should reference forest.webp")
+	assert_true(content.find("hero.webp") >= 0, "YAML should reference hero.webp")
+	assert_true(content.find("forest.png") < 0, "YAML should no longer reference forest.png")
+	assert_true(content.find("hero.png") < 0, "YAML should no longer reference hero.png")
+	# Le texte ne doit pas être modifié
+	assert_true(content.find("Hello world") >= 0, "Dialogue text should be preserved")
+
+	service._remove_dir_recursive(temp_dir)
+
+
+func test_convert_images_to_webp_updates_blink_manifest():
+	var service = ExportServiceScript.new()
+	var temp_dir = _create_webp_test_dir()
+	var log_path = temp_dir + "/test.log"
+	var f = FileAccess.open(log_path, FileAccess.WRITE)
+	f.close()
+
+	_create_test_image(temp_dir + "/assets/foregrounds/hero_smile.png", 64, 64, true)
+	_create_test_image(temp_dir + "/assets/foregrounds/hero_smile_blink.png", 64, 64, true)
+
+	f = FileAccess.open(temp_dir + "/assets/foregrounds/blink_manifest.yaml", FileAccess.WRITE)
+	f.store_string("blinks:\n  hero_smile.png: hero_smile_blink.png\n")
+	f.close()
+
+	service._convert_images_to_webp(temp_dir, log_path)
+
+	var content = FileAccess.get_file_as_string(temp_dir + "/assets/foregrounds/blink_manifest.yaml")
+	assert_true(content.find("hero_smile.webp") >= 0, "Blink manifest key should be .webp")
+	assert_true(content.find("hero_smile_blink.webp") >= 0, "Blink manifest value should be .webp")
+	assert_true(content.find(".png") < 0, "Blink manifest should have no .png references")
+
+	service._remove_dir_recursive(temp_dir)
+
+
+func test_find_image_files_recursive_includes_webp():
+	var service = ExportServiceScript.new()
+	var temp_dir = _create_webp_test_dir()
+
+	_create_test_image(temp_dir + "/assets/backgrounds/a.png", 8, 8)
+	_create_test_image(temp_dir + "/assets/backgrounds/b.jpg", 8, 8)
+	_create_test_image(temp_dir + "/assets/backgrounds/c.webp", 8, 8)
+
+	var files = service._find_image_files_recursive(temp_dir)
+	var names: Array = []
+	for p in files:
+		names.append(p.get_file())
+
+	assert_true("a.png" in names, "Should find PNG")
+	assert_true("b.jpg" in names, "Should find JPG")
+	assert_true("c.webp" in names, "Should find WebP")
+
+	service._remove_dir_recursive(temp_dir)
+
+
+func test_resize_story_images_handles_webp():
+	var service = ExportServiceScript.new()
+	var temp_dir = _create_webp_test_dir()
+	var log_path = temp_dir + "/test.log"
+	var f = FileAccess.open(log_path, FileAccess.WRITE)
+	f.close()
+
+	_create_test_image(temp_dir + "/assets/backgrounds/sky.webp", 128, 128)
+
+	service._resize_story_images(temp_dir, 2, log_path)
+
+	# Le fichier doit rester en WebP
+	assert_true(FileAccess.file_exists(temp_dir + "/assets/backgrounds/sky.webp"), "WebP should still exist after resize")
+	var img = Image.new()
+	img.load(temp_dir + "/assets/backgrounds/sky.webp")
+	assert_eq(img.get_width(), 64, "Width should be halved")
+	assert_eq(img.get_height(), 64, "Height should be halved")
+
+	service._remove_dir_recursive(temp_dir)

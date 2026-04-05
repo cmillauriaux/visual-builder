@@ -8,6 +8,8 @@ extends RefCounted
 
 class_name ExportService
 
+const WEBP_QUALITY := 0.85
+
 ## Résultat d'une tentative d'exportation.
 class ExportResult:
 	var success: bool = false
@@ -106,6 +108,11 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 	elif quality == "ultrasd":
 		_resize_story_images(abs_temp_story, 4, log_path)
 
+	# 3b-bis. Convertir PNG/JPG → WebP (réduction ~70-80%)
+	var webp_enabled: bool = export_options.get("webp_conversion", true)
+	if webp_enabled:
+		_convert_images_to_webp(abs_temp_story, log_path)
+
 	# 3c. Optimiser les fichiers audio pour le web (si ffmpeg est disponible)
 	if platform == "web":
 		_optimize_audio_files(abs_temp_story, log_path)
@@ -138,6 +145,11 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 	# Le script headless a besoin que le projet soit importé pour résoudre les preload().
 	_append_log(log_path, "→ Import minimal du projet temporaire...")
 	OS.execute(godot_bin, ["--path", abs_temp_project, "--headless", "--import"], [], true)
+
+	# 4b. Remplacer les .import/.ctex des images par importer="keep" pour inclure
+	# les fichiers bruts dans le PCK (les .ctex sont 4-7x plus lourds).
+	if webp_enabled:
+		_strip_image_imports(abs_temp_story, abs_temp_project, log_path)
 
 	_append_log(log_path, "→ Réécriture des chemins assets...")
 	var rewrite_args = ["--path", abs_temp_project, "--headless", "--script", "res://src/export/rewrite_runner.gd", "--", "--story-folder", "res://story", "--new-base", "res://story"]
@@ -242,12 +254,11 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 		preset_content = preset_content.replace("export_filter=\"selected_scenes\"", "export_filter=\"all_resources\"")
 
 		if preset_content.find("include_filter=\"") != -1:
-			if preset_content.find("*.yaml") == -1:
-				preset_content = preset_content.replace("include_filter=\"", "include_filter=\"*.yaml,")
-			if preset_content.find("*.json") == -1:
-				preset_content = preset_content.replace("include_filter=\"", "include_filter=\"*.json,")
+			for ext in ["*.yaml", "*.json", "*.webp", "*.png", "*.jpg"]:
+				if preset_content.find(ext) == -1:
+					preset_content = preset_content.replace("include_filter=\"", "include_filter=\"" + ext + ",")
 		else:
-			preset_content = preset_content.replace("[preset.0]", "[preset.0]\ninclude_filter=\"*.yaml, *.json\"")
+			preset_content = preset_content.replace("[preset.0]", "[preset.0]\ninclude_filter=\"*.yaml,*.json,*.webp,*.png,*.jpg\"")
 		# Injecter les platform_settings de la story dans le preset
 		var plat_cfg: Dictionary = story.platform_settings.get(platform, {}) if story.get("platform_settings") != null else {}
 		if platform == "ios":
@@ -328,6 +339,8 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 			f_headers.store_line("/*.pck")
 			f_headers.store_line("  Cache-Control: public, max-age=31536000, immutable")
 			f_headers.store_line("/*.png")
+			f_headers.store_line("  Cache-Control: public, max-age=86400")
+			f_headers.store_line("/*.webp")
 			f_headers.store_line("  Cache-Control: public, max-age=86400")
 			f_headers.close()
 			_append_log(log_path, "→ Fichier _headers créé (COOP/COEP + cache)")
@@ -1000,11 +1013,133 @@ func _resize_story_images(story_dir: String, divisor: int, log_path: String) -> 
 		var new_h = max(1, img.get_height() / divisor)
 		img.resize(new_w, new_h, Image.INTERPOLATE_LANCZOS)
 		var ext = path.get_extension().to_lower()
-		if ext == "png":
+		if ext == "webp":
+			img.save_webp(path, true, WEBP_QUALITY)
+		elif ext == "png":
 			img.save_png(path)
 		else:
 			img.save_jpg(path)
 		_append_log(log_path, "  → %s (%dx%d)" % [path.get_file(), new_w, new_h])
+
+
+func _convert_images_to_webp(story_dir: String, log_path: String) -> void:
+	var files = _find_image_files_recursive(story_dir)
+	if files.is_empty():
+		return
+
+	_append_log(log_path, "→ Conversion WebP (%d images, qualité %.0f%%)..." % [files.size(), WEBP_QUALITY * 100])
+
+	var total_original_size := 0
+	var total_webp_size := 0
+	var converted_count := 0
+	var conversions: Dictionary = {}  # old_filename -> new_filename
+
+	for path in files:
+		var ext = path.get_extension().to_lower()
+		if ext == "webp":
+			continue
+
+		var original_size := 0
+		var fa = FileAccess.open(path, FileAccess.READ)
+		if fa:
+			original_size = fa.get_length()
+			fa.close()
+
+		var img = Image.new()
+		if img.load(path) != OK:
+			_append_log(log_path, "  ⚠ Impossible de charger : " + path.get_file())
+			continue
+
+		var webp_path = path.get_basename() + ".webp"
+		var err = img.save_webp(webp_path, true, WEBP_QUALITY)
+		if err != OK:
+			_append_log(log_path, "  ⚠ Échec conversion : " + path.get_file())
+			continue
+
+		DirAccess.remove_absolute(path)
+		conversions[path.get_file()] = webp_path.get_file()
+
+		var new_size := 0
+		var fa2 = FileAccess.open(webp_path, FileAccess.READ)
+		if fa2:
+			new_size = fa2.get_length()
+			fa2.close()
+
+		total_original_size += original_size
+		total_webp_size += new_size
+		converted_count += 1
+
+	if converted_count > 0:
+		_replace_filenames_in_yaml(story_dir, conversions, log_path)
+
+	if total_original_size > 0:
+		var savings = 100.0 * (1.0 - float(total_webp_size) / float(total_original_size))
+		_append_log(log_path, "  → %d images converties : %.1f Mo → %.1f Mo (−%.0f%%)" % [
+			converted_count,
+			total_original_size / 1048576.0,
+			total_webp_size / 1048576.0,
+			savings
+		])
+
+
+func _replace_filenames_in_yaml(story_dir: String, conversions: Dictionary, log_path: String) -> void:
+	var yaml_files = _find_yaml_files_recursive(story_dir)
+	var modified_count := 0
+
+	for yaml_path in yaml_files:
+		var content = FileAccess.get_file_as_string(yaml_path)
+		var original = content
+
+		for old_name in conversions:
+			content = content.replace(old_name, conversions[old_name])
+
+		if content != original:
+			var f = FileAccess.open(yaml_path, FileAccess.WRITE)
+			if f:
+				f.store_string(content)
+				f.close()
+				modified_count += 1
+
+	if modified_count > 0:
+		_append_log(log_path, "  → %d fichier(s) YAML mis à jour (.png/.jpg → .webp)" % modified_count)
+
+
+## Remplace les .import des images story par des stubs "keep" et supprime les .ctex.
+## Godot avec importer="keep" inclut le fichier source tel quel dans le PCK,
+## ce qui est 4-7x plus léger que les .ctex générés par l'import standard.
+func _strip_image_imports(story_dir: String, project_dir: String, log_path: String) -> void:
+	var image_files := _find_image_files_recursive(story_dir)
+	var stripped := 0
+
+	for img_path in image_files:
+		var import_path = img_path + ".import"
+		if FileAccess.file_exists(import_path):
+			# Supprimer le .ctex référencé dans le .import
+			var fa = FileAccess.open(import_path, FileAccess.READ)
+			if fa:
+				var text = fa.get_as_text()
+				fa.close()
+				for line in text.split("\n"):
+					var s = line.strip_edges()
+					if s.begins_with("path="):
+						var val = s.substr(5).strip_edges()
+						if val.begins_with("\"") and val.ends_with("\""):
+							val = val.substr(1, val.length() - 2)
+						if val.begins_with("res://"):
+							var abs_ctex = project_dir + "/" + val.substr("res://".length())
+							if FileAccess.file_exists(abs_ctex):
+								DirAccess.remove_absolute(abs_ctex)
+						break
+
+			# Réécrire le .import avec importer="keep" pour empêcher la ré-import
+			var f = FileAccess.open(import_path, FileAccess.WRITE)
+			if f:
+				f.store_string("[remap]\n\nimporter=\"keep\"\ntype=\"\"\npath=\"\"\n")
+				f.close()
+			stripped += 1
+
+	if stripped > 0:
+		_append_log(log_path, "→ %d images converties en import 'keep' (inclusion brute, .ctex supprimés)" % stripped)
 
 
 func _find_image_files_recursive(dir_path: String) -> Array:
@@ -1021,7 +1156,7 @@ func _find_image_files_recursive(dir_path: String) -> Array:
 				result.append_array(_find_image_files_recursive(full_path))
 			else:
 				var ext = file_name.get_extension().to_lower()
-				if ext == "png" or ext == "jpg" or ext == "jpeg":
+				if ext == "png" or ext == "jpg" or ext == "jpeg" or ext == "webp":
 					result.append(full_path)
 		file_name = dir.get_next()
 	return result

@@ -178,9 +178,14 @@ func _init():
 	quit(0)
 
 
-## Résout les fichiers importés d'un asset : .import metadata + .ctex/.mp3str importé.
-## Les fichiers bruts (.png, .mp3) ne sont PAS inclus car Godot utilise uniquement
-## les versions importées au runtime.
+## Extensions d'images pouvant être incluses en brut dans le PCK (chargées via TextureLoader).
+## Godot importe ces formats en .ctex (4-7x plus lourd), donc on les inclut directement.
+const RAW_IMAGE_EXTENSIONS := ["webp", "png", "jpg", "jpeg"]
+
+
+## Résout les fichiers à inclure dans le PCK pour un asset donné.
+## Pour les images : inclut le fichier brut directement (WebP/PNG/JPG).
+## Pour les autres (audio) : inclut le .import + .ctex/.mp3str comme avant.
 ## Retourne un Array de [res_path, abs_path].
 func _resolve_asset_files(asset_path: String, abs_story: String) -> Array:
 	var files := []  # Array of [res_path, abs_path]
@@ -190,13 +195,19 @@ func _resolve_asset_files(asset_path: String, abs_story: String) -> Array:
 	var abs_raw = abs_story + "/" + norm_path
 	var res_raw = "res://story/" + norm_path
 
-	# 1. Fichier .import (ex: assets/backgrounds/image.png.import)
+	# Images : inclure le fichier brut directement (pas de .import/.ctex)
+	var ext = norm_path.get_extension().to_lower()
+	if ext in RAW_IMAGE_EXTENSIONS:
+		if FileAccess.file_exists(abs_raw):
+			files.append([res_raw, abs_raw])
+		return files
+
+	# Autres assets (audio, etc.) : inclure .import + fichier importé
 	var abs_import = abs_raw + ".import"
 	var res_import = res_raw + ".import"
 	if FileAccess.file_exists(abs_import):
 		files.append([res_import, abs_import])
 
-		# 3. Parser le .import pour trouver le fichier importé (.ctex, .mp3str, etc.)
 		var import_file = FileAccess.open(abs_import, FileAccess.READ)
 		if import_file:
 			var import_text = import_file.get_as_text()
@@ -205,7 +216,6 @@ func _resolve_asset_files(asset_path: String, abs_story: String) -> Array:
 				var stripped = line.strip_edges()
 				if stripped.begins_with("path="):
 					var value = stripped.substr(5).strip_edges()
-					# Enlever les guillemets
 					if value.begins_with("\"") and value.ends_with("\""):
 						value = value.substr(1, value.length() - 2)
 					if value.begins_with("res://"):
@@ -214,7 +224,7 @@ func _resolve_asset_files(asset_path: String, abs_story: String) -> Array:
 							files.append([value, abs_imported])
 						else:
 							print("    Warning: imported file not found: %s" % abs_imported)
-					break  # Un seul path= suffit
+					break
 
 	return files
 

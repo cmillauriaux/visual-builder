@@ -24,6 +24,7 @@ var _path_edit: LineEdit
 var _browse_button: Button
 var _status_label: Label
 var _file_dialog: FileDialog
+var _webp_check: CheckBox
 var _export_options_container: VBoxContainer
 var _export_option_checks: Dictionary = {}  # key -> CheckBox
 
@@ -123,6 +124,13 @@ func _init():
 	_browse_button.text = tr("Parcourir...")
 	_browse_button.pressed.connect(_on_browse_pressed)
 	hbox.add_child(_browse_button)
+
+	# Optimisation WebP
+	_webp_check = CheckBox.new()
+	_webp_check.name = "WebpCheck"
+	_webp_check.text = tr("Convertir les images en WebP (réduction ~80%)")
+	_webp_check.button_pressed = true
+	vbox.add_child(_webp_check)
 
 	# Options d'export des plugins
 	_export_options_container = VBoxContainer.new()
@@ -261,6 +269,7 @@ func _on_dir_selected(dir: String) -> void:
 
 func get_export_options() -> Dictionary:
 	var result: Dictionary = {}
+	result["webp_conversion"] = _webp_check.button_pressed
 	for key in _export_option_checks:
 		result[key] = _export_option_checks[key].button_pressed
 	return result
