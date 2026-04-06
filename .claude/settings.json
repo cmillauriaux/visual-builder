@@ -3,7 +3,9 @@
     "allow": [
       "Bash(xargs grep:*)",
       "Bash(find /c/Projets/visual-builder -path */i18n/*.yaml -type f)",
-      "Bash(find /c/Projets/visual-builder -name *.manifest.json -o -name manifest.json)"
+      "Bash(find /c/Projets/visual-builder -name *.manifest.json -o -name manifest.json)",
+      "Bash(grep -l \"anchor_bg\\\\|anchor_fg\\\\|foregrounds:\" c:Projetsvisual-builderstoriesepreuve-du-heroschaptersd489b81b-c6e1-4e73-2536-91fa573fd14ascenes*.yaml)",
+      "Bash(git config:*)"
     ]
   },
   "hooks": {

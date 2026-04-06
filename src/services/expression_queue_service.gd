@@ -12,14 +12,14 @@ var _current_index: int = -1
 var _cancelled: bool = false
 
 
-func build_queue(expressions: Array, prefix: String) -> void:
+func build_queue(expressions: Array, prefix: String, hint: String = "") -> void:
 	_items.clear()
 	_current_index = -1
 	_cancelled = false
 	for expr in expressions:
 		_items.append({
 			"expression": expr,
-			"prompt": _build_prompt(expr),
+			"prompt": _build_prompt(expr, hint),
 			"filename": _build_filename(prefix, expr),
 			"status": ItemStatus.PENDING,
 			"image": null,
@@ -101,8 +101,13 @@ func remove_item(index: int) -> void:
 		_current_index = _items.size() - 1
 
 
-static func _build_prompt(expression: String) -> String:
-	return "keep the same person, only change facial expression to %s, adjust face muscles only, keep all colors and details of the original image, keep exactly the same eye color as the original image, do not recolor irises, light color correction only" % expression
+static func _build_prompt(expression: String, hint: String = "") -> String:
+	var person_part: String
+	if hint == "":
+		person_part = "keep the same person"
+	else:
+		person_part = "keep the same person (%s)" % hint
+	return "%s, only change facial expression to %s, adjust face muscles only, keep all colors and details of the original image, keep exactly the same eye color as the original image, do not recolor irises, light color correction only" % [person_part, expression]
 
 
 static func _build_filename(prefix: String, expression: String) -> String:

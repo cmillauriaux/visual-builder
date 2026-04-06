@@ -47,3 +47,31 @@ func test_build_prompt():
 		svc._build_prompt("smile"),
 		"keep the same person, only change facial expression to smile, adjust face muscles only, keep all colors and details of the original image, keep exactly the same eye color as the original image, do not recolor irises, light color correction only"
 	)
+
+func test_build_prompt_with_empty_hint():
+	var svc = ExpressionQueueServiceScript
+	assert_eq(
+		svc._build_prompt("smile", ""),
+		"keep the same person, only change facial expression to smile, adjust face muscles only, keep all colors and details of the original image, keep exactly the same eye color as the original image, do not recolor irises, light color correction only"
+	)
+
+func test_build_prompt_with_hint():
+	var svc = ExpressionQueueServiceScript
+	assert_eq(
+		svc._build_prompt("smile", "cute girl"),
+		"keep the same person (cute girl), only change facial expression to smile, adjust face muscles only, keep all colors and details of the original image, keep exactly the same eye color as the original image, do not recolor irises, light color correction only"
+	)
+
+func test_build_queue_with_hint():
+	var svc = ExpressionQueueServiceScript.new()
+	svc.build_queue(["smile", "sad"], "hero", "cute girl")
+	assert_eq(svc.get_total(), 2)
+	assert_string_contains(svc.get_items()[0]["prompt"], "keep the same person (cute girl)")
+	assert_string_contains(svc.get_items()[1]["prompt"], "keep the same person (cute girl)")
+
+func test_build_queue_without_hint():
+	var svc = ExpressionQueueServiceScript.new()
+	svc.build_queue(["smile"], "hero")
+	assert_eq(svc.get_total(), 1)
+	assert_string_contains(svc.get_items()[0]["prompt"], "keep the same person,")
+	assert_false(svc.get_items()[0]["prompt"].contains("("))
