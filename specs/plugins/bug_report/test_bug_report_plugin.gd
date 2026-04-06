@@ -28,7 +28,7 @@ func _create_context_with_navigation(email: String = "bugs@test.com") -> RefCoun
 	var ctx = _create_context(email)
 	ctx.current_chapter = _FakeChapter.new("Chapitre 1")
 	ctx.current_scene = _FakeScene.new("Scène intro")
-	ctx.current_sequence = _FakeSequence.new("Dialogue initial")
+	ctx.current_sequence = _FakeSequence.new("Dialogue initial", "seq_intro")
 	return ctx
 
 
@@ -131,87 +131,147 @@ func test_system_info_with_chapter():
 	_free_context(ctx)
 
 
-# ── Tests génération body ────────────────────────────────────────────────────
+# ── Tests endpoint URL ──────────────────────────────────────────────────────
 
-func test_mail_body_contains_comment():
+func test_endpoint_url_contains_base():
+	var ctx = _create_context("bugs@test.com")
+	_plugin.on_game_ready(ctx)
+	var url = _plugin._build_endpoint_url()
+	assert_true(url.begins_with("https://formsubmit.co/ajax/"))
+	_free_context(ctx)
+
+
+func test_endpoint_url_contains_email():
+	var ctx = _create_context("bugs@test.com")
+	_plugin.on_game_ready(ctx)
+	var url = _plugin._build_endpoint_url()
+	assert_eq(url, "https://formsubmit.co/ajax/bugs@test.com")
+	_free_context(ctx)
+
+
+# ── Tests génération JSON body ──────────────────────────────────────────────
+
+func test_json_body_contains_comment():
 	var ctx = _create_context()
-	var body = _plugin._build_mail_body(ctx, "Le jeu plante quand je clique")
-	assert_string_contains(body, "Commentaire du joueur :")
-	assert_string_contains(body, "Le jeu plante quand je clique")
+	var json_str = _plugin._build_json_body(ctx, "Le jeu plante quand je clique")
+	var data: Dictionary = JSON.parse_string(json_str)
+	assert_eq(data["Commentaire"], "Le jeu plante quand je clique")
 	_free_context(ctx)
 
 
-func test_mail_body_contains_system_info():
+func test_json_body_contains_system_info():
 	var ctx = _create_context()
-	var body = _plugin._build_mail_body(ctx, "Bug")
-	assert_string_contains(body, "--- Informations système ---")
-	assert_string_contains(body, "OS : ")
+	var json_str = _plugin._build_json_body(ctx, "Bug")
+	var data: Dictionary = JSON.parse_string(json_str)
+	assert_eq(data["OS"], OS.get_name())
+	assert_eq(data["Version du moteur"], Engine.get_version_info().string)
 	_free_context(ctx)
 
 
-# ── Tests génération mailto URL ──────────────────────────────────────────────
-
-func test_mailto_url_starts_with_mailto():
-	var ctx = _create_context("bugs@test.com")
-	_plugin.on_game_ready(ctx)
-	var url = _plugin._build_mailto_url(ctx, "Test bug")
-	assert_true(url.begins_with("mailto:"))
-	_free_context(ctx)
-
-
-func test_mailto_url_contains_email():
-	var ctx = _create_context("bugs@test.com")
-	_plugin.on_game_ready(ctx)
-	var url = _plugin._build_mailto_url(ctx, "Test bug")
-	assert_string_contains(url, "bugs%40test.com")
-	_free_context(ctx)
-
-
-func test_mailto_url_contains_subject():
-	var ctx = _create_context("bugs@test.com")
-	_plugin.on_game_ready(ctx)
-	var url = _plugin._build_mailto_url(ctx, "Test")
-	assert_string_contains(url, "subject=")
-	assert_string_contains(url, "Bug%20Report")
-	_free_context(ctx)
-
-
-func test_mailto_url_contains_body():
-	var ctx = _create_context("bugs@test.com")
-	_plugin.on_game_ready(ctx)
-	var url = _plugin._build_mailto_url(ctx, "Mon commentaire")
-	assert_string_contains(url, "body=")
-	_free_context(ctx)
-
-
-# ── Tests subject ────────────────────────────────────────────────────────────
-
-func test_mail_subject_contains_story_info():
+func test_json_body_contains_subject():
 	var ctx = _create_context()
-	var subject = _plugin._build_mail_subject(ctx)
-	assert_string_contains(subject, "[Bug Report]")
-	assert_string_contains(subject, "Test Story")
-	assert_string_contains(subject, "v1.2.3")
+	var json_str = _plugin._build_json_body(ctx, "Test")
+	var data: Dictionary = JSON.parse_string(json_str)
+	assert_string_contains(data["_subject"], "[Bug Report]")
+	assert_string_contains(data["_subject"], "Test Story")
+	assert_string_contains(data["_subject"], "v1.2.3")
 	_free_context(ctx)
 
 
-func test_mail_subject_with_no_story():
+func test_json_body_contains_captcha_false():
+	var ctx = _create_context()
+	var json_str = _plugin._build_json_body(ctx, "Test")
+	var data: Dictionary = JSON.parse_string(json_str)
+	assert_eq(data["_captcha"], "false")
+	_free_context(ctx)
+
+
+func test_json_body_contains_template():
+	var ctx = _create_context()
+	var json_str = _plugin._build_json_body(ctx, "Test")
+	var data: Dictionary = JSON.parse_string(json_str)
+	assert_eq(data["_template"], "box")
+	_free_context(ctx)
+
+
+func test_json_body_contains_navigation_info():
+	var ctx = _create_context_with_navigation()
+	var json_str = _plugin._build_json_body(ctx, "Test")
+	var data: Dictionary = JSON.parse_string(json_str)
+	assert_eq(data["Chapitre"], "Chapitre 1")
+	assert_eq(data["Scène"], "Scène intro")
+	assert_eq(data["Séquence"], "Dialogue initial")
+	_free_context(ctx)
+
+
+func test_json_body_default_navigation():
+	var ctx = _create_context()
+	var json_str = _plugin._build_json_body(ctx, "Test")
+	var data: Dictionary = JSON.parse_string(json_str)
+	assert_eq(data["Chapitre"], "Aucun")
+	assert_eq(data["Scène"], "Aucune")
+	assert_eq(data["Séquence"], "Aucune")
+	_free_context(ctx)
+
+
+func test_json_body_with_no_story():
 	var ctx = GamePluginContextScript.new()
 	ctx.story = null
-	var subject = _plugin._build_mail_subject(ctx)
-	assert_string_contains(subject, "[Bug Report]")
+	var json_str = _plugin._build_json_body(ctx, "Test")
+	var data: Dictionary = JSON.parse_string(json_str)
+	assert_string_contains(data["_subject"], "[Bug Report]")
+	assert_eq(data["Commentaire"], "Test")
 
 
-# ── Tests URI encode ─────────────────────────────────────────────────────────
+# ── Tests sequence fallback ──────────────────────────────────────────────────
 
-func test_uri_encode_spaces():
-	var result = BugReportPlugin._uri_encode("hello world")
-	assert_eq(result, "hello%20world")
+func test_sequence_title_used_when_present():
+	var ctx = _create_context_with_navigation()
+	var info = _plugin._build_system_info(ctx)
+	assert_string_contains(info, "Séquence : Dialogue initial")
+	_free_context(ctx)
 
 
-func test_uri_encode_special_chars():
-	var result = BugReportPlugin._uri_encode("test@email.com")
-	assert_string_contains(result, "%40")
+func test_sequence_falls_back_to_seq_name():
+	var ctx = _create_context()
+	ctx.current_sequence = _FakeSequence.new("", "intro_scene")
+	var info = _plugin._build_system_info(ctx)
+	assert_string_contains(info, "Séquence : intro_scene")
+	_free_context(ctx)
+
+
+func test_sequence_falls_back_to_uuid():
+	var ctx = _create_context()
+	ctx.current_sequence = _FakeSequence.new("", "")
+	var info = _plugin._build_system_info(ctx)
+	assert_string_contains(info, "Séquence : fake-uuid-1234")
+	_free_context(ctx)
+
+
+# ── Tests game version from story ────────────────────────────────────────────
+
+func test_game_version_from_story():
+	var ctx = _create_context()
+	var version = _plugin._get_game_version(ctx)
+	assert_eq(version, "1.2.3")
+	_free_context(ctx)
+
+
+func test_game_version_fallback_when_no_story():
+	var ctx = GamePluginContextScript.new()
+	ctx.story = null
+	var version = _plugin._get_game_version(ctx)
+	# Falls back to ProjectSettings or "inconnue"
+	assert_true(version is String)
+
+
+# ── Tests fresh ctx ──────────────────────────────────────────────────────────
+
+func test_get_fresh_ctx_returns_ctx_when_no_method():
+	var ctx = _create_context()
+	var result = _plugin._get_fresh_ctx(ctx)
+	assert_eq(result, ctx)
+	_free_context(ctx)
 
 
 # ── Tests editor config ─────────────────────────────────────────────────────
@@ -288,6 +348,9 @@ class _FakeScene extends RefCounted:
 
 class _FakeSequence extends RefCounted:
 	var title: String = ""
+	var seq_name: String = ""
+	var uuid: String = "fake-uuid-1234"
 
-	func _init(p_title: String = "") -> void:
+	func _init(p_title: String = "", p_seq_name: String = "") -> void:
 		title = p_title
+		seq_name = p_seq_name

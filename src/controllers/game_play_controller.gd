@@ -48,6 +48,7 @@ var _skip_max_chapter_index: int = -1
 var _skip_max_scene_index: int = -1
 var _toolbar_visible: bool = true
 var _toolbar_toggle_button: Button = null
+var _plugin_toolbar: HBoxContainer = null
 var _voice_auto_play_connected: bool = false
 
 var _game_plugin_manager: Node = null
@@ -140,6 +141,8 @@ func setup(game: Control) -> void:
 	if game.get("_toolbar_toggle_button") != null:
 		_toolbar_toggle_button = game._toolbar_toggle_button
 		_toolbar_toggle_button.pressed.connect(_on_toolbar_toggle_pressed)
+	if game.get("_plugin_toolbar") != null:
+		_plugin_toolbar = game._plugin_toolbar
 	# Voice player for dialogue voice files
 	_voice_player = AudioStreamPlayer.new()
 	_voice_player.bus = "Voice"
@@ -583,7 +586,19 @@ func _is_advance_input(event: InputEvent) -> bool:
 	return false
 
 
+func _has_modal_overlay() -> bool:
+	if _game == null:
+		return false
+	for child in _game.get_children():
+		if child is ColorRect and child.visible and child.z_index >= 100:
+			return true
+	return false
+
+
 func _input(event: InputEvent) -> void:
+	if _has_modal_overlay():
+		return
+
 	if _is_showing_title:
 		if _is_advance_input(event):
 			_hide_title_screen()
@@ -603,6 +618,8 @@ func _input(event: InputEvent) -> void:
 			if _play_buttons_bar and _play_buttons_bar.visible and _play_buttons_bar.get_global_rect().has_point(mouse_pos):
 				return
 			if _toolbar_toggle_button and _toolbar_toggle_button.visible and _toolbar_toggle_button.get_global_rect().has_point(mouse_pos):
+				return
+			if _plugin_toolbar and _plugin_toolbar.visible and _plugin_toolbar.get_global_rect().has_point(mouse_pos):
 				return
 		if _auto_play:
 			_auto_play.stop_timer()

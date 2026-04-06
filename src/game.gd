@@ -1136,10 +1136,10 @@ func _setup_game_plugins() -> void:
 		return
 	var ctx = _build_game_plugin_context()
 	_play_ctrl._plugin_ctx = ctx
+	await _game_plugin_manager.dispatch_on_game_ready(ctx)
 	_game_plugin_manager.inject_toolbar_buttons(_plugin_toolbar, ctx)
 	_game_plugin_manager.inject_overlay_panels(
 		_plugin_overlay_left, _plugin_overlay_right, _plugin_overlay_top, ctx)
-	await _game_plugin_manager.dispatch_on_game_ready(ctx)
 
 
 func _on_plugin_chapter_entered(_chapter_name: String, _chapter_uuid: String) -> void:

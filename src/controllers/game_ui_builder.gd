@@ -453,14 +453,22 @@ static func _build_music_player(game: Control) -> void:
 static func _build_game_plugin_containers(game: Control) -> void:
 	var s := UIScale.get_scale()
 
-	# Container toolbar au-dessus du dialogue (HBoxContainer, aligné à gauche)
+	# Container toolbar à gauche du bouton Menu (HBoxContainer, aligné à droite)
+	var safe := _get_safe_area_margins()
+	var margin_top := maxf(10.0, safe["top"] + 4.0)
+	var margin_right := maxf(10.0, safe["right"] + 4.0)
+	var menu_btn_width := 130.0
+	var gap := 8.0
 	game._plugin_toolbar = HBoxContainer.new()
 	game._plugin_toolbar.visible = false
-	game._plugin_toolbar.alignment = BoxContainer.ALIGNMENT_BEGIN
-	game._plugin_toolbar.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	game._plugin_toolbar.offset_top = -roundi(188 * s)
-	game._plugin_toolbar.offset_bottom = -roundi(150 * s)
-	game._plugin_toolbar.offset_left = 3
+	game._plugin_toolbar.alignment = BoxContainer.ALIGNMENT_END
+	game._plugin_toolbar.add_theme_constant_override("separation", roundi(6 * s))
+	game._plugin_toolbar.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	game._plugin_toolbar.offset_right = -roundi((margin_right + menu_btn_width + gap) * s)
+	game._plugin_toolbar.offset_left = -roundi((margin_right + menu_btn_width + gap + 300) * s)
+	game._plugin_toolbar.offset_top = roundi(margin_top * s)
+	game._plugin_toolbar.offset_bottom = roundi((margin_top + 40) * s)
+	game._plugin_toolbar.z_index = SequenceVisualEditorScript.UI_OVERLAY_Z
 	game._plugin_toolbar.mouse_filter = Control.MOUSE_FILTER_PASS
 	game.add_child(game._plugin_toolbar)
 
