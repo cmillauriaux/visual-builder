@@ -52,6 +52,7 @@ var _detection_model: String = "bisenet"  # "bisenet" ou nom de fichier YOLO .pt
 var _detection_threshold: float = 0.3
 var _mask_filename: String = ""
 var _mask_bytes_data: PackedByteArray = PackedByteArray()
+var _inpaint_guidance: float = 30.0
 
 # --- Workflow template (Flux 2 Klein + BiRefNet) ---
 # Reproduit exactement Edit_Image_Transparent_API.json
@@ -536,6 +537,111 @@ const OUTPAINT_WORKFLOW_TEMPLATE: Dictionary = {
 	}
 }
 
+# --- Inpainting workflow template (Flux Fill + masque utilisateur) ---
+# Basé sur OUTPAINT_WORKFLOW_TEMPLATE sans ImagePadForOutpaint (nœud 44).
+# L'image source est câblée directement dans InpaintModelConditioning.pixels.
+# Le masque PNG généré par l'utilisateur est injecté dynamiquement.
+# Paramètres dynamiques : 17.inputs.image, 23.inputs.text, 3.inputs.seed/steps/denoise,
+#                         26.inputs.guidance, 38.inputs.mask=[final_mask_node,0]
+
+const INPAINT_FILL_WORKFLOW_TEMPLATE: Dictionary = {
+	"3": {
+		"class_type": "KSampler",
+		"inputs": {
+			"seed": 0,
+			"steps": 20,
+			"cfg": 0.7,
+			"sampler_name": "euler",
+			"scheduler": "normal",
+			"denoise": 1.0,
+			"model": ["39", 0],
+			"positive": ["38", 0],
+			"negative": ["38", 1],
+			"latent_image": ["38", 2]
+		}
+	},
+	"8": {
+		"class_type": "VAEDecode",
+		"inputs": {
+			"samples": ["3", 0],
+			"vae": ["32", 0]
+		}
+	},
+	"9": {
+		"class_type": "SaveImage",
+		"inputs": {
+			"filename_prefix": "Inpaint",
+			"images": ["8", 0]
+		}
+	},
+	"17": {
+		"class_type": "LoadImage",
+		"inputs": {
+			"image": ""
+		}
+	},
+	"23": {
+		"class_type": "CLIPTextEncode",
+		"inputs": {
+			"text": "",
+			"clip": ["34", 0]
+		}
+	},
+	"26": {
+		"class_type": "FluxGuidance",
+		"inputs": {
+			"guidance": 30.0,
+			"conditioning": ["23", 0]
+		}
+	},
+	"31": {
+		"class_type": "UNETLoader",
+		"inputs": {
+			"unet_name": "flux1-fill-dev.safetensors",
+			"weight_dtype": "default"
+		}
+	},
+	"32": {
+		"class_type": "VAELoader",
+		"inputs": {
+			"vae_name": "ae.safetensors"
+		}
+	},
+	"34": {
+		"class_type": "DualCLIPLoader",
+		"inputs": {
+			"clip_name1": "clip_l.safetensors",
+			"clip_name2": "t5xxl_fp16.safetensors",
+			"type": "flux",
+			"device": "default"
+		}
+	},
+	"38": {
+		"class_type": "InpaintModelConditioning",
+		"inputs": {
+			"noise_mask": false,
+			"positive": ["26", 0],
+			"negative": ["46", 0],
+			"vae": ["32", 0],
+			"pixels": ["17", 0],
+			"mask": ["ip:blur", 0]
+		}
+	},
+	"39": {
+		"class_type": "DifferentialDiffusion",
+		"inputs": {
+			"strength": 1,
+			"model": ["31", 0]
+		}
+	},
+	"46": {
+		"class_type": "ConditioningZeroOut",
+		"inputs": {
+			"conditioning": ["23", 0]
+		}
+	}
+}
+
 
 # --- Upscale / Enhance workflow template (z-image-turbo + RealESRGAN) ---
 # Base complète utilisée pour Upscale+Enhance. Les builders Upscale-only et
@@ -796,7 +902,7 @@ func build_workflow(filename: String, prompt_text: String, seed: int, remove_bac
 	if workflow_type == WorkflowType.EXPRESSION:
 		return _build_expression_workflow(filename, prompt_text, seed, remove_background, cfg, steps, denoise, negative_prompt, face_box_size, megapixels)
 	if workflow_type == WorkflowType.INPAINT:
-		return _build_inpaint_workflow(filename, _mask_filename, prompt_text, seed, remove_background, cfg, steps, denoise, negative_prompt, _mask_feather, megapixels, loras)
+		return _build_inpaint_workflow(filename, _mask_filename, prompt_text, seed, _inpaint_guidance, steps, denoise, negative_prompt, _mask_feather)
 	var wf = WORKFLOW_TEMPLATE.duplicate(true)
 	wf["76"]["inputs"]["image"] = filename
 	wf["75:74"]["inputs"]["text"] = prompt_text
@@ -889,101 +995,56 @@ func _build_expression_workflow(filename: String, prompt_text: String, seed: int
 	return wf
 
 
-func _build_inpaint_workflow(filename: String, mask_filename: String, prompt_text: String, seed: int, remove_background: bool, cfg: float, steps: int, denoise: float, negative_prompt: String, mask_feather: int, megapixels: float, loras: Array) -> Dictionary:
-	var wf = EXPRESSION_WORKFLOW_TEMPLATE.duplicate(true)
+func _build_inpaint_workflow(filename: String, mask_filename: String, prompt_text: String, seed: int, guidance: float, steps: int, denoise: float, negative_prompt: String, mask_feather: int) -> Dictionary:
+	var wf = INPAINT_FILL_WORKFLOW_TEMPLATE.duplicate(true)
+	wf["17"]["inputs"]["image"] = filename
+	wf["23"]["inputs"]["text"] = prompt_text
+	wf["3"]["inputs"]["seed"] = seed
+	wf["3"]["inputs"]["steps"] = steps
+	wf["3"]["inputs"]["denoise"] = denoise
+	wf["26"]["inputs"]["guidance"] = guidance
 
-	# Supprimer la détection de visage
-	wf.erase("99")
-	wf.erase("100")
-
-	# Charger le masque directement depuis un fichier PNG
 	wf["ip:mask"] = {
 		"class_type": "LoadImage",
-		"inputs": { "image": mask_filename }
+		"inputs": {"image": mask_filename}
 	}
-
-	# Convertir IMAGE → MASK (LoadImage output [0] est de type IMAGE, GrowMask attend MASK)
 	wf["ip:mask_convert"] = {
 		"class_type": "ImageToMask",
-		"inputs": { "image": ["ip:mask", 0], "channel": "red" }
+		"inputs": {"image": ["ip:mask", 0], "channel": "red"}
+	}
+	wf["ip:grow"] = {
+		"class_type": "GrowMask",
+		"inputs": {"expand": mask_feather, "tapered_corners": true, "mask": ["ip:mask_convert", 0]}
 	}
 
-	# GrowMask depuis le masque utilisateur
-	wf["101"]["inputs"]["mask"] = ["ip:mask_convert", 0]
-	wf["101"]["inputs"]["expand"] = mask_feather
-
-	# Fondu des bords du masque
 	var final_mask_node: String
 	if mask_feather <= 0:
-		wf.erase("102")
-		final_mask_node = "101"
+		final_mask_node = "ip:grow"
 	else:
-		var blur_kernel: int = min(99, max(3, mask_feather)) | 1  # toujours impair
+		var blur_kernel: int = min(99, max(3, mask_feather)) | 1
 		var blur_sigma: float = minf(50.0, maxf(1.0, mask_feather * 0.5))
-		wf["102"]["inputs"]["kernel_size"] = blur_kernel
-		wf["102"]["inputs"]["sigma"] = blur_sigma
-		final_mask_node = "102"
-
-	# Composite : recoller le résultat sur l'original avec le masque
-	wf["103"]["inputs"]["mask"] = [final_mask_node, 0]
-
-	# Bypasser ReferenceLatent : avec image source en contexte, Flux2 reproduit l'image
-	# entière et ignore le masque. Câbler CLIPTextEncode directement sur CFGGuider.
-	wf.erase("75:79:76")
-	wf.erase("75:79:77")
-	wf.erase("75:82")  # ConditioningZeroOut orphelin (était référencé par 75:79:76)
-	wf["75:63"]["inputs"]["positive"] = ["75:74", 0]
-	wf["75:63"]["inputs"]["negative"] = ["75:83", 0]
-
-	# SetLatentNoiseMask : le KSampler ne dénoise QUE dans la zone masquée
-	wf["set_noise_mask"] = {
-		"class_type": "SetLatentNoiseMask",
-		"inputs": {
-			"samples": ["75:79:78", 0],
-			"mask": [final_mask_node, 0]
+		wf["ip:blur"] = {
+			"class_type": "ImpactGaussianBlurMask",
+			"inputs": {"kernel_size": blur_kernel, "sigma": blur_sigma, "mask": ["ip:grow", 0]}
 		}
-	}
-	wf["75:64"]["inputs"]["latent_image"] = ["set_noise_mask", 0]
+		final_mask_node = "ip:blur"
 
-	# SplitSigmas pour inpainting : output[0] = sigmas élevés → le masque reçoit
-	# du bruit fort et la zone est vraiment régénérée (vs output[1] = sigmas faibles
-	# qui produit des changements imperceptibles)
-	var split_step = max(1, roundi(steps * denoise))
-	wf["split_sigmas"] = {
-		"class_type": "SplitSigmas",
-		"inputs": {
-			"sigmas": ["75:62", 0],
-			"step": split_step
+	wf["38"]["inputs"]["mask"] = [final_mask_node, 0]
+
+	if negative_prompt.strip_edges() != "":
+		wf["47"] = {
+			"class_type": "CLIPTextEncode",
+			"inputs": {"text": negative_prompt, "clip": ["34", 0]}
 		}
-	}
-	wf["75:64"]["inputs"]["sigmas"] = ["split_sigmas", 0]
-
-	# EmptyFlux2LatentImage non utilisé (img2img)
-	wf.erase("75:66")
-
-	# Paramètres dynamiques
-	wf["76"]["inputs"]["image"] = filename
-	wf["75:74"]["inputs"]["text"] = prompt_text
-	wf["75:73"]["inputs"]["noise_seed"] = seed
-	wf["75:63"]["inputs"]["cfg"] = cfg
-	wf["75:62"]["inputs"]["steps"] = steps
-	wf["75:80"]["inputs"]["megapixels"] = megapixels
-
-	_apply_negative_prompt(wf, negative_prompt)
-	_inject_loras(wf, loras)
+		wf["38"]["inputs"]["negative"] = ["47", 0]
+		wf.erase("46")
 
 	if _debug_mask:
 		wf["debug_mask_to_image"] = {
 			"class_type": "MaskToImage",
-			"inputs": { "mask": [final_mask_node, 0] }
+			"inputs": {"mask": [final_mask_node, 0]}
 		}
 		wf["9"]["inputs"]["images"] = ["debug_mask_to_image", 0]
-		wf.erase("106")
-		return wf
-
-	if not remove_background:
-		wf["9"]["inputs"]["images"] = ["103", 0]
-		wf.erase("106")
 
 	return wf
 
@@ -1322,6 +1383,45 @@ func generate_outpaint(config: RefCounted, source_image_path: String, prompt_tex
 	var file_bytes = file.get_buffer(file.get_length())
 	file.close()
 
+	var filename = source_image_path.get_file()
+
+	if _config.is_runpod():
+		generation_progress.emit("Envoi vers RunPod...")
+		_do_runpod_run(filename, file_bytes, prompt_text)
+	else:
+		generation_progress.emit("Upload de l'image vers ComfyUI...")
+		_do_upload(filename, file_bytes, prompt_text)
+
+
+func generate_inpaint(config: RefCounted, source_image_path: String, prompt_text: String, mask_bytes: PackedByteArray, mask_feather: int, guidance: float, steps: int, denoise: float, negative_prompt: String) -> void:
+	if _generating:
+		_fail("Une génération est déjà en cours")
+		return
+
+	_generating = true
+	_cancelled = false
+	_config = config
+	_workflow_type = WorkflowType.INPAINT
+	_steps = steps
+	_denoise = denoise
+	_negative_prompt = negative_prompt
+	_remove_background = false
+	_megapixels = 1.0
+	_loras = []
+	_inpaint_guidance = guidance
+	_mask_filename = "inpaint_mask_%d.png" % randi()
+	_mask_bytes_data = mask_bytes
+	_mask_feather = mask_feather
+
+	generation_progress.emit("Chargement de l'image source...")
+
+	var file = FileAccess.open(source_image_path, FileAccess.READ)
+	if file == null:
+		_generating = false
+		_fail("Impossible d'ouvrir l'image : " + source_image_path)
+		return
+	var file_bytes = file.get_buffer(file.get_length())
+	file.close()
 	var filename = source_image_path.get_file()
 
 	if _config.is_runpod():

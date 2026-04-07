@@ -286,87 +286,102 @@ func test_build_mask_bytes_empty_rect_returns_all_black():
 	var px = img.get_pixel(5, 5)
 	assert_almost_eq(px.r, 0.0, 0.01)
 
-func test_build_inpaint_workflow_has_mask_loader():
+func test_build_inpaint_fill_workflow_has_ksampler():
+	var client = ComfyUIClientScript.new()
+	client._mask_filename = "mask.png"
+	client._mask_feather = 15
+	client._inpaint_guidance = 30.0
+	var wf = client.build_workflow("src.png", "test", 42, false, 0.7, 20, ComfyUIClientScript.WorkflowType.INPAINT, 1.0, "", 0, 1.0, [])
+	assert_true(wf.has("3"), "KSampler absent")
+	assert_eq(wf["3"]["class_type"], "KSampler")
+
+
+func test_build_inpaint_fill_workflow_uses_flux_fill_model():
+	var client = ComfyUIClientScript.new()
+	client._mask_filename = "mask.png"
+	client._mask_feather = 15
+	client._inpaint_guidance = 30.0
+	var wf = client.build_workflow("src.png", "test", 42, false, 0.7, 20, ComfyUIClientScript.WorkflowType.INPAINT, 1.0, "", 0, 1.0, [])
+	assert_true(wf.has("31"), "UNETLoader absent")
+	assert_eq(wf["31"]["inputs"]["unet_name"], "flux1-fill-dev.safetensors")
+
+
+func test_build_inpaint_fill_workflow_has_inpaint_model_conditioning():
+	var client = ComfyUIClientScript.new()
+	client._mask_filename = "mask.png"
+	client._mask_feather = 15
+	client._inpaint_guidance = 30.0
+	var wf = client.build_workflow("src.png", "test", 42, false, 0.7, 20, ComfyUIClientScript.WorkflowType.INPAINT, 1.0, "", 0, 1.0, [])
+	assert_true(wf.has("38"), "InpaintModelConditioning absent")
+	assert_eq(wf["38"]["class_type"], "InpaintModelConditioning")
+
+
+func test_build_inpaint_fill_workflow_no_image_pad():
+	var client = ComfyUIClientScript.new()
+	client._mask_filename = "mask.png"
+	client._mask_feather = 15
+	client._inpaint_guidance = 30.0
+	var wf = client.build_workflow("src.png", "test", 42, false, 0.7, 20, ComfyUIClientScript.WorkflowType.INPAINT, 1.0, "", 0, 1.0, [])
+	assert_false(wf.has("44"), "ImagePadForOutpaint présent (doit être absent)")
+
+
+func test_build_inpaint_fill_workflow_sets_denoise():
+	var client = ComfyUIClientScript.new()
+	client._mask_filename = "mask.png"
+	client._mask_feather = 15
+	client._inpaint_guidance = 30.0
+	var wf = client.build_workflow("src.png", "test", 42, false, 0.7, 20, ComfyUIClientScript.WorkflowType.INPAINT, 0.75, "", 0, 1.0, [])
+	assert_eq(wf["3"]["inputs"]["denoise"], 0.75)
+
+
+func test_build_inpaint_fill_workflow_has_mask_loader():
 	var client = ComfyUIClientScript.new()
 	client._mask_filename = "mask_test.png"
 	client._mask_feather = 15
-	var wf = client.build_workflow("src.png", "test", 42, true, 1.0, 4, 7, 0.5, "", 80, 1.0, [])
-	assert_true(wf.has("ip:mask"), "ip:mask node absent")
+	client._inpaint_guidance = 30.0
+	var wf = client.build_workflow("src.png", "test", 42, false, 0.7, 20, ComfyUIClientScript.WorkflowType.INPAINT, 1.0, "", 0, 1.0, [])
+	assert_true(wf.has("ip:mask"), "ip:mask absent")
 	assert_eq(wf["ip:mask"]["inputs"]["image"], "mask_test.png")
 
-func test_build_inpaint_workflow_has_set_noise_mask():
+
+func test_build_inpaint_fill_workflow_has_mask_convert():
 	var client = ComfyUIClientScript.new()
 	client._mask_filename = "mask.png"
 	client._mask_feather = 15
-	var wf = client.build_workflow("src.png", "test", 42, true, 1.0, 4, 7, 0.5, "", 80, 1.0, [])
-	assert_true(wf.has("set_noise_mask"), "set_noise_mask absent")
-	assert_eq(wf["set_noise_mask"]["inputs"]["samples"][0], "75:79:78")
-
-func test_build_inpaint_workflow_has_split_sigmas():
-	var client = ComfyUIClientScript.new()
-	client._mask_filename = "mask.png"
-	client._mask_feather = 10
-	var wf = client.build_workflow("src.png", "test", 42, true, 1.0, 4, 7, 0.5, "", 80, 1.0, [])
-	assert_true(wf.has("split_sigmas"), "split_sigmas absent")
-
-func test_build_inpaint_workflow_no_face_detection():
-	var client = ComfyUIClientScript.new()
-	client._mask_filename = "mask.png"
-	client._mask_feather = 10
-	var wf = client.build_workflow("src.png", "test", 42, true, 1.0, 4, 7, 0.5, "", 80, 1.0, [])
-	assert_false(wf.has("99"), "Nœud 99 (face detector) présent mais ne devrait pas l'être")
-	assert_false(wf.has("100"), "Nœud 100 (bbox detector) présent mais ne devrait pas l'être")
-
-func test_build_inpaint_workflow_no_feather_removes_blur():
-	var client = ComfyUIClientScript.new()
-	client._mask_filename = "mask.png"
-	client._mask_feather = 0
-	var wf = client.build_workflow("src.png", "test", 42, true, 1.0, 4, 7, 0.5, "", 80, 1.0, [])
-	assert_false(wf.has("102"), "Nœud 102 (blur) présent alors que feather=0")
-	assert_eq(wf["103"]["inputs"]["mask"][0], "101")
-
-func test_build_inpaint_workflow_with_feather_has_blur():
-	var client = ComfyUIClientScript.new()
-	client._mask_filename = "mask.png"
-	client._mask_feather = 20
-	var wf = client.build_workflow("src.png", "test", 42, true, 1.0, 4, 7, 0.5, "", 80, 1.0, [])
-	assert_true(wf.has("102"), "Nœud 102 (blur) absent alors que feather=20")
-	assert_eq(wf["103"]["inputs"]["mask"][0], "102")
-
-func test_build_inpaint_workflow_no_bg_removal():
-	var client = ComfyUIClientScript.new()
-	client._mask_filename = "mask.png"
-	client._mask_feather = 10
-	var wf = client.build_workflow("src.png", "test", 42, false, 1.0, 4, 7, 0.5, "", 80, 1.0, [])
-	assert_false(wf.has("106"), "106 (BiRefNet) présent mais remove_background=false")
-	assert_eq(wf["9"]["inputs"]["images"][0], "103")
-
-func test_build_inpaint_workflow_has_mask_convert():
-	var client = ComfyUIClientScript.new()
-	client._mask_filename = "mask.png"
-	client._mask_feather = 10
-	var wf = client.build_workflow("src.png", "test", 42, true, 1.0, 4, 7, 0.5, "", 80, 1.0, [])
-	assert_true(wf.has("ip:mask_convert"), "ip:mask_convert node absent")
+	client._inpaint_guidance = 30.0
+	var wf = client.build_workflow("src.png", "test", 42, false, 0.7, 20, ComfyUIClientScript.WorkflowType.INPAINT, 1.0, "", 0, 1.0, [])
+	assert_true(wf.has("ip:mask_convert"), "ip:mask_convert absent")
 	assert_eq(wf["ip:mask_convert"]["class_type"], "ImageToMask")
 	assert_eq(wf["ip:mask_convert"]["inputs"]["channel"], "red")
 
-func test_build_inpaint_workflow_no_reference_latent():
-	# ReferenceLatent passe l'image source entière en conditioning → écrase le masque.
-	# L'inpainting doit câbler CLIPTextEncode directement sur CFGGuider.
-	var client = ComfyUIClientScript.new()
-	client._mask_filename = "mask.png"
-	client._mask_feather = 10
-	var wf = client.build_workflow("src.png", "prompt", 42, true, 1.0, 4, 7, 0.5, "", 80, 1.0, [])
-	assert_false(wf.has("75:79:76"), "ReferenceLatent négatif présent (doit être absent)")
-	assert_false(wf.has("75:79:77"), "ReferenceLatent positif présent (doit être absent)")
-	assert_eq(wf["75:63"]["inputs"]["positive"], ["75:74", 0], "CFGGuider.positive doit pointer sur CLIPTextEncode")
-	assert_eq(wf["75:63"]["inputs"]["negative"], ["75:83", 0], "CFGGuider.negative doit pointer sur CLIPTextEncode")
 
-func test_build_inpaint_workflow_negative_prompt_no_crash():
-	# Régression : _apply_negative_prompt accédait wf["75:79:76"] après l'erase → crash
+func test_build_inpaint_fill_workflow_no_feather_removes_blur():
 	var client = ComfyUIClientScript.new()
 	client._mask_filename = "mask.png"
-	client._mask_feather = 10
-	var wf = client.build_workflow("src.png", "prompt", 42, true, 1.0, 4, 7, 0.5, "bad quality", 80, 1.0, [])
-	assert_true(wf.has("75:83"), "75:83 (CLIPTextEncode négatif) absent")
-	assert_eq(wf["75:83"]["inputs"]["text"], "bad quality")
+	client._mask_feather = 0
+	client._inpaint_guidance = 30.0
+	var wf = client.build_workflow("src.png", "test", 42, false, 0.7, 20, ComfyUIClientScript.WorkflowType.INPAINT, 1.0, "", 0, 1.0, [])
+	assert_false(wf.has("ip:blur"), "ip:blur présent alors que feather=0")
+	assert_eq(wf["38"]["inputs"]["mask"][0], "ip:grow")
+
+
+func test_build_inpaint_fill_workflow_with_feather_has_blur():
+	var client = ComfyUIClientScript.new()
+	client._mask_filename = "mask.png"
+	client._mask_feather = 20
+	client._inpaint_guidance = 30.0
+	var wf = client.build_workflow("src.png", "test", 42, false, 0.7, 20, ComfyUIClientScript.WorkflowType.INPAINT, 1.0, "", 0, 1.0, [])
+	assert_true(wf.has("ip:blur"), "ip:blur absent alors que feather=20")
+	assert_eq(wf["38"]["inputs"]["mask"][0], "ip:blur")
+
+
+func test_build_inpaint_fill_workflow_negative_prompt():
+	var client = ComfyUIClientScript.new()
+	client._mask_filename = "mask.png"
+	client._mask_feather = 15
+	client._inpaint_guidance = 30.0
+	var wf = client.build_workflow("src.png", "test", 42, false, 0.7, 20, ComfyUIClientScript.WorkflowType.INPAINT, 1.0, "bad quality", 0, 1.0, [])
+	assert_true(wf.has("47"), "CLIPTextEncode négatif absent")
+	assert_eq(wf["47"]["inputs"]["text"], "bad quality")
+	assert_eq(wf["38"]["inputs"]["negative"], ["47", 0])
+	assert_false(wf.has("46"), "ConditioningZeroOut doit être effacé")
