@@ -901,8 +901,14 @@ func _build_inpaint_workflow(filename: String, mask_filename: String, prompt_tex
 		"inputs": { "image": mask_filename }
 	}
 
+	# Convertir IMAGE → MASK (LoadImage output [0] est de type IMAGE, GrowMask attend MASK)
+	wf["ip:mask_convert"] = {
+		"class_type": "ImageToMask",
+		"inputs": { "image": ["ip:mask", 0], "channel": "red" }
+	}
+
 	# GrowMask depuis le masque utilisateur
-	wf["101"]["inputs"]["mask"] = ["ip:mask", 0]
+	wf["101"]["inputs"]["mask"] = ["ip:mask_convert", 0]
 	wf["101"]["inputs"]["expand"] = mask_feather
 
 	# Fondu des bords du masque

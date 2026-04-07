@@ -340,3 +340,12 @@ func test_build_inpaint_workflow_no_bg_removal():
 	var wf = client.build_workflow("src.png", "test", 42, false, 1.0, 4, 7, 0.5, "", 80, 1.0, [])
 	assert_false(wf.has("106"), "106 (BiRefNet) présent mais remove_background=false")
 	assert_eq(wf["9"]["inputs"]["images"][0], "103")
+
+func test_build_inpaint_workflow_has_mask_convert():
+	var client = ComfyUIClientScript.new()
+	client._mask_filename = "mask.png"
+	client._mask_feather = 10
+	var wf = client.build_workflow("src.png", "test", 42, true, 1.0, 4, 7, 0.5, "", 80, 1.0, [])
+	assert_true(wf.has("ip:mask_convert"), "ip:mask_convert node absent")
+	assert_eq(wf["ip:mask_convert"]["class_type"], "ImageToMask")
+	assert_eq(wf["ip:mask_convert"]["inputs"]["channel"], "red")
