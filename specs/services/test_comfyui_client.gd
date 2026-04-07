@@ -349,3 +349,15 @@ func test_build_inpaint_workflow_has_mask_convert():
 	assert_true(wf.has("ip:mask_convert"), "ip:mask_convert node absent")
 	assert_eq(wf["ip:mask_convert"]["class_type"], "ImageToMask")
 	assert_eq(wf["ip:mask_convert"]["inputs"]["channel"], "red")
+
+func test_build_inpaint_workflow_no_reference_latent():
+	# ReferenceLatent passe l'image source entière en conditioning → écrase le masque.
+	# L'inpainting doit câbler CLIPTextEncode directement sur CFGGuider.
+	var client = ComfyUIClientScript.new()
+	client._mask_filename = "mask.png"
+	client._mask_feather = 10
+	var wf = client.build_workflow("src.png", "prompt", 42, true, 1.0, 4, 7, 0.5, "", 80, 1.0, [])
+	assert_false(wf.has("75:79:76"), "ReferenceLatent négatif présent (doit être absent)")
+	assert_false(wf.has("75:79:77"), "ReferenceLatent positif présent (doit être absent)")
+	assert_eq(wf["75:63"]["inputs"]["positive"], ["75:74", 0], "CFGGuider.positive doit pointer sur CLIPTextEncode")
+	assert_eq(wf["75:63"]["inputs"]["negative"], ["75:83", 0], "CFGGuider.negative doit pointer sur CLIPTextEncode")

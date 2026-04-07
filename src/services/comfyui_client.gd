@@ -927,6 +927,13 @@ func _build_inpaint_workflow(filename: String, mask_filename: String, prompt_tex
 	# Composite : recoller le résultat sur l'original avec le masque
 	wf["103"]["inputs"]["mask"] = [final_mask_node, 0]
 
+	# Bypasser ReferenceLatent : avec image source en contexte, Flux2 reproduit l'image
+	# entière et ignore le masque. Câbler CLIPTextEncode directement sur CFGGuider.
+	wf.erase("75:79:76")
+	wf.erase("75:79:77")
+	wf["75:63"]["inputs"]["positive"] = ["75:74", 0]
+	wf["75:63"]["inputs"]["negative"] = ["75:83", 0]
+
 	# SetLatentNoiseMask : le KSampler ne dénoise QUE dans la zone masquée
 	wf["set_noise_mask"] = {
 		"class_type": "SetLatentNoiseMask",
@@ -937,8 +944,10 @@ func _build_inpaint_workflow(filename: String, mask_filename: String, prompt_tex
 	}
 	wf["75:64"]["inputs"]["latent_image"] = ["set_noise_mask", 0]
 
-	# SplitSigmas : contrôle du niveau de débruitage
-	var split_step = max(1, roundi(steps * (1.0 - denoise)))
+	# SplitSigmas pour inpainting : output[0] = sigmas élevés → le masque reçoit
+	# du bruit fort et la zone est vraiment régénérée (vs output[1] = sigmas faibles
+	# qui produit des changements imperceptibles)
+	var split_step = max(1, roundi(steps * denoise))
 	wf["split_sigmas"] = {
 		"class_type": "SplitSigmas",
 		"inputs": {
@@ -946,7 +955,7 @@ func _build_inpaint_workflow(filename: String, mask_filename: String, prompt_tex
 			"step": split_step
 		}
 	}
-	wf["75:64"]["inputs"]["sigmas"] = ["split_sigmas", 1]
+	wf["75:64"]["inputs"]["sigmas"] = ["split_sigmas", 0]
 
 	# EmptyFlux2LatentImage non utilisé (img2img)
 	wf.erase("75:66")
