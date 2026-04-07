@@ -361,3 +361,12 @@ func test_build_inpaint_workflow_no_reference_latent():
 	assert_false(wf.has("75:79:77"), "ReferenceLatent positif présent (doit être absent)")
 	assert_eq(wf["75:63"]["inputs"]["positive"], ["75:74", 0], "CFGGuider.positive doit pointer sur CLIPTextEncode")
 	assert_eq(wf["75:63"]["inputs"]["negative"], ["75:83", 0], "CFGGuider.negative doit pointer sur CLIPTextEncode")
+
+func test_build_inpaint_workflow_negative_prompt_no_crash():
+	# Régression : _apply_negative_prompt accédait wf["75:79:76"] après l'erase → crash
+	var client = ComfyUIClientScript.new()
+	client._mask_filename = "mask.png"
+	client._mask_feather = 10
+	var wf = client.build_workflow("src.png", "prompt", 42, true, 1.0, 4, 7, 0.5, "bad quality", 80, 1.0, [])
+	assert_true(wf.has("75:83"), "75:83 (CLIPTextEncode négatif) absent")
+	assert_eq(wf["75:83"]["inputs"]["text"], "bad quality")

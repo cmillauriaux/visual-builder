@@ -931,6 +931,7 @@ func _build_inpaint_workflow(filename: String, mask_filename: String, prompt_tex
 	# entière et ignore le masque. Câbler CLIPTextEncode directement sur CFGGuider.
 	wf.erase("75:79:76")
 	wf.erase("75:79:77")
+	wf.erase("75:82")  # ConditioningZeroOut orphelin (était référencé par 75:79:76)
 	wf["75:63"]["inputs"]["positive"] = ["75:74", 0]
 	wf["75:63"]["inputs"]["negative"] = ["75:83", 0]
 
@@ -1156,8 +1157,10 @@ func _apply_negative_prompt(wf: Dictionary, negative_prompt: String) -> void:
 			"clip": ["75:71", 0]
 		}
 	}
-	wf["75:79:76"]["inputs"]["conditioning"] = ["75:83", 0]
-	wf.erase("75:82")
+	# INPAINT bypass ReferenceLatent : 75:79:76 est absent, 75:83 est déjà câblé
+	if wf.has("75:79:76"):
+		wf["75:79:76"]["inputs"]["conditioning"] = ["75:83", 0]
+		wf.erase("75:82")
 
 # --- Multipart body builder ---
 
