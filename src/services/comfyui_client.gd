@@ -16,7 +16,7 @@ func _fail(error: String) -> void:
 	print("[ComfyUI] FAILED: ", error)
 	generation_failed.emit(error)
 
-enum WorkflowType { CREATION = 0, EXPRESSION = 1, OUTPAINT = 2, UPSCALE = 3, ENHANCE = 4, UPSCALE_ENHANCE = 5, BLINK = 6 }
+enum WorkflowType { CREATION = 0, EXPRESSION = 1, OUTPAINT = 2, UPSCALE = 3, ENHANCE = 4, UPSCALE_ENHANCE = 5, BLINK = 6, INPAINT = 7 }
 
 var _generating: bool = false
 var _prompt_id: String = ""
@@ -32,6 +32,9 @@ var _negative_prompt: String = ""
 var _face_box_size: int = 80
 var _megapixels: float = 1.0
 var _loras: Array = []
+var _source_filename: String = ""
+var _second_image_filename: String = ""
+var _second_image_bytes: PackedByteArray = PackedByteArray()
 var _outpaint_left: int = 0
 var _outpaint_top: int = 0
 var _outpaint_right: int = 0
@@ -42,11 +45,12 @@ var _upscale_factor: float = 2.0
 var _enhance_shift: float = 3.0
 var _eye_zone_mode: String = "eyes_only"  # "eyes_only" ou "eyes_and_brows"
 var _debug_mask: bool = false
-var _mask_feather: int = 10
+var _mask_feather: int = 15
 var _detection_scale: float = 1.0
 var _backbone: String = "resnet18"
 var _detection_model: String = "bisenet"  # "bisenet" ou nom de fichier YOLO .pt
 var _detection_threshold: float = 0.3
+var _mask_filename: String = ""
 
 # --- Workflow template (Flux 2 Klein + BiRefNet) ---
 # Reproduit exactement Edit_Image_Transparent_API.json
@@ -659,6 +663,22 @@ const UPSCALE_ENHANCE_WORKFLOW_TEMPLATE: Dictionary = {
 func is_generating() -> bool:
 	return _generating
 
+
+static func build_mask_bytes(rect: Rect2i, img_width: int, img_height: int) -> PackedByteArray:
+	var img = Image.create(img_width, img_height, false, Image.FORMAT_L8)
+	img.fill(Color(0.0, 0.0, 0.0))
+	if rect.size.x > 0 and rect.size.y > 0:
+		var clamped = Rect2i(
+			clampi(rect.position.x, 0, img_width - 1),
+			clampi(rect.position.y, 0, img_height - 1),
+			0, 0
+		)
+		clamped.size.x = clampi(rect.size.x, 1, img_width - clamped.position.x)
+		clamped.size.y = clampi(rect.size.y, 1, img_height - clamped.position.y)
+		img.fill_rect(clamped, Color(1.0, 1.0, 1.0))
+	return img.save_png_to_buffer()
+
+
 # --- Build workflow with dynamic parameters ---
 
 func _inject_loras(wf: Dictionary, loras: Array) -> void:
@@ -774,6 +794,8 @@ func build_workflow(filename: String, prompt_text: String, seed: int, remove_bac
 		return _build_blink_workflow(filename, prompt_text, seed, remove_background, cfg, steps, denoise, negative_prompt, face_box_size, megapixels)
 	if workflow_type == WorkflowType.EXPRESSION:
 		return _build_expression_workflow(filename, prompt_text, seed, remove_background, cfg, steps, denoise, negative_prompt, face_box_size, megapixels)
+	if workflow_type == WorkflowType.INPAINT:
+		return _build_inpaint_workflow(filename, _mask_filename, prompt_text, seed, remove_background, cfg, steps, denoise, negative_prompt, _mask_feather, megapixels, loras)
 	var wf = WORKFLOW_TEMPLATE.duplicate(true)
 	wf["76"]["inputs"]["image"] = filename
 	wf["75:74"]["inputs"]["text"] = prompt_text
@@ -783,6 +805,43 @@ func build_workflow(filename: String, prompt_text: String, seed: int, remove_bac
 	wf["75:80"]["inputs"]["megapixels"] = megapixels
 	_apply_negative_prompt(wf, negative_prompt)
 	_inject_loras(wf, loras)
+	# Seconde image de référence pour Klein
+	if _second_image_filename != "":
+		wf["81"]["inputs"]["image"] = _second_image_filename
+		wf["ref2_scale"] = {
+			"class_type": "ImageScaleToTotalPixels",
+			"inputs": {
+				"upscale_method": "lanczos",
+				"megapixels": megapixels,
+				"resolution_steps": 1,
+				"image": ["81", 0]
+			}
+		}
+		wf["ref2_vae"] = {
+			"class_type": "VAEEncode",
+			"inputs": {
+				"pixels": ["ref2_scale", 0],
+				"vae": ["75:72", 0]
+			}
+		}
+		wf["ref2_pos"] = {
+			"class_type": "ReferenceLatent",
+			"inputs": {
+				"conditioning": ["75:79:77", 0],
+				"latent": ["ref2_vae", 0]
+			}
+		}
+		wf["ref2_neg"] = {
+			"class_type": "ReferenceLatent",
+			"inputs": {
+				"conditioning": ["75:79:76", 0],
+				"latent": ["ref2_vae", 0]
+			}
+		}
+		wf["75:63"]["inputs"]["positive"] = ["ref2_pos", 0]
+		wf["75:63"]["inputs"]["negative"] = ["ref2_neg", 0]
+	else:
+		wf.erase("81")
 	if not remove_background:
 		# Pour les backgrounds : sauvegarder directement la sortie du VAEDecode
 		# sans passer par BiRefNetRMBG (pas de suppression de fond)
@@ -826,6 +885,80 @@ func _build_expression_workflow(filename: String, prompt_text: String, seed: int
 	if not remove_background:
 		wf["9"]["inputs"]["images"] = ["103", 0]
 		wf.erase("106")
+	return wf
+
+
+func _build_inpaint_workflow(filename: String, mask_filename: String, prompt_text: String, seed: int, remove_background: bool, cfg: float, steps: int, denoise: float, negative_prompt: String, mask_feather: int, megapixels: float, loras: Array) -> Dictionary:
+	var wf = EXPRESSION_WORKFLOW_TEMPLATE.duplicate(true)
+
+	# Supprimer la détection de visage
+	wf.erase("99")
+	wf.erase("100")
+
+	# Charger le masque directement depuis un fichier PNG
+	wf["ip:mask"] = {
+		"class_type": "LoadImage",
+		"inputs": { "image": mask_filename }
+	}
+
+	# GrowMask depuis le masque utilisateur
+	wf["101"]["inputs"]["mask"] = ["ip:mask", 0]
+	wf["101"]["inputs"]["expand"] = mask_feather
+
+	# Fondu des bords du masque
+	var final_mask_node: String
+	if mask_feather <= 0:
+		wf.erase("102")
+		final_mask_node = "101"
+	else:
+		var blur_kernel: int = min(99, max(3, mask_feather)) | 1  # toujours impair
+		var blur_sigma: float = minf(50.0, maxf(1.0, mask_feather * 0.5))
+		wf["102"]["inputs"]["kernel_size"] = blur_kernel
+		wf["102"]["inputs"]["sigma"] = blur_sigma
+		final_mask_node = "102"
+
+	# Composite : recoller le résultat sur l'original avec le masque
+	wf["103"]["inputs"]["mask"] = [final_mask_node, 0]
+
+	# SetLatentNoiseMask : le KSampler ne dénoise QUE dans la zone masquée
+	wf["set_noise_mask"] = {
+		"class_type": "SetLatentNoiseMask",
+		"inputs": {
+			"samples": ["75:79:78", 0],
+			"mask": [final_mask_node, 0]
+		}
+	}
+	wf["75:64"]["inputs"]["latent_image"] = ["set_noise_mask", 0]
+
+	# SplitSigmas : contrôle du niveau de débruitage
+	var split_step = max(1, roundi(steps * (1.0 - denoise)))
+	wf["split_sigmas"] = {
+		"class_type": "SplitSigmas",
+		"inputs": {
+			"sigmas": ["75:62", 0],
+			"step": split_step
+		}
+	}
+	wf["75:64"]["inputs"]["sigmas"] = ["split_sigmas", 1]
+
+	# EmptyFlux2LatentImage non utilisé (img2img)
+	wf.erase("75:66")
+
+	# Paramètres dynamiques
+	wf["76"]["inputs"]["image"] = filename
+	wf["75:74"]["inputs"]["text"] = prompt_text
+	wf["75:73"]["inputs"]["noise_seed"] = seed
+	wf["75:63"]["inputs"]["cfg"] = cfg
+	wf["75:62"]["inputs"]["steps"] = steps
+	wf["75:80"]["inputs"]["megapixels"] = megapixels
+
+	_apply_negative_prompt(wf, negative_prompt)
+	_inject_loras(wf, loras)
+
+	if not remove_background:
+		wf["9"]["inputs"]["images"] = ["103", 0]
+		wf.erase("106")
+
 	return wf
 
 
@@ -1171,7 +1304,7 @@ func generate_outpaint(config: RefCounted, source_image_path: String, prompt_tex
 		_do_upload(filename, file_bytes, prompt_text)
 
 
-func generate(config: RefCounted, source_image_path: String, prompt_text: String, remove_background: bool = true, cfg: float = 1.0, steps: int = 4, workflow_type: int = WorkflowType.CREATION, denoise: float = 0.5, negative_prompt: String = "", face_box_size: int = 80, megapixels: float = 1.0, loras: Array = []) -> void:
+func generate(config: RefCounted, source_image_path: String, prompt_text: String, remove_background: bool = true, cfg: float = 1.0, steps: int = 4, workflow_type: int = WorkflowType.CREATION, denoise: float = 0.5, negative_prompt: String = "", face_box_size: int = 80, megapixels: float = 1.0, loras: Array = [], second_image_path: String = "") -> void:
 	if _generating:
 		_fail("Une génération est déjà en cours")
 		return
@@ -1188,6 +1321,8 @@ func generate(config: RefCounted, source_image_path: String, prompt_text: String
 	_face_box_size = face_box_size
 	_megapixels = megapixels
 	_loras = loras
+	_second_image_filename = ""
+	_second_image_bytes = PackedByteArray()
 
 	generation_progress.emit("Chargement de l'image source...")
 
@@ -1202,6 +1337,15 @@ func generate(config: RefCounted, source_image_path: String, prompt_text: String
 	file.close()
 
 	var filename = source_image_path.get_file()
+	_source_filename = filename
+
+	# Load optional second image
+	if second_image_path != "":
+		var file2 = FileAccess.open(second_image_path, FileAccess.READ)
+		if file2 != null:
+			_second_image_bytes = file2.get_buffer(file2.get_length())
+			file2.close()
+			_second_image_filename = second_image_path.get_file()
 
 	if _config.is_runpod():
 		generation_progress.emit("Envoi vers RunPod...")
@@ -1233,10 +1377,13 @@ func _do_runpod_run(filename: String, file_bytes: PackedByteArray, prompt_text: 
 	print("[RunPod] --- fin workflow ---")
 
 	var image_b64 = Marshalls.raw_to_base64(file_bytes)
+	var images_payload = [{"name": filename, "image": image_b64}]
+	if _second_image_filename != "" and not _second_image_bytes.is_empty():
+		images_payload.append({"name": _second_image_filename, "image": Marshalls.raw_to_base64(_second_image_bytes)})
 	var payload = {
 		"input": {
 			"workflow": workflow,
-			"images": [{"name": filename, "image": image_b64}]
+			"images": images_payload
 		}
 	}
 
@@ -1350,11 +1497,44 @@ func _do_upload(filename: String, file_bytes: PackedByteArray, prompt_text: Stri
 			_generating = false
 			_fail("Erreur upload (code %d, result %d)" % [code, result])
 			return
-		generation_progress.emit("Image uploadée. Lancement du workflow...")
-		_do_prompt(filename, prompt_text)
+		if _second_image_filename != "" and not _second_image_bytes.is_empty():
+			generation_progress.emit("Upload de l'image 2 vers ComfyUI...")
+			_do_upload_second(prompt_text)
+		else:
+			generation_progress.emit("Image uploadée. Lancement du workflow...")
+			_do_prompt(filename, prompt_text)
 	)
 
 	http.request_raw(url, PackedStringArray(headers), HTTPClient.METHOD_POST, body_bytes)
+
+func _do_upload_second(prompt_text: String) -> void:
+	var multipart = build_multipart_body(_second_image_filename, _second_image_bytes)
+	var body_bytes: PackedByteArray = multipart[0]
+	var boundary: String = multipart[1]
+
+	var http = HTTPRequest.new()
+	add_child(http)
+
+	var url = _config.get_full_url("/upload/image")
+	var headers: Array = ["Content-Type: multipart/form-data; boundary=" + boundary]
+	for h in _config.get_auth_headers():
+		headers.append(h)
+
+	http.request_completed.connect(func(result: int, code: int, _headers: PackedStringArray, _body: PackedByteArray):
+		http.queue_free()
+		if _cancelled:
+			_generating = false
+			return
+		if result != HTTPRequest.RESULT_SUCCESS or code != 200:
+			_generating = false
+			_fail("Erreur upload image 2 (code %d, result %d)" % [code, result])
+			return
+		generation_progress.emit("Images uploadées. Lancement du workflow...")
+		_do_prompt(_source_filename, prompt_text)
+	)
+
+	http.request_raw(url, PackedStringArray(headers), HTTPClient.METHOD_POST, body_bytes)
+
 
 func _do_prompt(filename: String, prompt_text: String) -> void:
 	var seed = randi()
