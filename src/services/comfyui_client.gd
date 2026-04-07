@@ -962,6 +962,15 @@ func _build_inpaint_workflow(filename: String, mask_filename: String, prompt_tex
 	_apply_negative_prompt(wf, negative_prompt)
 	_inject_loras(wf, loras)
 
+	if _debug_mask:
+		wf["debug_mask_to_image"] = {
+			"class_type": "MaskToImage",
+			"inputs": { "mask": [final_mask_node, 0] }
+		}
+		wf["9"]["inputs"]["images"] = ["debug_mask_to_image", 0]
+		wf.erase("106")
+		return wf
+
 	if not remove_background:
 		wf["9"]["inputs"]["images"] = ["103", 0]
 		wf.erase("106")
@@ -1384,6 +1393,9 @@ func _do_runpod_run(filename: String, file_bytes: PackedByteArray, prompt_text: 
 	print("[RunPod] megapixels     : ", _megapixels)
 	print("[RunPod] remove_bg      : ", _remove_background)
 	print("[RunPod] neg_prompt     : '", _negative_prompt, "'")
+	if _mask_filename != "":
+		print("[RunPod] mask           : ", _mask_filename, " (", _mask_bytes_data.size(), " bytes)")
+	print("[RunPod] debug_mask     : ", _debug_mask)
 	print("[RunPod] --- workflow JSON ---")
 	print(JSON.stringify(workflow, "\t"))
 	print("[RunPod] --- fin workflow ---")
