@@ -247,3 +247,96 @@ func test_build_blink_workflow_preserves_original_alpha():
 	assert_eq(wf["join_alpha"]["inputs"]["image"], ["103", 0])
 	assert_eq(wf["join_alpha"]["inputs"]["alpha"], ["76", 1])
 	assert_eq(wf["9"]["inputs"]["images"], ["join_alpha", 0])
+
+
+# --- Inpaint workflow (mask-based inpainting) ---
+
+func test_build_mask_bytes_returns_png_with_correct_dimensions():
+	var client = ComfyUIClientScript.new()
+	var bytes = client.build_mask_bytes(Rect2i(10, 10, 20, 20), 50, 40)
+	assert_true(bytes.size() > 0)
+	var img = Image.new()
+	assert_eq(img.load_png_from_buffer(bytes), OK)
+	assert_eq(img.get_width(), 50)
+	assert_eq(img.get_height(), 40)
+
+func test_build_mask_bytes_white_inside_rect():
+	var client = ComfyUIClientScript.new()
+	var bytes = client.build_mask_bytes(Rect2i(10, 10, 20, 20), 50, 50)
+	var img = Image.new()
+	img.load_png_from_buffer(bytes)
+	# Centre du rectangle : (20, 20) → blanc
+	var center = img.get_pixel(20, 20)
+	assert_almost_eq(center.r, 1.0, 0.01)
+
+func test_build_mask_bytes_black_outside_rect():
+	var client = ComfyUIClientScript.new()
+	var bytes = client.build_mask_bytes(Rect2i(10, 10, 20, 20), 50, 50)
+	var img = Image.new()
+	img.load_png_from_buffer(bytes)
+	# Coin haut-gauche (0,0) → noir
+	var corner = img.get_pixel(0, 0)
+	assert_almost_eq(corner.r, 0.0, 0.01)
+
+func test_build_mask_bytes_empty_rect_returns_all_black():
+	var client = ComfyUIClientScript.new()
+	var bytes = client.build_mask_bytes(Rect2i(0, 0, 0, 0), 10, 10)
+	var img = Image.new()
+	img.load_png_from_buffer(bytes)
+	var px = img.get_pixel(5, 5)
+	assert_almost_eq(px.r, 0.0, 0.01)
+
+func test_build_inpaint_workflow_has_mask_loader():
+	var client = ComfyUIClientScript.new()
+	client._mask_filename = "mask_test.png"
+	client._mask_feather = 15
+	var wf = client.build_workflow("src.png", "test", 42, true, 1.0, 4, 7, 0.5, "", 80, 1.0, [])
+	assert_true(wf.has("ip:mask"), "ip:mask node absent")
+	assert_eq(wf["ip:mask"]["inputs"]["image"], "mask_test.png")
+
+func test_build_inpaint_workflow_has_set_noise_mask():
+	var client = ComfyUIClientScript.new()
+	client._mask_filename = "mask.png"
+	client._mask_feather = 15
+	var wf = client.build_workflow("src.png", "test", 42, true, 1.0, 4, 7, 0.5, "", 80, 1.0, [])
+	assert_true(wf.has("set_noise_mask"), "set_noise_mask absent")
+	assert_eq(wf["set_noise_mask"]["inputs"]["samples"][0], "75:79:78")
+
+func test_build_inpaint_workflow_has_split_sigmas():
+	var client = ComfyUIClientScript.new()
+	client._mask_filename = "mask.png"
+	client._mask_feather = 10
+	var wf = client.build_workflow("src.png", "test", 42, true, 1.0, 4, 7, 0.5, "", 80, 1.0, [])
+	assert_true(wf.has("split_sigmas"), "split_sigmas absent")
+
+func test_build_inpaint_workflow_no_face_detection():
+	var client = ComfyUIClientScript.new()
+	client._mask_filename = "mask.png"
+	client._mask_feather = 10
+	var wf = client.build_workflow("src.png", "test", 42, true, 1.0, 4, 7, 0.5, "", 80, 1.0, [])
+	assert_false(wf.has("99"), "Nœud 99 (face detector) présent mais ne devrait pas l'être")
+	assert_false(wf.has("100"), "Nœud 100 (bbox detector) présent mais ne devrait pas l'être")
+
+func test_build_inpaint_workflow_no_feather_removes_blur():
+	var client = ComfyUIClientScript.new()
+	client._mask_filename = "mask.png"
+	client._mask_feather = 0
+	var wf = client.build_workflow("src.png", "test", 42, true, 1.0, 4, 7, 0.5, "", 80, 1.0, [])
+	assert_false(wf.has("102"), "Nœud 102 (blur) présent alors que feather=0")
+	assert_eq(wf["103"]["inputs"]["mask"][0], "101")
+
+func test_build_inpaint_workflow_with_feather_has_blur():
+	var client = ComfyUIClientScript.new()
+	client._mask_filename = "mask.png"
+	client._mask_feather = 20
+	var wf = client.build_workflow("src.png", "test", 42, true, 1.0, 4, 7, 0.5, "", 80, 1.0, [])
+	assert_true(wf.has("102"), "Nœud 102 (blur) absent alors que feather=20")
+	assert_eq(wf["103"]["inputs"]["mask"][0], "102")
+
+func test_build_inpaint_workflow_no_bg_removal():
+	var client = ComfyUIClientScript.new()
+	client._mask_filename = "mask.png"
+	client._mask_feather = 10
+	var wf = client.build_workflow("src.png", "test", 42, false, 1.0, 4, 7, 0.5, "", 80, 1.0, [])
+	assert_false(wf.has("106"), "106 (BiRefNet) présent mais remove_background=false")
+	assert_eq(wf["9"]["inputs"]["images"][0], "103")
