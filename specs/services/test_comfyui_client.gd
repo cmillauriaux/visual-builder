@@ -362,7 +362,8 @@ func test_build_inpaint_fill_workflow_no_feather_removes_blur():
 	client._inpaint_guidance = 30.0
 	var wf = client.build_workflow("src.png", "test", 42, false, 0.7, 20, ComfyUIClientScript.WorkflowType.INPAINT, 1.0, "", 0, 1.0, [])
 	assert_false(wf.has("ip:blur"), "ip:blur présent alors que feather=0")
-	assert_eq(wf["38"]["inputs"]["mask"][0], "ip:grow")
+	assert_false(wf.has("ip:grow"), "ip:grow présent alors que feather=0")
+	assert_eq(wf["38"]["inputs"]["mask"][0], "ip:mask_convert")
 
 
 func test_build_inpaint_fill_workflow_with_feather_has_blur():

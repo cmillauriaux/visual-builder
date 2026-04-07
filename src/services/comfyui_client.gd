@@ -624,7 +624,7 @@ const INPAINT_FILL_WORKFLOW_TEMPLATE: Dictionary = {
 			"negative": ["46", 0],
 			"vae": ["32", 0],
 			"pixels": ["17", 0],
-			"mask": ["ip:blur", 0]
+			"mask": []
 		}
 	},
 	"39": {
@@ -1012,15 +1012,14 @@ func _build_inpaint_workflow(filename: String, mask_filename: String, prompt_tex
 		"class_type": "ImageToMask",
 		"inputs": {"image": ["ip:mask", 0], "channel": "red"}
 	}
-	wf["ip:grow"] = {
-		"class_type": "GrowMask",
-		"inputs": {"expand": mask_feather, "tapered_corners": true, "mask": ["ip:mask_convert", 0]}
-	}
-
 	var final_mask_node: String
 	if mask_feather <= 0:
-		final_mask_node = "ip:grow"
+		final_mask_node = "ip:mask_convert"
 	else:
+		wf["ip:grow"] = {
+			"class_type": "GrowMask",
+			"inputs": {"expand": mask_feather, "tapered_corners": true, "mask": ["ip:mask_convert", 0]}
+		}
 		var blur_kernel: int = min(99, max(3, mask_feather)) | 1
 		var blur_sigma: float = minf(50.0, maxf(1.0, mask_feather * 0.5))
 		wf["ip:blur"] = {
@@ -1402,6 +1401,7 @@ func generate_inpaint(config: RefCounted, source_image_path: String, prompt_text
 	_cancelled = false
 	_config = config
 	_workflow_type = WorkflowType.INPAINT
+	_cfg = 1.0
 	_steps = steps
 	_denoise = denoise
 	_negative_prompt = negative_prompt
@@ -1423,6 +1423,7 @@ func generate_inpaint(config: RefCounted, source_image_path: String, prompt_text
 	var file_bytes = file.get_buffer(file.get_length())
 	file.close()
 	var filename = source_image_path.get_file()
+	_source_filename = filename
 
 	if _config.is_runpod():
 		generation_progress.emit("Envoi vers RunPod...")
