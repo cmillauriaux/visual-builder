@@ -51,6 +51,7 @@ var _backbone: String = "resnet18"
 var _detection_model: String = "bisenet"  # "bisenet" ou nom de fichier YOLO .pt
 var _detection_threshold: float = 0.3
 var _mask_filename: String = ""
+var _mask_bytes_data: PackedByteArray = PackedByteArray()
 
 # --- Workflow template (Flux 2 Klein + BiRefNet) ---
 # Reproduit exactement Edit_Image_Transparent_API.json
@@ -1310,7 +1311,7 @@ func generate_outpaint(config: RefCounted, source_image_path: String, prompt_tex
 		_do_upload(filename, file_bytes, prompt_text)
 
 
-func generate(config: RefCounted, source_image_path: String, prompt_text: String, remove_background: bool = true, cfg: float = 1.0, steps: int = 4, workflow_type: int = WorkflowType.CREATION, denoise: float = 0.5, negative_prompt: String = "", face_box_size: int = 80, megapixels: float = 1.0, loras: Array = [], second_image_path: String = "") -> void:
+func generate(config: RefCounted, source_image_path: String, prompt_text: String, remove_background: bool = true, cfg: float = 1.0, steps: int = 4, workflow_type: int = WorkflowType.CREATION, denoise: float = 0.5, negative_prompt: String = "", face_box_size: int = 80, megapixels: float = 1.0, loras: Array = [], second_image_path: String = "", mask_bytes: PackedByteArray = PackedByteArray(), mask_feather: int = 15) -> void:
 	if _generating:
 		_fail("Une génération est déjà en cours")
 		return
@@ -1329,6 +1330,11 @@ func generate(config: RefCounted, source_image_path: String, prompt_text: String
 	_loras = loras
 	_second_image_filename = ""
 	_second_image_bytes = PackedByteArray()
+	_mask_filename = ""
+	if not mask_bytes.is_empty():
+		_mask_filename = "inpaint_mask_%d.png" % randi()
+	_mask_bytes_data = mask_bytes
+	_mask_feather = mask_feather
 
 	generation_progress.emit("Chargement de l'image source...")
 
@@ -1386,6 +1392,8 @@ func _do_runpod_run(filename: String, file_bytes: PackedByteArray, prompt_text: 
 	var images_payload = [{"name": filename, "image": image_b64}]
 	if _second_image_filename != "" and not _second_image_bytes.is_empty():
 		images_payload.append({"name": _second_image_filename, "image": Marshalls.raw_to_base64(_second_image_bytes)})
+	if _mask_filename != "" and not _mask_bytes_data.is_empty():
+		images_payload.append({"name": _mask_filename, "image": Marshalls.raw_to_base64(_mask_bytes_data)})
 	var payload = {
 		"input": {
 			"workflow": workflow,
@@ -1506,6 +1514,9 @@ func _do_upload(filename: String, file_bytes: PackedByteArray, prompt_text: Stri
 		if _second_image_filename != "" and not _second_image_bytes.is_empty():
 			generation_progress.emit("Upload de l'image 2 vers ComfyUI...")
 			_do_upload_second(prompt_text)
+		elif _mask_filename != "" and not _mask_bytes_data.is_empty():
+			generation_progress.emit("Upload du masque vers ComfyUI...")
+			_do_upload_mask(prompt_text)
 		else:
 			generation_progress.emit("Image uploadée. Lancement du workflow...")
 			_do_prompt(filename, prompt_text)
@@ -1535,7 +1546,40 @@ func _do_upload_second(prompt_text: String) -> void:
 			_generating = false
 			_fail("Erreur upload image 2 (code %d, result %d)" % [code, result])
 			return
-		generation_progress.emit("Images uploadées. Lancement du workflow...")
+		if _mask_filename != "" and not _mask_bytes_data.is_empty():
+			generation_progress.emit("Upload du masque vers ComfyUI...")
+			_do_upload_mask(prompt_text)
+		else:
+			generation_progress.emit("Images uploadées. Lancement du workflow...")
+			_do_prompt(_source_filename, prompt_text)
+	)
+
+	http.request_raw(url, PackedStringArray(headers), HTTPClient.METHOD_POST, body_bytes)
+
+
+func _do_upload_mask(prompt_text: String) -> void:
+	var multipart = build_multipart_body(_mask_filename, _mask_bytes_data)
+	var body_bytes: PackedByteArray = multipart[0]
+	var boundary: String = multipart[1]
+
+	var http = HTTPRequest.new()
+	add_child(http)
+
+	var url = _config.get_full_url("/upload/image")
+	var headers: Array = ["Content-Type: multipart/form-data; boundary=" + boundary]
+	for h in _config.get_auth_headers():
+		headers.append(h)
+
+	http.request_completed.connect(func(result: int, code: int, _headers: PackedStringArray, _body: PackedByteArray):
+		http.queue_free()
+		if _cancelled:
+			_generating = false
+			return
+		if result != HTTPRequest.RESULT_SUCCESS or code != 200:
+			_generating = false
+			_fail("Erreur upload masque (code %d, result %d)" % [code, result])
+			return
+		generation_progress.emit("Masque uploadé. Lancement du workflow...")
 		_do_prompt(_source_filename, prompt_text)
 	)
 
