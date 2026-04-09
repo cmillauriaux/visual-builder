@@ -1869,13 +1869,29 @@ func _do_download(filename: String) -> void:
 
 # ===== Create tab : text-to-image avec LoRA =====
 
-## Workflow Flux text-to-image via CheckpointLoaderSimple + CFGGuider + SamplerCustomAdvanced.
+## Workflow Flux text-to-image via UNETLoader + CLIPLoader + VAELoader.
 ## Paramètres dynamiques injectés dans _build_create_flux_workflow.
+## CLIP/VAE hardcodés pour le setup Klein Flux2 (même valeurs que WORKFLOW_TEMPLATE).
 const LORA_CREATE_FLUX_WORKFLOW_TEMPLATE: Dictionary = {
-	"ckpt": {
-		"class_type": "CheckpointLoaderSimple",
+	"unet": {
+		"class_type": "UNETLoader",
 		"inputs": {
-			"ckpt_name": ""
+			"unet_name": "",
+			"weight_dtype": "default"
+		}
+	},
+	"clip": {
+		"class_type": "CLIPLoader",
+		"inputs": {
+			"clip_name": "qwen_3_8b_fp8mixed.safetensors",
+			"type": "flux2",
+			"device": "default"
+		}
+	},
+	"vae": {
+		"class_type": "VAELoader",
+		"inputs": {
+			"vae_name": "flux2-vae.safetensors"
 		}
 	},
 	"latent": {
@@ -1910,7 +1926,7 @@ const LORA_CREATE_FLUX_WORKFLOW_TEMPLATE: Dictionary = {
 		"class_type": "CLIPTextEncode",
 		"inputs": {
 			"text": "",
-			"clip": ["ckpt", 1]
+			"clip": ["clip", 0]
 		}
 	},
 	"neg_cond": {
@@ -1923,7 +1939,7 @@ const LORA_CREATE_FLUX_WORKFLOW_TEMPLATE: Dictionary = {
 		"class_type": "CFGGuider",
 		"inputs": {
 			"cfg": 1.0,
-			"model": ["ckpt", 0],
+			"model": ["unet", 0],
 			"positive": ["clip_text", 0],
 			"negative": ["neg_cond", 0]
 		}
@@ -1942,7 +1958,7 @@ const LORA_CREATE_FLUX_WORKFLOW_TEMPLATE: Dictionary = {
 		"class_type": "VAEDecode",
 		"inputs": {
 			"samples": ["sampler", 0],
-			"vae": ["ckpt", 2]
+			"vae": ["vae", 0]
 		}
 	},
 	"9": {
@@ -2017,12 +2033,24 @@ const ILLUSTRIOUS_WORKFLOW_TEMPLATE: Dictionary = {
 }
 
 
-## Récupère la liste des modèles disponibles dans ComfyUI.
+## Récupère la liste des modèles UNET disponibles dans ComfyUI (UNETLoader).
+## Les workflows Flux utilisent UNETLoader (unet_name), pas CheckpointLoaderSimple.
 ## callback(models: Array) est appelé avec un tableau de noms de modèles (strings).
+## Pour RunPod : soumet un job {action:"get_object_info", node:"UNETLoader"}
+## et poll le résultat. Pour ComfyUI local : appel direct à /object_info.
 func get_available_models(config: RefCounted, callback: Callable) -> void:
+	if config.is_runpod():
+		print("[ComfyUIClient] get_available_models: mode RunPod → _fetch_runpod_discovery")
+		_fetch_runpod_discovery(config, "UNETLoader", func(info: Dictionary):
+			var models = info.get("UNETLoader", {}).get("input", {}).get("required", {}).get("unet_name", [[]])[0]
+			print("[ComfyUIClient] get_available_models RunPod: ", len(models) if models is Array else 0, " modèles")
+			callback.call(models if models is Array else [])
+		)
+		return
+	print("[ComfyUIClient] get_available_models: mode local")
 	var http = HTTPRequest.new()
 	add_child(http)
-	var url = config.get_full_url("/object_info/CheckpointLoaderSimple")
+	var url = config.get_full_url("/object_info/UNETLoader")
 	var headers: Array = []
 	for h in config.get_auth_headers():
 		headers.append(h)
@@ -2036,7 +2064,7 @@ func get_available_models(config: RefCounted, callback: Callable) -> void:
 			callback.call([])
 			return
 		var data = json.get_data()
-		var models = data.get("CheckpointLoaderSimple", {}).get("input", {}).get("required", {}).get("ckpt_name", [[]])[0]
+		var models = data.get("UNETLoader", {}).get("input", {}).get("required", {}).get("unet_name", [[]])[0]
 		callback.call(models if models is Array else [])
 	)
 	http.request(url, PackedStringArray(headers))
@@ -2044,7 +2072,15 @@ func get_available_models(config: RefCounted, callback: Callable) -> void:
 
 ## Récupère la liste des LoRA disponibles dans ComfyUI.
 ## callback(loras: Array) est appelé avec un tableau de noms de LoRA (strings).
+## Pour RunPod : soumet un job {action:"get_object_info", node:"LoraLoader"}.
+## Pour ComfyUI local : appel direct à /object_info.
 func get_available_loras(config: RefCounted, callback: Callable) -> void:
+	if config.is_runpod():
+		_fetch_runpod_discovery(config, "LoraLoader", func(info: Dictionary):
+			var loras = info.get("LoraLoader", {}).get("input", {}).get("required", {}).get("lora_name", [[]])[0]
+			callback.call(loras if loras is Array else [])
+		)
+		return
 	var http = HTTPRequest.new()
 	add_child(http)
 	var url = config.get_full_url("/object_info/LoraLoader")
@@ -2067,19 +2103,91 @@ func get_available_loras(config: RefCounted, callback: Callable) -> void:
 	http.request(url, PackedStringArray(headers))
 
 
-## Injecte des LoRA dans un workflow basé sur CheckpointLoaderSimple.
-## ckpt_node : identifiant du nœud CheckpointLoaderSimple (output 0=model, 1=clip).
+## Soumet un job RunPod {action:"get_object_info", node:node_type} et poll le résultat.
+## callback(info: Dictionary) est appelé avec le dictionnaire object_info brut de ComfyUI.
+func _fetch_runpod_discovery(config: RefCounted, node_type: String, callback: Callable) -> void:
+	var http = HTTPRequest.new()
+	add_child(http)
+	var url = config.get_full_url("/run")
+	var payload = JSON.stringify({"input": {"action": "get_object_info", "node": node_type}})
+	var headers: Array = []
+	for h in config.get_auth_headers():
+		headers.append(h)
+	headers.append("Content-Type: application/json")
+	print("[ComfyUIClient] _fetch_runpod_discovery: POST ", url, " node=", node_type)
+	http.request_completed.connect(func(result: int, code: int, _hdrs: PackedStringArray, body: PackedByteArray):
+		print("[ComfyUIClient] _fetch_runpod_discovery response: result=", result, " code=", code, " body=", body.get_string_from_utf8().left(200))
+		http.queue_free()
+		if result != HTTPRequest.RESULT_SUCCESS or code != 200:
+			print("[ComfyUIClient] _fetch_runpod_discovery: échec HTTP result=", result, " code=", code)
+			callback.call({})
+			return
+		var json = JSON.new()
+		if json.parse(body.get_string_from_utf8()) != OK:
+			print("[ComfyUIClient] _fetch_runpod_discovery: JSON parse error")
+			callback.call({})
+			return
+		var data = json.get_data()
+		var job_id: String = data.get("id", "")
+		print("[ComfyUIClient] _fetch_runpod_discovery: job_id=", job_id)
+		if job_id.is_empty():
+			callback.call({})
+			return
+		_poll_runpod_discovery(config, job_id, callback)
+	)
+	http.request(url, PackedStringArray(headers), HTTPClient.METHOD_POST, payload)
+
+
+## Poll /status/:job_id jusqu'à COMPLETED ou FAILED, puis appelle callback(info).
+func _poll_runpod_discovery(config: RefCounted, job_id: String, callback: Callable) -> void:
+	var http = HTTPRequest.new()
+	add_child(http)
+	var url = config.get_full_url("/status/" + job_id)
+	print("[ComfyUIClient] _poll_runpod_discovery: GET ", url)
+	http.request_completed.connect(func(result: int, code: int, _hdrs: PackedStringArray, body: PackedByteArray):
+		http.queue_free()
+		if result != HTTPRequest.RESULT_SUCCESS or code != 200:
+			print("[ComfyUIClient] _poll_runpod_discovery: échec HTTP result=", result, " code=", code)
+			callback.call({})
+			return
+		var json = JSON.new()
+		if json.parse(body.get_string_from_utf8()) != OK:
+			print("[ComfyUIClient] _poll_runpod_discovery: JSON parse error")
+			callback.call({})
+			return
+		var data = json.get_data()
+		var status: String = data.get("status", "")
+		print("[ComfyUIClient] _poll_runpod_discovery: status=", status)
+		if status == "COMPLETED":
+			var info = data.get("output", {}).get("object_info", {})
+			print("[ComfyUIClient] _poll_runpod_discovery: COMPLETED, clés=", info.keys())
+			callback.call(info)
+		elif status == "FAILED" or status == "CANCELLED":
+			print("[ComfyUIClient] _poll_runpod_discovery: terminal status=", status, " error=", data.get("error", data.get("output", "?")))
+			callback.call({})
+		else:
+			# IN_QUEUE / IN_PROGRESS — reessayer dans 3 secondes
+			get_tree().create_timer(3.0).timeout.connect(
+				func(): _poll_runpod_discovery(config, job_id, callback)
+			)
+	)
+	http.request(url, config.get_auth_headers())
+
+
+## Injecte des LoRA dans un workflow basé sur UNETLoader + CLIPLoader séparés.
+## unet_node : nœud UNETLoader (output 0=model).
+## clip_node : nœud CLIPLoader (output 0=clip).
 ## model_out_node : nœud dont l'entrée "model" doit être mise à jour.
 ## clip_out_node : nœud dont l'entrée "clip" doit être mise à jour.
-func _inject_loras_create(wf: Dictionary, loras: Array, ckpt_node: String, model_out_node: String, clip_out_node: String) -> void:
+func _inject_loras_create(wf: Dictionary, loras: Array, unet_node: String, clip_node: String, model_out_node: String, clip_out_node: String) -> void:
 	if loras.is_empty():
 		return
 	var last_node_id = ""
 	for i in range(loras.size()):
 		var lora = loras[i]
 		var node_id = "clora_%d" % i
-		var model_in = [ckpt_node, 0] if i == 0 else [last_node_id, 0]
-		var clip_in = [ckpt_node, 1] if i == 0 else [last_node_id, 1]
+		var model_in = [unet_node, 0] if i == 0 else [last_node_id, 0]
+		var clip_in = [clip_node, 0] if i == 0 else [last_node_id, 1]
 		wf[node_id] = {
 			"class_type": "LoraLoader",
 			"inputs": {
@@ -2099,7 +2207,7 @@ func _inject_loras_create(wf: Dictionary, loras: Array, ckpt_node: String, model
 func _build_create_flux_workflow(prompt_text: String, negative_prompt: String, ckpt_name: String, loras: Array, steps: int, guidance: float, megapixels: float, seed: int) -> Dictionary:
 	var wf = LORA_CREATE_FLUX_WORKFLOW_TEMPLATE.duplicate(true)
 	var side = maxi(64, int(sqrt(megapixels * 1_000_000.0) / 64.0) * 64)
-	wf["ckpt"]["inputs"]["ckpt_name"] = ckpt_name
+	wf["unet"]["inputs"]["unet_name"] = ckpt_name
 	wf["noise"]["inputs"]["noise_seed"] = seed
 	wf["clip_text"]["inputs"]["text"] = prompt_text
 	wf["guider"]["inputs"]["cfg"] = guidance
@@ -2114,13 +2222,13 @@ func _build_create_flux_workflow(prompt_text: String, negative_prompt: String, c
 			"class_type": "CLIPTextEncode",
 			"inputs": {
 				"text": negative_prompt,
-				"clip": ["ckpt", 1]
+				"clip": ["clip", 0]
 			}
 		}
 		wf["guider"]["inputs"]["negative"] = ["neg_cond_text", 0]
 		wf.erase("neg_cond")
 	# Injection LoRA : met à jour guider (model) et clip_text (clip)
-	_inject_loras_create(wf, loras, "ckpt", "guider", "clip_text")
+	_inject_loras_create(wf, loras, "unet", "clip", "guider", "clip_text")
 	# Si LoRA injectés et negative prompt actif, mettre à jour le clip du négatif aussi
 	if not loras.is_empty() and negative_prompt.strip_edges() != "":
 		var last_lora_id = "clora_%d" % (loras.size() - 1)
