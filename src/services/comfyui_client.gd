@@ -2026,7 +2026,7 @@ func get_available_models(config: RefCounted, callback: Callable) -> void:
 	var headers: Array = []
 	for h in config.get_auth_headers():
 		headers.append(h)
-	http.request_completed.connect(func(result, code, _headers, body):
+	http.request_completed.connect(func(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray):
 		http.queue_free()
 		if result != HTTPRequest.RESULT_SUCCESS or code != 200:
 			callback.call([])
@@ -2051,7 +2051,7 @@ func get_available_loras(config: RefCounted, callback: Callable) -> void:
 	var headers: Array = []
 	for h in config.get_auth_headers():
 		headers.append(h)
-	http.request_completed.connect(func(result, code, _headers, body):
+	http.request_completed.connect(func(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray):
 		http.queue_free()
 		if result != HTTPRequest.RESULT_SUCCESS or code != 200:
 			callback.call([])
@@ -2158,6 +2158,11 @@ func generate_create(config: RefCounted, prompt_text: String, negative_prompt: S
 		return
 	_generating = true
 	_cancelled = false
+	_cfg = guidance
+	_steps = steps
+	_megapixels = megapixels
+	_loras = loras
+	_negative_prompt = negative_prompt
 	_config = config
 
 	generation_progress.emit("Construction du workflow...")

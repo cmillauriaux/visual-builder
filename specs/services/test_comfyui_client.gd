@@ -504,3 +504,27 @@ func test_build_illustrious_workflow_params():
 	assert_eq(wf["ksampler"]["inputs"]["seed"], 777)
 	assert_eq(wf["ksampler"]["inputs"]["steps"], 30)
 	assert_eq(wf["ksampler"]["inputs"]["cfg"], 7.5)
+
+func test_build_create_flux_workflow_with_lora_and_negative_prompt():
+	# When loras provided AND negative_prompt non-empty, both must use the final lora's clip output
+	var client = ComfyUIClientScript.new()
+	var loras = [{"name": "test_lora.safetensors", "strength": 0.8}]
+	var wf = client._build_create_flux_workflow("positive", "negative text", "model.safetensors", loras, 20, 3.5, 1.0, 0)
+	assert_true(wf.has("clora_0"))
+	# The negative text node's clip must point to the last lora output, not the original checkpoint
+	var neg_nodes = []
+	for key in wf.keys():
+		if wf[key].get("class_type", "") == "CLIPTextEncode" and wf[key]["inputs"].get("text", "") == "negative text":
+			neg_nodes.append(key)
+	assert_eq(neg_nodes.size(), 1, "Must have exactly one negative CLIPTextEncode")
+	var neg_node = neg_nodes[0]
+	assert_eq(wf[neg_node]["inputs"]["clip"], ["clora_0", 1], "Negative clip must use last lora clip output")
+
+func test_build_illustrious_workflow_with_lora_and_negative_prompt():
+	# When loras provided, neg.clip must use the final lora's clip output
+	var client = ComfyUIClientScript.new()
+	var loras = [{"name": "test_lora.safetensors", "strength": 0.9}]
+	var wf = client._build_illustrious_workflow("positive", "negative text", "model.safetensors", loras, 20, 7.0, 1.0, 0)
+	assert_true(wf.has("clora_0"))
+	assert_eq(wf["neg"]["inputs"]["clip"], ["clora_0", 1], "neg.clip must use last lora clip output")
+	assert_eq(wf["pos"]["inputs"]["clip"], ["clora_0", 1], "pos.clip must use last lora clip output")
