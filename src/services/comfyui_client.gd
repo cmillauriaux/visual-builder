@@ -16,7 +16,7 @@ func _fail(error: String) -> void:
 	print("[ComfyUI] FAILED: ", error)
 	generation_failed.emit(error)
 
-enum WorkflowType { CREATION = 0, EXPRESSION = 1, OUTPAINT = 2, UPSCALE = 3, ENHANCE = 4, UPSCALE_ENHANCE = 5, BLINK = 6, INPAINT = 7 }
+enum WorkflowType { CREATION = 0, EXPRESSION = 1, OUTPAINT = 2, UPSCALE = 3, ENHANCE = 4, UPSCALE_ENHANCE = 5, BLINK = 6, INPAINT = 7, LORA_CREATE_FLUX = 8, ILLUSTRIOUS = 9 }
 
 var _generating: bool = false
 var _prompt_id: String = ""
@@ -1866,6 +1866,355 @@ func _do_download(filename: String) -> void:
 	)
 
 	http.request(url, PackedStringArray(headers))
+
+# ===== Create tab : text-to-image avec LoRA =====
+
+## Workflow Flux text-to-image via CheckpointLoaderSimple + CFGGuider + SamplerCustomAdvanced.
+## Paramètres dynamiques injectés dans _build_create_flux_workflow.
+const LORA_CREATE_FLUX_WORKFLOW_TEMPLATE: Dictionary = {
+	"ckpt": {
+		"class_type": "CheckpointLoaderSimple",
+		"inputs": {
+			"ckpt_name": ""
+		}
+	},
+	"latent": {
+		"class_type": "EmptyFlux2LatentImage",
+		"inputs": {
+			"width": 1024,
+			"height": 1024,
+			"batch_size": 1
+		}
+	},
+	"sampler_sel": {
+		"class_type": "KSamplerSelect",
+		"inputs": {
+			"sampler_name": "euler"
+		}
+	},
+	"scheduler": {
+		"class_type": "Flux2Scheduler",
+		"inputs": {
+			"steps": 4,
+			"width": 1024,
+			"height": 1024
+		}
+	},
+	"noise": {
+		"class_type": "RandomNoise",
+		"inputs": {
+			"noise_seed": 0
+		}
+	},
+	"clip_text": {
+		"class_type": "CLIPTextEncode",
+		"inputs": {
+			"text": "",
+			"clip": ["ckpt", 1]
+		}
+	},
+	"neg_cond": {
+		"class_type": "ConditioningZeroOut",
+		"inputs": {
+			"conditioning": ["clip_text", 0]
+		}
+	},
+	"guider": {
+		"class_type": "CFGGuider",
+		"inputs": {
+			"cfg": 1.0,
+			"model": ["ckpt", 0],
+			"positive": ["clip_text", 0],
+			"negative": ["neg_cond", 0]
+		}
+	},
+	"sampler": {
+		"class_type": "SamplerCustomAdvanced",
+		"inputs": {
+			"noise": ["noise", 0],
+			"guider": ["guider", 0],
+			"sampler": ["sampler_sel", 0],
+			"sigmas": ["scheduler", 0],
+			"latent_image": ["latent", 0]
+		}
+	},
+	"vae_decode": {
+		"class_type": "VAEDecode",
+		"inputs": {
+			"samples": ["sampler", 0],
+			"vae": ["ckpt", 2]
+		}
+	},
+	"9": {
+		"class_type": "SaveImage",
+		"inputs": {
+			"filename_prefix": "Create-Flux",
+			"images": ["vae_decode", 0]
+		}
+	}
+}
+
+## Workflow SDXL/Illustrious text-to-image via CheckpointLoaderSimple + KSampler standard.
+## Paramètres dynamiques injectés dans _build_illustrious_workflow.
+const ILLUSTRIOUS_WORKFLOW_TEMPLATE: Dictionary = {
+	"ckpt": {
+		"class_type": "CheckpointLoaderSimple",
+		"inputs": {
+			"ckpt_name": ""
+		}
+	},
+	"pos": {
+		"class_type": "CLIPTextEncode",
+		"inputs": {
+			"text": "",
+			"clip": ["ckpt", 1]
+		}
+	},
+	"neg": {
+		"class_type": "CLIPTextEncode",
+		"inputs": {
+			"text": "",
+			"clip": ["ckpt", 1]
+		}
+	},
+	"latent": {
+		"class_type": "EmptyLatentImage",
+		"inputs": {
+			"width": 1024,
+			"height": 1024,
+			"batch_size": 1
+		}
+	},
+	"ksampler": {
+		"class_type": "KSampler",
+		"inputs": {
+			"seed": 0,
+			"steps": 20,
+			"cfg": 7.0,
+			"sampler_name": "euler",
+			"scheduler": "karras",
+			"denoise": 1.0,
+			"model": ["ckpt", 0],
+			"positive": ["pos", 0],
+			"negative": ["neg", 0],
+			"latent_image": ["latent", 0]
+		}
+	},
+	"vae_decode": {
+		"class_type": "VAEDecode",
+		"inputs": {
+			"samples": ["ksampler", 0],
+			"vae": ["ckpt", 2]
+		}
+	},
+	"9": {
+		"class_type": "SaveImage",
+		"inputs": {
+			"filename_prefix": "Create-Illustrious",
+			"images": ["vae_decode", 0]
+		}
+	}
+}
+
+
+## Récupère la liste des modèles disponibles dans ComfyUI.
+## callback(models: Array) est appelé avec un tableau de noms de modèles (strings).
+func get_available_models(config: RefCounted, callback: Callable) -> void:
+	var http = HTTPRequest.new()
+	add_child(http)
+	var url = config.get_full_url("/object_info/CheckpointLoaderSimple")
+	var headers: Array = []
+	for h in config.get_auth_headers():
+		headers.append(h)
+	http.request_completed.connect(func(result, code, _headers, body):
+		http.queue_free()
+		if result != HTTPRequest.RESULT_SUCCESS or code != 200:
+			callback.call([])
+			return
+		var json = JSON.new()
+		if json.parse(body.get_string_from_utf8()) != OK:
+			callback.call([])
+			return
+		var data = json.get_data()
+		var models = data.get("CheckpointLoaderSimple", {}).get("input", {}).get("required", {}).get("ckpt_name", [[]])[0]
+		callback.call(models if models is Array else [])
+	)
+	http.request(url, PackedStringArray(headers))
+
+
+## Récupère la liste des LoRA disponibles dans ComfyUI.
+## callback(loras: Array) est appelé avec un tableau de noms de LoRA (strings).
+func get_available_loras(config: RefCounted, callback: Callable) -> void:
+	var http = HTTPRequest.new()
+	add_child(http)
+	var url = config.get_full_url("/object_info/LoraLoader")
+	var headers: Array = []
+	for h in config.get_auth_headers():
+		headers.append(h)
+	http.request_completed.connect(func(result, code, _headers, body):
+		http.queue_free()
+		if result != HTTPRequest.RESULT_SUCCESS or code != 200:
+			callback.call([])
+			return
+		var json = JSON.new()
+		if json.parse(body.get_string_from_utf8()) != OK:
+			callback.call([])
+			return
+		var data = json.get_data()
+		var loras = data.get("LoraLoader", {}).get("input", {}).get("required", {}).get("lora_name", [[]])[0]
+		callback.call(loras if loras is Array else [])
+	)
+	http.request(url, PackedStringArray(headers))
+
+
+## Injecte des LoRA dans un workflow basé sur CheckpointLoaderSimple.
+## ckpt_node : identifiant du nœud CheckpointLoaderSimple (output 0=model, 1=clip).
+## model_out_node : nœud dont l'entrée "model" doit être mise à jour.
+## clip_out_node : nœud dont l'entrée "clip" doit être mise à jour.
+func _inject_loras_create(wf: Dictionary, loras: Array, ckpt_node: String, model_out_node: String, clip_out_node: String) -> void:
+	if loras.is_empty():
+		return
+	var last_node_id = ""
+	for i in range(loras.size()):
+		var lora = loras[i]
+		var node_id = "clora_%d" % i
+		var model_in = [ckpt_node, 0] if i == 0 else [last_node_id, 0]
+		var clip_in = [ckpt_node, 1] if i == 0 else [last_node_id, 1]
+		wf[node_id] = {
+			"class_type": "LoraLoader",
+			"inputs": {
+				"model": model_in,
+				"clip": clip_in,
+				"lora_name": lora["name"],
+				"strength_model": lora["strength"],
+				"strength_clip": lora["strength"]
+			}
+		}
+		last_node_id = node_id
+	wf[model_out_node]["inputs"]["model"] = [last_node_id, 0]
+	wf[clip_out_node]["inputs"]["clip"] = [last_node_id, 1]
+
+
+## Construit le workflow Flux text-to-image (LORA_CREATE_FLUX).
+func _build_create_flux_workflow(prompt_text: String, negative_prompt: String, ckpt_name: String, loras: Array, steps: int, guidance: float, megapixels: float, seed: int) -> Dictionary:
+	var wf = LORA_CREATE_FLUX_WORKFLOW_TEMPLATE.duplicate(true)
+	var side = maxi(64, int(sqrt(megapixels * 1_000_000.0) / 64.0) * 64)
+	wf["ckpt"]["inputs"]["ckpt_name"] = ckpt_name
+	wf["noise"]["inputs"]["noise_seed"] = seed
+	wf["clip_text"]["inputs"]["text"] = prompt_text
+	wf["guider"]["inputs"]["cfg"] = guidance
+	wf["scheduler"]["inputs"]["steps"] = steps
+	wf["latent"]["inputs"]["width"] = side
+	wf["latent"]["inputs"]["height"] = side
+	wf["scheduler"]["inputs"]["width"] = side
+	wf["scheduler"]["inputs"]["height"] = side
+	# Negative prompt : remplacer ConditioningZeroOut par un vrai CLIPTextEncode
+	if negative_prompt.strip_edges() != "":
+		wf["neg_cond_text"] = {
+			"class_type": "CLIPTextEncode",
+			"inputs": {
+				"text": negative_prompt,
+				"clip": ["ckpt", 1]
+			}
+		}
+		wf["guider"]["inputs"]["negative"] = ["neg_cond_text", 0]
+		wf.erase("neg_cond")
+	# Injection LoRA : met à jour guider (model) et clip_text (clip)
+	_inject_loras_create(wf, loras, "ckpt", "guider", "clip_text")
+	# Si LoRA injectés et negative prompt actif, mettre à jour le clip du négatif aussi
+	if not loras.is_empty() and negative_prompt.strip_edges() != "":
+		var last_lora_id = "clora_%d" % (loras.size() - 1)
+		wf["neg_cond_text"]["inputs"]["clip"] = [last_lora_id, 1]
+	return wf
+
+
+## Construit le workflow Illustrious/SDXL text-to-image.
+func _build_illustrious_workflow(prompt_text: String, negative_prompt: String, ckpt_name: String, loras: Array, steps: int, cfg: float, megapixels: float, seed: int) -> Dictionary:
+	var wf = ILLUSTRIOUS_WORKFLOW_TEMPLATE.duplicate(true)
+	var side = maxi(64, int(sqrt(megapixels * 1_000_000.0) / 64.0) * 64)
+	wf["ckpt"]["inputs"]["ckpt_name"] = ckpt_name
+	wf["pos"]["inputs"]["text"] = prompt_text
+	wf["neg"]["inputs"]["text"] = negative_prompt
+	wf["ksampler"]["inputs"]["seed"] = seed
+	wf["ksampler"]["inputs"]["steps"] = steps
+	wf["ksampler"]["inputs"]["cfg"] = cfg
+	wf["latent"]["inputs"]["width"] = side
+	wf["latent"]["inputs"]["height"] = side
+	# Injection LoRA : met à jour ksampler (model) et pos (clip)
+	if not loras.is_empty():
+		_inject_loras_create(wf, loras, "ckpt", "ksampler", "pos")
+		# Mettre à jour le clip du négatif aussi
+		var last_lora_id = "clora_%d" % (loras.size() - 1)
+		wf["neg"]["inputs"]["clip"] = [last_lora_id, 1]
+	return wf
+
+
+## Génère une image text-to-image avec le modèle et les LoRA sélectionnés.
+## model_type: "flux" pour Flux (LORA_CREATE_FLUX), "illustrious" pour SDXL/Illustrious.
+## loras: Array de {"name": String, "strength": float}
+func generate_create(config: RefCounted, prompt_text: String, negative_prompt: String, ckpt_name: String, loras: Array, steps: int, guidance: float, megapixels: float, seed: int, model_type: String) -> void:
+	if _generating:
+		_fail("Une génération est déjà en cours")
+		return
+	_generating = true
+	_cancelled = false
+	_config = config
+
+	generation_progress.emit("Construction du workflow...")
+	var wf: Dictionary
+	if model_type == "illustrious":
+		_workflow_type = WorkflowType.ILLUSTRIOUS
+		wf = _build_illustrious_workflow(prompt_text, negative_prompt, ckpt_name, loras, steps, guidance, megapixels, seed)
+	else:
+		_workflow_type = WorkflowType.LORA_CREATE_FLUX
+		wf = _build_create_flux_workflow(prompt_text, negative_prompt, ckpt_name, loras, steps, guidance, megapixels, seed)
+
+	generation_progress.emit("Envoi du prompt à ComfyUI...")
+	_do_prompt_only(wf)
+
+
+## Soumet un workflow directement à ComfyUI sans upload d'image préalable.
+## Utilisé pour les workflows text-to-image (generate_create).
+func _do_prompt_only(wf: Dictionary) -> void:
+	var wt_name = WorkflowType.keys()[_workflow_type] if _workflow_type < WorkflowType.size() else str(_workflow_type)
+	print("[ComfyUI] === PROMPT ONLY DEBUG ===")
+	print("[ComfyUI] workflow_type : ", wt_name)
+	print("[ComfyUI] full workflow JSON : ", JSON.stringify(wf))
+	print("[ComfyUI] ====================")
+
+	var payload = JSON.stringify({"prompt": wf})
+
+	var http = HTTPRequest.new()
+	add_child(http)
+
+	var url = _config.get_full_url("/prompt")
+	var headers: Array = ["Content-Type: application/json"]
+	for h in _config.get_auth_headers():
+		headers.append(h)
+
+	http.request_completed.connect(func(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray):
+		http.queue_free()
+		if _cancelled:
+			_generating = false
+			return
+		if result != HTTPRequest.RESULT_SUCCESS or code != 200:
+			_generating = false
+			var response_str = body.get_string_from_utf8()
+			print("[ComfyUI] ERREUR prompt (code %d) : %s" % [code, response_str])
+			_fail("Erreur prompt (code %d) : %s" % [code, response_str.left(500)])
+			return
+		var response_str = body.get_string_from_utf8()
+		_prompt_id = parse_prompt_response(response_str)
+		if _prompt_id.is_empty():
+			_generating = false
+			_fail("Réponse invalide du serveur (pas de prompt_id)")
+			return
+		generation_progress.emit("Génération en cours...")
+		_start_polling()
+	)
+
+	http.request(url, PackedStringArray(headers), HTTPClient.METHOD_POST, payload)
+
 
 func cancel() -> void:
 	_cancelled = true
