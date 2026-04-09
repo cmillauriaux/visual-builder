@@ -386,3 +386,121 @@ func test_build_inpaint_fill_workflow_negative_prompt():
 	assert_eq(wf["47"]["inputs"]["text"], "bad quality")
 	assert_eq(wf["38"]["inputs"]["negative"], ["47", 0])
 	assert_false(wf.has("46"), "ConditioningZeroOut doit être effacé")
+
+
+# --- _inject_loras_create ---
+
+func test_inject_loras_create_empty_loras():
+	# Empty loras list → no lora nodes added, workflow unchanged
+	var client = ComfyUIClientScript.new()
+	var wf = {
+		"ckpt": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": "test.safetensors"}},
+		"guider": {"class_type": "CFGGuider", "inputs": {"model": ["ckpt", 0], "positive": ["clip_text", 0], "negative": ["neg_cond", 0], "cfg": 1.0}},
+		"clip_text": {"class_type": "CLIPTextEncode", "inputs": {"text": "", "clip": ["ckpt", 1]}}
+	}
+	client._inject_loras_create(wf, [], "ckpt", "guider", "clip_text")
+	assert_false(wf.has("clora_0"))
+	assert_eq(wf["guider"]["inputs"]["model"], ["ckpt", 0])
+	assert_eq(wf["clip_text"]["inputs"]["clip"], ["ckpt", 1])
+
+func test_inject_loras_create_single_lora():
+	# One lora → creates clora_0 node, updates model_out_node.model and clip_out_node.clip
+	var client = ComfyUIClientScript.new()
+	var wf = {
+		"ckpt": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": "test.safetensors"}},
+		"guider": {"class_type": "CFGGuider", "inputs": {"model": ["ckpt", 0], "positive": ["clip_text", 0], "negative": ["neg_cond", 0], "cfg": 1.0}},
+		"clip_text": {"class_type": "CLIPTextEncode", "inputs": {"text": "", "clip": ["ckpt", 1]}}
+	}
+	client._inject_loras_create(wf, [{"name": "my_lora.safetensors", "strength": 0.8}], "ckpt", "guider", "clip_text")
+	assert_true(wf.has("clora_0"))
+	assert_eq(wf["clora_0"]["class_type"], "LoraLoader")
+	assert_eq(wf["clora_0"]["inputs"]["lora_name"], "my_lora.safetensors")
+	assert_eq(wf["clora_0"]["inputs"]["strength_model"], 0.8)
+	assert_eq(wf["clora_0"]["inputs"]["model"], ["ckpt", 0])
+	assert_eq(wf["clora_0"]["inputs"]["clip"], ["ckpt", 1])
+	assert_eq(wf["guider"]["inputs"]["model"], ["clora_0", 0])
+	assert_eq(wf["clip_text"]["inputs"]["clip"], ["clora_0", 1])
+
+func test_inject_loras_create_multiple_loras():
+	# Two loras → clora_0 feeds into clora_1
+	var client = ComfyUIClientScript.new()
+	var wf = {
+		"ckpt": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": "test.safetensors"}},
+		"guider": {"class_type": "CFGGuider", "inputs": {"model": ["ckpt", 0], "positive": ["clip_text", 0], "negative": ["neg_cond", 0], "cfg": 1.0}},
+		"clip_text": {"class_type": "CLIPTextEncode", "inputs": {"text": "", "clip": ["ckpt", 1]}}
+	}
+	var loras = [
+		{"name": "lora_a.safetensors", "strength": 0.7},
+		{"name": "lora_b.safetensors", "strength": 0.5}
+	]
+	client._inject_loras_create(wf, loras, "ckpt", "guider", "clip_text")
+	assert_true(wf.has("clora_0"))
+	assert_true(wf.has("clora_1"))
+	assert_eq(wf["clora_0"]["inputs"]["model"], ["ckpt", 0])
+	assert_eq(wf["clora_1"]["inputs"]["model"], ["clora_0", 0])
+	assert_eq(wf["clora_1"]["inputs"]["clip"], ["clora_0", 1])
+	assert_eq(wf["guider"]["inputs"]["model"], ["clora_1", 0])
+	assert_eq(wf["clip_text"]["inputs"]["clip"], ["clora_1", 1])
+
+
+# --- _build_create_flux_workflow ---
+
+func test_build_create_flux_workflow_structure():
+	var client = ComfyUIClientScript.new()
+	var wf = client._build_create_flux_workflow("test prompt", "", "my_model.safetensors", [], 20, 3.5, 1.0, 12345)
+	assert_true(wf.has("9"))  # SaveImage
+	assert_true(wf.has("ckpt"))
+	assert_true(wf.has("latent"))
+	assert_true(wf.has("sampler"))
+	assert_true(wf.has("noise"))
+	assert_true(wf.has("clip_text"))
+	assert_eq(wf["ckpt"]["class_type"], "CheckpointLoaderSimple")
+	assert_eq(wf["latent"]["class_type"], "EmptyFlux2LatentImage")
+
+func test_build_create_flux_workflow_params():
+	var client = ComfyUIClientScript.new()
+	var wf = client._build_create_flux_workflow("my prompt", "", "flux_model.safetensors", [], 25, 4.0, 1.0, 99999)
+	assert_eq(wf["ckpt"]["inputs"]["ckpt_name"], "flux_model.safetensors")
+	assert_eq(wf["clip_text"]["inputs"]["text"], "my prompt")
+	assert_eq(wf["noise"]["inputs"]["noise_seed"], 99999)
+	assert_eq(wf["scheduler"]["inputs"]["steps"], 25)
+	assert_eq(wf["guider"]["inputs"]["cfg"], 4.0)
+
+func test_build_create_flux_workflow_size_from_megapixels():
+	var client = ComfyUIClientScript.new()
+	var wf = client._build_create_flux_workflow("prompt", "", "model.safetensors", [], 20, 1.0, 1.0, 0)
+	var w = wf["latent"]["inputs"]["width"]
+	var h = wf["latent"]["inputs"]["height"]
+	assert_true(w > 0)
+	assert_true(h > 0)
+	assert_eq(w % 64, 0)  # Must be multiple of 64
+	assert_eq(h % 64, 0)
+	# For 1MP: approx 1024x1024
+	assert_gt(w, 512)
+	assert_gt(h, 512)
+
+
+# --- _build_illustrious_workflow ---
+
+func test_build_illustrious_workflow_structure():
+	var client = ComfyUIClientScript.new()
+	var wf = client._build_illustrious_workflow("test", "negative", "illust.safetensors", [], 20, 7.0, 1.0, 42)
+	assert_true(wf.has("9"))  # SaveImage
+	assert_true(wf.has("ckpt"))
+	assert_true(wf.has("latent"))
+	assert_true(wf.has("ksampler"))
+	assert_true(wf.has("pos"))
+	assert_true(wf.has("neg"))
+	assert_eq(wf["ckpt"]["class_type"], "CheckpointLoaderSimple")
+	assert_eq(wf["latent"]["class_type"], "EmptyLatentImage")
+	assert_eq(wf["ksampler"]["class_type"], "KSampler")
+
+func test_build_illustrious_workflow_params():
+	var client = ComfyUIClientScript.new()
+	var wf = client._build_illustrious_workflow("positive prompt", "negative prompt", "sdxl.safetensors", [], 30, 7.5, 1.0, 777)
+	assert_eq(wf["ckpt"]["inputs"]["ckpt_name"], "sdxl.safetensors")
+	assert_eq(wf["pos"]["inputs"]["text"], "positive prompt")
+	assert_eq(wf["neg"]["inputs"]["text"], "negative prompt")
+	assert_eq(wf["ksampler"]["inputs"]["seed"], 777)
+	assert_eq(wf["ksampler"]["inputs"]["steps"], 30)
+	assert_eq(wf["ksampler"]["inputs"]["cfg"], 7.5)
