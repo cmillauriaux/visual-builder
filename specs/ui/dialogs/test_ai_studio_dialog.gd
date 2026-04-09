@@ -42,8 +42,8 @@ func test_has_tab_container():
 	assert_is(_dialog._tab_container, TabContainer)
 
 
-func test_has_two_tabs():
-	assert_eq(_dialog._tab_container.get_tab_count(), 2)
+func test_has_ten_tabs():
+	assert_eq(_dialog._tab_container.get_tab_count(), 10)
 
 
 func test_tab_decliner_exists():
