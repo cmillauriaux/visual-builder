@@ -2174,20 +2174,20 @@ func _poll_runpod_discovery(config: RefCounted, job_id: String, callback: Callab
 	http.request(url, config.get_auth_headers())
 
 
-## Injecte des LoRA dans un workflow basé sur UNETLoader + CLIPLoader séparés.
-## unet_node : nœud UNETLoader (output 0=model).
-## clip_node : nœud CLIPLoader (output 0=clip).
+## Injecte des LoRA dans un workflow.
+## model_ref : référence source du modèle, ex: ["unet", 0] ou ["ckpt", 0].
+## clip_ref  : référence source du clip,   ex: ["clip", 0] ou ["ckpt", 1].
 ## model_out_node : nœud dont l'entrée "model" doit être mise à jour.
-## clip_out_node : nœud dont l'entrée "clip" doit être mise à jour.
-func _inject_loras_create(wf: Dictionary, loras: Array, unet_node: String, clip_node: String, model_out_node: String, clip_out_node: String) -> void:
+## clip_out_node  : nœud dont l'entrée "clip" doit être mise à jour.
+func _inject_loras_create(wf: Dictionary, loras: Array, model_ref: Array, clip_ref: Array, model_out_node: String, clip_out_node: String) -> void:
 	if loras.is_empty():
 		return
 	var last_node_id = ""
 	for i in range(loras.size()):
 		var lora = loras[i]
 		var node_id = "clora_%d" % i
-		var model_in = [unet_node, 0] if i == 0 else [last_node_id, 0]
-		var clip_in = [clip_node, 0] if i == 0 else [last_node_id, 1]
+		var model_in = model_ref if i == 0 else [last_node_id, 0]
+		var clip_in = clip_ref if i == 0 else [last_node_id, 1]
 		wf[node_id] = {
 			"class_type": "LoraLoader",
 			"inputs": {
@@ -2228,7 +2228,7 @@ func _build_create_flux_workflow(prompt_text: String, negative_prompt: String, c
 		wf["guider"]["inputs"]["negative"] = ["neg_cond_text", 0]
 		wf.erase("neg_cond")
 	# Injection LoRA : met à jour guider (model) et clip_text (clip)
-	_inject_loras_create(wf, loras, "unet", "clip", "guider", "clip_text")
+	_inject_loras_create(wf, loras, ["unet", 0], ["clip", 0], "guider", "clip_text")
 	# Si LoRA injectés et negative prompt actif, mettre à jour le clip du négatif aussi
 	if not loras.is_empty() and negative_prompt.strip_edges() != "":
 		var last_lora_id = "clora_%d" % (loras.size() - 1)
@@ -2250,7 +2250,7 @@ func _build_illustrious_workflow(prompt_text: String, negative_prompt: String, c
 	wf["latent"]["inputs"]["height"] = side
 	# Injection LoRA : met à jour ksampler (model) et pos (clip)
 	if not loras.is_empty():
-		_inject_loras_create(wf, loras, "ckpt", "ksampler", "pos")
+		_inject_loras_create(wf, loras, ["ckpt", 0], ["ckpt", 1], "ksampler", "pos")
 		# Mettre à jour le clip du négatif aussi
 		var last_lora_id = "clora_%d" % (loras.size() - 1)
 		wf["neg"]["inputs"]["clip"] = [last_lora_id, 1]
