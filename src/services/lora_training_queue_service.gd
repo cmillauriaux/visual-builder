@@ -77,8 +77,10 @@ func mark_completed(index: int, image: Image) -> void:
 	_items[index]["image"] = image
 
 
-func mark_failed(index: int) -> void:
+func mark_failed(index: int, error: String = "") -> void:
 	_items[index]["status"] = ItemStatus.FAILED
+	if error != "":
+		_items[index]["error"] = error
 
 
 func cancel() -> void:
