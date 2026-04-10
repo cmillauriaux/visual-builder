@@ -1566,6 +1566,7 @@ func _do_runpod_poll(job_id: String) -> void:
 	var http = HTTPRequest.new()
 	add_child(http)
 	var url = _config.get_full_url("/status/" + job_id)
+	print("[RunPod] poll → ", url)
 
 	http.request_completed.connect(func(result: int, code: int, _h: PackedStringArray, body_bytes: PackedByteArray):
 		http.queue_free()
@@ -1573,20 +1574,29 @@ func _do_runpod_poll(job_id: String) -> void:
 			_generating = false
 			return
 		if result != HTTPRequest.RESULT_SUCCESS:
+			print("[RunPod] poll: erreur réseau result=", result)
 			_generating = false
-			_fail("Erreur polling RunPod")
+			_fail("Erreur polling RunPod (result=%d)" % result)
+			return
+		if code != 200:
+			print("[RunPod] poll: HTTP ", code, " body=", body_bytes.get_string_from_utf8().left(200))
+			_generating = false
+			_fail("Erreur polling RunPod (HTTP %d)" % code)
 			return
 		var resp = JSON.parse_string(body_bytes.get_string_from_utf8())
 		if resp == null:
+			print("[RunPod] poll: JSON parse error body=", body_bytes.get_string_from_utf8().left(200))
 			_generating = false
 			_fail("Réponse statut RunPod invalide")
 			return
 		var status: String = resp.get("status", "")
+		print("[RunPod] poll: job_id=", job_id, " status=", status)
 		if status == "COMPLETED":
 			var output = resp.get("output", {})
 			if output == null:
 				output = {}
 			var images = output.get("images", [])
+			print("[RunPod] poll: COMPLETED, images=", images.size())
 			if images.size() == 0:
 				_generating = false
 				_fail("Aucune image dans la sortie RunPod")
@@ -1594,6 +1604,7 @@ func _do_runpod_poll(job_id: String) -> void:
 			# rp_handler.py retourne {"name": ..., "image": <base64>}
 			var b64: String = images[0].get("image", images[0].get("data", ""))
 			if b64 == "":
+				print("[RunPod] poll: image[0] keys=", images[0].keys())
 				_generating = false
 				_fail("Image vide dans la sortie RunPod")
 				return
@@ -1606,8 +1617,10 @@ func _do_runpod_poll(job_id: String) -> void:
 			_generating = false
 			generation_completed.emit(image)
 		elif status == "FAILED":
+			var error_detail = str(resp.get("error", resp.get("output", "erreur inconnue")))
+			print("[RunPod] poll: FAILED error=", error_detail)
 			_generating = false
-			_fail("Job RunPod échoué : " + str(resp.get("error", "erreur inconnue")))
+			_fail("Job RunPod échoué : " + error_detail)
 		else:
 			generation_progress.emit("RunPod : " + status + "...")
 			get_tree().create_timer(5.0).timeout.connect(func(): _do_runpod_poll(job_id))
