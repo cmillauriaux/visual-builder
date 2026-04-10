@@ -22,7 +22,8 @@
     "res://specs/plugins/",
     "res://specs/plugins/ai_studio/",
     "res://specs/plugins/censure/",
-    "res://specs/plugins/playfab_analytics/"
+    "res://specs/plugins/playfab_analytics/",
+    "res://specs/panels/"
   ],
   "prefix": "test_",
   "suffix": ".gd",
