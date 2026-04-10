@@ -9,6 +9,43 @@ func before_each():
 	LoraTrainingQueueServiceScript = load("res://src/services/lora_training_queue_service.gd")
 
 
+func test_detect_base_closeup():
+	assert_eq(LoraTrainingQueueServiceScript.detect_base("close-up, front view, looking at viewer"), "closeup")
+
+
+func test_detect_base_full_body():
+	assert_eq(LoraTrainingQueueServiceScript.detect_base("full body, front view, standing"), "full_body")
+
+
+func test_detect_base_buste_upper_body():
+	assert_eq(LoraTrainingQueueServiceScript.detect_base("upper body, front view, standing"), "buste")
+
+
+func test_detect_base_buste_waist_up():
+	assert_eq(LoraTrainingQueueServiceScript.detect_base("waist up, three-quarter view, sitting"), "buste")
+
+
+func test_detect_base_three_quarter():
+	assert_eq(LoraTrainingQueueServiceScript.detect_base("portrait, three-quarter left view, looking at viewer"), "three_quarter")
+
+
+func test_detect_base_profile_over_shoulder():
+	assert_eq(LoraTrainingQueueServiceScript.detect_base("portrait, looking over shoulder, neutral expression"), "profile")
+
+
+func test_detect_base_portrait_default():
+	assert_eq(LoraTrainingQueueServiceScript.detect_base("portrait, front view, looking at viewer, smiling"), "portrait")
+
+
+func test_detect_base_priority_closeup_over_upper_body():
+	# "close-up" must win over "upper body" even if both appear
+	assert_eq(LoraTrainingQueueServiceScript.detect_base("close-up, upper body, front view"), "closeup")
+
+
+func test_detect_base_priority_full_body_over_buste():
+	assert_eq(LoraTrainingQueueServiceScript.detect_base("full body, upper body, standing"), "full_body")
+
+
 func test_build_queue_creates_variation_items():
 	var svc = LoraTrainingQueueServiceScript.new()
 	svc.build_queue(["img1.png", "img2.png"], "hero", ["front view", "side view", "back view"])

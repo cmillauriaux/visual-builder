@@ -12,6 +12,27 @@ extends RefCounted
 
 class_name LoraTrainingQueueService
 
+## Détecte le slot de base à utiliser pour une variation donnée.
+## Priorité (premier match) :
+##   1. "close-up"                         → "closeup"
+##   2. "full body"                         → "full_body"
+##   3. "upper body" ou "waist up"          → "buste"
+##   4. "three-quarter"                     → "three_quarter"
+##   5. "looking over shoulder" ou "profile"→ "profile"
+##   6. (défaut)                            → "portrait"
+static func detect_base(caption: String) -> String:
+	if "close-up" in caption:
+		return "closeup"
+	if "full body" in caption:
+		return "full_body"
+	if "upper body" in caption or "waist up" in caption:
+		return "buste"
+	if "three-quarter" in caption:
+		return "three_quarter"
+	if "looking over shoulder" in caption or "profile" in caption:
+		return "profile"
+	return "portrait"
+
 enum ItemStatus { PENDING, GENERATING, COMPLETED, FAILED }
 
 var _items: Array = []
