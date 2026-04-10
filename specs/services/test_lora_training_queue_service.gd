@@ -5,6 +5,15 @@ extends GutTest
 
 var LoraTrainingQueueServiceScript
 
+const BASES_FULL = {
+	"closeup":       {"image": null, "path": "img_closeup.png"},
+	"portrait":      {"image": null, "path": "img_portrait.png"},
+	"three_quarter": {"image": null, "path": "img_3q.png"},
+	"profile":       {"image": null, "path": "img_profile.png"},
+	"buste":         {"image": null, "path": "img_buste.png"},
+	"full_body":     {"image": null, "path": "img_fullbody.png"},
+}
+
 func before_each():
 	LoraTrainingQueueServiceScript = load("res://src/services/lora_training_queue_service.gd")
 
@@ -46,143 +55,119 @@ func test_detect_base_priority_full_body_over_buste():
 	assert_eq(LoraTrainingQueueServiceScript.detect_base("full body, upper body, standing"), "full_body")
 
 
-func test_build_queue_creates_variation_items():
+func test_build_queue_creates_one_item_per_variation():
 	var svc = LoraTrainingQueueServiceScript.new()
-	svc.build_queue(["img1.png", "img2.png"], "hero", ["front view", "side view", "back view"])
-	var items = svc.get_all_items()
-	var pending_count = 0
-	for item in items:
-		if item["status"] == LoraTrainingQueueServiceScript.ItemStatus.PENDING:
-			pending_count += 1
-	assert_eq(pending_count, 6, "2 sources × 3 variations = 6 PENDING variation items")
+	svc.build_queue(BASES_FULL, "hero", ["portrait, front view", "full body, standing", "close-up, face"])
+	assert_eq(svc.get_total(), 3, "One item per variation, no source reference items")
 
 
-func test_build_queue_adds_source_items_as_completed():
+func test_build_queue_all_items_pending():
 	var svc = LoraTrainingQueueServiceScript.new()
-	svc.build_queue(["img1.png", "img2.png"], "hero", ["front view", "side view"])
-	var items = svc.get_all_items()
-	var completed_sources: Array = []
-	for item in items:
-		if item["status"] == LoraTrainingQueueServiceScript.ItemStatus.COMPLETED and item["variation_prompt"] == "reference image":
-			completed_sources.append(item)
-	assert_eq(completed_sources.size(), 2, "2 sources → 2 COMPLETED items with variation_prompt 'reference image'")
-	assert_eq(completed_sources[0]["source_image_path"], "img1.png")
-	assert_eq(completed_sources[1]["source_image_path"], "img2.png")
+	svc.build_queue(BASES_FULL, "hero", ["portrait, front view", "full body, standing"])
+	for item in svc.get_all_items():
+		assert_eq(item["status"], LoraTrainingQueueServiceScript.ItemStatus.PENDING)
 
 
-func test_build_queue_total():
+func test_build_queue_source_path_from_detected_base():
 	var svc = LoraTrainingQueueServiceScript.new()
-	svc.build_queue(["img1.png", "img2.png"], "hero", ["front view", "side view", "back view"])
-	assert_eq(svc.get_total(), 8, "2 sources + (2 × 3 variations) = 8 total items")
+	svc.build_queue(BASES_FULL, "hero", ["full body, front view, standing"])
+	var item = svc.get_all_items()[0]
+	assert_eq(item["source_image_path"], "img_fullbody.png", "full body variation uses full_body base path")
 
 
-func test_caption_format():
+func test_build_queue_source_path_closeup():
 	var svc = LoraTrainingQueueServiceScript.new()
-	svc.build_queue(["img1.png"], "hero", ["front view, standing, white background"])
-	var items = svc.get_all_items()
-	var variation_item = null
-	for item in items:
-		if item["variation_prompt"] != "reference image":
-			variation_item = item
-			break
-	assert_not_null(variation_item)
-	assert_eq(variation_item["caption"], "hero, front view, standing, white background")
+	svc.build_queue(BASES_FULL, "hero", ["close-up, front view, neutral expression"])
+	var item = svc.get_all_items()[0]
+	assert_eq(item["source_image_path"], "img_closeup.png")
 
 
-func test_source_item_caption():
+func test_build_queue_source_path_portrait_default():
 	var svc = LoraTrainingQueueServiceScript.new()
-	svc.build_queue(["img1.png"], "hero", ["front view"])
-	var items = svc.get_all_items()
-	var source_item = null
-	for item in items:
-		if item["variation_prompt"] == "reference image":
-			source_item = item
-			break
-	assert_not_null(source_item)
-	assert_eq(source_item["caption"], "hero, reference image")
+	svc.build_queue(BASES_FULL, "hero", ["portrait, front view, smiling"])
+	var item = svc.get_all_items()[0]
+	assert_eq(item["source_image_path"], "img_portrait.png")
+
+
+func test_build_queue_caption_format():
+	var svc = LoraTrainingQueueServiceScript.new()
+	svc.build_queue(BASES_FULL, "hero", ["portrait, front view, smiling"])
+	var item = svc.get_all_items()[0]
+	assert_eq(item["caption"], "hero, portrait, front view, smiling")
+
+
+func test_build_queue_empty_variations():
+	var svc = LoraTrainingQueueServiceScript.new()
+	svc.build_queue(BASES_FULL, "hero", [])
+	assert_eq(svc.get_total(), 0)
 
 
 func test_get_next_pending_returns_first_pending():
 	var svc = LoraTrainingQueueServiceScript.new()
-	svc.build_queue(["img1.png"], "hero", ["front view", "side view"])
-	# source items are COMPLETED, variation items are PENDING
+	svc.build_queue(BASES_FULL, "hero", ["portrait, front view", "full body, standing"])
 	var idx = svc.get_next_pending_index()
-	assert_true(idx >= 0, "Should return a valid index for the first PENDING item")
-	var items = svc.get_all_items()
-	assert_eq(items[idx]["status"], LoraTrainingQueueServiceScript.ItemStatus.PENDING)
+	assert_eq(idx, 0)
+	assert_eq(svc.get_all_items()[idx]["status"], LoraTrainingQueueServiceScript.ItemStatus.PENDING)
 
 
 func test_get_next_pending_skips_completed():
 	var svc = LoraTrainingQueueServiceScript.new()
-	svc.build_queue(["img1.png"], "hero", ["front view", "side view"])
-	var first = svc.get_next_pending_index()
-	svc.mark_completed(first, Image.new())
-	var second = svc.get_next_pending_index()
-	assert_true(second != first, "Should skip the completed item")
-	assert_true(second >= 0)
+	svc.build_queue(BASES_FULL, "hero", ["portrait, front view", "full body, standing"])
+	svc.mark_completed(0, Image.new())
+	var idx = svc.get_next_pending_index()
+	assert_eq(idx, 1)
 
 
 func test_get_next_pending_returns_minus_one_when_no_pending():
 	var svc = LoraTrainingQueueServiceScript.new()
-	svc.build_queue(["img1.png"], "hero", ["front view"])
-	var idx = svc.get_next_pending_index()
-	while idx >= 0:
-		svc.mark_completed(idx, Image.new())
-		idx = svc.get_next_pending_index()
+	svc.build_queue(BASES_FULL, "hero", ["portrait, front view"])
+	svc.mark_completed(0, Image.new())
 	assert_eq(svc.get_next_pending_index(), -1)
 
 
 func test_mark_generating_sets_status():
 	var svc = LoraTrainingQueueServiceScript.new()
-	svc.build_queue(["img1.png"], "hero", ["front view"])
-	var idx = svc.get_next_pending_index()
-	svc.mark_generating(idx)
-	assert_eq(svc.get_all_items()[idx]["status"], LoraTrainingQueueServiceScript.ItemStatus.GENERATING)
+	svc.build_queue(BASES_FULL, "hero", ["portrait, front view"])
+	svc.mark_generating(0)
+	assert_eq(svc.get_all_items()[0]["status"], LoraTrainingQueueServiceScript.ItemStatus.GENERATING)
 
 
 func test_mark_completed_sets_status_and_image():
 	var svc = LoraTrainingQueueServiceScript.new()
-	svc.build_queue(["img1.png"], "hero", ["front view"])
-	var idx = svc.get_next_pending_index()
+	svc.build_queue(BASES_FULL, "hero", ["portrait, front view"])
 	var img = Image.new()
-	svc.mark_completed(idx, img)
-	var item = svc.get_all_items()[idx]
+	svc.mark_completed(0, img)
+	var item = svc.get_all_items()[0]
 	assert_eq(item["status"], LoraTrainingQueueServiceScript.ItemStatus.COMPLETED)
 	assert_eq(item["image"], img)
 
 
 func test_mark_failed_sets_status():
 	var svc = LoraTrainingQueueServiceScript.new()
-	svc.build_queue(["img1.png"], "hero", ["front view"])
-	var idx = svc.get_next_pending_index()
-	svc.mark_failed(idx)
-	assert_eq(svc.get_all_items()[idx]["status"], LoraTrainingQueueServiceScript.ItemStatus.FAILED)
+	svc.build_queue(BASES_FULL, "hero", ["portrait, front view"])
+	svc.mark_failed(0)
+	assert_eq(svc.get_all_items()[0]["status"], LoraTrainingQueueServiceScript.ItemStatus.FAILED)
 
 
 func test_get_completed_count():
 	var svc = LoraTrainingQueueServiceScript.new()
-	svc.build_queue(["img1.png"], "hero", ["front view", "side view"])
-	# source items already COMPLETED = 1
-	var initial = svc.get_completed_count()
-	var idx = svc.get_next_pending_index()
-	svc.mark_completed(idx, Image.new())
-	assert_eq(svc.get_completed_count(), initial + 1)
+	svc.build_queue(BASES_FULL, "hero", ["portrait, front view", "full body, standing"])
+	assert_eq(svc.get_completed_count(), 0)
+	svc.mark_completed(0, Image.new())
+	assert_eq(svc.get_completed_count(), 1)
 
 
 func test_cancel_sets_pending_to_failed():
 	var svc = LoraTrainingQueueServiceScript.new()
-	svc.build_queue(["img1.png"], "hero", ["front view", "side view"])
+	svc.build_queue(BASES_FULL, "hero", ["portrait, front view", "full body, standing"])
 	svc.cancel()
-	var items = svc.get_all_items()
-	for item in items:
-		if item["variation_prompt"] != "reference image":
-			assert_eq(item["status"], LoraTrainingQueueServiceScript.ItemStatus.FAILED,
-				"PENDING items should become FAILED after cancel")
+	for item in svc.get_all_items():
+		assert_eq(item["status"], LoraTrainingQueueServiceScript.ItemStatus.FAILED)
 
 
 func test_is_cancelled():
 	var svc = LoraTrainingQueueServiceScript.new()
-	svc.build_queue(["img1.png"], "hero", ["front view"])
+	svc.build_queue(BASES_FULL, "hero", ["portrait, front view"])
 	assert_false(svc.is_cancelled())
 	svc.cancel()
 	assert_true(svc.is_cancelled())
@@ -190,7 +175,7 @@ func test_is_cancelled():
 
 func test_clear_resets_queue():
 	var svc = LoraTrainingQueueServiceScript.new()
-	svc.build_queue(["img1.png"], "hero", ["front view"])
+	svc.build_queue(BASES_FULL, "hero", ["portrait, front view"])
 	svc.cancel()
 	svc.clear()
 	assert_eq(svc.get_total(), 0)
@@ -199,19 +184,17 @@ func test_clear_resets_queue():
 
 func test_remove_item():
 	var svc = LoraTrainingQueueServiceScript.new()
-	svc.build_queue(["img1.png"], "hero", ["front view", "side view"])
-	var total_before = svc.get_total()
+	svc.build_queue(BASES_FULL, "hero", ["portrait, front view", "full body, standing"])
 	svc.remove_item(0)
-	assert_eq(svc.get_total(), total_before - 1)
+	assert_eq(svc.get_total(), 1)
 
 
 func test_reset_item():
 	var svc = LoraTrainingQueueServiceScript.new()
-	svc.build_queue(["img1.png"], "hero", ["front view"])
-	var idx = svc.get_next_pending_index()
+	svc.build_queue(BASES_FULL, "hero", ["portrait, front view"])
 	var img = Image.new()
-	svc.mark_completed(idx, img)
-	svc.reset_item(idx)
-	var item = svc.get_all_items()[idx]
+	svc.mark_completed(0, img)
+	svc.reset_item(0)
+	var item = svc.get_all_items()[0]
 	assert_eq(item["status"], LoraTrainingQueueServiceScript.ItemStatus.PENDING)
 	assert_null(item["image"])

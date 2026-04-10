@@ -5,10 +5,10 @@ extends RefCounted
 
 ## Gère la file d'attente de génération de datasets LoRA (variations d'images).
 ##
-## Chaque item représente soit une image source (COMPLETED, variation_prompt="reference image")
-## soit une variation à générer (PENDING, variation_prompt=la variation demandée).
+## Chaque item représente une variation à générer (PENDING, variation_prompt=la variation demandée).
+## Le source_image_path est déterminé automatiquement par detect_base() sur la variation.
 ##
-## Ordre : pour chaque source, l'item source est inséré en premier, suivi de ses variations.
+## Les bases (images de référence) sont gérées séparément par l'orchestrateur.
 
 class_name LoraTrainingQueueService
 
@@ -39,31 +39,23 @@ var _items: Array = []
 var _cancelled: bool = false
 
 
-## Construit la file depuis un tableau de chemins sources, un keyword LoRA et un tableau de variations.
-## Pour chaque source : 1 item COMPLETED (reference image) + N items PENDING (1 par variation).
-func build_queue(sources: Array, keyword: String, variations: Array) -> void:
+## Construit la file depuis un dict de bases, un keyword LoRA et un tableau de variations.
+## Pour chaque variation, le source_image_path est la base correspondante (via detect_base()).
+## Aucun item "reference image" — les bases sont gérées séparément dans l'orchestrateur.
+func build_queue(bases: Dictionary, keyword: String, variations: Array) -> void:
 	_items.clear()
 	_cancelled = false
-	for source in sources:
-		# Item source (image de référence, déjà disponible)
+	for variation in variations:
+		var base_key = detect_base(variation)
+		var source_path = bases[base_key]["path"] if bases.has(base_key) else ""
 		_items.append({
-			"source_image_path": source,
+			"source_image_path": source_path,
 			"keyword": keyword,
-			"variation_prompt": "reference image",
-			"status": ItemStatus.COMPLETED,
+			"variation_prompt": variation,
+			"status": ItemStatus.PENDING,
 			"image": null,
-			"caption": "%s, reference image" % keyword,
+			"caption": "%s, %s" % [keyword, variation],
 		})
-		# Items variation à générer
-		for variation in variations:
-			_items.append({
-				"source_image_path": source,
-				"keyword": keyword,
-				"variation_prompt": variation,
-				"status": ItemStatus.PENDING,
-				"image": null,
-				"caption": "%s, %s" % [keyword, variation],
-			})
 
 
 func get_all_items() -> Array:
