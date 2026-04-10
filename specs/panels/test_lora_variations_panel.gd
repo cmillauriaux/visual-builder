@@ -57,3 +57,21 @@ func test_get_steps_fallback_before_build() -> void:
 
 func test_get_cfg_fallback_before_build() -> void:
 	assert_eq(panel.get_cfg(), 3.5)
+
+# ── Consistency checks ───────────────────────────────────────────
+
+func test_badge_labels_and_colors_have_same_keys() -> void:
+	var label_keys = LoraVariationsPanel.BADGE_LABELS.keys()
+	var color_keys = LoraVariationsPanel.BADGE_COLORS.keys()
+	label_keys.sort()
+	color_keys.sort()
+	assert_eq(label_keys, color_keys)
+
+func test_set_generating_before_build_does_not_crash() -> void:
+	panel.set_generating(true)
+	panel.set_generating(false)
+	assert_true(true)  # reaching here = no crash
+
+func test_initialize_does_not_crash() -> void:
+	panel.initialize(null)  # Window arg unused
+	assert_true(true)
