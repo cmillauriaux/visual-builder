@@ -2282,12 +2282,57 @@ func generate_create(config: RefCounted, prompt_text: String, negative_prompt: S
 		_workflow_type = WorkflowType.LORA_CREATE_FLUX
 		wf = _build_create_flux_workflow(prompt_text, negative_prompt, ckpt_name, loras, steps, guidance, megapixels, seed)
 
-	generation_progress.emit("Envoi du prompt à ComfyUI...")
-	_do_prompt_only(wf)
+	if _config.is_runpod():
+		generation_progress.emit("Envoi vers RunPod...")
+		_do_runpod_prompt_only(wf)
+	else:
+		generation_progress.emit("Envoi du prompt à ComfyUI...")
+		_do_prompt_only(wf)
+
+
+## Soumet un workflow text-to-image vers RunPod (pas d'image source).
+func _do_runpod_prompt_only(wf: Dictionary) -> void:
+	var payload = {
+		"input": {
+			"workflow": wf,
+			"images": []
+		}
+	}
+
+	var http = HTTPRequest.new()
+	add_child(http)
+	var url = _config.get_full_url("/run")
+	var headers = PackedStringArray(["Content-Type: application/json"])
+	for h in _config.get_auth_headers():
+		headers.append(h)
+
+	http.request_completed.connect(func(result: int, code: int, _h: PackedStringArray, body_bytes: PackedByteArray):
+		http.queue_free()
+		if _cancelled:
+			_generating = false
+			return
+		if result != HTTPRequest.RESULT_SUCCESS or code != 200:
+			_generating = false
+			_fail("Erreur RunPod /run (HTTP %d)" % code)
+			return
+		var resp = JSON.parse_string(body_bytes.get_string_from_utf8())
+		if resp == null:
+			_generating = false
+			_fail("Réponse RunPod invalide")
+			return
+		var job_id: String = resp.get("id", "")
+		if job_id == "":
+			_generating = false
+			_fail("Pas de job ID dans la réponse RunPod")
+			return
+		generation_progress.emit("Job RunPod soumis, traitement en cours...")
+		_do_runpod_poll(job_id)
+	)
+	http.request(url, headers, HTTPClient.METHOD_POST, JSON.stringify(payload))
 
 
 ## Soumet un workflow directement à ComfyUI sans upload d'image préalable.
-## Utilisé pour les workflows text-to-image (generate_create).
+## Utilisé pour les workflows text-to-image (generate_create) en mode local.
 func _do_prompt_only(wf: Dictionary) -> void:
 	var wt_name = WorkflowType.keys()[_workflow_type] if _workflow_type < WorkflowType.size() else str(_workflow_type)
 	print("[ComfyUI] === PROMPT ONLY DEBUG ===")
