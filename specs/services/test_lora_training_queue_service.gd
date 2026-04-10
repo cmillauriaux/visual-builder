@@ -89,6 +89,17 @@ func test_build_queue_source_path_portrait_default():
 	assert_eq(item["source_image_path"], "img_portrait.png")
 
 
+func test_build_queue_source_path_empty_when_base_missing():
+	var partial_bases = {
+		"portrait": {"image": null, "path": "img_portrait.png"},
+		# deliberately missing "closeup", "full_body", etc.
+	}
+	var svc = LoraTrainingQueueServiceScript.new()
+	svc.build_queue(partial_bases, "hero", ["close-up, front view, neutral expression"])
+	var item = svc.get_all_items()[0]
+	assert_eq(item["source_image_path"], "", "Missing base key should produce empty source path, not crash")
+
+
 func test_build_queue_caption_format():
 	var svc = LoraTrainingQueueServiceScript.new()
 	svc.build_queue(BASES_FULL, "hero", ["portrait, front view, smiling"])
