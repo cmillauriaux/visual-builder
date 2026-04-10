@@ -1591,7 +1591,8 @@ func _do_runpod_poll(job_id: String) -> void:
 				_generating = false
 				_fail("Aucune image dans la sortie RunPod")
 				return
-			var b64: String = images[0].get("data", "")
+			# rp_handler.py retourne {"name": ..., "image": <base64>}
+			var b64: String = images[0].get("image", images[0].get("data", ""))
 			if b64 == "":
 				_generating = false
 				_fail("Image vide dans la sortie RunPod")
