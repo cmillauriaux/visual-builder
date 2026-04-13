@@ -1048,7 +1048,10 @@ func _build_zimage_decliner_workflow(filename: String, prompt_text: String, seed
 	# Paramètres dynamiques
 	wf["77"]["inputs"]["image"] = filename
 	wf["87:67"]["inputs"]["text"] = prompt_text
-	wf["87:71"]["inputs"]["text"] = negative_prompt
+	if negative_prompt.strip_edges() != "":
+		wf["87:71"]["inputs"]["text"] = negative_prompt
+	# "87:70" (ModelSamplingAuraFlow shift) is intentionally left at template default (3)
+	# — no shift control exposed in this tab.
 	wf["87:69"]["inputs"]["seed"] = seed
 	wf["87:69"]["inputs"]["steps"] = steps
 	wf["87:69"]["inputs"]["cfg"] = cfg
