@@ -16,7 +16,7 @@ func _fail(error: String) -> void:
 	print("[ComfyUI] FAILED: ", error)
 	generation_failed.emit(error)
 
-enum WorkflowType { CREATION = 0, EXPRESSION = 1, OUTPAINT = 2, UPSCALE = 3, ENHANCE = 4, UPSCALE_ENHANCE = 5, BLINK = 6, INPAINT = 7, LORA_CREATE_FLUX = 8, ILLUSTRIOUS = 9, ASSEMBLER = 10 }
+enum WorkflowType { CREATION = 0, EXPRESSION = 1, OUTPAINT = 2, UPSCALE = 3, ENHANCE = 4, UPSCALE_ENHANCE = 5, BLINK = 6, INPAINT = 7, LORA_CREATE_FLUX = 8, ILLUSTRIOUS = 9, ASSEMBLER = 10, ZIMAGE_DECLINER = 11 }
 
 var _generating: bool = false
 var _prompt_id: String = ""
@@ -905,6 +905,8 @@ func build_workflow(filename: String, prompt_text: String, seed: int, remove_bac
 		return _build_inpaint_workflow(filename, _mask_filename, prompt_text, seed, _inpaint_guidance, steps, denoise, negative_prompt, _mask_feather)
 	if workflow_type == WorkflowType.ASSEMBLER:
 		return _build_assembler_workflow(filename, prompt_text, seed, remove_background, cfg, steps, denoise, negative_prompt, megapixels, loras)
+	if workflow_type == WorkflowType.ZIMAGE_DECLINER:
+		return _build_zimage_decliner_workflow(filename, prompt_text, seed, cfg, steps, denoise, negative_prompt, megapixels)
 	var wf = WORKFLOW_TEMPLATE.duplicate(true)
 	wf["76"]["inputs"]["image"] = filename
 	wf["75:74"]["inputs"]["text"] = prompt_text
@@ -1033,6 +1035,40 @@ func _build_assembler_workflow(filename: String, prompt_text: String, seed: int,
 	if not remove_background:
 		wf["9"]["inputs"]["images"] = ["75:65", 0]
 		wf.erase("106")
+	return wf
+
+
+func _build_zimage_decliner_workflow(filename: String, prompt_text: String, seed: int, cfg: float, steps: int, denoise: float, negative_prompt: String, megapixels: float) -> Dictionary:
+	var wf = UPSCALE_ENHANCE_WORKFLOW_TEMPLATE.duplicate(true)
+	# Supprimer les nœuds upscale (non nécessaires pour img2img pur)
+	for key in ["87:76", "87:79", "87:81"]:
+		wf.erase(key)
+	# Rewire VAEEncode : entrée depuis ImageScaleToTotalPixels (mégapixels) directement
+	wf["87:80"]["inputs"]["pixels"] = ["87:78", 0]
+	# Paramètres dynamiques
+	wf["77"]["inputs"]["image"] = filename
+	wf["87:67"]["inputs"]["text"] = prompt_text
+	wf["87:71"]["inputs"]["text"] = negative_prompt
+	wf["87:69"]["inputs"]["seed"] = seed
+	wf["87:69"]["inputs"]["steps"] = steps
+	wf["87:69"]["inputs"]["cfg"] = cfg
+	wf["87:69"]["inputs"]["denoise"] = denoise
+	wf["87:78"]["inputs"]["megapixels"] = megapixels
+	# BiRefNet pour suppression de fond systématique
+	wf["zd:birefnet"] = {
+		"class_type": "BiRefNetRMBG",
+		"inputs": {
+			"model": "BiRefNet-general",
+			"mask_blur": 0,
+			"mask_offset": 0,
+			"invert_output": false,
+			"refine_foreground": true,
+			"background": "Alpha",
+			"background_color": "#222222",
+			"image": ["87:65", 0]
+		}
+	}
+	wf["9"]["inputs"]["images"] = ["zd:birefnet", 0]
 	return wf
 
 

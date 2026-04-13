@@ -599,3 +599,68 @@ func test_build_assembler_workflow_sets_cfg_and_steps():
 		ComfyUIClientScript.WorkflowType.ASSEMBLER, 0.5)
 	assert_eq(wf["75:63"]["inputs"]["cfg"], 4.0)
 	assert_eq(wf["75:62"]["inputs"]["steps"], 6)
+
+# --- Zimage Decliner workflow ---
+
+func test_build_zimage_decliner_workflow_uses_zimage_model():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("test.png", "portrait", 1, true, 1.0, 5,
+		ComfyUIClientScript.WorkflowType.ZIMAGE_DECLINER, 0.2)
+	assert_eq(wf["87:66"]["inputs"]["unet_name"], "z_image_turbo_bf16.safetensors")
+
+func test_build_zimage_decliner_workflow_no_upscale_nodes():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("test.png", "portrait", 1, true, 1.0, 5,
+		ComfyUIClientScript.WorkflowType.ZIMAGE_DECLINER, 0.2)
+	assert_false(wf.has("87:76"), "UpscaleModelLoader doit être absent")
+	assert_false(wf.has("87:79"), "ImageUpscaleWithModel doit être absent")
+	assert_false(wf.has("87:81"), "ImageScaleBy doit être absent")
+
+func test_build_zimage_decliner_workflow_is_img2img():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("test.png", "portrait", 1, true, 1.0, 5,
+		ComfyUIClientScript.WorkflowType.ZIMAGE_DECLINER, 0.2)
+	assert_eq(wf["87:80"]["inputs"]["pixels"], ["87:78", 0])
+	assert_eq(wf["87:78"]["inputs"]["image"], ["77", 0])
+
+func test_build_zimage_decliner_workflow_denoise_injected():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("test.png", "portrait", 1, true, 1.0, 5,
+		ComfyUIClientScript.WorkflowType.ZIMAGE_DECLINER, 0.35)
+	assert_eq(wf["87:69"]["inputs"]["denoise"], 0.35)
+
+func test_build_zimage_decliner_workflow_megapixels_injected():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("test.png", "portrait", 1, true, 1.0, 5,
+		ComfyUIClientScript.WorkflowType.ZIMAGE_DECLINER, 0.2, "", 80, 2.0)
+	assert_eq(wf["87:78"]["inputs"]["megapixels"], 2.0)
+
+func test_build_zimage_decliner_workflow_has_birefnet():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("test.png", "portrait", 1, true, 1.0, 5,
+		ComfyUIClientScript.WorkflowType.ZIMAGE_DECLINER, 0.2)
+	assert_true(wf.has("zd:birefnet"), "Nœud BiRefNet doit être présent")
+	assert_eq(wf["zd:birefnet"]["class_type"], "BiRefNetRMBG")
+	assert_eq(wf["zd:birefnet"]["inputs"]["image"], ["87:65", 0])
+	assert_eq(wf["9"]["inputs"]["images"], ["zd:birefnet", 0])
+
+func test_build_zimage_decliner_workflow_sets_image_and_prompt():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("hero.png", "close up face", 42, true, 1.0, 5,
+		ComfyUIClientScript.WorkflowType.ZIMAGE_DECLINER, 0.2)
+	assert_eq(wf["77"]["inputs"]["image"], "hero.png")
+	assert_eq(wf["87:67"]["inputs"]["text"], "close up face")
+	assert_eq(wf["87:69"]["inputs"]["seed"], 42)
+
+func test_build_zimage_decliner_workflow_sets_cfg_and_steps():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("t.png", "p", 1, true, 2.5, 8,
+		ComfyUIClientScript.WorkflowType.ZIMAGE_DECLINER, 0.2)
+	assert_eq(wf["87:69"]["inputs"]["cfg"], 2.5)
+	assert_eq(wf["87:69"]["inputs"]["steps"], 8)
+
+func test_build_zimage_decliner_workflow_negative_prompt():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("t.png", "p", 1, true, 1.0, 5,
+		ComfyUIClientScript.WorkflowType.ZIMAGE_DECLINER, 0.2, "bad quality")
+	assert_eq(wf["87:71"]["inputs"]["text"], "bad quality")
