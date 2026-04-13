@@ -16,7 +16,7 @@ func _fail(error: String) -> void:
 	print("[ComfyUI] FAILED: ", error)
 	generation_failed.emit(error)
 
-enum WorkflowType { CREATION = 0, EXPRESSION = 1, OUTPAINT = 2, UPSCALE = 3, ENHANCE = 4, UPSCALE_ENHANCE = 5, BLINK = 6, INPAINT = 7, LORA_CREATE_FLUX = 8, ILLUSTRIOUS = 9 }
+enum WorkflowType { CREATION = 0, EXPRESSION = 1, OUTPAINT = 2, UPSCALE = 3, ENHANCE = 4, UPSCALE_ENHANCE = 5, BLINK = 6, INPAINT = 7, LORA_CREATE_FLUX = 8, ILLUSTRIOUS = 9, ASSEMBLER = 10 }
 
 var _generating: bool = false
 var _prompt_id: String = ""
@@ -903,6 +903,8 @@ func build_workflow(filename: String, prompt_text: String, seed: int, remove_bac
 		return _build_expression_workflow(filename, prompt_text, seed, remove_background, cfg, steps, denoise, negative_prompt, face_box_size, megapixels)
 	if workflow_type == WorkflowType.INPAINT:
 		return _build_inpaint_workflow(filename, _mask_filename, prompt_text, seed, _inpaint_guidance, steps, denoise, negative_prompt, _mask_feather)
+	if workflow_type == WorkflowType.ASSEMBLER:
+		return _build_assembler_workflow(filename, prompt_text, seed, remove_background, cfg, steps, denoise, negative_prompt, megapixels, loras)
 	var wf = WORKFLOW_TEMPLATE.duplicate(true)
 	wf["76"]["inputs"]["image"] = filename
 	wf["75:74"]["inputs"]["text"] = prompt_text
@@ -991,6 +993,45 @@ func _build_expression_workflow(filename: String, prompt_text: String, seed: int
 	wf.erase("75:66")
 	if not remove_background:
 		wf["9"]["inputs"]["images"] = ["103", 0]
+		wf.erase("106")
+	return wf
+
+
+func _build_assembler_workflow(filename: String, prompt_text: String, seed: int, remove_background: bool, cfg: float, steps: int, denoise: float, negative_prompt: String, megapixels: float, loras: Array) -> Dictionary:
+	var wf = EXPRESSION_WORKFLOW_TEMPLATE.duplicate(true)
+	# Supprimer les nœuds YOLO (détection visage) — pas nécessaires pour Assembler
+	wf.erase("99")
+	wf.erase("100")
+	wf.erase("101")
+	wf.erase("102")
+	wf.erase("103")
+	# Rewire BiRefNet : input = VAEDecode directement (plus ImageCompositeMasked)
+	wf["106"]["inputs"]["image"] = ["75:65", 0]
+	# Paramètres standards
+	wf["76"]["inputs"]["image"] = filename
+	wf["75:74"]["inputs"]["text"] = prompt_text
+	wf["75:73"]["inputs"]["noise_seed"] = seed
+	wf["75:63"]["inputs"]["cfg"] = cfg
+	wf["75:62"]["inputs"]["steps"] = steps
+	wf["75:80"]["inputs"]["megapixels"] = megapixels
+	_apply_negative_prompt(wf, negative_prompt)
+	_inject_loras(wf, loras)
+	# img2img : partir de l'image source encodée
+	wf["75:64"]["inputs"]["latent_image"] = ["75:79:78", 0]
+	# SplitSigmas : contrôle du denoise (0.05 = peu de changement, 1.0 = régénération totale)
+	var split_step = max(1, roundi(steps * (1.0 - denoise)))
+	wf["split_sigmas"] = {
+		"class_type": "SplitSigmas",
+		"inputs": {
+			"sigmas": ["75:62", 0],
+			"step": split_step
+		}
+	}
+	wf["75:64"]["inputs"]["sigmas"] = ["split_sigmas", 1]
+	wf.erase("75:66")
+	# BiRefNet conditionnel
+	if not remove_background:
+		wf["9"]["inputs"]["images"] = ["75:65", 0]
 		wf.erase("106")
 	return wf
 
@@ -2079,6 +2120,41 @@ func get_available_models(config: RefCounted, callback: Callable) -> void:
 			return
 		var data = json.get_data()
 		var models = data.get("UNETLoader", {}).get("input", {}).get("required", {}).get("unet_name", [[]])[0]
+		callback.call(models if models is Array else [])
+	)
+	http.request(url, PackedStringArray(headers))
+
+
+## Récupère la liste des checkpoints disponibles dans ComfyUI (CheckpointLoaderSimple).
+## Les workflows Illustrious/SDXL utilisent CheckpointLoaderSimple (ckpt_name).
+## callback(models: Array) est appelé avec un tableau de noms de checkpoints (strings).
+func get_available_checkpoints(config: RefCounted, callback: Callable) -> void:
+	if config.is_runpod():
+		print("[ComfyUIClient] get_available_checkpoints: mode RunPod → _fetch_runpod_discovery")
+		_fetch_runpod_discovery(config, "CheckpointLoaderSimple", func(info: Dictionary):
+			var models = info.get("CheckpointLoaderSimple", {}).get("input", {}).get("required", {}).get("ckpt_name", [[]])[0]
+			print("[ComfyUIClient] get_available_checkpoints RunPod: ", len(models) if models is Array else 0, " checkpoints")
+			callback.call(models if models is Array else [])
+		)
+		return
+	print("[ComfyUIClient] get_available_checkpoints: mode local")
+	var http = HTTPRequest.new()
+	add_child(http)
+	var url = config.get_full_url("/object_info/CheckpointLoaderSimple")
+	var headers: Array = []
+	for h in config.get_auth_headers():
+		headers.append(h)
+	http.request_completed.connect(func(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray):
+		http.queue_free()
+		if result != HTTPRequest.RESULT_SUCCESS or code != 200:
+			callback.call([])
+			return
+		var json = JSON.new()
+		if json.parse(body.get_string_from_utf8()) != OK:
+			callback.call([])
+			return
+		var data = json.get_data()
+		var models = data.get("CheckpointLoaderSimple", {}).get("input", {}).get("required", {}).get("ckpt_name", [[]])[0]
 		callback.call(models if models is Array else [])
 	)
 	http.request(url, PackedStringArray(headers))

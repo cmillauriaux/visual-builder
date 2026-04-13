@@ -528,3 +528,74 @@ func test_build_illustrious_workflow_with_lora_and_negative_prompt():
 	assert_true(wf.has("clora_0"))
 	assert_eq(wf["neg"]["inputs"]["clip"], ["clora_0", 1], "neg.clip must use last lora clip output")
 	assert_eq(wf["pos"]["inputs"]["clip"], ["clora_0", 1], "pos.clip must use last lora clip output")
+
+# --- Assembler workflow (img2img sans YOLO) ---
+
+func test_build_assembler_workflow_no_yolo_nodes():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("test.png", "tilt head", 42, true, 3.0, 4,
+		ComfyUIClientScript.WorkflowType.ASSEMBLER, 0.5)
+	assert_false(wf.has("99"), "UltralyticsDetectorProvider doit être absent")
+	assert_false(wf.has("100"), "BboxDetectorCombined doit être absent")
+	assert_false(wf.has("101"), "GrowMask doit être absent")
+	assert_false(wf.has("102"), "ImpactGaussianBlurMask doit être absent")
+	assert_false(wf.has("103"), "ImageCompositeMasked doit être absent")
+
+func test_build_assembler_workflow_is_img2img():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("test.png", "tilt head", 42, true, 3.0, 4,
+		ComfyUIClientScript.WorkflowType.ASSEMBLER, 0.5)
+	assert_eq(wf["75:64"]["inputs"]["latent_image"], ["75:79:78", 0])
+	assert_false(wf.has("75:66"))
+
+func test_build_assembler_workflow_has_split_sigmas():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("test.png", "tilt head", 42, true, 3.0, 4,
+		ComfyUIClientScript.WorkflowType.ASSEMBLER, 0.5)
+	assert_true(wf.has("split_sigmas"))
+	assert_eq(wf["split_sigmas"]["class_type"], "SplitSigmas")
+	assert_eq(wf["75:64"]["inputs"]["sigmas"], ["split_sigmas", 1])
+
+func test_build_assembler_workflow_split_sigmas_step_from_denoise():
+	# denoise=0.5, steps=4 → split_step = max(1, round(4 * (1.0 - 0.5))) = 2
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("test.png", "p", 1, true, 3.0, 4,
+		ComfyUIClientScript.WorkflowType.ASSEMBLER, 0.5)
+	assert_eq(wf["split_sigmas"]["inputs"]["step"], 2)
+
+func test_build_assembler_workflow_split_sigmas_high_denoise():
+	# denoise=1.0, steps=4 → split_step = max(1, round(4 * 0.0)) = max(1,0) = 1
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("test.png", "p", 1, true, 3.0, 4,
+		ComfyUIClientScript.WorkflowType.ASSEMBLER, 1.0)
+	assert_eq(wf["split_sigmas"]["inputs"]["step"], 1)
+
+func test_build_assembler_workflow_birefnet_wired_to_vaedecode():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("test.png", "tilt head", 42, true, 3.0, 4,
+		ComfyUIClientScript.WorkflowType.ASSEMBLER, 0.5)
+	assert_true(wf.has("106"))
+	assert_eq(wf["106"]["inputs"]["image"], ["75:65", 0])
+	assert_eq(wf["9"]["inputs"]["images"], ["106", 0])
+
+func test_build_assembler_workflow_no_bg_removal():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("test.png", "tilt head", 42, false, 3.0, 4,
+		ComfyUIClientScript.WorkflowType.ASSEMBLER, 0.5)
+	assert_false(wf.has("106"))
+	assert_eq(wf["9"]["inputs"]["images"], ["75:65", 0])
+
+func test_build_assembler_workflow_sets_image_and_prompt():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("src.png", "change head tilt", 99, true, 3.0, 4,
+		ComfyUIClientScript.WorkflowType.ASSEMBLER, 0.5)
+	assert_eq(wf["76"]["inputs"]["image"], "src.png")
+	assert_eq(wf["75:74"]["inputs"]["text"], "change head tilt")
+	assert_eq(wf["75:73"]["inputs"]["noise_seed"], 99)
+
+func test_build_assembler_workflow_sets_cfg_and_steps():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("t.png", "p", 1, true, 4.0, 6,
+		ComfyUIClientScript.WorkflowType.ASSEMBLER, 0.5)
+	assert_eq(wf["75:63"]["inputs"]["cfg"], 4.0)
+	assert_eq(wf["75:62"]["inputs"]["steps"], 6)
