@@ -351,3 +351,35 @@ func test_generate_sequence_stores_loras_and_transparent_output():
 	assert_eq(client._loras, loras)
 	assert_true(client._transparent_output)
 	client.free()
+
+func test_build_wan_vace_workflow_with_loras():
+	var client = ComfyUIClientScript.new()
+	var loras = [
+		{"name": "style.safetensors", "strength": 0.8},
+		{"name": "char.safetensors", "strength": 1.2}
+	]
+	var wf = client._build_wan_vace_workflow("src.png", "p", 1, false, 7.0, 20, 0.85, "", 6, 3.0, 8, 832, 480, loras)
+	assert_true(wf.has("wv:lora_0"), "wv:lora_0 doit exister")
+	assert_eq(wf["wv:lora_0"]["class_type"], "LoraLoaderModelOnly")
+	assert_eq(wf["wv:lora_0"]["inputs"]["lora_name"], "style.safetensors")
+	assert_eq(wf["wv:lora_0"]["inputs"]["strength_model"], 0.8)
+	assert_eq(wf["wv:lora_0"]["inputs"]["model"], ["wv:model", 0])
+	assert_true(wf.has("wv:lora_1"), "wv:lora_1 doit exister")
+	assert_eq(wf["wv:lora_1"]["inputs"]["model"], ["wv:lora_0", 0])
+	assert_eq(wf["wv:sampler"]["inputs"]["model"], ["wv:lora_1", 0])
+
+func test_build_wan_vace_workflow_no_loras_no_lora_nodes():
+	var client = ComfyUIClientScript.new()
+	var wf = client._build_wan_vace_workflow("src.png", "p", 1, false, 7.0, 20, 0.85, "", 6, 3.0)
+	for key in wf.keys():
+		assert_false(key.begins_with("wv:lora_"), "Nœud lora inattendu : " + key)
+	assert_eq(wf["wv:sampler"]["inputs"]["model"], ["wv:model", 0])
+
+func test_build_wan_vace_workflow_transparent_output():
+	var client = ComfyUIClientScript.new()
+	var wf = client._build_wan_vace_workflow("src.png", "p", 1, true, 7.0, 20, 0.85, "", 6, 3.0, 8, 832, 480, [], true)
+	assert_true(wf.has("wv:birefnet_out"), "wv:birefnet_out doit exister")
+	assert_eq(wf["wv:birefnet_out"]["class_type"], "BiRefNetRMBG")
+	assert_eq(wf["wv:birefnet_out"]["inputs"]["image"], ["wv:decode", 0])
+	assert_eq(wf["9"]["inputs"]["images"], ["wv:birefnet_out", 0])
+	assert_true(wf.has("wv:birefnet"), "wv:birefnet (source) doit rester intact")

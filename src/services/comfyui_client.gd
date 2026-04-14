@@ -2315,7 +2315,9 @@ func _build_wan_vace_workflow(
 	duration_sec: float,
 	fps: int = 8,
 	width: int = 832,
-	height: int = 480
+	height: int = 480,
+	loras: Array = [],
+	transparent_output: bool = false
 ) -> Dictionary:
 	var total_frames = clampi(roundi(duration_sec * float(fps) / 8.0) * 8, 16, 128)
 	var wf: Dictionary = {
@@ -2426,6 +2428,38 @@ func _build_wan_vace_workflow(
 			}
 		}
 		wf["9"]["inputs"]["images"] = ["wv:birefnet", 0]
+
+	# LORAs
+	for i in loras.size():
+		var lora = loras[i]
+		wf["wv:lora_%d" % i] = {
+			"class_type": "LoraLoaderModelOnly",
+			"inputs": {
+				"model": ["wv:model", 0] if i == 0 else ["wv:lora_%d" % (i - 1), 0],
+				"lora_name": lora["name"],
+				"strength_model": lora["strength"]
+			}
+		}
+	if not loras.is_empty():
+		wf["wv:sampler"]["inputs"]["model"] = ["wv:lora_%d" % (loras.size() - 1), 0]
+
+	# Transparent output (distinct de wv:birefnet existant)
+	if transparent_output:
+		wf["wv:birefnet_out"] = {
+			"class_type": "BiRefNetRMBG",
+			"inputs": {
+				"model": "BiRefNet-general",
+				"mask_blur": 0,
+				"mask_offset": 0,
+				"invert_output": false,
+				"refine_foreground": true,
+				"background": "Alpha",
+				"background_color": "#222222",
+				"image": ["wv:decode", 0]
+			}
+		}
+		wf["9"]["inputs"]["images"] = ["wv:birefnet_out", 0]
+
 	return wf
 
 
@@ -2446,12 +2480,14 @@ func _build_wan_vace_pose_workflow(
 	controlnet_strength: float,
 	fps: int = 8,
 	width: int = 832,
-	height: int = 480
+	height: int = 480,
+	loras: Array = [],
+	transparent_output: bool = false
 ) -> Dictionary:
 	# Construire la base sans pose, puis injecter les nœuds ControlNet
 	var wf = _build_wan_vace_workflow(source_filename, prompt_text, seed,
 		remove_background, cfg, steps, denoise, negative_prompt,
-		frames_to_extract, duration_sec, fps, width, height)
+		frames_to_extract, duration_sec, fps, width, height, loras, transparent_output)
 
 	# Nœuds DWPose + ControlNet
 	wf["wv:pose_img"] = {
