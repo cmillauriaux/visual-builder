@@ -98,3 +98,43 @@ func test_build_workflow_dispatches_dwpose_preview():
 	var wf = client.build_workflow("pose.png", "", 0, false, 1.0, 1,
 		ComfyUIClientScript.WorkflowType.WAN_VACE_DWPOSE_PREVIEW)
 	assert_true(wf.has("wv:dwpose"))
+
+func test_build_wan_vace_workflow_sets_source_image():
+	var client = ComfyUIClientScript.new()
+	var wf = client._build_wan_vace_workflow("src.png", "two characters kissing", 42,
+		false, 7.0, 20, 0.85, "", 6, 3.0)
+	assert_eq(wf["wv:src"]["inputs"]["image"], "src.png")
+
+func test_build_wan_vace_workflow_sets_prompt():
+	var client = ComfyUIClientScript.new()
+	var wf = client._build_wan_vace_workflow("src.png", "two characters kissing", 42,
+		false, 7.0, 20, 0.85, "", 6, 3.0)
+	assert_eq(wf["wv:pos"]["inputs"]["text"], "two characters kissing")
+
+func test_build_wan_vace_workflow_sets_seed_steps_cfg():
+	var client = ComfyUIClientScript.new()
+	var wf = client._build_wan_vace_workflow("src.png", "prompt", 99,
+		false, 5.0, 15, 0.9, "", 6, 3.0)
+	assert_eq(wf["wv:sampler"]["inputs"]["seed"], 99)
+	assert_eq(wf["wv:sampler"]["inputs"]["steps"], 15)
+	assert_eq(wf["wv:sampler"]["inputs"]["cfg"], 5.0)
+	assert_eq(wf["wv:sampler"]["inputs"]["denoise"], 0.9)
+
+func test_build_wan_vace_workflow_computes_num_frames():
+	var client = ComfyUIClientScript.new()
+	# 3 sec * 16 fps = 48, rounded to multiple of 8 = 48
+	var wf = client._build_wan_vace_workflow("src.png", "p", 1, false, 7.0, 20, 0.85, "", 6, 3.0)
+	assert_eq(wf["wv:vace"]["inputs"]["num_frames"], 48)
+	assert_eq(wf["wv:empty_latent"]["inputs"]["num_frames"], 48)
+
+func test_build_wan_vace_workflow_with_remove_bg():
+	var client = ComfyUIClientScript.new()
+	var wf = client._build_wan_vace_workflow("src.png", "p", 1, true, 7.0, 20, 0.85, "", 6, 3.0)
+	assert_true(wf.has("wv:birefnet"))
+	assert_eq(wf["9"]["inputs"]["images"][0], "wv:birefnet")
+
+func test_build_wan_vace_workflow_no_birefnet_when_no_bg():
+	var client = ComfyUIClientScript.new()
+	var wf = client._build_wan_vace_workflow("src.png", "p", 1, false, 7.0, 20, 0.85, "", 6, 3.0)
+	assert_false(wf.has("wv:birefnet"))
+	assert_eq(wf["9"]["inputs"]["images"][0], "wv:decode")

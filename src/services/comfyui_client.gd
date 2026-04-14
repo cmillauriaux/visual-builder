@@ -2145,6 +2145,123 @@ func _build_wan_vace_dwpose_preview_workflow(pose_filename: String) -> Dictionar
 	}
 
 
+## Workflow Wan VACE séquence sans pose ControlNet.
+## num_frames = round(duration_sec * 16 / 8) * 8, clamped [16, 128].
+func _build_wan_vace_workflow(
+	source_filename: String,
+	prompt_text: String,
+	seed: int,
+	remove_background: bool,
+	cfg: float,
+	steps: int,
+	denoise: float,
+	negative_prompt: String,
+	_frames_to_extract: int,
+	duration_sec: float
+) -> Dictionary:
+	var total_frames = clampi(roundi(duration_sec * 16.0 / 8.0) * 8, 16, 128)
+	var wf: Dictionary = {
+		"wv:model": {
+			"class_type": "WanVideoModelLoader",
+			"inputs": {
+				"model": "wan2.1-vace-14b.safetensors",
+				"quantization": "disabled",
+				"load_device": "main_device",
+				"enable_sequential_cpu_offload": false
+			}
+		},
+		"wv:clip": {
+			"class_type": "CLIPLoader",
+			"inputs": {
+				"clip_name": "umt5-xxl-enc-bf16.safetensors",
+				"type": "wan",
+				"device": "default"
+			}
+		},
+		"wv:pos": {
+			"class_type": "CLIPTextEncode",
+			"inputs": {
+				"text": prompt_text,
+				"clip": ["wv:clip", 0]
+			}
+		},
+		"wv:neg": {
+			"class_type": "CLIPTextEncode",
+			"inputs": {
+				"text": negative_prompt,
+				"clip": ["wv:clip", 0]
+			}
+		},
+		"wv:src": {
+			"class_type": "LoadImage",
+			"inputs": {"image": source_filename}
+		},
+		"wv:vace": {
+			"class_type": "WanVideoVACEEncode",
+			"inputs": {
+				"vae": ["wv:model", 2],
+				"image": ["wv:src", 0],
+				"strength": 1.0,
+				"num_frames": total_frames
+			}
+		},
+		"wv:empty_latent": {
+			"class_type": "WanVideoEmptyLatent",
+			"inputs": {
+				"width": 832,
+				"height": 480,
+				"batch_size": 1,
+				"num_frames": total_frames
+			}
+		},
+		"wv:sampler": {
+			"class_type": "WanVideoSampler",
+			"inputs": {
+				"model": ["wv:model", 0],
+				"positive": ["wv:pos", 0],
+				"negative": ["wv:neg", 0],
+				"latents": ["wv:empty_latent", 0],
+				"vace_embeds": ["wv:vace", 0],
+				"steps": steps,
+				"cfg": cfg,
+				"seed": seed,
+				"scheduler": "unipc",
+				"denoise": denoise
+			}
+		},
+		"wv:decode": {
+			"class_type": "VAEDecode",
+			"inputs": {
+				"samples": ["wv:sampler", 0],
+				"vae": ["wv:model", 2]
+			}
+		},
+		"9": {
+			"class_type": "SaveImage",
+			"inputs": {
+				"filename_prefix": "wan_vace_frame",
+				"images": ["wv:decode", 0]
+			}
+		}
+	}
+	if remove_background:
+		wf["wv:birefnet"] = {
+			"class_type": "BiRefNetRMBG",
+			"inputs": {
+				"model": "BiRefNet-general",
+				"mask_blur": 0,
+				"mask_offset": 0,
+				"invert_output": false,
+				"refine_foreground": true,
+				"background": "Alpha",
+				"background_color": "#222222",
+				"image": ["wv:decode", 0]
+			}
+		}
+		wf["9"]["inputs"]["images"] = ["wv:birefnet", 0]
+	return wf
+
+
 # ===== Create tab : text-to-image avec LoRA =====
 
 ## Workflow Flux text-to-image via UNETLoader + CLIPLoader + VAELoader.
