@@ -1409,6 +1409,14 @@ func parse_history_response_all(json_str: String, prompt_id: String) -> Dictiona
 	if entry.has("status"):
 		var status_info = entry["status"]
 		if status_info is Dictionary and not status_info.get("completed", false):
+			if status_info.has("messages"):
+				for msg in status_info["messages"]:
+					if msg is Array and msg.size() >= 2 and msg[0] == "execution_error":
+						var error_detail = msg[1]
+						if error_detail is Dictionary:
+							var node_type = error_detail.get("node_type", "unknown")
+							var exception_message = error_detail.get("exception_message", "")
+							return {"status": "error", "error": "%s: %s" % [node_type, exception_message]}
 			return {"status": "pending"}
 	if not entry.has("outputs"):
 		return {"status": "error", "error": "Pas de sorties dans l'historique"}
@@ -1865,7 +1873,7 @@ func _do_upload_mask(prompt_text: String) -> void:
 ## Redirige vers _do_prompt (génération simple) ou _do_prompt_sequence (mode séquence).
 func _dispatch_prompt(filename: String, prompt_text: String) -> void:
 	if _is_sequence_mode:
-		call("_do_prompt_sequence", filename, prompt_text)
+		_do_prompt_sequence(filename, prompt_text)
 	else:
 		_do_prompt(filename, prompt_text)
 
@@ -1873,6 +1881,9 @@ func _dispatch_prompt(filename: String, prompt_text: String) -> void:
 ## Stub — implémentation complète dans Task 6 (generate_sequence + _do_prompt_sequence).
 func _do_prompt_sequence(_filename: String, _prompt_text: String) -> void:
 	push_error("[ComfyUI] _do_prompt_sequence: non encore implémenté")
+	_generating = false
+	_is_sequence_mode = false
+	_fail("_do_prompt_sequence non encore implémenté")
 
 
 func _do_prompt(filename: String, prompt_text: String) -> void:
