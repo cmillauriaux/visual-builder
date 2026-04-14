@@ -60,6 +60,8 @@ var _frames_to_extract: int = 6
 var _duration_sec: float = 3.0
 var _controlnet_strength: float = 0.7
 var _is_sequence_mode: bool = false
+var _source_width: int = 832
+var _source_height: int = 480
 
 # --- Workflow template (Flux 2 Klein + BiRefNet) ---
 # Reproduit exactement Edit_Image_Transparent_API.json
@@ -1683,6 +1685,18 @@ func generate_sequence(
 	file.close()
 	_source_filename = source_image_path.get_file()
 
+	# Lire les dimensions de l'image source (arrondi au multiple de 8 requis par WanVideoVACEEncode)
+	var _src_img = Image.new()
+	var _img_err = _src_img.load_png_from_buffer(file_bytes)
+	if _img_err != OK:
+		_img_err = _src_img.load_jpg_from_buffer(file_bytes)
+	if _img_err == OK:
+		_source_width = int(round(float(_src_img.get_width()) / 8.0) * 8)
+		_source_height = int(round(float(_src_img.get_height()) / 8.0) * 8)
+	else:
+		_source_width = 832
+		_source_height = 480
+
 	if second_image_path != "":
 		var file2 = FileAccess.open(second_image_path, FileAccess.READ)
 		if file2 != null:
@@ -1951,12 +1965,13 @@ func _do_prompt_sequence(filename: String, prompt_text: String) -> void:
 		workflow = _build_wan_vace_pose_workflow(
 			filename, _second_image_filename, prompt_text, seed,
 			_remove_background, _cfg, _steps, _denoise, _negative_prompt,
-			_frames_to_extract, _duration_sec, _controlnet_strength)
+			_frames_to_extract, _duration_sec, _controlnet_strength,
+			_source_width, _source_height)
 	else:
 		workflow = _build_wan_vace_workflow(
 			filename, prompt_text, seed,
 			_remove_background, _cfg, _steps, _denoise, _negative_prompt,
-			_frames_to_extract, _duration_sec)
+			_frames_to_extract, _duration_sec, _source_width, _source_height)
 
 	var payload = JSON.stringify({"prompt": workflow})
 	var http = HTTPRequest.new()
@@ -2260,7 +2275,9 @@ func _build_wan_vace_workflow(
 	denoise: float,
 	negative_prompt: String,
 	_frames_to_extract: int,
-	duration_sec: float
+	duration_sec: float,
+	width: int = 832,
+	height: int = 480
 ) -> Dictionary:
 	var total_frames = clampi(roundi(duration_sec * 16.0 / 8.0) * 8, 16, 128)
 	var wf: Dictionary = {
@@ -2301,8 +2318,8 @@ func _build_wan_vace_workflow(
 			"class_type": "WanVideoVACEEncode",
 			"inputs": {
 				"vae": ["wv:vae", 0],
-				"width": 832,
-				"height": 480,
+				"width": width,
+				"height": height,
 				"num_frames": total_frames,
 				"strength": 1.0,
 				"vace_start_percent": 0.0,
@@ -2378,12 +2395,14 @@ func _build_wan_vace_pose_workflow(
 	negative_prompt: String,
 	frames_to_extract: int,
 	duration_sec: float,
-	controlnet_strength: float
+	controlnet_strength: float,
+	width: int = 832,
+	height: int = 480
 ) -> Dictionary:
 	# Construire la base sans pose, puis injecter les nœuds ControlNet
 	var wf = _build_wan_vace_workflow(source_filename, prompt_text, seed,
 		remove_background, cfg, steps, denoise, negative_prompt,
-		frames_to_extract, duration_sec)
+		frames_to_extract, duration_sec, width, height)
 
 	# Nœuds DWPose + ControlNet
 	wf["wv:pose_img"] = {

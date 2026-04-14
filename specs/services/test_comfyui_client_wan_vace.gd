@@ -105,6 +105,13 @@ func test_build_wan_vace_workflow_sets_source_image():
 		false, 7.0, 20, 0.85, "", 6, 3.0)
 	assert_eq(wf["wv:src"]["inputs"]["image"], "src.png")
 
+func test_build_wan_vace_workflow_uses_source_dimensions():
+	var client = ComfyUIClientScript.new()
+	# Portrait 768×1024 → passed as-is (already multiples of 8)
+	var wf = client._build_wan_vace_workflow("src.png", "p", 1, false, 7.0, 20, 0.85, "", 6, 3.0, 768, 1024)
+	assert_eq(wf["wv:vace"]["inputs"]["width"], 768)
+	assert_eq(wf["wv:vace"]["inputs"]["height"], 1024)
+
 func test_build_wan_vace_workflow_sets_prompt():
 	var client = ComfyUIClientScript.new()
 	var wf = client._build_wan_vace_workflow("src.png", "two characters kissing", 42,
