@@ -144,3 +144,28 @@ func test_build_wan_vace_workflow_no_birefnet_when_no_bg():
 	var wf = client._build_wan_vace_workflow("src.png", "p", 1, false, 7.0, 20, 0.85, "", 6, 3.0)
 	assert_false(wf.has("wv:birefnet"))
 	assert_eq(wf["9"]["inputs"]["images"][0], "wv:decode")
+
+func test_build_wan_vace_pose_workflow_has_dwpose():
+	var client = ComfyUIClientScript.new()
+	var wf = client._build_wan_vace_pose_workflow(
+		"src.png", "pose.png", "two characters kissing", 42,
+		false, 7.0, 20, 0.85, "", 6, 3.0, 0.7)
+	assert_true(wf.has("wv:dwpose"))
+	assert_eq(wf["wv:dwpose"]["class_type"], "DWPreprocess")
+	assert_eq(wf["wv:pose_img"]["inputs"]["image"], "pose.png")
+
+func test_build_wan_vace_pose_workflow_has_controlnet():
+	var client = ComfyUIClientScript.new()
+	var wf = client._build_wan_vace_pose_workflow(
+		"src.png", "pose.png", "prompt", 1,
+		false, 7.0, 20, 0.85, "", 6, 3.0, 0.6)
+	assert_true(wf.has("wv:ctrl_apply"))
+	assert_eq(wf["wv:ctrl_apply"]["inputs"]["strength"], 0.6)
+
+func test_build_wan_vace_pose_workflow_sampler_uses_controlnet_positive():
+	var client = ComfyUIClientScript.new()
+	var wf = client._build_wan_vace_pose_workflow(
+		"src.png", "pose.png", "prompt", 1,
+		false, 7.0, 20, 0.85, "", 6, 3.0, 0.7)
+	# Le sampler doit utiliser ctrl_apply comme conditioning positif
+	assert_eq(wf["wv:sampler"]["inputs"]["positive"][0], "wv:ctrl_apply")

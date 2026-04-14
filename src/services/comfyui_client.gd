@@ -2262,6 +2262,61 @@ func _build_wan_vace_workflow(
 	return wf
 
 
+## Workflow Wan VACE séquence avec DWPose ControlNet.
+func _build_wan_vace_pose_workflow(
+	source_filename: String,
+	pose_filename: String,
+	prompt_text: String,
+	seed: int,
+	remove_background: bool,
+	cfg: float,
+	steps: int,
+	denoise: float,
+	negative_prompt: String,
+	frames_to_extract: int,
+	duration_sec: float,
+	controlnet_strength: float
+) -> Dictionary:
+	# Construire la base sans pose, puis injecter les nœuds ControlNet
+	var wf = _build_wan_vace_workflow(source_filename, prompt_text, seed,
+		remove_background, cfg, steps, denoise, negative_prompt,
+		frames_to_extract, duration_sec)
+
+	# Nœuds DWPose + ControlNet
+	wf["wv:pose_img"] = {
+		"class_type": "LoadImage",
+		"inputs": {"image": pose_filename}
+	}
+	wf["wv:dwpose"] = {
+		"class_type": "DWPreprocess",
+		"inputs": {
+			"image": ["wv:pose_img", 0],
+			"detect_hand": "enable",
+			"detect_body": "enable",
+			"detect_face": "enable",
+			"resolution": 512,
+			"bbox_detector": "yolox_l.onnx",
+			"pose_estimator": "dw-ll_ucoco_384.onnx"
+		}
+	}
+	wf["wv:ctrl_loader"] = {
+		"class_type": "ControlNetLoader",
+		"inputs": {"control_net_name": "wan_fun_control.safetensors"}
+	}
+	wf["wv:ctrl_apply"] = {
+		"class_type": "ControlNetApply",
+		"inputs": {
+			"conditioning": ["wv:pos", 0],
+			"control_net": ["wv:ctrl_loader", 0],
+			"image": ["wv:dwpose", 0],
+			"strength": controlnet_strength
+		}
+	}
+	# Le sampler utilise ctrl_apply au lieu de pos pour le conditioning positif
+	wf["wv:sampler"]["inputs"]["positive"] = ["wv:ctrl_apply", 0]
+	return wf
+
+
 # ===== Create tab : text-to-image avec LoRA =====
 
 ## Workflow Flux text-to-image via UNETLoader + CLIPLoader + VAELoader.
