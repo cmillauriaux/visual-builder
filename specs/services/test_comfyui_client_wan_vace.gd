@@ -169,3 +169,28 @@ func test_build_wan_vace_pose_workflow_sampler_uses_controlnet_positive():
 		false, 7.0, 20, 0.85, "", 6, 3.0, 0.7)
 	# Le sampler doit utiliser ctrl_apply comme conditioning positif
 	assert_eq(wf["wv:sampler"]["inputs"]["positive"][0], "wv:ctrl_apply")
+
+func test_generate_sequence_fails_when_already_generating():
+	var client = Node.new()
+	client.set_script(ComfyUIClientScript)
+	client._generating = true
+	var errors = []
+	client.generation_failed.connect(func(e): errors.append(e))
+	var config = load("res://src/services/comfyui_config.gd").new()
+	client.generate_sequence(config, "", "", false, 7.0, 20,
+		ComfyUIClientScript.WorkflowType.WAN_VACE, 0.85, "", 6, 3.0)
+	assert_eq(errors.size(), 1)
+	assert_eq(errors[0], "Une génération est déjà en cours")
+	client.free()
+
+func test_generate_sequence_fails_if_source_missing():
+	var client = Node.new()
+	client.set_script(ComfyUIClientScript)
+	var errors = []
+	client.generation_failed.connect(func(e): errors.append(e))
+	var config = load("res://src/services/comfyui_config.gd").new()
+	client.generate_sequence(config, "/nonexistent/path.png", "prompt", false, 7.0, 20,
+		ComfyUIClientScript.WorkflowType.WAN_VACE, 0.85, "", 6, 3.0)
+	assert_eq(errors.size(), 1)
+	assert_string_contains(errors[0], "Impossible d'ouvrir l'image")
+	client.free()

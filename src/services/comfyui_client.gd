@@ -1635,6 +1635,70 @@ func generate(config: RefCounted, source_image_path: String, prompt_text: String
 		generation_progress.emit("Upload de l'image vers ComfyUI...")
 		_do_upload(filename, file_bytes, prompt_text)
 
+## Génère une séquence de frames Wan VACE et émet sequence_completed(images: Array).
+## Supporte uniquement ComfyUI local (pas RunPod).
+func generate_sequence(
+	config: RefCounted,
+	source_image_path: String,
+	prompt_text: String,
+	remove_background: bool = true,
+	cfg: float = 7.0,
+	steps: int = 20,
+	workflow_type: int = WorkflowType.WAN_VACE,
+	denoise: float = 0.85,
+	negative_prompt: String = "",
+	frames_to_extract: int = 6,
+	duration_sec: float = 3.0,
+	second_image_path: String = "",
+	controlnet_strength: float = 0.7
+) -> void:
+	if _generating:
+		_fail("Une génération est déjà en cours")
+		return
+	_generating = true
+	_cancelled = false
+	_config = config
+	_remove_background = remove_background
+	_cfg = cfg
+	_steps = steps
+	_denoise = denoise
+	_workflow_type = workflow_type
+	_negative_prompt = negative_prompt
+	_frames_to_extract = frames_to_extract
+	_duration_sec = duration_sec
+	_controlnet_strength = controlnet_strength
+	_is_sequence_mode = true
+	_second_image_filename = ""
+	_second_image_bytes = PackedByteArray()
+
+	generation_progress.emit("Chargement de l'image source...")
+
+	var file = FileAccess.open(source_image_path, FileAccess.READ)
+	if file == null:
+		_generating = false
+		_is_sequence_mode = false
+		_fail("Impossible d'ouvrir l'image : " + source_image_path)
+		return
+	var file_bytes = file.get_buffer(file.get_length())
+	file.close()
+	_source_filename = source_image_path.get_file()
+
+	if second_image_path != "":
+		var file2 = FileAccess.open(second_image_path, FileAccess.READ)
+		if file2 != null:
+			_second_image_bytes = file2.get_buffer(file2.get_length())
+			file2.close()
+			_second_image_filename = second_image_path.get_file()
+
+	if config.is_runpod():
+		_generating = false
+		_is_sequence_mode = false
+		_fail("generate_sequence() ne supporte pas RunPod (utiliser ComfyUI local)")
+		return
+
+	generation_progress.emit("Upload de l'image source vers ComfyUI...")
+	_do_upload(_source_filename, file_bytes, prompt_text)
+
 func _do_runpod_run(filename: String, file_bytes: PackedByteArray, prompt_text: String) -> void:
 	var seed = randi()
 	var workflow = build_workflow(filename, prompt_text, seed, _remove_background, _cfg, _steps, _workflow_type, _denoise, _negative_prompt, _face_box_size, _megapixels, _loras)
@@ -1880,12 +1944,48 @@ func _dispatch_prompt(filename: String, prompt_text: String) -> void:
 		_do_prompt(filename, prompt_text)
 
 
-## Stub — implémentation complète dans Task 6 (generate_sequence + _do_prompt_sequence).
-func _do_prompt_sequence(_filename: String, _prompt_text: String) -> void:
-	push_error("[ComfyUI] _do_prompt_sequence: non encore implémenté")
-	_generating = false
-	_is_sequence_mode = false
-	_fail("_do_prompt_sequence non encore implémenté")
+func _do_prompt_sequence(filename: String, prompt_text: String) -> void:
+	var seed = randi()
+	var workflow: Dictionary
+	if _workflow_type == WorkflowType.WAN_VACE_POSE:
+		workflow = _build_wan_vace_pose_workflow(
+			filename, _second_image_filename, prompt_text, seed,
+			_remove_background, _cfg, _steps, _denoise, _negative_prompt,
+			_frames_to_extract, _duration_sec, _controlnet_strength)
+	else:
+		workflow = _build_wan_vace_workflow(
+			filename, prompt_text, seed,
+			_remove_background, _cfg, _steps, _denoise, _negative_prompt,
+			_frames_to_extract, _duration_sec)
+
+	var payload = JSON.stringify({"prompt": workflow})
+	var http = HTTPRequest.new()
+	add_child(http)
+	var url = _config.get_full_url("/prompt")
+	var headers = PackedStringArray(["Content-Type: application/json"])
+	for h in _config.get_auth_headers():
+		headers.append(h)
+	http.request_completed.connect(func(result: int, code: int, _h: PackedStringArray, body: PackedByteArray):
+		http.queue_free()
+		if _cancelled:
+			_generating = false
+			_is_sequence_mode = false
+			return
+		if result != HTTPRequest.RESULT_SUCCESS or code != 200:
+			_generating = false
+			_is_sequence_mode = false
+			_fail("Erreur /prompt (code %d)" % code)
+			return
+		_prompt_id = parse_prompt_response(body.get_string_from_utf8())
+		if _prompt_id == "":
+			_generating = false
+			_is_sequence_mode = false
+			_fail("Pas de prompt_id dans la réponse ComfyUI")
+			return
+		generation_progress.emit("Workflow soumis. Génération en cours...")
+		_start_polling()
+	)
+	http.request(url, headers, HTTPClient.METHOD_POST, payload)
 
 
 func _do_prompt(filename: String, prompt_text: String) -> void:
