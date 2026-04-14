@@ -1393,6 +1393,56 @@ func parse_history_response(json_str: String, prompt_id: String) -> Dictionary:
 		return {"status": "completed", "filename": fallback_filename}
 	return {"status": "error", "error": "Aucune image dans les sorties"}
 
+
+## Retourne TOUTES les images du nœud SaveImage (pour les workflows vidéo multi-frame).
+func parse_history_response_all(json_str: String, prompt_id: String) -> Dictionary:
+	var json = JSON.new()
+	var err = json.parse(json_str)
+	if err != OK:
+		return {"status": "error", "error": "Réponse JSON invalide"}
+	var data = json.data
+	if not data is Dictionary or not data.has(prompt_id):
+		return {"status": "pending"}
+	var entry = data[prompt_id]
+	if not entry is Dictionary:
+		return {"status": "error", "error": "Entrée invalide dans l'historique"}
+	if entry.has("status"):
+		var status_info = entry["status"]
+		if status_info is Dictionary and not status_info.get("completed", false):
+			return {"status": "pending"}
+	if not entry.has("outputs"):
+		return {"status": "error", "error": "Pas de sorties dans l'historique"}
+	var outputs = entry["outputs"]
+	var all_filenames: Array = []
+	for node_id in outputs:
+		var node_output = outputs[node_id]
+		if node_output is Dictionary and node_output.has("images"):
+			var images = node_output["images"]
+			if images is Array:
+				for img in images:
+					if img is Dictionary and img.get("type", "output") == "output":
+						all_filenames.append(img.get("filename", ""))
+	all_filenames = all_filenames.filter(func(f): return f != "")
+	all_filenames.sort()
+	if all_filenames.is_empty():
+		return {"status": "error", "error": "Aucune image dans les sorties"}
+	return {"status": "completed", "filenames": all_filenames}
+
+
+## Sélectionne `count` frames régulièrement espacées dans `all_filenames`.
+func select_frames(all_filenames: Array, count: int) -> Array:
+	var total = all_filenames.size()
+	if total == 0 or count == 0:
+		return []
+	if count >= total:
+		return all_filenames.duplicate()
+	var result: Array = []
+	for i in range(count):
+		var index = roundi(float(i) * (total - 1) / (count - 1))
+		result.append(all_filenames[index])
+	return result
+
+
 # --- Full generation flow ---
 
 func generate_upscale_enhance(config: RefCounted, source_image_path: String, workflow_type: int, prompt_text: String, factor: float, denoise: float, steps: int, cfg: float, shift: float, megapixels: float, negative_prompt: String) -> void:
@@ -1745,7 +1795,7 @@ func _do_upload(filename: String, file_bytes: PackedByteArray, prompt_text: Stri
 			_do_upload_mask(prompt_text)
 		else:
 			generation_progress.emit("Image uploadée. Lancement du workflow...")
-			_do_prompt(filename, prompt_text)
+			_dispatch_prompt(filename, prompt_text)
 	)
 
 	http.request_raw(url, PackedStringArray(headers), HTTPClient.METHOD_POST, body_bytes)
@@ -1777,7 +1827,7 @@ func _do_upload_second(prompt_text: String) -> void:
 			_do_upload_mask(prompt_text)
 		else:
 			generation_progress.emit("Images uploadées. Lancement du workflow...")
-			_do_prompt(_source_filename, prompt_text)
+			_dispatch_prompt(_source_filename, prompt_text)
 	)
 
 	http.request_raw(url, PackedStringArray(headers), HTTPClient.METHOD_POST, body_bytes)
@@ -1806,10 +1856,23 @@ func _do_upload_mask(prompt_text: String) -> void:
 			_fail("Erreur upload masque (code %d, result %d)" % [code, result])
 			return
 		generation_progress.emit("Masque uploadé. Lancement du workflow...")
-		_do_prompt(_source_filename, prompt_text)
+		_dispatch_prompt(_source_filename, prompt_text)
 	)
 
 	http.request_raw(url, PackedStringArray(headers), HTTPClient.METHOD_POST, body_bytes)
+
+
+## Redirige vers _do_prompt (génération simple) ou _do_prompt_sequence (mode séquence).
+func _dispatch_prompt(filename: String, prompt_text: String) -> void:
+	if _is_sequence_mode:
+		call("_do_prompt_sequence", filename, prompt_text)
+	else:
+		_do_prompt(filename, prompt_text)
+
+
+## Stub — implémentation complète dans Task 6 (generate_sequence + _do_prompt_sequence).
+func _do_prompt_sequence(_filename: String, _prompt_text: String) -> void:
+	push_error("[ComfyUI] _do_prompt_sequence: non encore implémenté")
 
 
 func _do_prompt(filename: String, prompt_text: String) -> void:
@@ -1919,7 +1982,16 @@ func _poll_history() -> void:
 		if parsed["status"] == "completed":
 			_stop_polling()
 			generation_progress.emit("Téléchargement du résultat...")
-			_do_download(parsed["filename"])
+			if _is_sequence_mode:
+				var parsed_all = parse_history_response_all(response_str, _prompt_id)
+				if parsed_all["status"] == "completed":
+					_do_download_sequence(parsed_all["filenames"])
+				else:
+					_generating = false
+					_is_sequence_mode = false
+					_fail("Impossible de récupérer les frames : %s" % parsed_all.get("error", "inconnu"))
+			else:
+				_do_download(parsed["filename"])
 		elif parsed["status"] == "error":
 			_stop_polling()
 			_generating = false
@@ -1967,6 +2039,53 @@ func _do_download(filename: String) -> void:
 	)
 
 	http.request(url, PackedStringArray(headers))
+
+
+## Télécharge une séquence de frames et émet sequence_completed.
+func _do_download_sequence(filenames: Array) -> void:
+	var selected = select_frames(filenames, _frames_to_extract)
+	_download_next_frame(selected, 0, [])
+
+
+func _download_next_frame(filenames: Array, index: int, acc: Array) -> void:
+	if index >= filenames.size():
+		_generating = false
+		_is_sequence_mode = false
+		sequence_completed.emit(acc)
+		return
+	generation_progress.emit("Téléchargement frame %d / %d..." % [index + 1, filenames.size()])
+	var http = HTTPRequest.new()
+	add_child(http)
+	var filename = filenames[index]
+	var url = _config.get_full_url("/view?filename=" + filename.uri_encode() + "&type=output")
+	var headers: Array = []
+	for h in _config.get_auth_headers():
+		headers.append(h)
+	http.request_completed.connect(func(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray):
+		http.queue_free()
+		if _cancelled:
+			_generating = false
+			_is_sequence_mode = false
+			return
+		if result != HTTPRequest.RESULT_SUCCESS or code != 200:
+			_generating = false
+			_is_sequence_mode = false
+			_fail("Erreur téléchargement frame %d (code %d)" % [index + 1, code])
+			return
+		var image = Image.new()
+		var decode_err = image.load_png_from_buffer(body)
+		if decode_err != OK:
+			decode_err = image.load_jpg_from_buffer(body)
+		if decode_err != OK:
+			_generating = false
+			_is_sequence_mode = false
+			_fail("Impossible de décoder la frame %d" % [index + 1])
+			return
+		acc.append(image)
+		_download_next_frame(filenames, index + 1, acc)
+	)
+	http.request(url, PackedStringArray(headers))
+
 
 # ===== Create tab : text-to-image avec LoRA =====
 
