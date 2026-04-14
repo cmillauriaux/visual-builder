@@ -59,6 +59,7 @@ var _inpaint_guidance: float = 30.0
 var _frames_to_extract: int = 6
 var _duration_sec: float = 3.0
 var _controlnet_strength: float = 0.7
+var _fps: int = 8
 var _is_sequence_mode: bool = false
 var _source_width: int = 832
 var _source_height: int = 480
@@ -1654,7 +1655,8 @@ func generate_sequence(
 	frames_to_extract: int = 6,
 	duration_sec: float = 3.0,
 	second_image_path: String = "",
-	controlnet_strength: float = 0.7
+	controlnet_strength: float = 0.7,
+	fps: int = 8
 ) -> void:
 	if _generating:
 		_fail("Une génération est déjà en cours")
@@ -1671,6 +1673,7 @@ func generate_sequence(
 	_frames_to_extract = frames_to_extract
 	_duration_sec = duration_sec
 	_controlnet_strength = controlnet_strength
+	_fps = fps
 	_is_sequence_mode = true
 	_second_image_filename = ""
 	_second_image_bytes = PackedByteArray()
@@ -1968,17 +1971,17 @@ func _do_prompt_sequence(filename: String, prompt_text: String) -> void:
 		workflow = _build_wan_vace_pose_workflow(
 			filename, _second_image_filename, prompt_text, seed,
 			_remove_background, _cfg, _steps, _denoise, _negative_prompt,
-			_frames_to_extract, _duration_sec, _controlnet_strength,
+			_frames_to_extract, _duration_sec, _controlnet_strength, _fps,
 			_source_width, _source_height)
 	elif _workflow_type == WorkflowType.WAN_I2V:
 		workflow = _build_wan_i2v_workflow(
 			filename, prompt_text, seed, _cfg, _steps, _negative_prompt,
-			_duration_sec, _source_width, _source_height)
+			_duration_sec, _fps, _source_width, _source_height)
 	else:
 		workflow = _build_wan_vace_workflow(
 			filename, prompt_text, seed,
 			_remove_background, _cfg, _steps, _denoise, _negative_prompt,
-			_frames_to_extract, _duration_sec, _source_width, _source_height)
+			_frames_to_extract, _duration_sec, _fps, _source_width, _source_height)
 
 	var payload = JSON.stringify({"prompt": workflow})
 	var http = HTTPRequest.new()
@@ -2293,7 +2296,7 @@ static func _wan_vace_resolution(src_w: int, src_h: int) -> Vector2i:
 ## Utilise ComfyUI-WanVideoWrapper : WanVideoModelLoader, WanVideoVAELoader,
 ## LoadWanVideoT5TextEncoder, WanVideoTextEncode, WanVideoVACEEncode,
 ## WanVideoSampler, WanVideoDecode.
-## num_frames = round(duration_sec * 16 / 8) * 8, clamped [16, 128].
+## num_frames = round(duration_sec * fps / 8) * 8, clamped [16, 128].
 func _build_wan_vace_workflow(
 	source_filename: String,
 	prompt_text: String,
@@ -2305,10 +2308,11 @@ func _build_wan_vace_workflow(
 	negative_prompt: String,
 	_frames_to_extract: int,
 	duration_sec: float,
+	fps: int = 8,
 	width: int = 832,
 	height: int = 480
 ) -> Dictionary:
-	var total_frames = clampi(roundi(duration_sec * 16.0 / 8.0) * 8, 16, 128)
+	var total_frames = clampi(roundi(duration_sec * float(fps) / 8.0) * 8, 16, 128)
 	var wf: Dictionary = {
 		"wv:model": {
 			"class_type": "WanVideoModelLoader",
@@ -2435,13 +2439,14 @@ func _build_wan_vace_pose_workflow(
 	frames_to_extract: int,
 	duration_sec: float,
 	controlnet_strength: float,
+	fps: int = 8,
 	width: int = 832,
 	height: int = 480
 ) -> Dictionary:
 	# Construire la base sans pose, puis injecter les nœuds ControlNet
 	var wf = _build_wan_vace_workflow(source_filename, prompt_text, seed,
 		remove_background, cfg, steps, denoise, negative_prompt,
-		frames_to_extract, duration_sec, width, height)
+		frames_to_extract, duration_sec, fps, width, height)
 
 	# Nœuds DWPose + ControlNet
 	wf["wv:pose_img"] = {
@@ -2493,12 +2498,12 @@ func _build_wan_i2v_workflow(
 	steps: int,
 	negative_prompt: String,
 	duration_sec: float,
+	fps: int = 8,
 	width: int = 832,
 	height: int = 480
 ) -> Dictionary:
-	# 16 fps, multiple de 4 (contrainte WanImageToVideo length step=4)
-	var fps := 16
-	var num_frames: int = clamp(int(round(duration_sec * fps / 4.0)) * 4, 16, 200)
+	# multiple de 4 (contrainte WanImageToVideo length step=4)
+	var num_frames: int = clamp(int(round(duration_sec * float(fps) / 4.0)) * 4, 16, 200)
 	# Découpage deux-modèles : high_noise → première moitié, low_noise → deuxième moitié
 	var split_step := steps / 2
 

@@ -159,14 +159,20 @@ func test_build_wan_vace_workflow_sets_seed_steps_cfg():
 func test_build_wan_vace_workflow_computes_num_frames():
 	var client = ComfyUIClientScript.new()
 	# 3 sec * 16 fps = 48, rounded to multiple of 8 = 48
-	var wf = client._build_wan_vace_workflow("src.png", "p", 1, false, 7.0, 20, 0.85, "", 6, 3.0)
+	var wf = client._build_wan_vace_workflow("src.png", "p", 1, false, 7.0, 20, 0.85, "", 6, 3.0, 16)
 	assert_eq(wf["wv:vace"]["inputs"]["num_frames"], 48)
-	# Lower bound: 0.5 sec → roundi(0.5*16/8)*8 = roundi(1)*8 = 8, clamped to 16
-	var wf_short = client._build_wan_vace_workflow("src.png", "p", 1, false, 7.0, 20, 0.85, "", 6, 0.5)
+	# Lower bound: 0.5 sec @ 16fps → roundi(0.5*16/8)*8 = 8, clamped to 16
+	var wf_short = client._build_wan_vace_workflow("src.png", "p", 1, false, 7.0, 20, 0.85, "", 6, 0.5, 16)
 	assert_eq(wf_short["wv:vace"]["inputs"]["num_frames"], 16)
-	# Upper bound: 9 sec → roundi(9*16/8)*8 = roundi(18)*8 = 144, clamped to 128
-	var wf_long = client._build_wan_vace_workflow("src.png", "p", 1, false, 7.0, 20, 0.85, "", 6, 9.0)
+	# Upper bound: 9 sec @ 16fps → roundi(18)*8 = 144, clamped to 128
+	var wf_long = client._build_wan_vace_workflow("src.png", "p", 1, false, 7.0, 20, 0.85, "", 6, 9.0, 16)
 	assert_eq(wf_long["wv:vace"]["inputs"]["num_frames"], 128)
+	# 3 sec @ 8fps → roundi(3*8/8)*8 = 24
+	var wf_8 = client._build_wan_vace_workflow("src.png", "p", 1, false, 7.0, 20, 0.85, "", 6, 3.0, 8)
+	assert_eq(wf_8["wv:vace"]["inputs"]["num_frames"], 24)
+	# 3 sec @ 4fps → roundi(3*4/8)*8 = roundi(1.5)*8 = 16 (minimum)
+	var wf_4 = client._build_wan_vace_workflow("src.png", "p", 1, false, 7.0, 20, 0.85, "", 6, 3.0, 4)
+	assert_eq(wf_4["wv:vace"]["inputs"]["num_frames"], 16)
 
 func test_build_wan_vace_workflow_with_remove_bg():
 	var client = ComfyUIClientScript.new()
@@ -300,8 +306,14 @@ func test_build_wan_i2v_workflow_encode_sets_resolution():
 func test_build_wan_i2v_workflow_num_frames_3s():
 	var client = ComfyUIClientScript.new()
 	# 3s × 16fps = 48, multiple of 4 = 48
-	var wf = client._build_wan_i2v_workflow("src.png", "p", 1, 3.5, 20, "", 3.0)
+	var wf = client._build_wan_i2v_workflow("src.png", "p", 1, 3.5, 20, "", 3.0, 16)
 	assert_eq(wf["i2v:encode"]["inputs"]["length"], 48)
+	# 3s × 8fps = 24, multiple of 4 = 24
+	var wf_8 = client._build_wan_i2v_workflow("src.png", "p", 1, 3.5, 20, "", 3.0, 8)
+	assert_eq(wf_8["i2v:encode"]["inputs"]["length"], 24)
+	# 3s × 4fps = 12, clamped to minimum 16
+	var wf_4 = client._build_wan_i2v_workflow("src.png", "p", 1, 3.5, 20, "", 3.0, 4)
+	assert_eq(wf_4["i2v:encode"]["inputs"]["length"], 16)
 
 func test_build_wan_i2v_workflow_two_stage_sampler():
 	var client = ComfyUIClientScript.new()
