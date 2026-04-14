@@ -77,18 +77,19 @@ func test_parse_history_response_all_detects_execution_error():
 
 func test_build_wan_vace_dwpose_preview_has_load_image():
 	var client = ComfyUIClientScript.new()
-	var wf = client.build_wan_vace_dwpose_preview_workflow("pose.png")
+	var wf = client._build_wan_vace_dwpose_preview_workflow("pose.png")
+	assert_eq(wf["wv:pose_src"]["class_type"], "LoadImage")
 	assert_eq(wf["wv:pose_src"]["inputs"]["image"], "pose.png")
 
 func test_build_wan_vace_dwpose_preview_has_dwpose():
 	var client = ComfyUIClientScript.new()
-	var wf = client.build_wan_vace_dwpose_preview_workflow("pose.png")
+	var wf = client._build_wan_vace_dwpose_preview_workflow("pose.png")
 	assert_true(wf.has("wv:dwpose"))
 	assert_eq(wf["wv:dwpose"]["class_type"], "DWPreprocess")
 
 func test_build_wan_vace_dwpose_preview_output_is_dwpose():
 	var client = ComfyUIClientScript.new()
-	var wf = client.build_wan_vace_dwpose_preview_workflow("pose.png")
+	var wf = client._build_wan_vace_dwpose_preview_workflow("pose.png")
 	assert_eq(wf["9"]["inputs"]["images"][0], "wv:dwpose")
 
 func test_build_workflow_dispatches_dwpose_preview():

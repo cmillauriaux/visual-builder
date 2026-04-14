@@ -915,7 +915,7 @@ func build_workflow(filename: String, prompt_text: String, seed: int, remove_bac
 	if workflow_type == WorkflowType.ZIMAGE_DECLINER:
 		return _build_zimage_decliner_workflow(filename, prompt_text, seed, cfg, steps, denoise, negative_prompt, megapixels)
 	if workflow_type == WorkflowType.WAN_VACE_DWPOSE_PREVIEW:
-		return build_wan_vace_dwpose_preview_workflow(filename)
+		return _build_wan_vace_dwpose_preview_workflow(filename)
 	var wf = WORKFLOW_TEMPLATE.duplicate(true)
 	wf["76"]["inputs"]["image"] = filename
 	wf["75:74"]["inputs"]["text"] = prompt_text
@@ -2117,7 +2117,7 @@ func _download_next_frame(filenames: Array, index: int, acc: Array) -> void:
 
 
 ## Workflow minimal : estime la pose DWPose et retourne l'image squelette.
-func build_wan_vace_dwpose_preview_workflow(pose_filename: String) -> Dictionary:
+func _build_wan_vace_dwpose_preview_workflow(pose_filename: String) -> Dictionary:
 	return {
 		"wv:pose_src": {
 			"class_type": "LoadImage",
