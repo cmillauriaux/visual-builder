@@ -74,3 +74,26 @@ func test_parse_history_response_all_detects_execution_error():
 	var parsed = client.parse_history_response_all(json, "id1")
 	assert_eq(parsed["status"], "error")
 	assert_true(parsed["error"].contains("WanVideoSampler"))
+
+func test_build_wan_vace_dwpose_preview_has_load_image():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_wan_vace_dwpose_preview_workflow("pose.png")
+	assert_eq(wf["wv:pose_src"]["inputs"]["image"], "pose.png")
+
+func test_build_wan_vace_dwpose_preview_has_dwpose():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_wan_vace_dwpose_preview_workflow("pose.png")
+	assert_true(wf.has("wv:dwpose"))
+	assert_eq(wf["wv:dwpose"]["class_type"], "DWPreprocess")
+
+func test_build_wan_vace_dwpose_preview_output_is_dwpose():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_wan_vace_dwpose_preview_workflow("pose.png")
+	assert_eq(wf["9"]["inputs"]["images"][0], "wv:dwpose")
+
+func test_build_workflow_dispatches_dwpose_preview():
+	var client = ComfyUIClientScript.new()
+	client._source_filename = "pose.png"
+	var wf = client.build_workflow("pose.png", "", 0, false, 1.0, 1,
+		ComfyUIClientScript.WorkflowType.WAN_VACE_DWPOSE_PREVIEW)
+	assert_true(wf.has("wv:dwpose"))

@@ -914,6 +914,8 @@ func build_workflow(filename: String, prompt_text: String, seed: int, remove_bac
 		return _build_assembler_workflow(filename, prompt_text, seed, remove_background, cfg, steps, denoise, negative_prompt, megapixels, loras)
 	if workflow_type == WorkflowType.ZIMAGE_DECLINER:
 		return _build_zimage_decliner_workflow(filename, prompt_text, seed, cfg, steps, denoise, negative_prompt, megapixels)
+	if workflow_type == WorkflowType.WAN_VACE_DWPOSE_PREVIEW:
+		return build_wan_vace_dwpose_preview_workflow(filename)
 	var wf = WORKFLOW_TEMPLATE.duplicate(true)
 	wf["76"]["inputs"]["image"] = filename
 	wf["75:74"]["inputs"]["text"] = prompt_text
@@ -2096,6 +2098,51 @@ func _download_next_frame(filenames: Array, index: int, acc: Array) -> void:
 		_download_next_frame(filenames, index + 1, acc)
 	)
 	http.request(url, PackedStringArray(headers))
+
+
+# ===== Wan VACE : séquence de poses multi-personnages =====
+#
+# Dépendances ComfyUI-Manager :
+#   - ComfyUI-WanVideo (ou ComfyUI-WanVideoWrapper) → WanVideoModelLoader, WanVideoVACEEncode,
+#     WanVideoSampler, WanVideoEmptyLatent
+#   - comfyui_controlnet_aux → DWPreprocess
+#   - ComfyUI-WanFunControlNet → ControlNetLoader (wan_fun_control.safetensors)
+#   - ComfyUI-BiRefNet-Hugo → BiRefNetRMBG (déjà présent)
+#
+# Modèles requis :
+#   models/wan/wan2.1-vace-14b.safetensors  (ou variante GGUF Q4)
+#   models/clip/umt5-xxl-enc-bf16.safetensors
+#   models/controlnet/wan_fun_control.safetensors
+#   models/onnx/yolox_l.onnx + dw-ll_ucoco_384.onnx  (pour DWPose)
+
+
+## Workflow minimal : estime la pose DWPose et retourne l'image squelette.
+func build_wan_vace_dwpose_preview_workflow(pose_filename: String) -> Dictionary:
+	return {
+		"wv:pose_src": {
+			"class_type": "LoadImage",
+			"inputs": {"image": pose_filename}
+		},
+		"wv:dwpose": {
+			"class_type": "DWPreprocess",
+			"inputs": {
+				"image": ["wv:pose_src", 0],
+				"detect_hand": "enable",
+				"detect_body": "enable",
+				"detect_face": "enable",
+				"resolution": 512,
+				"bbox_detector": "yolox_l.onnx",
+				"pose_estimator": "dw-ll_ucoco_384.onnx"
+			}
+		},
+		"9": {
+			"class_type": "SaveImage",
+			"inputs": {
+				"filename_prefix": "wan_vace_pose_preview",
+				"images": ["wv:dwpose", 0]
+			}
+		}
+	}
 
 
 # ===== Create tab : text-to-image avec LoRA =====
