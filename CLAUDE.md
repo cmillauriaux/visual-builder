@@ -278,6 +278,8 @@ kill $(lsof -ti:8099) 2>/dev/null  # tuer le serveur web
 
 **Avant d'annoncer à l'utilisateur que le travail est terminé**, tu DOIS lancer la commande `/check-global-acceptance` et vérifier que toutes les vérifications passent. Ne jamais déclarer une tâche terminée sans avoir exécuté cette validation.
 
+> **Pour les sous-agents (subagent-driven-development)** : NE PAS lancer `/check-global-acceptance` après chaque tâche individuelle — la suite de tests complète (~3000 tests) est trop lente (~8 min). À la place, lancer uniquement le fichier de test spécifique à la tâche en cours avec `-gtest=res://specs/...`. Le `/check-global-acceptance` n'est à lancer qu'avant de finaliser l'implémentation complète (dernière tâche du plan).
+
 ## Key Decisions
 
 - **Renderer**: GL Compatibility (OpenGL-based, required for HTML5/web export and older hardware)
