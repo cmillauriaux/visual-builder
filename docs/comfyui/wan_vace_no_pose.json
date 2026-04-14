@@ -1,0 +1,88 @@
+{
+  "wv:model": {
+    "class_type": "WanVideoModelLoader",
+    "inputs": {
+      "model": "wan2.1_vace_14B_fp16.safetensors",
+      "base_precision": "bf16",
+      "quantization": "disabled",
+      "load_device": "offload_device"
+    }
+  },
+  "wv:vae": {
+    "class_type": "WanVideoVAELoader",
+    "inputs": {
+      "model_name": "wan_2.1_vae.safetensors",
+      "precision": "bf16"
+    }
+  },
+  "wv:t5": {
+    "class_type": "LoadWanVideoT5TextEncoder",
+    "inputs": {
+      "model_name": "umt5-xxl-enc-bf16.safetensors",
+      "precision": "bf16"
+    }
+  },
+  "wv:text": {
+    "class_type": "WanVideoTextEncode",
+    "inputs": {
+      "positive_prompt": "two characters kissing passionately, cinematic",
+      "negative_prompt": "low quality, blurry",
+      "t5": ["wv:t5", 0],
+      "force_offload": true
+    }
+  },
+  "wv:src": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "your_reference_image.png"
+    }
+  },
+  "wv:vace": {
+    "class_type": "WanVideoVACEEncode",
+    "inputs": {
+      "vae": ["wv:vae", 0],
+      "width": 832,
+      "height": 480,
+      "num_frames": 48,
+      "strength": 1.0,
+      "vace_start_percent": 0.0,
+      "vace_end_percent": 1.0,
+      "input_frames": ["wv:src", 0]
+    }
+  },
+  "wv:sampler": {
+    "class_type": "WanVideoSampler",
+    "inputs": {
+      "model": ["wv:model", 0],
+      "image_embeds": ["wv:vace", 0],
+      "text_embeds": ["wv:text", 0],
+      "steps": 20,
+      "cfg": 7.0,
+      "shift": 5.0,
+      "seed": 42,
+      "force_offload": true,
+      "scheduler": "unipc",
+      "riflex_freq_index": 0,
+      "denoise_strength": 0.85
+    }
+  },
+  "wv:decode": {
+    "class_type": "WanVideoDecode",
+    "inputs": {
+      "vae": ["wv:vae", 0],
+      "samples": ["wv:sampler", 0],
+      "enable_vae_tiling": false,
+      "tile_x": 272,
+      "tile_y": 272,
+      "tile_stride_x": 144,
+      "tile_stride_y": 128
+    }
+  },
+  "9": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "filename_prefix": "wan_vace_frame",
+      "images": ["wv:decode", 0]
+    }
+  }
+}

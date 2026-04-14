@@ -2268,13 +2268,14 @@ func _build_wan_vace_workflow(
 			"class_type": "WanVideoModelLoader",
 			"inputs": {
 				"model": "wan2.1_vace_14B_fp16.safetensors",
+				"base_precision": "bf16",
 				"quantization": "disabled",
 				"load_device": "offload_device"
 			}
 		},
 		"wv:vae": {
 			"class_type": "WanVideoVAELoader",
-			"inputs": {"model_name": "wan_2.1_vae.safetensors"}
+			"inputs": {"model_name": "wan_2.1_vae.safetensors", "precision": "bf16"}
 		},
 		"wv:t5": {
 			"class_type": "LoadWanVideoT5TextEncoder",
@@ -2330,7 +2331,11 @@ func _build_wan_vace_workflow(
 			"inputs": {
 				"vae": ["wv:vae", 0],
 				"samples": ["wv:sampler", 0],
-				"enable_vae_tiling": false
+				"enable_vae_tiling": false,
+				"tile_x": 272,
+				"tile_y": 272,
+				"tile_stride_x": 144,
+				"tile_stride_y": 128
 			}
 		},
 		"9": {
