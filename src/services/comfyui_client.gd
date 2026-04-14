@@ -2269,7 +2269,7 @@ func _build_wan_vace_workflow(
 			"inputs": {
 				"model": "wan2.1_vace_14B_fp16.safetensors",
 				"base_precision": "bf16",
-				"quantization": "disabled",
+				"quantization": "fp8_e4m3fn",
 				"load_device": "offload_device"
 			}
 		},
