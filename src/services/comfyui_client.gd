@@ -2224,7 +2224,7 @@ func _build_wan_vace_dwpose_preview_workflow(pose_filename: String) -> Dictionar
 			"inputs": {"image": pose_filename}
 		},
 		"wv:dwpose": {
-			"class_type": "DWPreprocess",
+			"class_type": "DWPreprocessor",
 			"inputs": {
 				"image": ["wv:pose_src", 0],
 				"detect_hand": "enable",
@@ -2246,6 +2246,9 @@ func _build_wan_vace_dwpose_preview_workflow(pose_filename: String) -> Dictionar
 
 
 ## Workflow Wan VACE séquence sans pose ControlNet.
+## Utilise ComfyUI-WanVideoWrapper : WanVideoModelLoader, WanVideoVAELoader,
+## LoadWanVideoT5TextEncoder, WanVideoTextEncode, WanVideoVACEEncode,
+## WanVideoSampler, WanVideoDecode.
 ## num_frames = round(duration_sec * 16 / 8) * 8, clamped [16, 128].
 func _build_wan_vace_workflow(
 	source_filename: String,
@@ -2264,32 +2267,29 @@ func _build_wan_vace_workflow(
 		"wv:model": {
 			"class_type": "WanVideoModelLoader",
 			"inputs": {
-				"model": "wan2.1-vace-14b.safetensors",
+				"model": "wan2.1_vace_14B_fp16.safetensors",
 				"quantization": "disabled",
-				"load_device": "main_device",
-				"enable_sequential_cpu_offload": false
+				"load_device": "offload_device"
 			}
 		},
-		"wv:clip": {
-			"class_type": "CLIPLoader",
+		"wv:vae": {
+			"class_type": "WanVideoVAELoader",
+			"inputs": {"model_name": "wan_2.1_vae.safetensors"}
+		},
+		"wv:t5": {
+			"class_type": "LoadWanVideoT5TextEncoder",
 			"inputs": {
-				"clip_name": "umt5-xxl-enc-bf16.safetensors",
-				"type": "wan",
-				"device": "default"
+				"model_name": "umt5-xxl-enc-bf16.safetensors",
+				"precision": "bf16"
 			}
 		},
-		"wv:pos": {
-			"class_type": "CLIPTextEncode",
+		"wv:text": {
+			"class_type": "WanVideoTextEncode",
 			"inputs": {
-				"text": prompt_text,
-				"clip": ["wv:clip", 0]
-			}
-		},
-		"wv:neg": {
-			"class_type": "CLIPTextEncode",
-			"inputs": {
-				"text": negative_prompt,
-				"clip": ["wv:clip", 0]
+				"positive_prompt": prompt_text,
+				"negative_prompt": negative_prompt,
+				"t5": ["wv:t5", 0],
+				"force_offload": true
 			}
 		},
 		"wv:src": {
@@ -2299,41 +2299,38 @@ func _build_wan_vace_workflow(
 		"wv:vace": {
 			"class_type": "WanVideoVACEEncode",
 			"inputs": {
-				"vae": ["wv:model", 2],
-				"image": ["wv:src", 0],
-				"strength": 1.0,
-				"num_frames": total_frames
-			}
-		},
-		"wv:empty_latent": {
-			"class_type": "WanVideoEmptyLatent",
-			"inputs": {
+				"vae": ["wv:vae", 0],
 				"width": 832,
 				"height": 480,
-				"batch_size": 1,
-				"num_frames": total_frames
+				"num_frames": total_frames,
+				"strength": 1.0,
+				"vace_start_percent": 0.0,
+				"vace_end_percent": 1.0,
+				"input_frames": ["wv:src", 0]
 			}
 		},
 		"wv:sampler": {
 			"class_type": "WanVideoSampler",
 			"inputs": {
 				"model": ["wv:model", 0],
-				"positive": ["wv:pos", 0],
-				"negative": ["wv:neg", 0],
-				"latents": ["wv:empty_latent", 0],
-				"vace_embeds": ["wv:vace", 0],
+				"image_embeds": ["wv:vace", 0],
+				"text_embeds": ["wv:text", 0],
 				"steps": steps,
 				"cfg": cfg,
+				"shift": 5.0,
 				"seed": seed,
+				"force_offload": true,
 				"scheduler": "unipc",
-				"denoise": denoise
+				"riflex_freq_index": 0,
+				"denoise_strength": denoise
 			}
 		},
 		"wv:decode": {
-			"class_type": "VAEDecode",
+			"class_type": "WanVideoDecode",
 			"inputs": {
+				"vae": ["wv:vae", 0],
 				"samples": ["wv:sampler", 0],
-				"vae": ["wv:model", 2]
+				"enable_vae_tiling": false
 			}
 		},
 		"9": {
@@ -2363,6 +2360,7 @@ func _build_wan_vace_workflow(
 
 
 ## Workflow Wan VACE séquence avec DWPose ControlNet.
+## WanVideoControlnet injecte le ControlNet dans le modèle (retourne WANVIDEOMODEL modifié).
 func _build_wan_vace_pose_workflow(
 	source_filename: String,
 	pose_filename: String,
@@ -2388,7 +2386,7 @@ func _build_wan_vace_pose_workflow(
 		"inputs": {"image": pose_filename}
 	}
 	wf["wv:dwpose"] = {
-		"class_type": "DWPreprocess",
+		"class_type": "DWPreprocessor",
 		"inputs": {
 			"image": ["wv:pose_img", 0],
 			"detect_hand": "enable",
@@ -2400,20 +2398,23 @@ func _build_wan_vace_pose_workflow(
 		}
 	}
 	wf["wv:ctrl_loader"] = {
-		"class_type": "ControlNetLoader",
-		"inputs": {"control_net_name": "wan_fun_control.safetensors"}
+		"class_type": "WanVideoControlnetLoader",
+		"inputs": {"model": "wan_fun_control.safetensors"}
 	}
-	wf["wv:ctrl_apply"] = {
-		"class_type": "ControlNetApply",
+	wf["wv:ctrl"] = {
+		"class_type": "WanVideoControlnet",
 		"inputs": {
-			"conditioning": ["wv:pos", 0],
-			"control_net": ["wv:ctrl_loader", 0],
-			"image": ["wv:dwpose", 0],
-			"strength": controlnet_strength
+			"model": ["wv:model", 0],
+			"controlnet": ["wv:ctrl_loader", 0],
+			"control_images": ["wv:dwpose", 0],
+			"strength": controlnet_strength,
+			"control_stride": 3,
+			"control_start_percent": 0.0,
+			"control_end_percent": 1.0
 		}
 	}
-	# Le sampler utilise ctrl_apply au lieu de pos pour le conditioning positif
-	wf["wv:sampler"]["inputs"]["positive"] = ["wv:ctrl_apply", 0]
+	# Le sampler utilise le modèle patché par WanVideoControlnet
+	wf["wv:sampler"]["inputs"]["model"] = ["wv:ctrl", 0]
 	return wf
 
 

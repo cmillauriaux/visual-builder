@@ -85,7 +85,7 @@ func test_build_wan_vace_dwpose_preview_has_dwpose():
 	var client = ComfyUIClientScript.new()
 	var wf = client._build_wan_vace_dwpose_preview_workflow("pose.png")
 	assert_true(wf.has("wv:dwpose"))
-	assert_eq(wf["wv:dwpose"]["class_type"], "DWPreprocess")
+	assert_eq(wf["wv:dwpose"]["class_type"], "DWPreprocessor")
 
 func test_build_wan_vace_dwpose_preview_output_is_dwpose():
 	var client = ComfyUIClientScript.new()
@@ -109,7 +109,7 @@ func test_build_wan_vace_workflow_sets_prompt():
 	var client = ComfyUIClientScript.new()
 	var wf = client._build_wan_vace_workflow("src.png", "two characters kissing", 42,
 		false, 7.0, 20, 0.85, "", 6, 3.0)
-	assert_eq(wf["wv:pos"]["inputs"]["text"], "two characters kissing")
+	assert_eq(wf["wv:text"]["inputs"]["positive_prompt"], "two characters kissing")
 
 func test_build_wan_vace_workflow_sets_seed_steps_cfg():
 	var client = ComfyUIClientScript.new()
@@ -118,14 +118,13 @@ func test_build_wan_vace_workflow_sets_seed_steps_cfg():
 	assert_eq(wf["wv:sampler"]["inputs"]["seed"], 99)
 	assert_eq(wf["wv:sampler"]["inputs"]["steps"], 15)
 	assert_eq(wf["wv:sampler"]["inputs"]["cfg"], 5.0)
-	assert_eq(wf["wv:sampler"]["inputs"]["denoise"], 0.9)
+	assert_eq(wf["wv:sampler"]["inputs"]["denoise_strength"], 0.9)
 
 func test_build_wan_vace_workflow_computes_num_frames():
 	var client = ComfyUIClientScript.new()
 	# 3 sec * 16 fps = 48, rounded to multiple of 8 = 48
 	var wf = client._build_wan_vace_workflow("src.png", "p", 1, false, 7.0, 20, 0.85, "", 6, 3.0)
 	assert_eq(wf["wv:vace"]["inputs"]["num_frames"], 48)
-	assert_eq(wf["wv:empty_latent"]["inputs"]["num_frames"], 48)
 	# Lower bound: 0.5 sec → roundi(0.5*16/8)*8 = roundi(1)*8 = 8, clamped to 16
 	var wf_short = client._build_wan_vace_workflow("src.png", "p", 1, false, 7.0, 20, 0.85, "", 6, 0.5)
 	assert_eq(wf_short["wv:vace"]["inputs"]["num_frames"], 16)
@@ -151,7 +150,7 @@ func test_build_wan_vace_pose_workflow_has_dwpose():
 		"src.png", "pose.png", "two characters kissing", 42,
 		false, 7.0, 20, 0.85, "", 6, 3.0, 0.7)
 	assert_true(wf.has("wv:dwpose"))
-	assert_eq(wf["wv:dwpose"]["class_type"], "DWPreprocess")
+	assert_eq(wf["wv:dwpose"]["class_type"], "DWPreprocessor")
 	assert_eq(wf["wv:pose_img"]["inputs"]["image"], "pose.png")
 
 func test_build_wan_vace_pose_workflow_has_controlnet():
@@ -159,16 +158,17 @@ func test_build_wan_vace_pose_workflow_has_controlnet():
 	var wf = client._build_wan_vace_pose_workflow(
 		"src.png", "pose.png", "prompt", 1,
 		false, 7.0, 20, 0.85, "", 6, 3.0, 0.6)
-	assert_true(wf.has("wv:ctrl_apply"))
-	assert_eq(wf["wv:ctrl_apply"]["inputs"]["strength"], 0.6)
+	assert_true(wf.has("wv:ctrl"))
+	assert_eq(wf["wv:ctrl"]["class_type"], "WanVideoControlnet")
+	assert_eq(wf["wv:ctrl"]["inputs"]["strength"], 0.6)
 
-func test_build_wan_vace_pose_workflow_sampler_uses_controlnet_positive():
+func test_build_wan_vace_pose_workflow_sampler_uses_controlnet_model():
 	var client = ComfyUIClientScript.new()
 	var wf = client._build_wan_vace_pose_workflow(
 		"src.png", "pose.png", "prompt", 1,
 		false, 7.0, 20, 0.85, "", 6, 3.0, 0.7)
-	# Le sampler doit utiliser ctrl_apply comme conditioning positif
-	assert_eq(wf["wv:sampler"]["inputs"]["positive"][0], "wv:ctrl_apply")
+	# Le sampler doit utiliser le modèle patché par WanVideoControlnet
+	assert_eq(wf["wv:sampler"]["inputs"]["model"][0], "wv:ctrl")
 
 func test_generate_sequence_fails_when_already_generating():
 	var client = Node.new()
