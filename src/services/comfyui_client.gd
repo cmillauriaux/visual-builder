@@ -10,13 +10,14 @@ const ComfyUIConfig = preload("res://src/services/comfyui_config.gd")
 signal generation_completed(image: Image)
 signal generation_failed(error: String)
 signal generation_progress(status: String)
+signal sequence_completed(images: Array)
 
 
 func _fail(error: String) -> void:
 	print("[ComfyUI] FAILED: ", error)
 	generation_failed.emit(error)
 
-enum WorkflowType { CREATION = 0, EXPRESSION = 1, OUTPAINT = 2, UPSCALE = 3, ENHANCE = 4, UPSCALE_ENHANCE = 5, BLINK = 6, INPAINT = 7, LORA_CREATE_FLUX = 8, ILLUSTRIOUS = 9, ASSEMBLER = 10, ZIMAGE_DECLINER = 11 }
+enum WorkflowType { CREATION = 0, EXPRESSION = 1, OUTPAINT = 2, UPSCALE = 3, ENHANCE = 4, UPSCALE_ENHANCE = 5, BLINK = 6, INPAINT = 7, LORA_CREATE_FLUX = 8, ILLUSTRIOUS = 9, ASSEMBLER = 10, ZIMAGE_DECLINER = 11, WAN_VACE = 12, WAN_VACE_POSE = 13, WAN_VACE_DWPOSE_PREVIEW = 14 }
 
 var _generating: bool = false
 var _prompt_id: String = ""
@@ -53,6 +54,12 @@ var _detection_threshold: float = 0.3
 var _mask_filename: String = ""
 var _mask_bytes_data: PackedByteArray = PackedByteArray()
 var _inpaint_guidance: float = 30.0
+
+# --- Wan VACE sequence state ---
+var _frames_to_extract: int = 6
+var _duration_sec: float = 3.0
+var _controlnet_strength: float = 0.7
+var _is_sequence_mode: bool = false
 
 # --- Workflow template (Flux 2 Klein + BiRefNet) ---
 # Reproduit exactement Edit_Image_Transparent_API.json
