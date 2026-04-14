@@ -17,7 +17,7 @@ func _fail(error: String) -> void:
 	print("[ComfyUI] FAILED: ", error)
 	generation_failed.emit(error)
 
-enum WorkflowType { CREATION = 0, EXPRESSION = 1, OUTPAINT = 2, UPSCALE = 3, ENHANCE = 4, UPSCALE_ENHANCE = 5, BLINK = 6, INPAINT = 7, LORA_CREATE_FLUX = 8, ILLUSTRIOUS = 9, ASSEMBLER = 10, ZIMAGE_DECLINER = 11, WAN_VACE = 12, WAN_VACE_POSE = 13, WAN_VACE_DWPOSE_PREVIEW = 14 }
+enum WorkflowType { CREATION = 0, EXPRESSION = 1, OUTPAINT = 2, UPSCALE = 3, ENHANCE = 4, UPSCALE_ENHANCE = 5, BLINK = 6, INPAINT = 7, LORA_CREATE_FLUX = 8, ILLUSTRIOUS = 9, ASSEMBLER = 10, ZIMAGE_DECLINER = 11, WAN_VACE = 12, WAN_VACE_POSE = 13, WAN_VACE_DWPOSE_PREVIEW = 14, WAN_I2V = 15 }
 
 var _generating: bool = false
 var _prompt_id: String = ""
@@ -918,6 +918,8 @@ func build_workflow(filename: String, prompt_text: String, seed: int, remove_bac
 		return _build_zimage_decliner_workflow(filename, prompt_text, seed, cfg, steps, denoise, negative_prompt, megapixels)
 	if workflow_type == WorkflowType.WAN_VACE_DWPOSE_PREVIEW:
 		return _build_wan_vace_dwpose_preview_workflow(filename)
+	if workflow_type == WorkflowType.WAN_I2V:
+		return _build_wan_i2v_workflow(filename, prompt_text, seed, cfg, steps, negative_prompt, _duration_sec, _source_width, _source_height)
 	var wf = WORKFLOW_TEMPLATE.duplicate(true)
 	wf["76"]["inputs"]["image"] = filename
 	wf["75:74"]["inputs"]["text"] = prompt_text
@@ -1968,6 +1970,10 @@ func _do_prompt_sequence(filename: String, prompt_text: String) -> void:
 			_remove_background, _cfg, _steps, _denoise, _negative_prompt,
 			_frames_to_extract, _duration_sec, _controlnet_strength,
 			_source_width, _source_height)
+	elif _workflow_type == WorkflowType.WAN_I2V:
+		workflow = _build_wan_i2v_workflow(
+			filename, prompt_text, seed, _cfg, _steps, _negative_prompt,
+			_duration_sec, _source_width, _source_height)
 	else:
 		workflow = _build_wan_vace_workflow(
 			filename, prompt_text, seed,
@@ -2473,6 +2479,147 @@ func _build_wan_vace_pose_workflow(
 	# Le sampler utilise le modèle patché par WanVideoControlnet
 	wf["wv:sampler"]["inputs"]["model"] = ["wv:ctrl", 0]
 	return wf
+
+
+## Workflow Wan 2.2 Image-to-Video (I2V).
+## Utilise UNETLoader + CLIPLoader (standard ComfyUI) avec deux modèles en cascade :
+## wan2.2_i2v_high_noise (premières étapes) → wan2.2_i2v_low_noise (dernières étapes).
+## Préserve l'identité du personnage grâce à WanImageToVideo (start_image conditioning).
+func _build_wan_i2v_workflow(
+	source_filename: String,
+	prompt_text: String,
+	seed: int,
+	cfg: float,
+	steps: int,
+	negative_prompt: String,
+	duration_sec: float,
+	width: int = 832,
+	height: int = 480
+) -> Dictionary:
+	# 16 fps, multiple de 4 (contrainte WanImageToVideo length step=4)
+	var fps := 16
+	var num_frames := clamp(int(round(duration_sec * fps / 4.0)) * 4, 16, 200)
+	# Découpage deux-modèles : high_noise → première moitié, low_noise → deuxième moitié
+	var split_step := steps / 2
+
+	return {
+		"i2v:unet_high": {
+			"class_type": "UNETLoader",
+			"inputs": {
+				"unet_name": "wan2.2_i2v_high_noise_14B_fp16.safetensors",
+				"weight_dtype": "fp8_e4m3fn"
+			}
+		},
+		"i2v:unet_low": {
+			"class_type": "UNETLoader",
+			"inputs": {
+				"unet_name": "wan2.2_i2v_low_noise_14B_fp16.safetensors",
+				"weight_dtype": "fp8_e4m3fn"
+			}
+		},
+		"i2v:vae": {
+			"class_type": "VAELoader",
+			"inputs": {"vae_name": "wan_2.1_vae.safetensors"}
+		},
+		"i2v:clip": {
+			"class_type": "CLIPLoader",
+			"inputs": {
+				"clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+				"type": "wan"
+			}
+		},
+		"i2v:pos": {
+			"class_type": "CLIPTextEncode",
+			"inputs": {
+				"text": prompt_text,
+				"clip": ["i2v:clip", 0]
+			}
+		},
+		"i2v:neg": {
+			"class_type": "CLIPTextEncode",
+			"inputs": {
+				"text": negative_prompt,
+				"clip": ["i2v:clip", 0]
+			}
+		},
+		"i2v:src": {
+			"class_type": "LoadImage",
+			"inputs": {"image": source_filename}
+		},
+		"i2v:scale": {
+			"class_type": "ImageScale",
+			"inputs": {
+				"image": ["i2v:src", 0],
+				"upscale_method": "lanczos",
+				"width": width,
+				"height": height,
+				"crop": "center"
+			}
+		},
+		"i2v:encode": {
+			"class_type": "WanImageToVideo",
+			"inputs": {
+				"positive": ["i2v:pos", 0],
+				"negative": ["i2v:neg", 0],
+				"vae": ["i2v:vae", 0],
+				"width": width,
+				"height": height,
+				"length": num_frames,
+				"batch_size": 1,
+				"start_image": ["i2v:scale", 0]
+			}
+		},
+		"i2v:sampler1": {
+			"class_type": "KSamplerAdvanced",
+			"inputs": {
+				"model": ["i2v:unet_high", 0],
+				"add_noise": "enable",
+				"noise_seed": seed,
+				"steps": steps,
+				"cfg": cfg,
+				"sampler_name": "euler",
+				"scheduler": "simple",
+				"positive": ["i2v:encode", 0],
+				"negative": ["i2v:encode", 1],
+				"latent_image": ["i2v:encode", 2],
+				"start_at_step": 0,
+				"end_at_step": split_step,
+				"return_with_leftover_noise": "enable"
+			}
+		},
+		"i2v:sampler2": {
+			"class_type": "KSamplerAdvanced",
+			"inputs": {
+				"model": ["i2v:unet_low", 0],
+				"add_noise": "disable",
+				"noise_seed": seed,
+				"steps": steps,
+				"cfg": cfg,
+				"sampler_name": "euler",
+				"scheduler": "simple",
+				"positive": ["i2v:encode", 0],
+				"negative": ["i2v:encode", 1],
+				"latent_image": ["i2v:sampler1", 0],
+				"start_at_step": split_step,
+				"end_at_step": steps,
+				"return_with_leftover_noise": "disable"
+			}
+		},
+		"i2v:decode": {
+			"class_type": "VAEDecode",
+			"inputs": {
+				"samples": ["i2v:sampler2", 0],
+				"vae": ["i2v:vae", 0]
+			}
+		},
+		"9": {
+			"class_type": "SaveImage",
+			"inputs": {
+				"filename_prefix": "wan_i2v_frame",
+				"images": ["i2v:decode", 0]
+			}
+		}
+	}
 
 
 # ===== Create tab : text-to-image avec LoRA =====

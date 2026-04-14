@@ -1,0 +1,122 @@
+{
+  "i2v:unet_high": {
+    "class_type": "UNETLoader",
+    "inputs": {
+      "unet_name": "wan2.2_i2v_high_noise_14B_fp16.safetensors",
+      "weight_dtype": "fp8_e4m3fn"
+    }
+  },
+  "i2v:unet_low": {
+    "class_type": "UNETLoader",
+    "inputs": {
+      "unet_name": "wan2.2_i2v_low_noise_14B_fp16.safetensors",
+      "weight_dtype": "fp8_e4m3fn"
+    }
+  },
+  "i2v:vae": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "wan_2.1_vae.safetensors"
+    }
+  },
+  "i2v:clip": {
+    "class_type": "CLIPLoader",
+    "inputs": {
+      "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "type": "wan"
+    }
+  },
+  "i2v:pos": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "a woman standing, gentle breeze, anime style, high quality",
+      "clip": ["i2v:clip", 0]
+    }
+  },
+  "i2v:neg": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "low quality, blurry, deformed",
+      "clip": ["i2v:clip", 0]
+    }
+  },
+  "i2v:src": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "Anita_base.png"
+    }
+  },
+  "i2v:scale": {
+    "class_type": "ImageScale",
+    "inputs": {
+      "image": ["i2v:src", 0],
+      "upscale_method": "lanczos",
+      "width": 480,
+      "height": 832,
+      "crop": "center"
+    }
+  },
+  "i2v:encode": {
+    "class_type": "WanImageToVideo",
+    "inputs": {
+      "positive": ["i2v:pos", 0],
+      "negative": ["i2v:neg", 0],
+      "vae": ["i2v:vae", 0],
+      "width": 480,
+      "height": 832,
+      "length": 48,
+      "batch_size": 1,
+      "start_image": ["i2v:scale", 0]
+    }
+  },
+  "i2v:sampler1": {
+    "class_type": "KSamplerAdvanced",
+    "inputs": {
+      "model": ["i2v:unet_high", 0],
+      "add_noise": "enable",
+      "noise_seed": 42,
+      "steps": 20,
+      "cfg": 3.5,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "positive": ["i2v:encode", 0],
+      "negative": ["i2v:encode", 1],
+      "latent_image": ["i2v:encode", 2],
+      "start_at_step": 0,
+      "end_at_step": 10,
+      "return_with_leftover_noise": "enable"
+    }
+  },
+  "i2v:sampler2": {
+    "class_type": "KSamplerAdvanced",
+    "inputs": {
+      "model": ["i2v:unet_low", 0],
+      "add_noise": "disable",
+      "noise_seed": 42,
+      "steps": 20,
+      "cfg": 3.5,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "positive": ["i2v:encode", 0],
+      "negative": ["i2v:encode", 1],
+      "latent_image": ["i2v:sampler1", 0],
+      "start_at_step": 10,
+      "end_at_step": 20,
+      "return_with_leftover_noise": "disable"
+    }
+  },
+  "i2v:decode": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": ["i2v:sampler2", 0],
+      "vae": ["i2v:vae", 0]
+    }
+  },
+  "9": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "filename_prefix": "wan_i2v_frame",
+      "images": ["i2v:decode", 0]
+    }
+  }
+}

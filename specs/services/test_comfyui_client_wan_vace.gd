@@ -14,6 +14,9 @@ func test_workflow_type_wan_vace_pose_exists():
 func test_workflow_type_wan_vace_dwpose_preview_exists():
 	assert_eq(ComfyUIClientScript.WorkflowType.WAN_VACE_DWPOSE_PREVIEW, 14)
 
+func test_workflow_type_wan_i2v_exists():
+	assert_eq(ComfyUIClientScript.WorkflowType.WAN_I2V, 15)
+
 func test_sequence_completed_signal_exists():
 	var client = Node.new()
 	client.set_script(ComfyUIClientScript)
@@ -255,3 +258,71 @@ func test_wan_vace_tab_generate_button_disabled_without_url():
 	tab.update_generate_button()
 	assert_true(tab._generate_btn.disabled)
 	window.queue_free()
+
+func test_build_wan_i2v_workflow_has_two_unets():
+	var client = ComfyUIClientScript.new()
+	var wf = client._build_wan_i2v_workflow("src.png", "p", 1, 3.5, 20, "", 3.0)
+	assert_eq(wf["i2v:unet_high"]["class_type"], "UNETLoader")
+	assert_eq(wf["i2v:unet_high"]["inputs"]["unet_name"], "wan2.2_i2v_high_noise_14B_fp16.safetensors")
+	assert_eq(wf["i2v:unet_low"]["class_type"], "UNETLoader")
+	assert_eq(wf["i2v:unet_low"]["inputs"]["unet_name"], "wan2.2_i2v_low_noise_14B_fp16.safetensors")
+	assert_eq(wf["i2v:unet_high"]["inputs"]["weight_dtype"], "fp8_e4m3fn")
+
+func test_build_wan_i2v_workflow_uses_wan_clip():
+	var client = ComfyUIClientScript.new()
+	var wf = client._build_wan_i2v_workflow("src.png", "p", 1, 3.5, 20, "", 3.0)
+	assert_eq(wf["i2v:clip"]["class_type"], "CLIPLoader")
+	assert_eq(wf["i2v:clip"]["inputs"]["clip_name"], "umt5_xxl_fp8_e4m3fn_scaled.safetensors")
+	assert_eq(wf["i2v:clip"]["inputs"]["type"], "wan")
+
+func test_build_wan_i2v_workflow_sets_prompt():
+	var client = ComfyUIClientScript.new()
+	var wf = client._build_wan_i2v_workflow("src.png", "my prompt", 1, 3.5, 20, "neg", 3.0)
+	assert_eq(wf["i2v:pos"]["inputs"]["text"], "my prompt")
+	assert_eq(wf["i2v:neg"]["inputs"]["text"], "neg")
+
+func test_build_wan_i2v_workflow_scales_source():
+	var client = ComfyUIClientScript.new()
+	var wf = client._build_wan_i2v_workflow("src.png", "p", 1, 3.5, 20, "", 3.0, 480, 832)
+	assert_eq(wf["i2v:scale"]["class_type"], "ImageScale")
+	assert_eq(wf["i2v:scale"]["inputs"]["width"], 480)
+	assert_eq(wf["i2v:scale"]["inputs"]["height"], 832)
+	assert_eq(wf["i2v:scale"]["inputs"]["crop"], "center")
+	assert_eq(wf["i2v:encode"]["inputs"]["start_image"][0], "i2v:scale")
+
+func test_build_wan_i2v_workflow_encode_sets_resolution():
+	var client = ComfyUIClientScript.new()
+	var wf = client._build_wan_i2v_workflow("src.png", "p", 1, 3.5, 20, "", 3.0, 480, 832)
+	assert_eq(wf["i2v:encode"]["class_type"], "WanImageToVideo")
+	assert_eq(wf["i2v:encode"]["inputs"]["width"], 480)
+	assert_eq(wf["i2v:encode"]["inputs"]["height"], 832)
+
+func test_build_wan_i2v_workflow_num_frames_3s():
+	var client = ComfyUIClientScript.new()
+	# 3s × 16fps = 48, multiple of 4 = 48
+	var wf = client._build_wan_i2v_workflow("src.png", "p", 1, 3.5, 20, "", 3.0)
+	assert_eq(wf["i2v:encode"]["inputs"]["length"], 48)
+
+func test_build_wan_i2v_workflow_two_stage_sampler():
+	var client = ComfyUIClientScript.new()
+	var wf = client._build_wan_i2v_workflow("src.png", "p", 42, 3.5, 20, "", 3.0)
+	# Stage 1: high_noise, steps 0→10
+	assert_eq(wf["i2v:sampler1"]["inputs"]["model"][0], "i2v:unet_high")
+	assert_eq(wf["i2v:sampler1"]["inputs"]["add_noise"], "enable")
+	assert_eq(wf["i2v:sampler1"]["inputs"]["start_at_step"], 0)
+	assert_eq(wf["i2v:sampler1"]["inputs"]["end_at_step"], 10)
+	assert_eq(wf["i2v:sampler1"]["inputs"]["return_with_leftover_noise"], "enable")
+	# Stage 2: low_noise, steps 10→20, receives latent from stage 1
+	assert_eq(wf["i2v:sampler2"]["inputs"]["model"][0], "i2v:unet_low")
+	assert_eq(wf["i2v:sampler2"]["inputs"]["add_noise"], "disable")
+	assert_eq(wf["i2v:sampler2"]["inputs"]["start_at_step"], 10)
+	assert_eq(wf["i2v:sampler2"]["inputs"]["end_at_step"], 20)
+	assert_eq(wf["i2v:sampler2"]["inputs"]["latent_image"][0], "i2v:sampler1")
+
+func test_build_wan_i2v_workflow_decode_and_save():
+	var client = ComfyUIClientScript.new()
+	var wf = client._build_wan_i2v_workflow("src.png", "p", 1, 3.5, 20, "", 3.0)
+	assert_eq(wf["i2v:decode"]["class_type"], "VAEDecode")
+	assert_eq(wf["i2v:decode"]["inputs"]["samples"][0], "i2v:sampler2")
+	assert_eq(wf["9"]["inputs"]["filename_prefix"], "wan_i2v_frame")
+	assert_eq(wf["9"]["inputs"]["images"][0], "i2v:decode")
