@@ -126,6 +126,12 @@ func test_build_wan_vace_workflow_computes_num_frames():
 	var wf = client._build_wan_vace_workflow("src.png", "p", 1, false, 7.0, 20, 0.85, "", 6, 3.0)
 	assert_eq(wf["wv:vace"]["inputs"]["num_frames"], 48)
 	assert_eq(wf["wv:empty_latent"]["inputs"]["num_frames"], 48)
+	# Lower bound: 0.5 sec → roundi(0.5*16/8)*8 = roundi(1)*8 = 8, clamped to 16
+	var wf_short = client._build_wan_vace_workflow("src.png", "p", 1, false, 7.0, 20, 0.85, "", 6, 0.5)
+	assert_eq(wf_short["wv:vace"]["inputs"]["num_frames"], 16)
+	# Upper bound: 9 sec → roundi(9*16/8)*8 = roundi(18)*8 = 144, clamped to 128
+	var wf_long = client._build_wan_vace_workflow("src.png", "p", 1, false, 7.0, 20, 0.85, "", 6, 9.0)
+	assert_eq(wf_long["wv:vace"]["inputs"]["num_frames"], 128)
 
 func test_build_wan_vace_workflow_with_remove_bg():
 	var client = ComfyUIClientScript.new()
