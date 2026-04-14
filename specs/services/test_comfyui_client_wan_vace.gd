@@ -338,3 +338,16 @@ func test_build_wan_i2v_workflow_decode_and_save():
 	assert_eq(wf["i2v:decode"]["inputs"]["samples"][0], "i2v:sampler2")
 	assert_eq(wf["9"]["inputs"]["filename_prefix"], "wan_i2v_frame")
 	assert_eq(wf["9"]["inputs"]["images"][0], "i2v:decode")
+
+func test_generate_sequence_stores_loras_and_transparent_output():
+	var client = Node.new()
+	client.set_script(ComfyUIClientScript)
+	var config = load("res://src/services/comfyui_config.gd").new()
+	var loras = [{"name": "my_lora.safetensors", "strength": 0.8}]
+	# /nonexistent.png fails file open but AFTER params are stored
+	client.generate_sequence(config, "/nonexistent.png", "", false, 7.0, 20,
+		ComfyUIClientScript.WorkflowType.WAN_VACE, 0.85, "", 6, 3.0, "", 0.7, 8,
+		loras, true)
+	assert_eq(client._loras, loras)
+	assert_true(client._transparent_output)
+	client.free()

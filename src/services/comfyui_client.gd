@@ -60,6 +60,7 @@ var _frames_to_extract: int = 6
 var _duration_sec: float = 3.0
 var _controlnet_strength: float = 0.7
 var _fps: int = 8
+var _transparent_output: bool = false
 var _is_sequence_mode: bool = false
 var _source_width: int = 832
 var _source_height: int = 480
@@ -1656,7 +1657,9 @@ func generate_sequence(
 	duration_sec: float = 3.0,
 	second_image_path: String = "",
 	controlnet_strength: float = 0.7,
-	fps: int = 8
+	fps: int = 8,
+	loras: Array = [],
+	transparent_output: bool = false
 ) -> void:
 	if _generating:
 		_fail("Une génération est déjà en cours")
@@ -1674,6 +1677,8 @@ func generate_sequence(
 	_duration_sec = duration_sec
 	_controlnet_strength = controlnet_strength
 	_fps = fps
+	_loras = loras
+	_transparent_output = transparent_output
 	_is_sequence_mode = true
 	_second_image_filename = ""
 	_second_image_bytes = PackedByteArray()
