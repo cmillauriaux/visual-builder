@@ -194,3 +194,31 @@ func test_generate_sequence_fails_if_source_missing():
 	assert_eq(errors.size(), 1)
 	assert_string_contains(errors[0], "Impossible d'ouvrir l'image")
 	client.free()
+
+func test_wan_vace_tab_builds_without_crash():
+	var WanVaceTab = load("res://plugins/ai_studio/ai_studio_wan_vace_tab.gd")
+	assert_not_null(WanVaceTab)
+	var tab = WanVaceTab.new()
+	assert_not_null(tab)
+
+func test_wan_vace_tab_generate_button_disabled_without_url():
+	var WanVaceTab = load("res://plugins/ai_studio/ai_studio_wan_vace_tab.gd")
+	var tab = WanVaceTab.new()
+	var container = TabContainer.new()
+	var neg = TextEdit.new()
+	var window = Window.new()
+	window.add_child(container)
+	window.add_child(neg)
+	var config_script = load("res://src/services/comfyui_config.gd")
+	tab.initialize(window,
+		func(): return config_script.new(),
+		neg,
+		func(_t, _n): pass,
+		func(_c): pass,
+		func(): pass,
+		func(p): return p
+	)
+	tab.build_tab(container)
+	tab.update_generate_button()
+	assert_true(tab._generate_btn.disabled)
+	window.queue_free()
