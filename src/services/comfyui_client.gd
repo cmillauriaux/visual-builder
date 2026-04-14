@@ -2280,9 +2280,9 @@ static func _wan_vace_resolution(src_w: int, src_h: int) -> Vector2i:
 	]
 	var src_ratio := float(src_w) / float(src_h) if src_h > 0 else 1.0
 	var best := SUPPORTED[0]
-	var best_diff := abs(float(SUPPORTED[0].x) / float(SUPPORTED[0].y) - src_ratio)
+	var best_diff: float = abs(float(SUPPORTED[0].x) / float(SUPPORTED[0].y) - src_ratio)
 	for res in SUPPORTED:
-		var diff := abs(float(res.x) / float(res.y) - src_ratio)
+		var diff: float = abs(float(res.x) / float(res.y) - src_ratio)
 		if diff < best_diff:
 			best_diff = diff
 			best = res
@@ -2498,7 +2498,7 @@ func _build_wan_i2v_workflow(
 ) -> Dictionary:
 	# 16 fps, multiple de 4 (contrainte WanImageToVideo length step=4)
 	var fps := 16
-	var num_frames := clamp(int(round(duration_sec * fps / 4.0)) * 4, 16, 200)
+	var num_frames: int = clamp(int(round(duration_sec * fps / 4.0)) * 4, 16, 200)
 	# Découpage deux-modèles : high_noise → première moitié, low_noise → deuxième moitié
 	var split_step := steps / 2
 
