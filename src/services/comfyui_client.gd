@@ -1685,14 +1685,15 @@ func generate_sequence(
 	file.close()
 	_source_filename = source_image_path.get_file()
 
-	# Lire les dimensions de l'image source (arrondi au multiple de 8 requis par WanVideoVACEEncode)
+	# Sélectionner la résolution Wan supportée la plus proche du ratio de l'image source
 	var _src_img = Image.new()
 	var _img_err = _src_img.load_png_from_buffer(file_bytes)
 	if _img_err != OK:
 		_img_err = _src_img.load_jpg_from_buffer(file_bytes)
 	if _img_err == OK:
-		_source_width = int(round(float(_src_img.get_width()) / 8.0) * 8)
-		_source_height = int(round(float(_src_img.get_height()) / 8.0) * 8)
+		var _res = _wan_vace_resolution(_src_img.get_width(), _src_img.get_height())
+		_source_width = _res.x
+		_source_height = _res.y
 	else:
 		_source_width = 832
 		_source_height = 480
@@ -2258,6 +2259,28 @@ func _build_wan_vace_dwpose_preview_workflow(pose_filename: String) -> Dictionar
 			}
 		}
 	}
+
+
+## Sélectionne la résolution Wan VACE supportée la plus proche du ratio source.
+## Wan2.1 est entraîné sur des résolutions précises ; une résolution arbitraire produit du bruit.
+## Résolutions supportées (portrait et paysage) selon la doc Wan2.1-VACE.
+static func _wan_vace_resolution(src_w: int, src_h: int) -> Vector2i:
+	const SUPPORTED := [
+		Vector2i(1280, 720), Vector2i(720, 1280),
+		Vector2i(960, 544),  Vector2i(544, 960),
+		Vector2i(832, 480),  Vector2i(480, 832),
+		Vector2i(720, 480),  Vector2i(480, 720),
+		Vector2i(1024, 576), Vector2i(576, 1024),
+	]
+	var src_ratio := float(src_w) / float(src_h) if src_h > 0 else 1.0
+	var best := SUPPORTED[0]
+	var best_diff := abs(float(SUPPORTED[0].x) / float(SUPPORTED[0].y) - src_ratio)
+	for res in SUPPORTED:
+		var diff := abs(float(res.x) / float(res.y) - src_ratio)
+		if diff < best_diff:
+			best_diff = diff
+			best = res
+	return best
 
 
 ## Workflow Wan VACE séquence sans pose ControlNet.
