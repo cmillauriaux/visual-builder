@@ -2337,6 +2337,16 @@ func _build_wan_vace_workflow(
 			"class_type": "LoadImage",
 			"inputs": {"image": source_filename}
 		},
+		"wv:scale": {
+			"class_type": "ImageScale",
+			"inputs": {
+				"image": ["wv:src", 0],
+				"upscale_method": "lanczos",
+				"width": width,
+				"height": height,
+				"crop": "disabled"
+			}
+		},
 		"wv:vace": {
 			"class_type": "WanVideoVACEEncode",
 			"inputs": {
@@ -2347,7 +2357,7 @@ func _build_wan_vace_workflow(
 				"strength": 1.0,
 				"vace_start_percent": 0.0,
 				"vace_end_percent": 1.0,
-				"input_frames": ["wv:src", 0]
+				"input_frames": ["wv:scale", 0]
 			}
 		},
 		"wv:sampler": {

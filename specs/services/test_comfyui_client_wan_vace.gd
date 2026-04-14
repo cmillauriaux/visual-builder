@@ -105,6 +105,15 @@ func test_build_wan_vace_workflow_sets_source_image():
 		false, 7.0, 20, 0.85, "", 6, 3.0)
 	assert_eq(wf["wv:src"]["inputs"]["image"], "src.png")
 
+func test_build_wan_vace_workflow_has_imagescale():
+	var client = ComfyUIClientScript.new()
+	var wf = client._build_wan_vace_workflow("src.png", "p", 1, false, 7.0, 20, 0.85, "", 6, 3.0, 480, 832)
+	assert_true(wf.has("wv:scale"))
+	assert_eq(wf["wv:scale"]["class_type"], "ImageScale")
+	assert_eq(wf["wv:scale"]["inputs"]["width"], 480)
+	assert_eq(wf["wv:scale"]["inputs"]["height"], 832)
+	assert_eq(wf["wv:vace"]["inputs"]["input_frames"][0], "wv:scale")
+
 func test_wan_vace_resolution_portrait():
 	# 784×1312 (Anita_base.png) ≈ 9:16 → doit mapper sur 480×832
 	var res = ComfyUIClientScript._wan_vace_resolution(784, 1312)
@@ -120,7 +129,7 @@ func test_wan_vace_resolution_landscape():
 func test_wan_vace_resolution_square():
 	# 512×512 ≈ 1:1 → mapper sur 720×480 ou 480×720 (plus proche de 1:1 parmi les supportées)
 	var res = ComfyUIClientScript._wan_vace_resolution(512, 512)
-	assert_eq(res.x, res.y == 480 ? 720 : res.x, "must pick a 1:1-ish resolution")
+	assert_eq(res.x, 720 if res.y == 480 else res.x, "must pick a 1:1-ish resolution")
 
 func test_build_wan_vace_workflow_uses_wan_resolution():
 	var client = ComfyUIClientScript.new()
