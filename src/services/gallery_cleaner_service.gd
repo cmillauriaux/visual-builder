@@ -63,7 +63,7 @@ static func _find_unused_in_dir(dir_path: String, used_images: Array) -> Array:
 	while fname != "":
 		if not dir.current_is_dir():
 			var ext = fname.get_extension().to_lower()
-			if ext in ["png", "jpg", "jpeg", "webp"]:
+			if ext in ["png", "jpg", "jpeg", "webp", "apng"]:
 				var full_path = dir_path + "/" + fname
 				if full_path not in used_images:
 					unused.append(full_path)

@@ -1051,3 +1051,46 @@ func test_setup_with_empty_base_path():
 
 func test_image_renamed_signal_exists():
 	assert_has_signal(_dialog, "image_renamed")
+
+
+# --- Filtre APNG / Animations ---
+
+func _create_test_apng(path: String) -> void:
+	# Crée un fichier .apng (contenu PNG valide, extension apng)
+	var img = Image.create(4, 4, false, Image.FORMAT_RGBA8)
+	img.fill(Color.GREEN)
+	img.save_png(path)
+
+
+func test_list_images_includes_apng():
+	GalleryCacheService.clear_all()
+	var apng_path = _test_dir + "/assets/foregrounds/anim.apng"
+	_create_test_apng(apng_path)
+	_dialog.setup(_build_story(), _test_dir)
+	# Seul le fichier APNG existe physiquement dans le dossier foregrounds
+	var grid = _dialog._fg_grid
+	assert_eq(grid.get_child_count(), 1, "La grille doit contenir le fichier APNG")
+
+
+func test_anim_filter_shows_only_apng():
+	GalleryCacheService.clear_all()
+	_create_test_image(_test_dir + "/assets/foregrounds/hero.png")
+	_create_test_apng(_test_dir + "/assets/foregrounds/walk.apng")
+	_dialog.setup(_build_story(), _test_dir)
+	_dialog._anim_filter_check.button_pressed = true
+	_dialog._refresh()
+	await get_tree().process_frame
+	var grid = _dialog._fg_grid
+	assert_eq(grid.get_child_count(), 1, "Filtre actif → seulement le .apng")
+
+
+func test_anim_filter_off_shows_all():
+	GalleryCacheService.clear_all()
+	_create_test_image(_test_dir + "/assets/foregrounds/hero.png")
+	_create_test_apng(_test_dir + "/assets/foregrounds/walk.apng")
+	_dialog.setup(_build_story(), _test_dir)
+	_dialog._anim_filter_check.button_pressed = false
+	_dialog._refresh()
+	await get_tree().process_frame
+	var grid = _dialog._fg_grid
+	assert_eq(grid.get_child_count(), 2, "Filtre inactif → PNG + APNG")

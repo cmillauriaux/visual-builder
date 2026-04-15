@@ -37,6 +37,7 @@ var _category_filter_container: HBoxContainer
 var _category_checkboxes: Array = []
 var _search_edit: LineEdit
 var _context_menu: PopupMenu
+var _anim_filter_check: CheckBox
 
 
 func _ready() -> void:
@@ -132,10 +133,19 @@ func _build_ui() -> void:
 	scroll_inner.add_child(_bg_grid)
 
 	# --- Section Foregrounds ---
+	var fg_header_row = HBoxContainer.new()
+	scroll_inner.add_child(fg_header_row)
+
 	_fg_section_label = Label.new()
 	_fg_section_label.text = tr("Foregrounds")
 	_fg_section_label.add_theme_font_size_override("font_size", 18)
-	scroll_inner.add_child(_fg_section_label)
+	_fg_section_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	fg_header_row.add_child(_fg_section_label)
+
+	_anim_filter_check = CheckBox.new()
+	_anim_filter_check.text = tr("Animations")
+	_anim_filter_check.toggled.connect(func(_v): _refresh())
+	fg_header_row.add_child(_anim_filter_check)
 
 	_fg_empty_label = Label.new()
 	_fg_empty_label.text = tr("Aucun foreground disponible.")
@@ -185,16 +195,19 @@ func _build_ui() -> void:
 
 func _refresh() -> void:
 	_refresh_grid(_bg_grid, _bg_empty_label, _story_base_path + "/assets/backgrounds")
-	_refresh_grid(_fg_grid, _fg_empty_label, _story_base_path + "/assets/foregrounds")
+	var anim_only = _anim_filter_check != null and _anim_filter_check.button_pressed
+	_refresh_grid(_fg_grid, _fg_empty_label, _story_base_path + "/assets/foregrounds", anim_only)
 	_update_clean_button_state()
 
 
-func _refresh_grid(grid: GridContainer, empty_label: Label, dir_path: String) -> void:
+func _refresh_grid(grid: GridContainer, empty_label: Label, dir_path: String, anim_only: bool = false) -> void:
 	for child in grid.get_children():
 		grid.remove_child(child)
 		child.queue_free()
 
 	var images = _list_images(dir_path)
+	if anim_only:
+		images = images.filter(func(p): return p.get_extension().to_lower() == "apng")
 	var selected_cats = _get_selected_categories()
 	if not selected_cats.is_empty() and _category_service:
 		images = _category_service.filter_paths_by_categories(images, selected_cats)
@@ -243,6 +256,15 @@ func _add_gallery_item(grid: GridContainer, path: String) -> void:
 	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vbox.add_child(name_label)
 
+	if path.get_extension().to_lower() == "apng":
+		var badge = Label.new()
+		badge.text = "▶"
+		badge.add_theme_color_override("font_color", Color(0.3, 0.85, 0.3))
+		badge.add_theme_font_size_override("font_size", 14)
+		badge.position = Vector2(4, 4)
+		badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		container.add_child(badge)
+
 	container.gui_input.connect(func(event: InputEvent):
 		if event is InputEventMouseButton and event.pressed:
 			if event.button_index == MOUSE_BUTTON_LEFT and event.double_click:
@@ -254,7 +276,7 @@ func _add_gallery_item(grid: GridContainer, path: String) -> void:
 
 
 func _list_images(dir_path: String) -> Array:
-	return GalleryCacheService.get_file_list(dir_path, ["png", "jpg", "jpeg", "webp"])
+	return GalleryCacheService.get_file_list(dir_path, ["png", "jpg", "jpeg", "webp", "apng"])
 
 
 func _update_clean_button_state() -> void:
