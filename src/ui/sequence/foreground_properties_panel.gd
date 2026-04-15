@@ -21,6 +21,13 @@ var _opacity_label: Label
 var _type_option: OptionButton
 var _duration_spin: SpinBox
 
+var _anim_section: VBoxContainer
+var _anim_reverse_check: CheckButton
+var _anim_speed_slider: HSlider
+var _anim_speed_label: Label
+var _anim_loop_check: CheckButton
+var _anim_reverse_loop_check: CheckButton
+
 var _updating: bool = false
 
 const TYPE_OPTIONS = ["none", "fade"]
@@ -175,6 +182,64 @@ func _ready() -> void:
 	_duration_spin.value_changed.connect(_on_property_changed)
 	trans_row.add_child(_duration_spin)
 
+	# Animation (visible uniquement pour foregrounds APNG)
+	add_child(HSeparator.new())
+
+	_anim_section = VBoxContainer.new()
+	_anim_section.add_theme_constant_override("separation", 4)
+	_anim_section.visible = false
+	add_child(_anim_section)
+
+	var anim_title = Label.new()
+	anim_title.text = tr("Animation")
+	anim_title.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
+	anim_title.add_theme_font_size_override("font_size", 12)
+	_anim_section.add_child(anim_title)
+
+	# Reverse
+	var reverse_row = HBoxContainer.new()
+	_anim_section.add_child(reverse_row)
+	var reverse_key = Label.new()
+	reverse_key.text = "Reverse"
+	reverse_key.custom_minimum_size = Vector2(70, 0)
+	reverse_row.add_child(reverse_key)
+	_anim_reverse_check = CheckButton.new()
+	_anim_reverse_check.toggled.connect(_on_property_changed)
+	reverse_row.add_child(_anim_reverse_check)
+
+	# Vitesse
+	var speed_row = HBoxContainer.new()
+	_anim_section.add_child(speed_row)
+	var speed_key = Label.new()
+	speed_key.text = tr("Vitesse")
+	speed_key.custom_minimum_size = Vector2(70, 0)
+	speed_row.add_child(speed_key)
+	_anim_speed_slider = HSlider.new()
+	_anim_speed_slider.min_value = 0.1
+	_anim_speed_slider.max_value = 4.0
+	_anim_speed_slider.step = 0.05
+	_anim_speed_slider.value = 1.0
+	_anim_speed_slider.size_flags_horizontal = SIZE_EXPAND_FILL
+	_anim_speed_slider.value_changed.connect(_on_property_changed)
+	speed_row.add_child(_anim_speed_slider)
+	_anim_speed_label = Label.new()
+	_anim_speed_label.text = "1.00×"
+	_anim_speed_label.custom_minimum_size = Vector2(40, 0)
+	speed_row.add_child(_anim_speed_label)
+
+	# Loop / Reverse Loop
+	var loop_row = HBoxContainer.new()
+	_anim_section.add_child(loop_row)
+	_anim_loop_check = CheckButton.new()
+	_anim_loop_check.text = "Loop"
+	_anim_loop_check.size_flags_horizontal = SIZE_EXPAND_FILL
+	_anim_loop_check.toggled.connect(_on_anim_loop_toggled)
+	loop_row.add_child(_anim_loop_check)
+	_anim_reverse_loop_check = CheckButton.new()
+	_anim_reverse_loop_check.text = "Reverse Loop"
+	_anim_reverse_loop_check.toggled.connect(_on_anim_reverse_loop_toggled)
+	loop_row.add_child(_anim_reverse_loop_check)
+
 
 func show_for_foreground(fg) -> void:
 	_foreground = fg
@@ -192,6 +257,15 @@ func show_for_foreground(fg) -> void:
 	var type_idx = TYPE_OPTIONS.find(fg.transition_type)
 	_type_option.selected = type_idx if type_idx >= 0 else 0
 	_duration_spin.value = fg.transition_duration
+	var is_apng = fg.image.ends_with(".apng")
+	_anim_section.visible = is_apng
+	if is_apng:
+		_anim_reverse_check.button_pressed = fg.anim_reverse
+		_anim_speed_slider.value = fg.anim_speed
+		_anim_speed_label.text = "%.2f×" % fg.anim_speed
+		_anim_loop_check.button_pressed = fg.anim_loop
+		_anim_reverse_loop_check.button_pressed = fg.anim_reverse_loop
+		_update_anim_reverse_enabled()
 	_updating = false
 	visible = true
 
@@ -215,4 +289,30 @@ func _on_property_changed(_value = null) -> void:
 	if type_idx >= 0 and type_idx < TYPE_OPTIONS.size():
 		_foreground.transition_type = TYPE_OPTIONS[type_idx]
 	_foreground.transition_duration = _duration_spin.value
+	if _foreground.image.ends_with(".apng"):
+		_foreground.anim_reverse = _anim_reverse_check.button_pressed
+		_foreground.anim_speed = _anim_speed_slider.value
+		_anim_speed_label.text = "%.2f×" % _anim_speed_slider.value
+		_foreground.anim_loop = _anim_loop_check.button_pressed
+		_foreground.anim_reverse_loop = _anim_reverse_loop_check.button_pressed
 	properties_changed.emit()
+
+
+func _on_anim_loop_toggled(pressed: bool) -> void:
+	if pressed and _anim_reverse_loop_check.button_pressed:
+		_anim_reverse_loop_check.set_pressed_no_signal(false)
+	_on_property_changed()
+	_update_anim_reverse_enabled()
+
+
+func _on_anim_reverse_loop_toggled(pressed: bool) -> void:
+	if pressed and _anim_loop_check.button_pressed:
+		_anim_loop_check.set_pressed_no_signal(false)
+	_on_property_changed()
+	_update_anim_reverse_enabled()
+
+
+func _update_anim_reverse_enabled() -> void:
+	if _anim_reverse_check == null:
+		return
+	_anim_reverse_check.disabled = _anim_loop_check.button_pressed or _anim_reverse_loop_check.button_pressed
