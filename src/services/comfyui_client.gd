@@ -3327,6 +3327,16 @@ func _send_comfyui_interrupt() -> void:
 		)
 
 
+## Applique BiRefNet sur une image en mémoire.
+## Sauvegarde dans un fichier temp, utilise le pipeline generate() standard.
+## Émet generation_completed(image: Image) ou generation_failed(error: String).
+func apply_birefnet(config: RefCounted, image: Image) -> void:
+	var temp_path := ProjectSettings.globalize_path("user://birefnet_temp.png")
+	image.save_png(temp_path)
+	generate(config, temp_path, "", false, 1.0, 1,
+		WorkflowType.BIREFNET_ONLY, 1.0, "", 80, 1.0, [])
+
+
 ## Workflow BiRefNet seul : retire le fond d'une image et retourne du RGBA transparent.
 func _build_birefnet_workflow(source_filename: String) -> Dictionary:
 	return {
