@@ -1680,7 +1680,6 @@ func generate_sequence(
 	_loras = loras
 	_transparent_output = transparent_output
 	_is_sequence_mode = true
-	print("[COMFYUI] generate_sequence: loras=%s  workflow_type=%d" % [str(loras), workflow_type])
 	_second_image_filename = ""
 	_second_image_bytes = PackedByteArray()
 
@@ -1971,8 +1970,6 @@ func _dispatch_prompt(filename: String, prompt_text: String) -> void:
 
 
 func _do_prompt_sequence(filename: String, prompt_text: String) -> void:
-	print("[COMFYUI] _do_prompt_sequence: _workflow_type=%d  _loras=%s  _transparent_output=%s" % [
-		_workflow_type, str(_loras), str(_transparent_output)])
 	var seed = randi()
 	var workflow: Dictionary
 	if _workflow_type == WorkflowType.WAN_VACE_POSE:
@@ -2674,7 +2671,6 @@ func _build_wan_i2v_workflow(
 	}
 
 	# LORAs — deux chaînes : high et low
-	print("[COMFYUI] _build_wan_i2v_workflow: loras=%s" % str(loras))
 	for i in loras.size():
 		var lora = loras[i]
 		wf["i2v:lora_high_%d" % i] = {
@@ -2696,8 +2692,6 @@ func _build_wan_i2v_workflow(
 	if not loras.is_empty():
 		wf["i2v:sampler1"]["inputs"]["model"] = ["i2v:lora_high_%d" % (loras.size() - 1), 0]
 		wf["i2v:sampler2"]["inputs"]["model"] = ["i2v:lora_low_%d" % (loras.size() - 1), 0]
-	print("[COMFYUI] _build_wan_i2v_workflow: workflow keys=%s" % str(wf.keys()))
-
 	# Transparent output
 	if transparent_output:
 		wf["i2v:birefnet_out"] = {
