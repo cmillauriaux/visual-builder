@@ -17,7 +17,7 @@ func _fail(error: String) -> void:
 	print("[ComfyUI] FAILED: ", error)
 	generation_failed.emit(error)
 
-enum WorkflowType { CREATION = 0, EXPRESSION = 1, OUTPAINT = 2, UPSCALE = 3, ENHANCE = 4, UPSCALE_ENHANCE = 5, BLINK = 6, INPAINT = 7, LORA_CREATE_FLUX = 8, ILLUSTRIOUS = 9, ASSEMBLER = 10, ZIMAGE_DECLINER = 11, WAN_VACE = 12, WAN_VACE_POSE = 13, WAN_VACE_DWPOSE_PREVIEW = 14, WAN_I2V = 15, FLUX_DECLINER_CONTROL = 16 }
+enum WorkflowType { CREATION = 0, EXPRESSION = 1, OUTPAINT = 2, UPSCALE = 3, ENHANCE = 4, UPSCALE_ENHANCE = 5, BLINK = 6, INPAINT = 7, LORA_CREATE_FLUX = 8, ILLUSTRIOUS = 9, ASSEMBLER = 10, ZIMAGE_DECLINER = 11, WAN_VACE = 12, WAN_VACE_POSE = 13, WAN_VACE_DWPOSE_PREVIEW = 14, WAN_I2V = 15, FLUX_DECLINER_CONTROL = 16, BIREFNET_ONLY = 17 }
 
 var _generating: bool = false
 var _prompt_id: String = ""
@@ -919,6 +919,8 @@ func build_workflow(filename: String, prompt_text: String, seed: int, remove_bac
 		return _build_assembler_workflow(filename, prompt_text, seed, remove_background, cfg, steps, denoise, negative_prompt, megapixels, loras)
 	if workflow_type == WorkflowType.ZIMAGE_DECLINER:
 		return _build_zimage_decliner_workflow(filename, prompt_text, seed, cfg, steps, denoise, negative_prompt, megapixels)
+	if workflow_type == WorkflowType.BIREFNET_ONLY:
+		return _build_birefnet_workflow(filename)
 	if workflow_type == WorkflowType.WAN_VACE_DWPOSE_PREVIEW:
 		return _build_wan_vace_dwpose_preview_workflow(filename)
 	if workflow_type == WorkflowType.WAN_I2V:
@@ -3323,3 +3325,33 @@ func _send_comfyui_interrupt() -> void:
 			HTTPClient.METHOD_POST,
 			JSON.stringify({"delete": [_prompt_id]})
 		)
+
+
+## Workflow BiRefNet seul : retire le fond d'une image et retourne du RGBA transparent.
+func _build_birefnet_workflow(source_filename: String) -> Dictionary:
+	return {
+		"br:src": {
+			"class_type": "LoadImage",
+			"inputs": {"image": source_filename}
+		},
+		"br:birefnet": {
+			"class_type": "BiRefNetRMBG",
+			"inputs": {
+				"model": "BiRefNet-general",
+				"mask_blur": 0,
+				"mask_offset": 0,
+				"invert_output": false,
+				"refine_foreground": true,
+				"background": "Alpha",
+				"background_color": "#222222",
+				"image": ["br:src", 0]
+			}
+		},
+		"br:save": {
+			"class_type": "SaveImage",
+			"inputs": {
+				"filename_prefix": "birefnet_frame",
+				"images": ["br:birefnet", 0]
+			}
+		}
+	}

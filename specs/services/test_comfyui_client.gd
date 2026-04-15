@@ -664,3 +664,33 @@ func test_build_zimage_decliner_workflow_negative_prompt():
 	var wf = client.build_workflow("t.png", "p", 1, true, 1.0, 5,
 		ComfyUIClientScript.WorkflowType.ZIMAGE_DECLINER, 0.2, "bad quality")
 	assert_eq(wf["87:71"]["inputs"]["text"], "bad quality")
+
+func test_build_birefnet_workflow_has_correct_nodes():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("frame.png", "", 1, false, 1.0, 1,
+		ComfyUIClientScript.WorkflowType.BIREFNET_ONLY)
+	assert_true(wf.has("br:src"), "LoadImage absent")
+	assert_eq(wf["br:src"]["class_type"], "LoadImage")
+	assert_true(wf.has("br:birefnet"), "BiRefNetRMBG absent")
+	assert_eq(wf["br:birefnet"]["class_type"], "BiRefNetRMBG")
+	assert_true(wf.has("br:save"), "SaveImage absent")
+	assert_eq(wf["br:save"]["class_type"], "SaveImage")
+
+func test_build_birefnet_workflow_uses_source_filename():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("frame_007.png", "", 1, false, 1.0, 1,
+		ComfyUIClientScript.WorkflowType.BIREFNET_ONLY)
+	assert_eq(wf["br:src"]["inputs"]["image"], "frame_007.png")
+
+func test_build_birefnet_workflow_connects_nodes():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("frame.png", "", 1, false, 1.0, 1,
+		ComfyUIClientScript.WorkflowType.BIREFNET_ONLY)
+	assert_eq(wf["br:birefnet"]["inputs"]["image"][0], "br:src")
+	assert_eq(wf["br:save"]["inputs"]["images"][0], "br:birefnet")
+
+func test_build_birefnet_workflow_alpha_background():
+	var client = ComfyUIClientScript.new()
+	var wf = client.build_workflow("frame.png", "", 1, false, 1.0, 1,
+		ComfyUIClientScript.WorkflowType.BIREFNET_ONLY)
+	assert_eq(wf["br:birefnet"]["inputs"]["background"], "Alpha")
