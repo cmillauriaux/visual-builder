@@ -2570,8 +2570,8 @@ func _build_wan_i2v_workflow(
 ) -> Dictionary:
 	# multiple de 4 (contrainte WanImageToVideo length step=4)
 	var num_frames: int = clamp(int(round(duration_sec * float(fps) / 4.0)) * 4, 16, 200)
-	# Découpage deux-modèles : high_noise → première moitié, low_noise → deuxième moitié
-	var split_step := steps / 2
+	# Découpage deux-modèles : ~60% high_noise / ~40% low_noise
+	var split_step := roundi(steps * 0.6)
 
 	var wf: Dictionary = {
 		"i2v:unet_high": {
