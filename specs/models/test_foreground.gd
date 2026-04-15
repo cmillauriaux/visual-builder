@@ -198,3 +198,74 @@ func test_from_dict_transition_defaults():
 	var fg = Foreground.from_dict(d)
 	assert_eq(fg.transition_type, "none")
 	assert_eq(fg.transition_duration, 0.5)
+
+
+# --- Tests champs animation ---
+
+func test_anim_default_values():
+	var fg = Foreground.new()
+	assert_eq(fg.anim_speed, 1.0)
+	assert_eq(fg.anim_reverse, false)
+	assert_eq(fg.anim_loop, true)
+	assert_eq(fg.anim_reverse_loop, false)
+
+func test_anim_speed_clamped_min():
+	var fg = Foreground.new()
+	fg.anim_speed = 0.0
+	assert_eq(fg.anim_speed, 0.1, "anim_speed minimum = 0.1")
+
+func test_anim_speed_clamped_max():
+	var fg = Foreground.new()
+	fg.anim_speed = 10.0
+	assert_eq(fg.anim_speed, 4.0, "anim_speed maximum = 4.0")
+
+func test_anim_speed_valid():
+	var fg = Foreground.new()
+	fg.anim_speed = 2.0
+	assert_eq(fg.anim_speed, 2.0)
+
+func test_to_dict_excludes_anim_fields_for_static_image():
+	var fg = Foreground.new()
+	fg.image = "assets/foregrounds/hero.png"
+	var d = fg.to_dict()
+	assert_false(d.has("anim_speed"), "champs anim absents pour PNG statique")
+	assert_false(d.has("anim_reverse"))
+	assert_false(d.has("anim_loop"))
+	assert_false(d.has("anim_reverse_loop"))
+
+func test_to_dict_includes_anim_fields_for_apng():
+	var fg = Foreground.new()
+	fg.image = "assets/foregrounds/character.apng"
+	fg.anim_speed = 2.0
+	fg.anim_reverse = true
+	fg.anim_loop = false
+	fg.anim_reverse_loop = true
+	var d = fg.to_dict()
+	assert_eq(d["anim_speed"], 2.0)
+	assert_eq(d["anim_reverse"], true)
+	assert_eq(d["anim_loop"], false)
+	assert_eq(d["anim_reverse_loop"], true)
+
+func test_from_dict_anim_fields():
+	var d = {
+		"uuid": "fg-anim",
+		"name": "AnimChar",
+		"image": "assets/foregrounds/character.apng",
+		"anim_speed": 0.5,
+		"anim_reverse": true,
+		"anim_loop": false,
+		"anim_reverse_loop": true,
+	}
+	var fg = Foreground.from_dict(d)
+	assert_eq(fg.anim_speed, 0.5)
+	assert_eq(fg.anim_reverse, true)
+	assert_eq(fg.anim_loop, false)
+	assert_eq(fg.anim_reverse_loop, true)
+
+func test_from_dict_anim_defaults_when_missing():
+	var d = {"uuid": "fg-anim", "name": "AnimChar", "image": "character.apng"}
+	var fg = Foreground.from_dict(d)
+	assert_eq(fg.anim_speed, 1.0)
+	assert_eq(fg.anim_reverse, false)
+	assert_eq(fg.anim_loop, true)
+	assert_eq(fg.anim_reverse_loop, false)
