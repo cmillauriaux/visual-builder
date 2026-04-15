@@ -1680,6 +1680,7 @@ func generate_sequence(
 	_loras = loras
 	_transparent_output = transparent_output
 	_is_sequence_mode = true
+	print("[COMFYUI] generate_sequence: loras=%s  workflow_type=%d" % [str(loras), workflow_type])
 	_second_image_filename = ""
 	_second_image_bytes = PackedByteArray()
 
@@ -1970,6 +1971,8 @@ func _dispatch_prompt(filename: String, prompt_text: String) -> void:
 
 
 func _do_prompt_sequence(filename: String, prompt_text: String) -> void:
+	print("[COMFYUI] _do_prompt_sequence: _workflow_type=%d  _loras=%s  _transparent_output=%s" % [
+		_workflow_type, str(_loras), str(_transparent_output)])
 	var seed = randi()
 	var workflow: Dictionary
 	if _workflow_type == WorkflowType.WAN_VACE_POSE:
@@ -2671,6 +2674,7 @@ func _build_wan_i2v_workflow(
 	}
 
 	# LORAs — deux chaînes : high et low
+	print("[COMFYUI] _build_wan_i2v_workflow: loras=%s" % str(loras))
 	for i in loras.size():
 		var lora = loras[i]
 		wf["i2v:lora_high_%d" % i] = {
@@ -2692,6 +2696,7 @@ func _build_wan_i2v_workflow(
 	if not loras.is_empty():
 		wf["i2v:sampler1"]["inputs"]["model"] = ["i2v:lora_high_%d" % (loras.size() - 1), 0]
 		wf["i2v:sampler2"]["inputs"]["model"] = ["i2v:lora_low_%d" % (loras.size() - 1), 0]
+	print("[COMFYUI] _build_wan_i2v_workflow: workflow keys=%s" % str(wf.keys()))
 
 	# Transparent output
 	if transparent_output:
@@ -3261,3 +3266,28 @@ func cancel() -> void:
 		_stop_polling()
 		_generating = false
 		generation_progress.emit("Génération annulée")
+		_send_comfyui_interrupt()
+
+
+func _send_comfyui_interrupt() -> void:
+	if _config == null:
+		return
+	# POST /interrupt — stoppe le prompt en cours côté ComfyUI
+	var http_int = HTTPRequest.new()
+	add_child(http_int)
+	http_int.request_completed.connect(func(_r, _c, _h, _b): http_int.queue_free())
+	var headers = PackedStringArray(["Content-Type: application/json"])
+	for h in _config.get_auth_headers():
+		headers.append(h)
+	http_int.request(_config.get_full_url("/interrupt"), headers, HTTPClient.METHOD_POST, "")
+	# POST /queue {"delete": [prompt_id]} — retire de la file si pas encore démarré
+	if _prompt_id != "":
+		var http_q = HTTPRequest.new()
+		add_child(http_q)
+		http_q.request_completed.connect(func(_r, _c, _h, _b): http_q.queue_free())
+		http_q.request(
+			_config.get_full_url("/queue"),
+			headers,
+			HTTPClient.METHOD_POST,
+			JSON.stringify({"delete": [_prompt_id]})
+		)
