@@ -1977,16 +1977,17 @@ func _do_prompt_sequence(filename: String, prompt_text: String) -> void:
 			filename, _second_image_filename, prompt_text, seed,
 			_remove_background, _cfg, _steps, _denoise, _negative_prompt,
 			_frames_to_extract, _duration_sec, _controlnet_strength, _fps,
-			_source_width, _source_height)
+			_source_width, _source_height, _loras, _transparent_output)
 	elif _workflow_type == WorkflowType.WAN_I2V:
 		workflow = _build_wan_i2v_workflow(
 			filename, prompt_text, seed, _cfg, _steps, _negative_prompt,
-			_duration_sec, _fps, _source_width, _source_height)
+			_duration_sec, _fps, _source_width, _source_height, _loras, _transparent_output)
 	else:
 		workflow = _build_wan_vace_workflow(
 			filename, prompt_text, seed,
 			_remove_background, _cfg, _steps, _denoise, _negative_prompt,
-			_frames_to_extract, _duration_sec, _fps, _source_width, _source_height)
+			_frames_to_extract, _duration_sec, _fps, _source_width, _source_height,
+			_loras, _transparent_output)
 
 	var payload = JSON.stringify({"prompt": workflow})
 	var http = HTTPRequest.new()
