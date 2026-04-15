@@ -61,6 +61,7 @@ var _duration_sec: float = 3.0
 var _controlnet_strength: float = 0.7
 var _fps: int = 8
 var _transparent_output: bool = false
+var _debug_save_video: bool = false
 var _is_sequence_mode: bool = false
 var _source_width: int = 832
 var _source_height: int = 480
@@ -1659,7 +1660,8 @@ func generate_sequence(
 	controlnet_strength: float = 0.7,
 	fps: int = 8,
 	loras: Array = [],
-	transparent_output: bool = false
+	transparent_output: bool = false,
+	debug_save_video: bool = false
 ) -> void:
 	if _generating:
 		_fail("Une génération est déjà en cours")
@@ -1679,6 +1681,7 @@ func generate_sequence(
 	_fps = fps
 	_loras = loras
 	_transparent_output = transparent_output
+	_debug_save_video = debug_save_video
 	_is_sequence_mode = true
 	_second_image_filename = ""
 	_second_image_bytes = PackedByteArray()
@@ -1977,17 +1980,18 @@ func _do_prompt_sequence(filename: String, prompt_text: String) -> void:
 			filename, _second_image_filename, prompt_text, seed,
 			_remove_background, _cfg, _steps, _denoise, _negative_prompt,
 			_frames_to_extract, _duration_sec, _controlnet_strength, _fps,
-			_source_width, _source_height, _loras, _transparent_output)
+			_source_width, _source_height, _loras, _transparent_output, _debug_save_video)
 	elif _workflow_type == WorkflowType.WAN_I2V:
 		workflow = _build_wan_i2v_workflow(
 			filename, prompt_text, seed, _cfg, _steps, _negative_prompt,
-			_duration_sec, _fps, _source_width, _source_height, _loras, _transparent_output)
+			_duration_sec, _fps, _source_width, _source_height, _loras, _transparent_output,
+			_debug_save_video)
 	else:
 		workflow = _build_wan_vace_workflow(
 			filename, prompt_text, seed,
 			_remove_background, _cfg, _steps, _denoise, _negative_prompt,
 			_frames_to_extract, _duration_sec, _fps, _source_width, _source_height,
-			_loras, _transparent_output)
+			_loras, _transparent_output, _debug_save_video)
 
 	var payload = JSON.stringify({"prompt": workflow})
 	var http = HTTPRequest.new()
@@ -2318,7 +2322,8 @@ func _build_wan_vace_workflow(
 	width: int = 832,
 	height: int = 480,
 	loras: Array = [],
-	transparent_output: bool = false
+	transparent_output: bool = false,
+	debug_save_video: bool = false
 ) -> Dictionary:
 	var total_frames = clampi(roundi(duration_sec * float(fps) / 8.0) * 8, 16, 128)
 	var wf: Dictionary = {
@@ -2461,6 +2466,21 @@ func _build_wan_vace_workflow(
 		}
 		wf["9"]["inputs"]["images"] = ["wv:birefnet_out", 0]
 
+	if debug_save_video:
+		var video_src = "wv:birefnet_out" if transparent_output else "wv:decode"
+		wf["wv:debug_video"] = {
+			"class_type": "VHS_VideoCombine",
+			"inputs": {
+				"images": [video_src, 0],
+				"frame_rate": fps,
+				"loop_count": 0,
+				"filename_prefix": "wan_vace_debug",
+				"format": "video/h264-mp4",
+				"pingpong": false,
+				"save_output": true
+			}
+		}
+
 	return wf
 
 
@@ -2483,12 +2503,13 @@ func _build_wan_vace_pose_workflow(
 	width: int = 832,
 	height: int = 480,
 	loras: Array = [],
-	transparent_output: bool = false
+	transparent_output: bool = false,
+	debug_save_video: bool = false
 ) -> Dictionary:
 	# Construire la base sans pose, puis injecter les nœuds ControlNet
 	var wf = _build_wan_vace_workflow(source_filename, prompt_text, seed,
 		remove_background, cfg, steps, denoise, negative_prompt,
-		frames_to_extract, duration_sec, fps, width, height, loras, transparent_output)
+		frames_to_extract, duration_sec, fps, width, height, loras, transparent_output, debug_save_video)
 
 	# Nœuds DWPose + ControlNet
 	wf["wv:pose_img"] = {
@@ -2544,7 +2565,8 @@ func _build_wan_i2v_workflow(
 	width: int = 832,
 	height: int = 480,
 	loras: Array = [],
-	transparent_output: bool = false
+	transparent_output: bool = false,
+	debug_save_video: bool = false
 ) -> Dictionary:
 	# multiple de 4 (contrainte WanImageToVideo length step=4)
 	var num_frames: int = clamp(int(round(duration_sec * float(fps) / 4.0)) * 4, 16, 200)
@@ -2708,6 +2730,22 @@ func _build_wan_i2v_workflow(
 			}
 		}
 		wf["9"]["inputs"]["images"] = ["i2v:birefnet_out", 0]
+
+	# Debug : sauvegarder la vidéo brute côté ComfyUI via VHS_VideoCombine
+	if debug_save_video:
+		var video_src = "i2v:birefnet_out" if transparent_output else "i2v:decode"
+		wf["i2v:debug_video"] = {
+			"class_type": "VHS_VideoCombine",
+			"inputs": {
+				"images": [video_src, 0],
+				"frame_rate": fps,
+				"loop_count": 0,
+				"filename_prefix": "wan_i2v_debug",
+				"format": "video/h264-mp4",
+				"pingpong": false,
+				"save_output": true
+			}
+		}
 
 	return wf
 
