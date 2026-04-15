@@ -383,3 +383,32 @@ func test_build_wan_vace_workflow_transparent_output():
 	assert_eq(wf["wv:birefnet_out"]["inputs"]["image"], ["wv:decode", 0])
 	assert_eq(wf["9"]["inputs"]["images"], ["wv:birefnet_out", 0])
 	assert_true(wf.has("wv:birefnet"), "wv:birefnet (source) doit rester intact")
+
+func test_build_wan_i2v_workflow_with_loras():
+	var client = ComfyUIClientScript.new()
+	var loras = [{"name": "style.safetensors", "strength": 0.9}]
+	var wf = client._build_wan_i2v_workflow("src.png", "p", 1, 3.5, 20, "", 3.0, 8, 832, 480, loras)
+	assert_true(wf.has("i2v:lora_high_0"), "i2v:lora_high_0 doit exister")
+	assert_eq(wf["i2v:lora_high_0"]["class_type"], "LoraLoaderModelOnly")
+	assert_eq(wf["i2v:lora_high_0"]["inputs"]["lora_name"], "style.safetensors")
+	assert_eq(wf["i2v:lora_high_0"]["inputs"]["model"], ["i2v:unet_high", 0])
+	assert_true(wf.has("i2v:lora_low_0"), "i2v:lora_low_0 doit exister")
+	assert_eq(wf["i2v:lora_low_0"]["inputs"]["model"], ["i2v:unet_low", 0])
+	assert_eq(wf["i2v:sampler1"]["inputs"]["model"], ["i2v:lora_high_0", 0])
+	assert_eq(wf["i2v:sampler2"]["inputs"]["model"], ["i2v:lora_low_0", 0])
+
+func test_build_wan_i2v_workflow_no_loras_no_lora_nodes():
+	var client = ComfyUIClientScript.new()
+	var wf = client._build_wan_i2v_workflow("src.png", "p", 1, 3.5, 20, "", 3.0)
+	for key in wf.keys():
+		assert_false(key.contains("lora_"), "Nœud lora inattendu : " + key)
+	assert_eq(wf["i2v:sampler1"]["inputs"]["model"], ["i2v:unet_high", 0])
+	assert_eq(wf["i2v:sampler2"]["inputs"]["model"], ["i2v:unet_low", 0])
+
+func test_build_wan_i2v_workflow_transparent_output():
+	var client = ComfyUIClientScript.new()
+	var wf = client._build_wan_i2v_workflow("src.png", "p", 1, 3.5, 20, "", 3.0, 8, 832, 480, [], true)
+	assert_true(wf.has("i2v:birefnet_out"), "i2v:birefnet_out doit exister")
+	assert_eq(wf["i2v:birefnet_out"]["class_type"], "BiRefNetRMBG")
+	assert_eq(wf["i2v:birefnet_out"]["inputs"]["image"], ["i2v:decode", 0])
+	assert_eq(wf["9"]["inputs"]["images"], ["i2v:birefnet_out", 0])

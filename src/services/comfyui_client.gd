@@ -2541,14 +2541,16 @@ func _build_wan_i2v_workflow(
 	duration_sec: float,
 	fps: int = 8,
 	width: int = 832,
-	height: int = 480
+	height: int = 480,
+	loras: Array = [],
+	transparent_output: bool = false
 ) -> Dictionary:
 	# multiple de 4 (contrainte WanImageToVideo length step=4)
 	var num_frames: int = clamp(int(round(duration_sec * float(fps) / 4.0)) * 4, 16, 200)
 	# Découpage deux-modèles : high_noise → première moitié, low_noise → deuxième moitié
 	var split_step := steps / 2
 
-	return {
+	var wf: Dictionary = {
 		"i2v:unet_high": {
 			"class_type": "UNETLoader",
 			"inputs": {
@@ -2666,6 +2668,48 @@ func _build_wan_i2v_workflow(
 			}
 		}
 	}
+
+	# LORAs — deux chaînes : high et low
+	for i in loras.size():
+		var lora = loras[i]
+		wf["i2v:lora_high_%d" % i] = {
+			"class_type": "LoraLoaderModelOnly",
+			"inputs": {
+				"model": ["i2v:unet_high", 0] if i == 0 else ["i2v:lora_high_%d" % (i - 1), 0],
+				"lora_name": lora["name"],
+				"strength_model": lora["strength"]
+			}
+		}
+		wf["i2v:lora_low_%d" % i] = {
+			"class_type": "LoraLoaderModelOnly",
+			"inputs": {
+				"model": ["i2v:unet_low", 0] if i == 0 else ["i2v:lora_low_%d" % (i - 1), 0],
+				"lora_name": lora["name"],
+				"strength_model": lora["strength"]
+			}
+		}
+	if not loras.is_empty():
+		wf["i2v:sampler1"]["inputs"]["model"] = ["i2v:lora_high_%d" % (loras.size() - 1), 0]
+		wf["i2v:sampler2"]["inputs"]["model"] = ["i2v:lora_low_%d" % (loras.size() - 1), 0]
+
+	# Transparent output
+	if transparent_output:
+		wf["i2v:birefnet_out"] = {
+			"class_type": "BiRefNetRMBG",
+			"inputs": {
+				"model": "BiRefNet-general",
+				"mask_blur": 0,
+				"mask_offset": 0,
+				"invert_output": false,
+				"refine_foreground": true,
+				"background": "Alpha",
+				"background_color": "#222222",
+				"image": ["i2v:decode", 0]
+			}
+		}
+		wf["9"]["inputs"]["images"] = ["i2v:birefnet_out", 0]
+
+	return wf
 
 
 # ===== Create tab : text-to-image avec LoRA =====
