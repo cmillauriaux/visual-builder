@@ -4,9 +4,9 @@
 class_name ApngBuilder
 
 ## Assemble frames RGBA en APNG. Retourne PackedByteArray (fichier APNG).
-## frames: Array[Image], fps: int (>0), loops: int (0 = infini)
-static func build(frames: Array, fps: int, loops: int = 0) -> PackedByteArray:
-	if frames.is_empty() or fps <= 0:
+## frames: Array[Image], fps: float (>0), loops: int (0 = infini)
+static func build(frames: Array, fps: float, loops: int = 0) -> PackedByteArray:
+	if frames.is_empty() or fps <= 0.0:
 		return PackedByteArray()
 
 	var png_list: Array = []
@@ -42,8 +42,9 @@ static func build(frames: Array, fps: int, loops: int = 0) -> PackedByteArray:
 		fctl.append_array(_u32_be(height))
 		fctl.append_array(_u32_be(0))    # x_offset
 		fctl.append_array(_u32_be(0))    # y_offset
-		fctl.append_array(_u16_be(1))    # delay_num
-		fctl.append_array(_u16_be(fps))  # delay_den
+		var delay_ms := clampi(roundi(1000.0 / fps), 1, 65535)
+		fctl.append_array(_u16_be(delay_ms))  # delay_num  (ms per frame)
+		fctl.append_array(_u16_be(1000))      # delay_den
 		fctl.append(0)  # dispose_op = APNG_DISPOSE_OP_NONE
 		fctl.append(0)  # blend_op = APNG_BLEND_OP_SOURCE
 		out.append_array(_make_chunk("fcTL", fctl))
