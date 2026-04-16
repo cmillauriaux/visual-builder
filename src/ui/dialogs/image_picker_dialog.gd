@@ -41,6 +41,7 @@ var _gallery_category_filter_container: HBoxContainer
 var _gallery_category_checkboxes: Array = []
 var _gallery_search_edit: LineEdit
 var _gallery_context_menu: PopupMenu
+var _anim_filter_check: CheckBox = null
 
 # Image preview
 var _image_preview: Control
@@ -69,6 +70,8 @@ func setup(mode: int, story_base_path: String, story = null) -> void:
 	if story_base_path != "":
 		_category_service.load_from(story_base_path)
 	_update_gallery_category_filter()
+	if _anim_filter_check:
+		_anim_filter_check.visible = (mode == Mode.FOREGROUND)
 
 func _reset_selection() -> void:
 	_selected_path = ""
@@ -210,6 +213,12 @@ func _build_gallery_tab() -> void:
 	_gallery_search_edit.text_changed.connect(func(_t): _refresh_gallery())
 	filter_hbox.add_child(_gallery_search_edit)
 
+	_anim_filter_check = CheckBox.new()
+	_anim_filter_check.text = tr("Animations")
+	_anim_filter_check.visible = false
+	_anim_filter_check.toggled.connect(func(_v): _refresh_gallery())
+	filter_hbox.add_child(_anim_filter_check)
+
 	var spacer = Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	filter_hbox.add_child(spacer)
@@ -218,6 +227,8 @@ func _build_gallery_tab() -> void:
 	refresh_btn.text = tr("Rafraîchir")
 	refresh_btn.pressed.connect(func():
 		GalleryCacheService.clear_dir(_get_assets_dir())
+		if _mode == Mode.FOREGROUND and _story_base_path != "":
+			GalleryCacheService.clear_dir(_story_base_path + "/assets/animation")
 		_refresh_gallery()
 	)
 	filter_hbox.add_child(refresh_btn)
@@ -277,6 +288,8 @@ func _refresh_gallery() -> void:
 		return
 
 	var images = _list_gallery_images()
+	if _anim_filter_check != null and _anim_filter_check.button_pressed:
+		images = images.filter(func(p): return p.get_extension().to_lower() == "apng")
 	var selected_cats = _get_gallery_selected_categories()
 	if not selected_cats.is_empty() and _category_service:
 		images = _category_service.filter_paths_by_categories(images, selected_cats)
@@ -320,6 +333,15 @@ func _add_gallery_item(path: String) -> void:
 	name_label.custom_minimum_size.x = 128
 	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vbox.add_child(name_label)
+
+	if path.get_extension().to_lower() == "apng":
+		var badge = Label.new()
+		badge.text = "▶"
+		badge.add_theme_color_override("font_color", Color(0.3, 0.85, 0.3))
+		badge.add_theme_font_size_override("font_size", 14)
+		badge.position = Vector2(4, 4)
+		badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		container.add_child(badge)
 
 	container.gui_input.connect(func(event: InputEvent):
 		if event is InputEventMouseButton and event.pressed:
@@ -390,7 +412,13 @@ func _get_assets_dir() -> String:
 	return _story_base_path + "/assets/foregrounds"
 
 func _list_gallery_images() -> Array:
-	return GalleryCacheService.get_file_list(_get_assets_dir(), ["png", "jpg", "jpeg", "webp"])
+	var extensions = ["png", "jpg", "jpeg", "webp", "apng"]
+	var images = GalleryCacheService.get_file_list(_get_assets_dir(), extensions)
+	if _mode == Mode.FOREGROUND and _story_base_path != "":
+		var anim_dir = _story_base_path + "/assets/animation"
+		var anim_images = GalleryCacheService.get_file_list(anim_dir, extensions)
+		images.append_array(anim_images)
+	return images
 
 static func _resolve_unique_path(dir_path: String, filename: String) -> String:
 	var name = filename.get_basename()
