@@ -12,6 +12,7 @@ const ForegroundClipboardScript = preload("res://src/ui/visual/foreground_clipbo
 const TextureLoaderScript = preload("res://src/ui/shared/texture_loader.gd")
 const ForegroundBlinkPlayerScript = preload("res://src/ui/visual/foreground_blink_player.gd")
 const BlinkManifestServiceScript = preload("res://src/services/blink_manifest_service.gd")
+const ForegroundAnimPlayerScript = preload("res://src/ui/visual/foreground_anim_player.gd")
 
 const DESIGN_RESOLUTION = Vector2(1920, 1080)
 const FX_Z := 101        # Un cran au-dessus du max fg.z_order (100)
@@ -489,6 +490,12 @@ func _update_single_fg_visual(fg) -> void:
 	if not is_instance_valid(wrapper):
 		return
 
+	# Chemin APNG : lecteur de frames animées
+	if fg.image.ends_with(".apng"):
+		_update_apng_fg_visual(wrapper, fg)
+		_update_fg_non_visual_props(wrapper, fg)
+		return
+
 	# Skip si le wrapper affiche déjà exactement ce foreground (évite le rechargement texture GPU)
 	if _wrapper_matches_fg(wrapper, fg):
 		_update_fg_non_visual_props(wrapper, fg)
@@ -541,6 +548,54 @@ func _update_single_fg_visual(fg) -> void:
 	_setup_blink_player(wrapper, fg.image, tex)
 
 	_update_fg_non_visual_props(wrapper, fg)
+
+
+func _update_apng_fg_visual(wrapper: Control, fg) -> void:
+	var tex_rect: TextureRect = wrapper.get_node("Texture")
+	tex_rect.visible = false
+	tex_rect.texture = null
+	var blink_player = wrapper.get_node_or_null("BlinkPlayer")
+	if blink_player:
+		blink_player.queue_free()
+	var anim_player = wrapper.get_node_or_null("AnimPlayer")
+	var image_changed = wrapper.get_meta("fg_image", "") != fg.image
+	if anim_player == null or image_changed:
+		if anim_player:
+			anim_player.queue_free()
+			anim_player = null
+		var new_player = ForegroundAnimPlayerScript.new()
+		new_player.name = "AnimPlayer"
+		wrapper.add_child(new_player)
+		if not new_player.load_apng(fg.image):
+			new_player.queue_free()
+			return
+		anim_player = new_player
+	anim_player.anim_speed = fg.anim_speed
+	anim_player.anim_reverse = fg.anim_reverse
+	anim_player.anim_loop = fg.anim_loop
+	anim_player.anim_reverse_loop = fg.anim_reverse_loop
+	anim_player.flip_h = fg.flip_h
+	anim_player.flip_v = fg.flip_v
+	if not anim_player.is_playing():
+		anim_player.play()
+	var first_tex = anim_player.get_first_frame_texture()
+	if first_tex == null:
+		return
+	var quality_div: float = _get_image_quality_divisor()
+	var fg_size = first_tex.get_size() * fg.scale * quality_div
+	wrapper.size = fg_size
+	anim_player.size = fg_size
+	var bg_size = Vector2(1920, 1080)
+	if _bg_rect and _bg_rect.texture:
+		bg_size = _bg_rect.texture.get_size() * quality_div
+	wrapper.position = fg.anchor_bg * bg_size - fg.anchor_fg * fg_size
+	wrapper.z_index = fg.z_order
+	wrapper.set_meta("fg_image", fg.image)
+	wrapper.set_meta("fg_anchor_bg", fg.anchor_bg)
+	wrapper.set_meta("fg_anchor_fg", fg.anchor_fg)
+	wrapper.set_meta("fg_scale", fg.scale)
+	wrapper.set_meta("fg_flip_h", fg.flip_h)
+	wrapper.set_meta("fg_flip_v", fg.flip_v)
 
 
 func _update_fg_non_visual_props(wrapper: Control, fg) -> void:

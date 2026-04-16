@@ -15,6 +15,10 @@ var anchor_bg: Vector2 = Vector2(0.5, 0.5)
 var anchor_fg: Vector2 = Vector2(0.5, 1.0)
 var _transition_type: String = "none"
 var _transition_duration: float = 0.5
+var _anim_speed: float = 1.0
+var anim_reverse: bool = false
+var anim_loop: bool = true
+var anim_reverse_loop: bool = false
 
 const VALID_TRANSITION_TYPES = ["none", "fade"]
 
@@ -39,6 +43,12 @@ var opacity: float:
 	set(value):
 		_opacity = clampf(value, 0.0, 1.0)
 
+var anim_speed: float:
+	get:
+		return _anim_speed
+	set(value):
+		_anim_speed = clampf(value, 0.1, 4.0)
+
 func _init():
 	uuid = _generate_uuid()
 
@@ -62,7 +72,7 @@ static func _generate_uuid() -> String:
 	return result
 
 func to_dict() -> Dictionary:
-	return {
+	var d = {
 		"uuid": uuid,
 		"name": fg_name,
 		"image": image,
@@ -76,6 +86,12 @@ func to_dict() -> Dictionary:
 		"transition_type": transition_type,
 		"transition_duration": transition_duration,
 	}
+	if image.ends_with(".apng"):
+		d["anim_speed"] = anim_speed
+		d["anim_reverse"] = anim_reverse
+		d["anim_loop"] = anim_loop
+		d["anim_reverse_loop"] = anim_reverse_loop
+	return d
 
 static func from_dict(d: Dictionary):
 	var script = load("res://src/models/foreground.gd")
@@ -94,4 +110,8 @@ static func from_dict(d: Dictionary):
 		fg.anchor_fg = Vector2(d["anchor_fg"]["x"], d["anchor_fg"]["y"])
 	fg.transition_type = d.get("transition_type", "none")
 	fg.transition_duration = d.get("transition_duration", 0.5)
+	fg.anim_speed = d.get("anim_speed", 1.0)
+	fg.anim_reverse = d.get("anim_reverse", false)
+	fg.anim_loop = d.get("anim_loop", true)
+	fg.anim_reverse_loop = d.get("anim_reverse_loop", false)
 	return fg
