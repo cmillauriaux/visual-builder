@@ -228,7 +228,7 @@ func _build_gallery_tab() -> void:
 	refresh_btn.pressed.connect(func():
 		GalleryCacheService.clear_dir(_get_assets_dir())
 		if _mode == Mode.FOREGROUND and _story_base_path != "":
-			GalleryCacheService.clear_dir(_story_base_path + "/assets/animation")
+			GalleryCacheService.clear_dir(_story_base_path + "/assets/animations")
 		_refresh_gallery()
 	)
 	filter_hbox.add_child(refresh_btn)
@@ -415,7 +415,7 @@ func _list_gallery_images() -> Array:
 	var extensions = ["png", "jpg", "jpeg", "webp", "apng"]
 	var images = GalleryCacheService.get_file_list(_get_assets_dir(), extensions)
 	if _mode == Mode.FOREGROUND and _story_base_path != "":
-		var anim_dir = _story_base_path + "/assets/animation"
+		var anim_dir = _story_base_path + "/assets/animations"
 		var anim_images = GalleryCacheService.get_file_list(anim_dir, extensions)
 		images.append_array(anim_images)
 	return images
