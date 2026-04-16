@@ -82,6 +82,12 @@ func on_foreground_replace_requested(uuid: String) -> void:
 
 
 func _on_replace_fg_selected(path: String, uuid: String) -> void:
+	# S'assurer que le dialogue courant a ses propres foregrounds (pas hérités)
+	# avant de modifier l'image, sinon on modifie l'objet partagé de la séquence/dialogue parent.
+	var idx = _main._sequence_editor_ctrl.get_selected_dialogue_index()
+	if idx >= 0:
+		_main._sequence_editor_ctrl.ensure_own_foregrounds(idx)
+		_main.update_preview_for_dialogue(idx)
 	var fg = _main._visual_editor.find_foreground(uuid)
 	if fg:
 		var cmd = ReplaceForegroundImageCommand.new(fg, path)

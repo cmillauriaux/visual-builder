@@ -122,6 +122,10 @@ func _copy_foreground(fg):
 	copy.anchor_fg = fg.anchor_fg
 	copy.transition_type = fg.transition_type
 	copy.transition_duration = fg.transition_duration
+	copy.anim_speed = fg.anim_speed
+	copy.anim_reverse = fg.anim_reverse
+	copy.anim_loop = fg.anim_loop
+	copy.anim_reverse_loop = fg.anim_reverse_loop
 	return copy
 
 # --- Normalisation foregrounds ---

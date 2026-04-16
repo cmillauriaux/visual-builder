@@ -11,14 +11,21 @@ class_name ApngLoader
 const PNG_SIG = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
 const DEFAULT_DELAY = 1.0 / 12.0
 
+static var _cache: Dictionary = {}  # path → { "frames": Array[ImageTexture], "delays": Array[float] }
+
 
 static func load(path: String) -> Dictionary:
+	if _cache.has(path):
+		return _cache[path]
 	var fa = FileAccess.open(path, FileAccess.READ)
 	if not fa:
 		return {}
 	var data = fa.get_buffer(fa.get_length())
 	fa.close()
-	return load_from_buffer(data)
+	var result = load_from_buffer(data)
+	if not result.is_empty():
+		_cache[path] = result
+	return result
 
 
 static func load_from_buffer(data: PackedByteArray) -> Dictionary:

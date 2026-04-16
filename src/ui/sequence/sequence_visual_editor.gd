@@ -13,6 +13,7 @@ const TextureLoaderScript = preload("res://src/ui/shared/texture_loader.gd")
 const ForegroundBlinkPlayerScript = preload("res://src/ui/visual/foreground_blink_player.gd")
 const BlinkManifestServiceScript = preload("res://src/services/blink_manifest_service.gd")
 const ForegroundAnimPlayerScript = preload("res://src/ui/visual/foreground_anim_player.gd")
+const ApngLoaderScript = preload("res://src/ui/shared/apng_loader.gd")
 
 const DESIGN_RESOLUTION = Vector2(1920, 1080)
 const FX_Z := 101        # Un cran au-dessus du max fg.z_order (100)
@@ -916,6 +917,7 @@ func _paste_foreground() -> void:
 func load_sequence(sequence) -> void:
 	_sequence = sequence
 	_display_foregrounds = _sequence.foregrounds if _sequence else []
+	_preload_apng_files()
 	_auto_fit_enabled = true
 	_selected_fg_uuids.clear()
 	_hidden_fg_uuids.clear()
@@ -938,6 +940,27 @@ func load_sequence(sequence) -> void:
 			if not tracked.has(child):
 				child.queue_free()
 	call_deferred("apply_auto_fit")
+
+## Précharge les APNG de la séquence dans le cache ApngLoader.
+## Appelé au load_sequence pour éviter un freeze au moment de l'affichage.
+func _preload_apng_files() -> void:
+	if _sequence == null:
+		return
+	var seen := {}
+	var all_fgs: Array = []
+	all_fgs.append_array(_sequence.foregrounds)
+	for dlg in _sequence.dialogues:
+		all_fgs.append_array(dlg.foregrounds)
+	for fg in all_fgs:
+		if not fg.image.ends_with(".apng"):
+			continue
+		var apng_path = fg.image
+		if not apng_path.is_absolute_path() and not apng_path.begins_with("res://") and TextureLoaderScript.base_dir != "":
+			apng_path = TextureLoaderScript.base_dir.path_join(apng_path)
+		if seen.has(apng_path):
+			continue
+		seen[apng_path] = true
+		ApngLoaderScript.load(apng_path)
 
 ## Met à jour uniquement les foregrounds sans toucher au background, aux transitions en cours,
 ## ni à l'état de sélection. Utilisé lors du changement de dialogue pendant le play.
