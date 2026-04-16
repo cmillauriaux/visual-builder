@@ -899,10 +899,7 @@ func _prepare_opening_visuals() -> void:
 
 func _update_preview(index: int) -> void:
 	var fgs = _sequence_editor_ctrl.get_effective_foregrounds(index)
-	var seq = _sequence_editor_ctrl.get_sequence()
-	if seq:
-		seq.foregrounds = fgs
-		_visual_editor.update_foregrounds()
+	_visual_editor.set_display_foregrounds(fgs)
 
 
 func _create_fade_out_clone(source: Control, z_order: int = 0) -> TextureRect:

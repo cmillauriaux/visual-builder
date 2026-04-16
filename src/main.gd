@@ -360,10 +360,7 @@ func _get_story_base_path() -> String:
 
 func update_preview_for_dialogue(index: int) -> void:
 	var fgs = _sequence_editor_ctrl.get_effective_foregrounds(index)
-	var seq = _sequence_editor_ctrl.get_sequence()
-	if seq:
-		seq.foregrounds = fgs
-		_visual_editor.update_foregrounds()
+	_visual_editor.set_display_foregrounds(fgs)
 
 
 func highlight_dialogue_in_list(index: int) -> void:

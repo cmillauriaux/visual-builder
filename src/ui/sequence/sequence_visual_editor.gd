@@ -48,6 +48,7 @@ var _blink_manifest_loaded: bool = false
 
 # --- Foreground interaction ---
 var _fg_visual_map: Dictionary = {}   # uuid → Control wrapper
+var _display_foregrounds: Array = []  # Foregrounds à afficher (dialogue courant, peut être un sous-ensemble de _sequence.foregrounds)
 var _selected_fg_uuids: Array = []
 var _hidden_fg_uuids: Array = []      # UUIDs temporairement cachés (reset au changement de dialogue)
 var _dragging_fg: bool = false
@@ -367,7 +368,7 @@ func _update_foreground_visuals() -> void:
 
 	# Collect current UUIDs
 	var current_uuids := {}
-	for fg in _sequence.foregrounds:
+	for fg in _display_foregrounds:
 		current_uuids[fg.uuid] = fg
 
 	# Identify orphan wrappers (old UUIDs absent du nouveau set)
@@ -378,7 +379,7 @@ func _update_foreground_visuals() -> void:
 
 	# Identify new FGs (not in existing map)
 	var new_fgs: Array = []
-	for fg in _sequence.foregrounds:
+	for fg in _display_foregrounds:
 		if not _fg_visual_map.has(fg.uuid):
 			new_fgs.append(fg)
 
@@ -400,7 +401,7 @@ func _update_foreground_visuals() -> void:
 		_fg_visual_map.erase(old_uuid)
 
 	# Create or update wrappers
-	for fg in _sequence.foregrounds:
+	for fg in _display_foregrounds:
 		if not _fg_visual_map.has(fg.uuid):
 			_create_fg_visual(fg)
 		_update_single_fg_visual(fg)
@@ -496,6 +497,11 @@ func _update_single_fg_visual(fg) -> void:
 		_update_fg_non_visual_props(wrapper, fg)
 		return
 
+	# Nettoyer un éventuel AnimPlayer restant d'un APNG précédent (même UUID, image changée)
+	var old_anim = wrapper.get_node_or_null("AnimPlayer")
+	if old_anim:
+		old_anim.queue_free()
+
 	# Skip si le wrapper affiche déjà exactement ce foreground (évite le rechargement texture GPU)
 	if _wrapper_matches_fg(wrapper, fg):
 		_update_fg_non_visual_props(wrapper, fg)
@@ -503,6 +509,7 @@ func _update_single_fg_visual(fg) -> void:
 
 	# Load texture — seulement si l'image a changé
 	var tex_rect: TextureRect = wrapper.get_node("Texture")
+	tex_rect.visible = true
 	var tex = _load_texture(fg.image)
 	# Compensate for downscaled textures in SD/USD exports:
 	# Anchors were computed with HD texture sizes, so we scale up by the quality divisor.
@@ -563,10 +570,15 @@ func _update_apng_fg_visual(wrapper: Control, fg) -> void:
 		if anim_player:
 			anim_player.queue_free()
 			anim_player = null
+		# Résoudre le chemin relatif en absolu (comme TextureLoader.load_texture)
+		var apng_path = fg.image
+		if not apng_path.is_absolute_path() and not apng_path.begins_with("res://") and TextureLoaderScript.base_dir != "":
+			apng_path = TextureLoaderScript.base_dir.path_join(apng_path)
 		var new_player = ForegroundAnimPlayerScript.new()
 		new_player.name = "AnimPlayer"
+		new_player.mouse_filter = Control.MOUSE_FILTER_PASS
 		wrapper.add_child(new_player)
-		if not new_player.load_apng(fg.image):
+		if not new_player.load_apng(apng_path):
 			new_player.queue_free()
 			return
 		anim_player = new_player
@@ -896,13 +908,14 @@ func _paste_foreground() -> void:
 	if new_fgs.is_empty():
 		return
 	for new_fg in new_fgs:
-		_sequence.foregrounds.append(new_fg)
+		_display_foregrounds.append(new_fg)
 	_update_foreground_visuals()
 
 # --- Data controller (existing API, unchanged) ---
 
 func load_sequence(sequence) -> void:
 	_sequence = sequence
+	_display_foregrounds = _sequence.foregrounds if _sequence else []
 	_auto_fit_enabled = true
 	_selected_fg_uuids.clear()
 	_hidden_fg_uuids.clear()
@@ -931,6 +944,12 @@ func load_sequence(sequence) -> void:
 func update_foregrounds() -> void:
 	_update_foreground_visuals()
 
+## Définit la liste de foregrounds à afficher (foregrounds effectifs pour le dialogue courant).
+## Ne modifie PAS _sequence.foregrounds — préserve l'intégrité du modèle.
+func set_display_foregrounds(fgs: Array) -> void:
+	_display_foregrounds = fgs
+	_update_foreground_visuals()
+
 func get_sequence():
 	return _sequence
 
@@ -951,15 +970,15 @@ func add_foreground(fg_name: String, image: String) -> void:
 	var fg = ForegroundScript.new()
 	fg.fg_name = fg_name
 	fg.image = image
-	_sequence.foregrounds.append(fg)
+	_display_foregrounds.append(fg)
 	_update_foreground_visuals()
 
 func remove_foreground(uuid: String) -> void:
 	if _sequence == null:
 		return
-	for i in range(_sequence.foregrounds.size()):
-		if _sequence.foregrounds[i].uuid == uuid:
-			_sequence.foregrounds.remove_at(i)
+	for i in range(_display_foregrounds.size()):
+		if _display_foregrounds[i].uuid == uuid:
+			_display_foregrounds.remove_at(i)
 			break
 	# Clean up visual
 	if _fg_visual_map.has(uuid):
@@ -1001,12 +1020,12 @@ func is_foreground_hidden(uuid: String) -> bool:
 func get_foreground_count() -> int:
 	if _sequence == null:
 		return 0
-	return _sequence.foregrounds.size()
+	return _display_foregrounds.size()
 
 func find_foreground(uuid: String):
 	if _sequence == null:
 		return null
-	for fg in _sequence.foregrounds:
+	for fg in _display_foregrounds:
 		if fg.uuid == uuid:
 			return fg
 	return null
@@ -1044,7 +1063,7 @@ func normalize_foregrounds() -> int:
 	if _sequence == null:
 		return 0
 	var to_remove: Array = []
-	var fgs = _sequence.foregrounds
+	var fgs = _display_foregrounds
 	for i in range(fgs.size()):
 		if i in to_remove:
 			continue
@@ -1084,7 +1103,7 @@ func _are_duplicate_foregrounds(a, b) -> bool:
 func get_foregrounds_sorted() -> Array:
 	if _sequence == null:
 		return []
-	var sorted = _sequence.foregrounds.duplicate()
+	var sorted = _display_foregrounds.duplicate()
 	sorted.sort_custom(func(a, b): return a.z_order < b.z_order)
 	return sorted
 

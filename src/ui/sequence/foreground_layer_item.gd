@@ -103,7 +103,10 @@ func _apply_data() -> void:
 	if _foreground == null:
 		return
 
-	_name_label.text = _foreground.fg_name
+	if _foreground.fg_name != "" and not _foreground.image.ends_with(".apng"):
+		_name_label.text = _foreground.fg_name
+	else:
+		_name_label.text = _foreground.image.get_file().get_basename()
 	_z_order_label.text = "z:%d" % _foreground.z_order
 
 	# Load thumbnail

@@ -15,17 +15,25 @@ static var _texture_cache: Dictionary = {}
 static var _file_list_cache: Dictionary = {}
 
 ## Récupère une texture du cache ou la charge si absente.
+## Pour les fichiers .apng, utilise load_png_from_buffer() (parseur PNG natif, rapide)
+## car Image.load() ne reconnaît pas l'extension .apng.
 static func get_texture(path: String) -> ImageTexture:
 	if _texture_cache.has(path):
 		var tex = _texture_cache[path]
 		if is_instance_valid(tex):
 			return tex
-	
+
 	if not FileAccess.file_exists(path):
 		return null
-		
+
 	var img = Image.new()
-	if img.load(path) == OK:
+	var ok := false
+	if path.get_extension().to_lower() == "apng":
+		var data = FileAccess.get_file_as_bytes(path)
+		ok = img.load_png_from_buffer(data) == OK
+	else:
+		ok = img.load(path) == OK
+	if ok:
 		var tex = ImageTexture.create_from_image(img)
 		_texture_cache[path] = tex
 		return tex

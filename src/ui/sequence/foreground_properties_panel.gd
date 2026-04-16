@@ -70,8 +70,8 @@ func _ready() -> void:
 
 	_pos_x_spin = SpinBox.new()
 	_pos_x_spin.min_value = 0.0
-	_pos_x_spin.max_value = 1.0
-	_pos_x_spin.step = 0.01
+	_pos_x_spin.max_value = 2.0
+	_pos_x_spin.step = 0.0001
 	_pos_x_spin.prefix = "X:"
 	_pos_x_spin.size_flags_horizontal = SIZE_EXPAND_FILL
 	_pos_x_spin.value_changed.connect(_on_property_changed)
@@ -79,8 +79,8 @@ func _ready() -> void:
 
 	_pos_y_spin = SpinBox.new()
 	_pos_y_spin.min_value = 0.0
-	_pos_y_spin.max_value = 1.0
-	_pos_y_spin.step = 0.01
+	_pos_y_spin.max_value = 2.0
+	_pos_y_spin.step = 0.0001
 	_pos_y_spin.prefix = "Y:"
 	_pos_y_spin.size_flags_horizontal = SIZE_EXPAND_FILL
 	_pos_y_spin.value_changed.connect(_on_property_changed)
@@ -97,7 +97,7 @@ func _ready() -> void:
 	_scale_spin = SpinBox.new()
 	_scale_spin.min_value = 0.1
 	_scale_spin.max_value = 10.0
-	_scale_spin.step = 0.05
+	_scale_spin.step = 0.001
 	_scale_spin.size_flags_horizontal = SIZE_EXPAND_FILL
 	_scale_spin.value_changed.connect(_on_property_changed)
 	scale_row.add_child(_scale_spin)

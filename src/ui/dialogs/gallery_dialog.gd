@@ -14,6 +14,7 @@ const CategoryManagerDialogScript = preload("res://src/ui/dialogs/category_manag
 const ImageRenameService = preload("res://src/services/image_rename_service.gd")
 const ImageNormalizerDialogScript = preload("res://src/ui/dialogs/image_normalizer_dialog.gd")
 const StorySaver = preload("res://src/persistence/story_saver.gd")
+const ForegroundAnimPlayerScript = preload("res://src/ui/visual/foreground_anim_player.gd")
 
 signal image_renamed(old_path: String, new_path: String)
 
@@ -239,14 +240,22 @@ func _add_gallery_item(grid: GridContainer, path: String) -> void:
 	vbox.mouse_filter = Control.MOUSE_FILTER_PASS
 	container.add_child(vbox)
 
-	var tex_rect = TextureRect.new()
-	tex_rect.custom_minimum_size = Vector2(128, 128)
-	tex_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-
-	tex_rect.texture = GalleryCacheService.get_texture(path)
-	vbox.add_child(tex_rect)
+	var is_apng = path.get_extension().to_lower() == "apng"
+	var anim_player_ref: Control = null
+	if is_apng:
+		var anim_player = ForegroundAnimPlayerScript.new()
+		anim_player.custom_minimum_size = Vector2(128, 128)
+		anim_player.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		vbox.add_child(anim_player)
+		anim_player_ref = anim_player
+	else:
+		var tex_rect = TextureRect.new()
+		tex_rect.custom_minimum_size = Vector2(128, 128)
+		tex_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		tex_rect.texture = GalleryCacheService.get_texture(path)
+		vbox.add_child(tex_rect)
 
 	var name_label = Label.new()
 	name_label.text = path.get_file()
@@ -256,15 +265,6 @@ func _add_gallery_item(grid: GridContainer, path: String) -> void:
 	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vbox.add_child(name_label)
 
-	if path.get_extension().to_lower() == "apng":
-		var badge = Label.new()
-		badge.text = "▶"
-		badge.add_theme_color_override("font_color", Color(0.3, 0.85, 0.3))
-		badge.add_theme_font_size_override("font_size", 14)
-		badge.position = Vector2(4, 4)
-		badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		container.add_child(badge)
-
 	container.gui_input.connect(func(event: InputEvent):
 		if event is InputEventMouseButton and event.pressed:
 			if event.button_index == MOUSE_BUTTON_LEFT and event.double_click:
@@ -273,6 +273,21 @@ func _add_gallery_item(grid: GridContainer, path: String) -> void:
 				_show_context_menu(path, container.get_global_mouse_position())
 	)
 	grid.add_child(container)
+
+	# Load APNG after entering scene tree so ForegroundAnimPlayer._ready() has run
+	if is_apng and is_instance_valid(anim_player_ref):
+		if anim_player_ref.load_apng(path):
+			anim_player_ref.play()
+		else:
+			anim_player_ref.queue_free()
+			var fallback = TextureRect.new()
+			fallback.custom_minimum_size = Vector2(128, 128)
+			fallback.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			fallback.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			fallback.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			fallback.texture = GalleryCacheService.get_texture(path)
+			vbox.add_child(fallback)
+			vbox.move_child(fallback, 0)
 
 
 func _list_images(dir_path: String) -> Array:
