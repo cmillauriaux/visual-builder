@@ -102,6 +102,11 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 	if platform != "web":
 		_remove_unused_assets(abs_temp_story, log_path)
 
+	# 3b-extra. Aplatir les APNG en PNG statiques (première frame)
+	var static_apng: bool = export_options.get("static_apng", false)
+	if static_apng:
+		_flatten_apng_files(abs_temp_story, log_path)
+
 	# 3b. Redimensionner les images si qualité SD ou Ultra SD
 	if quality == "sd":
 		_resize_story_images(abs_temp_story, 2, log_path)
