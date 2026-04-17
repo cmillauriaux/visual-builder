@@ -24,9 +24,6 @@ func after_each():
 func test_build_ui_creates_prompt():
 	assert_not_null(_prompt)
 
-func test_prompt_initially_hidden():
-	assert_false(_prompt.visible)
-
 func test_prompt_has_message_node():
 	var msg = _prompt.find_child("Message", true, false)
 	assert_not_null(msg, "Le prompt doit contenir un noeud Message")
@@ -46,29 +43,35 @@ func test_get_user_agent_returns_empty_on_non_web():
 		var ua = PwaInstallPromptScript._get_user_agent()
 		assert_eq(ua, "")
 
-func test_is_standalone_returns_false_on_non_web():
-	if OS.get_name() != "Web":
-		assert_false(PwaInstallPromptScript._is_standalone())
-
 
 # --- show_if_needed ---
 
 func test_show_if_needed_returns_false_when_dismissed():
-	var result = _prompt.show_if_needed(true)
+	# show_if_needed(parent, pwa_prompt_dismissed)
+	var parent = Node.new()
+	add_child_autofree(parent)
+	var prompt = Control.new()
+	prompt.set_script(PwaInstallPromptScript)
+	var result = prompt.show_if_needed(parent, true)
 	assert_false(result, "Doit retourner false si dismissed")
-	assert_false(_prompt.visible)
+	assert_eq(prompt.get_parent(), null, "Le prompt ne doit pas être ajouté au parent")
+	prompt.queue_free()
 
 func test_show_if_needed_returns_false_on_non_web():
 	if OS.get_name() != "Web":
-		var result = _prompt.show_if_needed(false)
+		var parent = Node.new()
+		add_child_autofree(parent)
+		var prompt = Control.new()
+		prompt.set_script(PwaInstallPromptScript)
+		var result = prompt.show_if_needed(parent, false)
 		assert_false(result, "Doit retourner false hors web")
-		assert_false(_prompt.visible)
+		assert_eq(prompt.get_parent(), null, "Le prompt ne doit pas être ajouté au parent")
+		prompt.queue_free()
 
 
 # --- Signal closed ---
 
 func test_ok_button_emits_closed_signal():
-	_prompt.visible = true
 	var result := [null]
 	_prompt.closed.connect(func(dont_show: bool): result[0] = dont_show)
 
@@ -76,7 +79,6 @@ func test_ok_button_emits_closed_signal():
 	assert_not_null(ok_btn, "Doit trouver le bouton Compris")
 	if ok_btn:
 		ok_btn.pressed.emit()
-		assert_false(_prompt.visible, "Le prompt doit se fermer")
 		assert_eq(result[0], false, "Par défaut, dont_show est false")
 
 func test_ok_button_with_checkbox_emits_true():

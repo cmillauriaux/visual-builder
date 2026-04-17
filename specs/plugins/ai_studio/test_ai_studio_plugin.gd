@@ -54,8 +54,8 @@ func test_image_picker_tab_create_tab_returns_control() -> void:
 	ctrl.queue_free()
 
 
-func test_dialog_has_ten_tabs() -> void:
+func test_dialog_has_nine_tabs() -> void:
 	var dialog = AIStudioDialog.new()
 	add_child_autofree(dialog)
 	await get_tree().process_frame
-	assert_eq(dialog._tab_container.get_tab_count(), 10)
+	assert_eq(dialog._tab_container.get_tab_count(), 9)

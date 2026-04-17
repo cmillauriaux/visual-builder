@@ -94,9 +94,11 @@ func test_builds_condition_editor() -> void:
 	assert_false(_main._condition_editor_panel.visible)
 
 
-func test_builds_tab_container_with_4_tabs() -> void:
+func test_builds_tab_container_with_expected_tabs() -> void:
 	assert_not_null(_main._tab_container)
-	assert_eq(_main._tab_container.get_tab_count(), 4)
+	# 6 onglets core (Texte, Calques, Terminaison, Musique, FX, Paramètres)
+	# + 1 onglet plugin voice_studio (Voix)
+	assert_eq(_main._tab_container.get_tab_count(), 7)
 
 
 func test_builds_ending_editor() -> void:

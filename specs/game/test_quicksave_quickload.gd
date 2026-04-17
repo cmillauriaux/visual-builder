@@ -25,12 +25,14 @@ func after_each() -> void:
 
 func test_quicksave_button_exists() -> void:
 	assert_not_null(_game._quicksave_button, "quicksave button should be created")
-	assert_eq(_game._quicksave_button.text, "Save (F5)")
+	# Texte initial ("Save (F)") — la clé i18n "Save (F5)" n'est appliquée qu'après apply_ui_translations()
+	assert_eq(_game._quicksave_button.text, "Save (F)")
 
 
 func test_quickload_button_exists() -> void:
 	assert_not_null(_game._quickload_button, "quickload button should be created")
-	assert_eq(_game._quickload_button.text, "Load (F9)")
+	# Texte initial ("Load (F)") — la clé i18n "Load (F9)" n'est appliquée qu'après apply_ui_translations()
+	assert_eq(_game._quickload_button.text, "Load (F)")
 
 
 func test_play_buttons_bar_exists() -> void:

@@ -65,34 +65,40 @@ func test_tab_container_exists():
 	assert_not_null(_main._tab_container, "TabContainer should exist")
 	assert_true(_main._tab_container is TabContainer, "Should be a TabContainer")
 
-func test_tab_container_has_4_tabs():
-	assert_eq(_main._tab_container.get_tab_count(), 4, "Should have 4 tabs")
+func test_tab_container_has_expected_tabs():
+	# 6 onglets core (Texte, Calques, Terminaison, Musique, FX, Paramètres)
+	# + 1 onglet plugin voice_studio (Voix)
+	assert_eq(_main._tab_container.get_tab_count(), 7, "Should have 7 tabs (6 core + 1 plugin)")
 
 func test_tab_names():
-	assert_eq(_main._tab_container.get_tab_title(0), "Terminaison")
-	assert_eq(_main._tab_container.get_tab_title(1), "Musique")
-	assert_eq(_main._tab_container.get_tab_title(2), "FX")
-	assert_eq(_main._tab_container.get_tab_title(3), "Paramètres")
+	assert_eq(_main._tab_container.get_tab_title(0), "Texte")
+	assert_eq(_main._tab_container.get_tab_title(1), "Calques")
+	assert_eq(_main._tab_container.get_tab_title(2), "Terminaison")
+	assert_eq(_main._tab_container.get_tab_title(3), "Musique")
+	assert_eq(_main._tab_container.get_tab_title(4), "FX")
+	assert_eq(_main._tab_container.get_tab_title(5), "Paramètres")
 
 # --- Contenu de l'onglet Terminaison ---
 
 func test_ending_editor_in_terminaison_tab():
 	assert_not_null(_main._ending_editor, "Ending editor should exist")
-	var terminaison_tab = _main._tab_container.get_child(0)
+	# Terminaison est désormais l'onglet index 2 (après Texte et Calques)
+	var terminaison_tab = _main._tab_container.get_child(2)
 	assert_true(terminaison_tab.is_ancestor_of(_main._ending_editor),
 		"Ending editor should be inside terminaison tab")
 
 # --- Placeholders Musique et FX ---
 
 func test_fx_tab_has_fx_panel():
-	var fx_tab = _main._tab_container.get_child(2)
+	# FX est désormais l'onglet index 4
+	var fx_tab = _main._tab_container.get_child(4)
 	assert_not_null(fx_tab, "FX tab should exist")
 	assert_eq(fx_tab, _main._fx_panel, "FX tab should be the FxPanel")
 
 # --- Sélection par défaut ---
 
-func test_terminaison_tab_selected_by_default():
-	assert_eq(_main._tab_container.current_tab, 0, "Terminaison tab should be selected by default")
+func test_texte_tab_selected_by_default():
+	assert_eq(_main._tab_container.current_tab, 0, "Texte tab should be selected by default")
 
 # --- Indicateur de terminaison ---
 
@@ -100,7 +106,7 @@ func test_terminaison_tab_no_indicator_when_no_ending():
 	var seq = _navigate_to_sequence()
 	seq.ending = null
 	_main._update_ending_tab_indicator()
-	assert_eq(_main._tab_container.get_tab_title(0), "Terminaison")
+	assert_eq(_main._tab_container.get_tab_title(2), "Terminaison")
 
 func test_terminaison_tab_indicator_when_ending_configured():
 	var seq = _navigate_to_sequence()
@@ -111,23 +117,23 @@ func test_terminaison_tab_indicator_when_ending_configured():
 	ending.auto_consequence = cons
 	seq.ending = ending
 	_main._update_ending_tab_indicator()
-	assert_eq(_main._tab_container.get_tab_title(0), "Terminaison ●")
+	assert_eq(_main._tab_container.get_tab_title(2), "Terminaison ●")
 
 func test_indicator_updates_on_ending_changed():
 	var seq = _navigate_to_sequence()
 	# Initially no ending
-	assert_eq(_main._tab_container.get_tab_title(0), "Terminaison")
+	assert_eq(_main._tab_container.get_tab_title(2), "Terminaison")
 	# Add ending
 	var ending = EndingScript.new()
 	ending.type = "choices"
 	seq.ending = ending
 	# Simulate ending_changed signal
 	_main._ending_editor._notify_change()
-	
+
 	# Attendre que l'EventBus propage le signal à main.gd
 	await wait_frames(1)
-	
-	assert_eq(_main._tab_container.get_tab_title(0), "Terminaison ●")
+
+	assert_eq(_main._tab_container.get_tab_title(2), "Terminaison ●")
 
 # --- Fonctionnalités existantes ---
 

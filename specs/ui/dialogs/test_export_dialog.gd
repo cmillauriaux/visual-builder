@@ -31,12 +31,13 @@ func test_dialog_has_platform_dropdown():
 
 func test_dialog_shows_all_platforms():
 	var dd = _dialog._platform_dropdown
-	assert_eq(dd.item_count, 5)
+	assert_eq(dd.item_count, 6)
 	assert_eq(dd.get_item_text(0), "Web (HTML5)")
 	assert_eq(dd.get_item_text(1), "macOS")
 	assert_eq(dd.get_item_text(2), "Linux")
 	assert_eq(dd.get_item_text(3), "Windows")
 	assert_eq(dd.get_item_text(4), "Android")
+	assert_eq(dd.get_item_text(5), "iOS")
 
 
 func test_dialog_has_path_edit():

@@ -44,7 +44,9 @@ func test_collect_menu_assets():
 	var assets = builder._collect_menu_assets(story)
 	assert_true(assets.has("bg.png"))
 	assert_true(assets.has("music.mp3"))
-	assert_eq(assets.size(), 2)
+	# blink_manifest.yaml est ajouté automatiquement pour rester dans le core PCK
+	assert_true(assets.has("assets/foregrounds/blink_manifest.yaml"))
+	assert_eq(assets.size(), 3)
 	builder.free()
 
 

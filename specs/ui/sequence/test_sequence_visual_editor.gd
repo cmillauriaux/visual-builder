@@ -385,14 +385,16 @@ func test_normalize_empty_sequence():
 func test_wrapper_reused_when_uuid_changes_but_visual_identical():
 	# Simule le scénario : même image/position, UUID différent entre 2 dialogues
 	# → le wrapper doit être RÉUTILISÉ (pas détruit/recréé)
+	# Note: on utilise res://icon.svg car le matching wrapper exige que la texture
+	# ait été chargée avec succès (_create_fg_visual retire le meta fg_image en cas d'échec)
 	_editor.load_sequence(_sequence)
-	_editor.add_foreground("Grille", "prison_bars.png")
+	_editor.add_foreground("Grille", "res://icon.svg")
 	var old_uuid = _sequence.foregrounds[0].uuid
 	var old_wrapper = _editor._fg_visual_map[old_uuid]
 
 	# Simuler un changement de dialogue : nouveau foreground, UUID différent, même visuel
 	var new_fg = Foreground.new()
-	new_fg.image = "prison_bars.png"
+	new_fg.image = "res://icon.svg"
 	new_fg.anchor_bg = _sequence.foregrounds[0].anchor_bg
 	new_fg.anchor_fg = _sequence.foregrounds[0].anchor_fg
 	new_fg.scale = _sequence.foregrounds[0].scale
@@ -430,15 +432,16 @@ func test_wrapper_not_reused_when_image_changes():
 
 func test_wrapper_reused_for_unchanged_fg_among_changed_ones():
 	# Scénario "Lucy" : 3 FGs, seul le personnage change, la grille reste
+	# Note: on utilise res://icon.svg pour que la texture "grille" charge avec succès
 	_editor.load_sequence(_sequence)
-	_editor.add_foreground("Grille", "prison_bars.png")
+	_editor.add_foreground("Grille", "res://icon.svg")
 	_editor.add_foreground("Jessy", "jessy_sad.png")
 	var grille_uuid = _sequence.foregrounds[0].uuid
 	var grille_wrapper = _editor._fg_visual_map[grille_uuid]
 
 	# Nouveau dialogue : grille identique (UUID différent), Jessy change d'image
 	var new_grille = Foreground.new()
-	new_grille.image = "prison_bars.png"
+	new_grille.image = "res://icon.svg"
 	new_grille.anchor_bg = _sequence.foregrounds[0].anchor_bg
 	new_grille.anchor_fg = _sequence.foregrounds[0].anchor_fg
 	new_grille.scale = _sequence.foregrounds[0].scale

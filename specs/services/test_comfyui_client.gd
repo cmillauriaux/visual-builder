@@ -398,7 +398,7 @@ func test_inject_loras_create_empty_loras():
 		"guider": {"class_type": "CFGGuider", "inputs": {"model": ["ckpt", 0], "positive": ["clip_text", 0], "negative": ["neg_cond", 0], "cfg": 1.0}},
 		"clip_text": {"class_type": "CLIPTextEncode", "inputs": {"text": "", "clip": ["ckpt", 1]}}
 	}
-	client._inject_loras_create(wf, [], "ckpt", "guider", "clip_text")
+	client._inject_loras_create(wf, [], ["ckpt", 0], ["ckpt", 1], "guider", "clip_text")
 	assert_false(wf.has("clora_0"))
 	assert_eq(wf["guider"]["inputs"]["model"], ["ckpt", 0])
 	assert_eq(wf["clip_text"]["inputs"]["clip"], ["ckpt", 1])
@@ -411,7 +411,7 @@ func test_inject_loras_create_single_lora():
 		"guider": {"class_type": "CFGGuider", "inputs": {"model": ["ckpt", 0], "positive": ["clip_text", 0], "negative": ["neg_cond", 0], "cfg": 1.0}},
 		"clip_text": {"class_type": "CLIPTextEncode", "inputs": {"text": "", "clip": ["ckpt", 1]}}
 	}
-	client._inject_loras_create(wf, [{"name": "my_lora.safetensors", "strength": 0.8}], "ckpt", "guider", "clip_text")
+	client._inject_loras_create(wf, [{"name": "my_lora.safetensors", "strength": 0.8}], ["ckpt", 0], ["ckpt", 1], "guider", "clip_text")
 	assert_true(wf.has("clora_0"))
 	assert_eq(wf["clora_0"]["class_type"], "LoraLoader")
 	assert_eq(wf["clora_0"]["inputs"]["lora_name"], "my_lora.safetensors")
@@ -433,7 +433,7 @@ func test_inject_loras_create_multiple_loras():
 		{"name": "lora_a.safetensors", "strength": 0.7},
 		{"name": "lora_b.safetensors", "strength": 0.5}
 	]
-	client._inject_loras_create(wf, loras, "ckpt", "guider", "clip_text")
+	client._inject_loras_create(wf, loras, ["ckpt", 0], ["ckpt", 1], "guider", "clip_text")
 	assert_true(wf.has("clora_0"))
 	assert_true(wf.has("clora_1"))
 	assert_eq(wf["clora_0"]["inputs"]["model"], ["ckpt", 0])
@@ -449,18 +449,18 @@ func test_build_create_flux_workflow_structure():
 	var client = ComfyUIClientScript.new()
 	var wf = client._build_create_flux_workflow("test prompt", "", "my_model.safetensors", [], 20, 3.5, 1.0, 12345)
 	assert_true(wf.has("9"))  # SaveImage
-	assert_true(wf.has("ckpt"))
+	assert_true(wf.has("unet"))
 	assert_true(wf.has("latent"))
 	assert_true(wf.has("sampler"))
 	assert_true(wf.has("noise"))
 	assert_true(wf.has("clip_text"))
-	assert_eq(wf["ckpt"]["class_type"], "CheckpointLoaderSimple")
+	assert_eq(wf["unet"]["class_type"], "UNETLoader")
 	assert_eq(wf["latent"]["class_type"], "EmptyFlux2LatentImage")
 
 func test_build_create_flux_workflow_params():
 	var client = ComfyUIClientScript.new()
 	var wf = client._build_create_flux_workflow("my prompt", "", "flux_model.safetensors", [], 25, 4.0, 1.0, 99999)
-	assert_eq(wf["ckpt"]["inputs"]["ckpt_name"], "flux_model.safetensors")
+	assert_eq(wf["unet"]["inputs"]["unet_name"], "flux_model.safetensors")
 	assert_eq(wf["clip_text"]["inputs"]["text"], "my prompt")
 	assert_eq(wf["noise"]["inputs"]["noise_seed"], 99999)
 	assert_eq(wf["scheduler"]["inputs"]["steps"], 25)

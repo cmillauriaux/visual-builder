@@ -110,7 +110,7 @@ func test_build_wan_vace_workflow_sets_source_image():
 
 func test_build_wan_vace_workflow_has_imagescale():
 	var client = ComfyUIClientScript.new()
-	var wf = client._build_wan_vace_workflow("src.png", "p", 1, false, 7.0, 20, 0.85, "", 6, 3.0, 480, 832)
+	var wf = client._build_wan_vace_workflow("src.png", "p", 1, false, 7.0, 20, 0.85, "", 6, 3.0, 8, 480, 832)
 	assert_true(wf.has("wv:scale"))
 	assert_eq(wf["wv:scale"]["class_type"], "ImageScale")
 	assert_eq(wf["wv:scale"]["inputs"]["width"], 480)
@@ -137,7 +137,7 @@ func test_wan_vace_resolution_square():
 func test_build_wan_vace_workflow_uses_wan_resolution():
 	var client = ComfyUIClientScript.new()
 	# 480×832 passé directement = résolution Wan valide
-	var wf = client._build_wan_vace_workflow("src.png", "p", 1, false, 7.0, 20, 0.85, "", 6, 3.0, 480, 832)
+	var wf = client._build_wan_vace_workflow("src.png", "p", 1, false, 7.0, 20, 0.85, "", 6, 3.0, 8, 480, 832)
 	assert_eq(wf["wv:vace"]["inputs"]["width"], 480)
 	assert_eq(wf["wv:vace"]["inputs"]["height"], 832)
 
@@ -289,7 +289,7 @@ func test_build_wan_i2v_workflow_sets_prompt():
 
 func test_build_wan_i2v_workflow_scales_source():
 	var client = ComfyUIClientScript.new()
-	var wf = client._build_wan_i2v_workflow("src.png", "p", 1, 3.5, 20, "", 3.0, 480, 832)
+	var wf = client._build_wan_i2v_workflow("src.png", "p", 1, 3.5, 20, "", 3.0, 8, 480, 832)
 	assert_eq(wf["i2v:scale"]["class_type"], "ImageScale")
 	assert_eq(wf["i2v:scale"]["inputs"]["width"], 480)
 	assert_eq(wf["i2v:scale"]["inputs"]["height"], 832)
@@ -298,7 +298,7 @@ func test_build_wan_i2v_workflow_scales_source():
 
 func test_build_wan_i2v_workflow_encode_sets_resolution():
 	var client = ComfyUIClientScript.new()
-	var wf = client._build_wan_i2v_workflow("src.png", "p", 1, 3.5, 20, "", 3.0, 480, 832)
+	var wf = client._build_wan_i2v_workflow("src.png", "p", 1, 3.5, 20, "", 3.0, 8, 480, 832)
 	assert_eq(wf["i2v:encode"]["class_type"], "WanImageToVideo")
 	assert_eq(wf["i2v:encode"]["inputs"]["width"], 480)
 	assert_eq(wf["i2v:encode"]["inputs"]["height"], 832)
@@ -318,16 +318,16 @@ func test_build_wan_i2v_workflow_num_frames_3s():
 func test_build_wan_i2v_workflow_two_stage_sampler():
 	var client = ComfyUIClientScript.new()
 	var wf = client._build_wan_i2v_workflow("src.png", "p", 42, 3.5, 20, "", 3.0)
-	# Stage 1: high_noise, steps 0→10
+	# Stage 1: high_noise, steps 0→12 (split 60/40 : 20 * 0.6 = 12)
 	assert_eq(wf["i2v:sampler1"]["inputs"]["model"][0], "i2v:unet_high")
 	assert_eq(wf["i2v:sampler1"]["inputs"]["add_noise"], "enable")
 	assert_eq(wf["i2v:sampler1"]["inputs"]["start_at_step"], 0)
-	assert_eq(wf["i2v:sampler1"]["inputs"]["end_at_step"], 10)
+	assert_eq(wf["i2v:sampler1"]["inputs"]["end_at_step"], 12)
 	assert_eq(wf["i2v:sampler1"]["inputs"]["return_with_leftover_noise"], "enable")
-	# Stage 2: low_noise, steps 10→20, receives latent from stage 1
+	# Stage 2: low_noise, steps 12→20, receives latent from stage 1
 	assert_eq(wf["i2v:sampler2"]["inputs"]["model"][0], "i2v:unet_low")
 	assert_eq(wf["i2v:sampler2"]["inputs"]["add_noise"], "disable")
-	assert_eq(wf["i2v:sampler2"]["inputs"]["start_at_step"], 10)
+	assert_eq(wf["i2v:sampler2"]["inputs"]["start_at_step"], 12)
 	assert_eq(wf["i2v:sampler2"]["inputs"]["end_at_step"], 20)
 	assert_eq(wf["i2v:sampler2"]["inputs"]["latent_image"][0], "i2v:sampler1")
 

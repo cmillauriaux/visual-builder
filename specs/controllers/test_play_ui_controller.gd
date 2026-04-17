@@ -9,6 +9,7 @@ class MockVisualEditor extends Control:
 
 class MockMain extends Control:
 	var _play_character_label = Label.new()
+	var _play_character_box = PanelContainer.new()
 	var _play_text_label = Label.new()
 	var _choice_overlay = Control.new()
 	var _choice_panel = Control.new()
@@ -19,6 +20,7 @@ class MockMain extends Control:
 		_visual_editor = MockVisualEditor.new()
 		_choice_overlay.add_child(_choice_panel)
 		add_child(_play_character_label)
+		add_child(_play_character_box)
 		add_child(_play_text_label)
 		add_child(_play_ctrl)
 		add_child(_visual_editor)

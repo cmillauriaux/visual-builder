@@ -361,7 +361,7 @@ func test_set_typewriter_speed_zero_does_not_change_timer() -> void:
 func test_set_dialogue_opacity_updates_overlay() -> void:
 	_game._play_ctrl.set_dialogue_opacity(0.5)
 	assert_eq(_game._play_ctrl._dialogue_opacity, 0.5, "opacity var should be updated")
-	assert_eq(_game._play_overlay.self_modulate.a, 0.5, "play overlay alpha should match")
+	assert_eq(_game._play_dialogue_panel.self_modulate.a, 0.5, "play dialogue panel alpha should match")
 
 
 # --- set_toolbar_visible ---
