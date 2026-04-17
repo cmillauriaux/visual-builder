@@ -779,3 +779,157 @@ func test_resize_story_images_handles_webp():
 	assert_eq(img.get_height(), 64, "Height should be halved")
 
 	service._remove_dir_recursive(temp_dir)
+
+
+# --- Tests _flatten_apng_files ---
+
+func _create_test_apng(path: String, color1: Color = Color.RED, color2: Color = Color.BLUE) -> void:
+	var frame1 = Image.create(32, 32, false, Image.FORMAT_RGBA8)
+	frame1.fill(color1)
+	var frame2 = Image.create(32, 32, false, Image.FORMAT_RGBA8)
+	frame2.fill(color2)
+	var apng_data = ApngBuilder.build([frame1, frame2], 12.0)
+	var f = FileAccess.open(path, FileAccess.WRITE)
+	f.store_buffer(apng_data)
+	f.close()
+
+
+func _create_flatten_test_dir() -> String:
+	var temp_dir = ProjectSettings.globalize_path("user://test_flatten_apng_" + str(Time.get_ticks_msec()))
+	DirAccess.make_dir_recursive_absolute(temp_dir + "/assets/foregrounds")
+	DirAccess.make_dir_recursive_absolute(temp_dir + "/chapters/ch1/scenes")
+	return temp_dir
+
+
+func test_find_apng_files_recursive():
+	var service = ExportServiceScript.new()
+	var temp_dir = _create_flatten_test_dir()
+
+	_create_test_apng(temp_dir + "/assets/foregrounds/hero.apng")
+	_create_test_apng(temp_dir + "/assets/foregrounds/villain.apng")
+	# Non-APNG file (should be ignored)
+	_create_test_image(temp_dir + "/assets/foregrounds/static.png", 32, 32)
+
+	var files = service._find_apng_files_recursive(temp_dir)
+	var names: Array = []
+	for p in files:
+		names.append(p.get_file())
+
+	assert_eq(files.size(), 2, "Should find exactly 2 APNG files")
+	assert_true("hero.apng" in names, "Should find hero.apng")
+	assert_true("villain.apng" in names, "Should find villain.apng")
+	assert_false("static.png" in names, "Should not include PNG files")
+
+	service._remove_dir_recursive(temp_dir)
+
+
+func test_flatten_apng_replaces_with_png():
+	var service = ExportServiceScript.new()
+	var temp_dir = _create_flatten_test_dir()
+	var log_path = temp_dir + "/test.log"
+	var f = FileAccess.open(log_path, FileAccess.WRITE)
+	f.close()
+
+	_create_test_apng(temp_dir + "/assets/foregrounds/hero.apng", Color.RED, Color.BLUE)
+
+	# YAML referencing the APNG
+	f = FileAccess.open(temp_dir + "/chapters/ch1/scenes/s1.yaml", FileAccess.WRITE)
+	f.store_string('sequences:\n  - foregrounds:\n      - image: "assets/foregrounds/hero.apng"\n')
+	f.close()
+
+	service._flatten_apng_files(temp_dir, log_path)
+
+	# APNG should be deleted
+	assert_false(FileAccess.file_exists(temp_dir + "/assets/foregrounds/hero.apng"), "APNG should be deleted")
+	# PNG should exist
+	assert_true(FileAccess.file_exists(temp_dir + "/assets/foregrounds/hero.png"), "PNG should be created")
+
+	service._remove_dir_recursive(temp_dir)
+
+
+func test_flatten_apng_creates_valid_first_frame_png():
+	var service = ExportServiceScript.new()
+	var temp_dir = _create_flatten_test_dir()
+	var log_path = temp_dir + "/test.log"
+	var f = FileAccess.open(log_path, FileAccess.WRITE)
+	f.close()
+
+	_create_test_apng(temp_dir + "/assets/foregrounds/hero.apng", Color.RED, Color.BLUE)
+
+	service._flatten_apng_files(temp_dir, log_path)
+
+	# The resulting PNG should be loadable and match the first frame (RED)
+	var img = Image.new()
+	assert_eq(img.load(temp_dir + "/assets/foregrounds/hero.png"), OK, "PNG should be loadable")
+	assert_eq(img.get_width(), 32, "Width should match")
+	assert_eq(img.get_height(), 32, "Height should match")
+	var pixel = img.get_pixel(16, 16)
+	assert_almost_eq(pixel.r, 1.0, 0.01, "First frame should be red (R)")
+	assert_almost_eq(pixel.g, 0.0, 0.01, "First frame should be red (G)")
+	assert_almost_eq(pixel.b, 0.0, 0.01, "First frame should be red (B)")
+
+	service._remove_dir_recursive(temp_dir)
+
+
+func test_flatten_apng_updates_yaml_refs():
+	var service = ExportServiceScript.new()
+	var temp_dir = _create_flatten_test_dir()
+	var log_path = temp_dir + "/test.log"
+	var f = FileAccess.open(log_path, FileAccess.WRITE)
+	f.close()
+
+	_create_test_apng(temp_dir + "/assets/foregrounds/hero.apng")
+
+	f = FileAccess.open(temp_dir + "/chapters/ch1/scenes/s1.yaml", FileAccess.WRITE)
+	f.store_string('sequences:\n  - foregrounds:\n      - image: "assets/foregrounds/hero.apng"\n        anim_speed: 1.5\n        anim_loop: true\n')
+	f.close()
+
+	service._flatten_apng_files(temp_dir, log_path)
+
+	var content = FileAccess.get_file_as_string(temp_dir + "/chapters/ch1/scenes/s1.yaml")
+	assert_true(content.find("hero.png") >= 0, "YAML should reference hero.png")
+	assert_true(content.find("hero.apng") < 0, "YAML should no longer reference hero.apng")
+
+	service._remove_dir_recursive(temp_dir)
+
+
+func test_flatten_apng_smaller_than_original():
+	var service = ExportServiceScript.new()
+	var temp_dir = _create_flatten_test_dir()
+	var log_path = temp_dir + "/test.log"
+	var f = FileAccess.open(log_path, FileAccess.WRITE)
+	f.close()
+
+	_create_test_apng(temp_dir + "/assets/foregrounds/hero.apng")
+
+	var fa = FileAccess.open(temp_dir + "/assets/foregrounds/hero.apng", FileAccess.READ)
+	var apng_size = fa.get_length()
+	fa.close()
+
+	service._flatten_apng_files(temp_dir, log_path)
+
+	fa = FileAccess.open(temp_dir + "/assets/foregrounds/hero.png", FileAccess.READ)
+	var png_size = fa.get_length()
+	fa.close()
+
+	assert_true(png_size < apng_size, "Static PNG (%d) should be smaller than APNG (%d)" % [png_size, apng_size])
+
+	service._remove_dir_recursive(temp_dir)
+
+
+func test_flatten_apng_no_apng_files_does_nothing():
+	var service = ExportServiceScript.new()
+	var temp_dir = _create_flatten_test_dir()
+	var log_path = temp_dir + "/test.log"
+	var f = FileAccess.open(log_path, FileAccess.WRITE)
+	f.close()
+
+	# Only static images, no APNG
+	_create_test_image(temp_dir + "/assets/foregrounds/hero.png", 32, 32)
+
+	service._flatten_apng_files(temp_dir, log_path)
+
+	# PNG should be untouched
+	assert_true(FileAccess.file_exists(temp_dir + "/assets/foregrounds/hero.png"), "PNG should still exist")
+
+	service._remove_dir_recursive(temp_dir)

@@ -1579,6 +1579,84 @@ func _patch_ios_xcode_project(xcode_path: String, log_path: String) -> void:
 		_append_log(log_path, "→ Xcode project patché: ajout LD_CLASSIC pour Xcode 26")
 
 
+## Aplatit les fichiers APNG en PNG statiques (première frame).
+## Supprime les .apng et met à jour les références YAML.
+func _flatten_apng_files(story_dir: String, log_path: String) -> void:
+	var apng_files = _find_apng_files_recursive(story_dir)
+	if apng_files.is_empty():
+		return
+
+	_append_log(log_path, "→ Aplatissement APNG → PNG (%d fichiers)..." % apng_files.size())
+
+	var total_original_size := 0
+	var total_png_size := 0
+	var converted_count := 0
+	var conversions: Dictionary = {}  # old_filename -> new_filename
+
+	for apng_path in apng_files:
+		var fa = FileAccess.open(apng_path, FileAccess.READ)
+		if fa == null:
+			_append_log(log_path, "  ⚠ Impossible d'ouvrir : " + apng_path.get_file())
+			continue
+		var original_size = fa.get_length()
+		var data = fa.get_buffer(original_size)
+		fa.close()
+
+		var img = Image.new()
+		if img.load_png_from_buffer(data) != OK:
+			_append_log(log_path, "  ⚠ Impossible de charger : " + apng_path.get_file())
+			continue
+
+		var png_path = apng_path.get_basename() + ".png"
+		if img.save_png(png_path) != OK:
+			_append_log(log_path, "  ⚠ Échec sauvegarde : " + png_path.get_file())
+			continue
+
+		DirAccess.remove_absolute(apng_path)
+		conversions[apng_path.get_file()] = png_path.get_file()
+
+		var new_size := 0
+		var fa2 = FileAccess.open(png_path, FileAccess.READ)
+		if fa2:
+			new_size = fa2.get_length()
+			fa2.close()
+
+		total_original_size += original_size
+		total_png_size += new_size
+		converted_count += 1
+
+	if converted_count > 0:
+		_replace_filenames_in_yaml(story_dir, conversions, log_path)
+
+	if total_original_size > 0:
+		var savings = 100.0 * (1.0 - float(total_png_size) / float(total_original_size))
+		_append_log(log_path, "  → %d APNG aplatis : %.1f Mo → %.1f Mo (−%.0f%%)" % [
+			converted_count,
+			total_original_size / 1048576.0,
+			total_png_size / 1048576.0,
+			savings
+		])
+
+
+## Parcourt récursivement un dossier et retourne les chemins de tous les fichiers .apng.
+func _find_apng_files_recursive(dir_path: String) -> Array:
+	var result = []
+	var dir = DirAccess.open(dir_path)
+	if dir == null:
+		return result
+	dir.list_dir_begin()
+	var file_name = dir.get_next()
+	while file_name != "":
+		if file_name != "." and file_name != "..":
+			var full_path = dir_path + "/" + file_name
+			if dir.current_is_dir():
+				result.append_array(_find_apng_files_recursive(full_path))
+			elif file_name.get_extension().to_lower() == "apng":
+				result.append(full_path)
+		file_name = dir.get_next()
+	return result
+
+
 ## Build le .ipa depuis le projet Xcode exporté.
 func _build_ios_ipa(xcode_dir: String, ipa_path: String, log_path: String) -> int:
 	var script_path = ProjectSettings.globalize_path("res://scripts/build_ios_xcode.sh")
