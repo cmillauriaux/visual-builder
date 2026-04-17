@@ -1124,3 +1124,87 @@ func test_compute_timings_audio_choices_and_conditions_zero():
 	]
 	var result = _verifier._compute_timings(runs)
 	assert_almost_eq(result["chapters"][0]["game_over"]["audio_min_seconds"], 5.0, 0.01)
+
+
+# === _compute_max_runs ===
+
+func test_compute_max_runs_no_choices_returns_min():
+	var story = _build_simple_story()
+	story.chapters[0].scenes[0].sequences[0].ending = _make_ending_auto("game_over", "")
+	assert_eq(_verifier._compute_max_runs(story), StoryVerifier.MIN_RUNS)
+
+func test_compute_max_runs_few_choices_returns_min():
+	# 2 choix * 2 = 4 < MIN_RUNS -> MIN_RUNS
+	var story = _make_story()
+	var ch = _make_chapter("Ch1")
+	story.chapters.append(ch)
+	var sc = _make_scene("Sc1")
+	ch.scenes.append(sc)
+	var seq1 = _make_sequence("Seq1", Vector2(0, 0))
+	var seq2 = _make_sequence("SeqA", Vector2(200, 0))
+	var seq3 = _make_sequence("SeqB", Vector2(200, 200))
+	sc.sequences.append(seq1)
+	sc.sequences.append(seq2)
+	sc.sequences.append(seq3)
+	seq1.ending = _make_ending_choices([
+		{"text": "Go A", "type": "redirect_sequence", "target": seq2.uuid},
+		{"text": "Go B", "type": "redirect_sequence", "target": seq3.uuid},
+	])
+	seq2.ending = _make_ending_auto("game_over", "")
+	seq3.ending = _make_ending_auto("game_over", "")
+	assert_eq(_verifier._compute_max_runs(story), StoryVerifier.MIN_RUNS)
+
+func test_compute_max_runs_many_choices_scales_up():
+	# Creer une histoire avec beaucoup de choix pour depasser MIN_RUNS
+	var story = _make_story()
+	var ch = _make_chapter("Ch1")
+	story.chapters.append(ch)
+	var sc = _make_scene("Sc1")
+	ch.scenes.append(sc)
+	# Creer 30 sequences, chacune avec 4 choix = 120 choix total -> 240 runs
+	var targets := []
+	for i in range(30):
+		var target = _make_sequence("Target%d" % i, Vector2(400, i * 50))
+		target.ending = _make_ending_auto("game_over", "")
+		sc.sequences.append(target)
+		targets.append(target)
+	for i in range(30):
+		var seq = _make_sequence("Seq%d" % i, Vector2(0, i * 50))
+		var t0 = targets[i].uuid
+		var t1 = targets[(i + 1) % 30].uuid
+		var t2 = targets[(i + 2) % 30].uuid
+		var t3 = targets[(i + 3) % 30].uuid
+		seq.ending = _make_ending_choices([
+			{"text": "A", "type": "redirect_sequence", "target": t0},
+			{"text": "B", "type": "redirect_sequence", "target": t1},
+			{"text": "C", "type": "redirect_sequence", "target": t2},
+			{"text": "D", "type": "redirect_sequence", "target": t3},
+		])
+		sc.sequences.append(seq)
+	# 30 sequences * 4 choix = 120 choix -> max(100, 120 * 2) = 240
+	assert_eq(_verifier._compute_max_runs(story), 240)
+
+func test_compute_max_runs_no_ending_ignored():
+	var story = _build_simple_story()
+	# No ending set -> no choices counted
+	assert_eq(_verifier._compute_max_runs(story), StoryVerifier.MIN_RUNS)
+
+func test_compute_max_runs_auto_redirect_not_counted():
+	var story = _build_simple_story()
+	story.chapters[0].scenes[0].sequences[0].ending = _make_ending_auto("game_over", "")
+	# auto_redirect is not a choice, should not inflate count
+	assert_eq(_verifier._compute_max_runs(story), StoryVerifier.MIN_RUNS)
+
+
+# === _compute_max_steps ===
+
+func test_compute_max_steps_few_nodes_returns_min():
+	assert_eq(_verifier._compute_max_steps(5), StoryVerifier.MIN_STEPS)
+
+func test_compute_max_steps_many_nodes_scales_up():
+	# 500 nodes * 50 = 25000 > MIN_STEPS
+	assert_eq(_verifier._compute_max_steps(500), 25000)
+
+func test_compute_max_steps_boundary():
+	# 200 nodes * 50 = 10000 == MIN_STEPS -> MIN_STEPS
+	assert_eq(_verifier._compute_max_steps(200), StoryVerifier.MIN_STEPS)

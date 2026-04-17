@@ -8,8 +8,9 @@ extends RefCounted
 
 class_name StoryVerifier
 
-const MAX_RUNS := 100
-const MAX_STEPS := 10000
+const MIN_RUNS := 100
+const MIN_STEPS := 10000
+const STEPS_PER_NODE := 50
 const WORDS_PER_MINUTE := 250.0
 const SECONDS_PER_DIALOGUE := 1.0
 const SECONDS_PER_CHOICE := 5.0
@@ -32,13 +33,16 @@ func verify(story: RefCounted, story_base_path: String = "") -> Dictionary:
 	if all_nodes.is_empty():
 		return _empty_report()
 
+	var max_runs := _compute_max_runs(story)
+	var max_steps := _compute_max_steps(all_nodes.size())
+
 	var visited_nodes := {}  # uuid -> true
 	var global_coverage := {}  # sequence_uuid -> {choice_index: true} — partage entre runs
 	var game_over_choices := {}  # sequence_uuid -> {choice_index: true} — choix menant a game_over
 	var runs := []
 
-	for run_index in range(MAX_RUNS):
-		var run_result := _simulate_run(story, global_coverage, game_over_choices, run_index)
+	for run_index in range(max_runs):
+		var run_result := _simulate_run(story, global_coverage, game_over_choices, run_index, max_steps)
 		runs.append(run_result)
 
 		# Enregistrer les choix menant a game_over pour les eviter dans les runs suivants
@@ -100,7 +104,7 @@ func _empty_report() -> Dictionary:
 	}
 
 
-func _simulate_run(story: RefCounted, global_coverage: Dictionary, game_over_choices: Dictionary, run_index: int) -> Dictionary:
+func _simulate_run(story: RefCounted, global_coverage: Dictionary, game_over_choices: Dictionary, run_index: int, max_steps: int = MIN_STEPS) -> Dictionary:
 	var variables := {}
 	_init_variables(story, variables)
 	var path := []
@@ -123,7 +127,7 @@ func _simulate_run(story: RefCounted, global_coverage: Dictionary, game_over_cho
 	if current_node == null:
 		return _make_run_result(run_index, path, "error")
 
-	while step_count < MAX_STEPS:
+	while step_count < max_steps:
 		step_count += 1
 		var node_uuid: String = current_node.uuid
 		var is_condition: bool = current_node.get("rules") != null
@@ -272,6 +276,20 @@ func _resolve_consequence(consequence: RefCounted, story: RefCounted, chapter: R
 
 
 # --- Utilitaires ---
+
+func _compute_max_runs(story: RefCounted) -> int:
+	var total_choices := 0
+	for chapter in story.chapters:
+		for scene in chapter.scenes:
+			for seq in scene.sequences:
+				if seq.ending != null and seq.ending.type == "choices":
+					total_choices += seq.ending.choices.size()
+	return maxi(MIN_RUNS, total_choices * 2)
+
+
+func _compute_max_steps(node_count: int) -> int:
+	return maxi(MIN_STEPS, node_count * STEPS_PER_NODE)
+
 
 func _collect_all_nodes(story: RefCounted) -> Array:
 	var nodes := []
