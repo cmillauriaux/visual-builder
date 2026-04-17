@@ -147,3 +147,26 @@ func test_clearing_path_disables_export():
 
 func test_export_requested_signal_exists():
 	assert_has_signal(_dialog, "export_requested")
+
+
+# --- APNG statique ---
+
+func test_dialog_has_static_apng_checkbox():
+	assert_not_null(_dialog._static_apng_check)
+	assert_true(_dialog._static_apng_check is CheckBox)
+
+
+func test_static_apng_checkbox_unchecked_by_default():
+	assert_false(_dialog._static_apng_check.button_pressed)
+
+
+func test_export_options_include_static_apng_false_by_default():
+	var opts = _dialog.get_export_options()
+	assert_true(opts.has("static_apng"))
+	assert_false(opts["static_apng"])
+
+
+func test_export_options_include_static_apng_true_when_checked():
+	_dialog._static_apng_check.button_pressed = true
+	var opts = _dialog.get_export_options()
+	assert_true(opts["static_apng"])
