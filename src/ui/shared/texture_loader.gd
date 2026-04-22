@@ -8,21 +8,33 @@ extends RefCounted
 class_name TextureLoader
 
 static var base_dir: String = ""
+static var _cache: Dictionary = {}
 
 static func load_texture(path: String) -> Texture2D:
-	if path == "":
+	if path == "" or path == null:
 		return null
 
 	var full_path = path
 	if not path.is_absolute_path() and not path.begins_with("res://") and base_dir != "":
 		full_path = base_dir.path_join(path)
 
+	if _cache.has(full_path):
+		var tex = _cache[full_path]
+		if is_instance_valid(tex):
+			return tex
+
 	# Try as Godot resource first (skips raw images packed without .import)
 	if ResourceLoader.exists(full_path):
-		return load(full_path)
+		var tex = load(full_path)
+		_cache[full_path] = tex
+		return tex
+
 	# Try as raw image in PCK (res:// path but no .import — loaded via FileAccess buffer)
 	if full_path.begins_with("res://") and FileAccess.file_exists(full_path):
-		return _load_from_buffer(full_path)
+		var tex = _load_from_buffer(full_path)
+		_cache[full_path] = tex
+		return tex
+
 	# Try as external file
 	if not FileAccess.file_exists(full_path):
 		# Fallback pour les chemins absolus invalides (migration de machine)
@@ -37,11 +49,14 @@ static func load_texture(path: String) -> Texture2D:
 				return null
 		else:
 			return null
+
 	var img = Image.new()
 	var err = img.load(full_path)
 	if err != OK:
 		return null
-	return ImageTexture.create_from_image(img)
+	var tex = ImageTexture.create_from_image(img)
+	_cache[full_path] = tex
+	return tex
 
 
 ## Charge une image depuis un fichier accessible via FileAccess (PCK ou filesystem).
@@ -68,3 +83,7 @@ static func _load_from_buffer(file_path: String) -> Texture2D:
 	if err != OK:
 		return null
 	return ImageTexture.create_from_image(img)
+
+
+static func clear_cache() -> void:
+	_cache.clear()

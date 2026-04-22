@@ -151,16 +151,28 @@ static func _make_idat_chunk(payload: PackedByteArray) -> PackedByteArray:
 	return chunk
 
 
+static var _crc_table: PackedInt32Array = []
+
+static func _get_crc_table() -> PackedInt32Array:
+	if not _crc_table.is_empty():
+		return _crc_table
+	_crc_table.resize(256)
+	for i in range(256):
+		var c = i
+		for j in range(8):
+			if c & 1:
+				c = 0xEDB88320 ^ ((c >> 1) & 0x7FFFFFFF)
+			else:
+				c = (c >> 1) & 0x7FFFFFFF
+		_crc_table[i] = c
+	return _crc_table
+
 static func _crc32(data: PackedByteArray) -> int:
 	var crc: int = 0xFFFFFFFF
+	var table = _get_crc_table()
 	for b in data:
-		crc ^= b
-		for _i in range(8):
-			if crc & 1:
-				crc = (crc >> 1) ^ 0xEDB88320
-			else:
-				crc >>= 1
-	return crc ^ 0xFFFFFFFF
+		crc = table[(crc ^ b) & 0xFF] ^ ((crc >> 8) & 0x00FFFFFF)
+	return (crc ^ 0xFFFFFFFF) & 0xFFFFFFFF
 
 
 static func _read_uint32_be(data: PackedByteArray, pos: int) -> int:

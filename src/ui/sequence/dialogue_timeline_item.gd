@@ -26,18 +26,38 @@ signal item_clicked(index: int)
 signal item_right_clicked(index: int, global_pos: Vector2)
 
 func setup(index: int, dialogue, is_inherited: bool, fg_count: int, bg_path: String = "", foregrounds: Array = []) -> void:
+	var bg_changed = _bg_path != bg_path
+	var fgs_changed = _fg_count != fg_count or _fg_images.size() != foregrounds.size()
+	
+	if not fgs_changed and _fg_images.size() == foregrounds.size():
+		for i in range(foregrounds.size()):
+			if _fg_images[i].image != foregrounds[i].image or \
+			   _fg_images[i].scale != foregrounds[i].scale or \
+			   _fg_images[i].anchor_bg != foregrounds[i].anchor_bg:
+				fgs_changed = true
+				break
+
 	_dialogue_index = index
 	_is_inherited = is_inherited
 	_fg_count = fg_count
 	_dialogue_data = dialogue
 	_bg_path = bg_path
-	_fg_images = []
-	for fg in foregrounds:
-		_fg_images.append({"image": fg.image, "anchor_bg": fg.anchor_bg, "anchor_fg": fg.anchor_fg, "scale": fg.scale})
+	
+	if fgs_changed:
+		_fg_images = []
+		for fg in foregrounds:
+			_fg_images.append({"image": fg.image, "anchor_bg": fg.anchor_bg, "anchor_fg": fg.anchor_fg, "scale": fg.scale})
+	
 	if _character_label:
 		_apply_dialogue_data(dialogue)
-		_apply_preview()
+		if bg_changed or fgs_changed:
+			_apply_preview()
 		_apply_style()
+
+func update_data(character: String, text: String) -> void:
+	if _character_label:
+		_character_label.text = character if character != "" else "(vide)"
+		_text_label.text = text if text != "" else ""
 
 func _ready() -> void:
 	custom_minimum_size = Vector2(110, 0)
@@ -103,14 +123,24 @@ func _apply_dialogue_data(dialogue) -> void:
 func _apply_preview() -> void:
 	if _preview_tex == null:
 		return
+	
+	# Clear previous FG rects (only those after _preview_tex and _badge_label)
+	for i in range(_preview_bg.get_child_count() - 1, -1, -1):
+		var child = _preview_bg.get_child(i)
+		if child != _preview_tex and child != _badge_label:
+			child.queue_free()
+
 	# Background
 	if _bg_path != "":
 		var tex = TextureLoaderScript.load_texture(_bg_path)
 		if tex:
 			_preview_tex.texture = tex
-	# Foreground silhouettes — same positioning as sequence_visual_editor.gd
-	# 1. Compute canvas-space position using actual bg texture size
-	# 2. Scale from canvas viewport (1920x1080) to preview space
+		else:
+			_preview_tex.texture = null
+	else:
+		_preview_tex.texture = null
+
+	# Foreground silhouettes
 	var canvas_ref = Vector2(1920.0, 1080.0)
 	var preview_size = Vector2(110.0, 55.0)
 	var bg_tex_size = _preview_tex.texture.get_size() if _preview_tex.texture else canvas_ref
@@ -123,7 +153,7 @@ func _apply_preview() -> void:
 		fg_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		fg_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		fg_rect.mouse_filter = MOUSE_FILTER_IGNORE
-		# Canvas-space position (same formula as sequence_visual_editor.gd)
+		# Canvas-space position
 		var fg_canvas_size = fg_tex.get_size() * fg_data["scale"]
 		var canvas_pos = fg_data["anchor_bg"] * bg_tex_size - fg_data["anchor_fg"] * fg_canvas_size
 		# Scale to preview
@@ -137,6 +167,8 @@ func _apply_preview() -> void:
 
 
 func set_selected(selected: bool) -> void:
+	if _selected == selected:
+		return
 	_selected = selected
 	_apply_style()
 

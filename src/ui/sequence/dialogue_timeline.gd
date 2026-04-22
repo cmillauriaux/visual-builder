@@ -69,29 +69,34 @@ func setup(seq_editor) -> void:
 
 
 func rebuild() -> void:
-	_clear_items()
-
 	if _seq_editor == null:
+		_clear_items()
 		return
 	var seq = _seq_editor.get_sequence()
 	if seq == null:
+		_clear_items()
 		return
 
 	var bg_path = seq.background if seq.background else ""
-
-	for i in range(seq.dialogues.size()):
-		var dlg = seq.dialogues[i]
-		var has_own_fg = dlg.foregrounds.size() > 0
-		var effective_fgs = _seq_editor.get_effective_foregrounds(i)
-		var fg_count = effective_fgs.size()
-		var is_inherited = not has_own_fg and fg_count > 0
-		var item = DialogueTimelineItemScript.new()
-		item.setup(i, dlg, is_inherited, fg_count, bg_path, effective_fgs)
-		_hbox.add_child(item)
-		_items.append(item)
-
-		item.item_clicked.connect(_on_item_clicked)
-		item.item_right_clicked.connect(_on_item_right_clicked)
+	var dialogues = seq.dialogues
+	
+	# If number of items changed, it's easier to rebuild
+	if _items.size() != dialogues.size():
+		_clear_items()
+		for i in range(dialogues.size()):
+			var dlg = dialogues[i]
+			var item = _create_item(i, dlg, bg_path)
+			_hbox.add_child(item)
+			_items.append(item)
+	else:
+		# Update existing items
+		for i in range(dialogues.size()):
+			var dlg = dialogues[i]
+			var has_own_fg = dlg.foregrounds.size() > 0
+			var effective_fgs = _seq_editor.get_effective_foregrounds(i)
+			var fg_count = effective_fgs.size()
+			var is_inherited = not has_own_fg and fg_count > 0
+			_items[i].setup(i, dlg, is_inherited, fg_count, bg_path, effective_fgs)
 
 	# Re-add the "+" button at the end
 	if _add_btn.get_parent():
@@ -101,6 +106,39 @@ func rebuild() -> void:
 	# Restore selection
 	if _selected_index >= 0 and _selected_index < _items.size():
 		_items[_selected_index].set_selected(true)
+
+
+func _create_item(index: int, dlg, bg_path: String) -> DialogueTimelineItemScript:
+	var has_own_fg = dlg.foregrounds.size() > 0
+	var effective_fgs = _seq_editor.get_effective_foregrounds(index)
+	var fg_count = effective_fgs.size()
+	var is_inherited = not has_own_fg and fg_count > 0
+	var item = DialogueTimelineItemScript.new()
+	item.setup(index, dlg, is_inherited, fg_count, bg_path, effective_fgs)
+	item.item_clicked.connect(_on_item_clicked)
+	item.item_right_clicked.connect(_on_item_right_clicked)
+	return item
+
+
+func update_item(index: int) -> void:
+	if index < 0 or index >= _items.size():
+		return
+	var seq = _seq_editor.get_sequence()
+	if seq == null or index >= seq.dialogues.size():
+		return
+	var dlg = seq.dialogues[index]
+	var bg_path = seq.background if seq.background else ""
+	var has_own_fg = dlg.foregrounds.size() > 0
+	var effective_fgs = _seq_editor.get_effective_foregrounds(index)
+	var fg_count = effective_fgs.size()
+	var is_inherited = not has_own_fg and fg_count > 0
+	_items[index].setup(index, dlg, is_inherited, fg_count, bg_path, effective_fgs)
+
+
+func update_item_text(index: int, character: String, text: String) -> void:
+	if index < 0 or index >= _items.size():
+		return
+	_items[index].update_data(character, text)
 
 
 func select_item(index: int) -> void:

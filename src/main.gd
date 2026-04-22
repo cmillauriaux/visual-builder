@@ -439,7 +439,11 @@ func _on_foreground_properties_changed() -> void:
 	_visual_editor.refresh_foreground_z_order()
 	_visual_editor.refresh_foreground_flip()
 	_visual_editor.update_foregrounds()
-	_rebuild_dialogue_list()
+	var idx = _sequence_editor_ctrl.get_selected_dialogue_index()
+	if idx >= 0:
+		_dialogue_timeline.update_item(idx)
+	else:
+		_rebuild_dialogue_list()
 	EventBus.story_modified.emit()
 	_seq_ui_ctrl.on_foreground_modified()
 
@@ -455,7 +459,7 @@ func _on_dialogue_character_changed(index: int, character: String) -> void:
 	if seq == null or index < 0 or index >= seq.dialogues.size():
 		return
 	seq.dialogues[index].character = character
-	_rebuild_dialogue_list()
+	_dialogue_timeline.update_item_text(index, character, seq.dialogues[index].text)
 	EventBus.story_modified.emit()
 
 
@@ -464,7 +468,7 @@ func _on_dialogue_text_changed(index: int, text: String) -> void:
 	if seq == null or index < 0 or index >= seq.dialogues.size():
 		return
 	seq.dialogues[index].text = text
-	_rebuild_dialogue_list()
+	_dialogue_timeline.update_item_text(index, seq.dialogues[index].character, text)
 	EventBus.story_modified.emit()
 
 
