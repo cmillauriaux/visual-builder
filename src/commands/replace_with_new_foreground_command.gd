@@ -19,6 +19,7 @@ func _init(dialogue, template_fg, new_image: String, inherited_fgs: Array) -> vo
 	_new_foreground.fg_name = template_fg.fg_name
 	_new_foreground.image = new_image
 	_new_foreground.z_order = template_fg.z_order
+	_new_foreground.censored = template_fg.censored
 	_new_foreground.opacity = template_fg.opacity
 	_new_foreground.flip_h = template_fg.flip_h
 	_new_foreground.flip_v = template_fg.flip_v
@@ -47,6 +48,7 @@ func _copy_foreground(fg):
 	copy.fg_name = fg.fg_name
 	copy.image = fg.image
 	copy.z_order = fg.z_order
+	copy.censored = fg.censored
 	copy.opacity = fg.opacity
 	copy.flip_h = fg.flip_h
 	copy.flip_v = fg.flip_v

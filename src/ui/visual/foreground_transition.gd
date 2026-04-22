@@ -54,13 +54,13 @@ func compute_transitions(old_fgs: Array, new_fgs: Array, seen_uuids: Dictionary 
 					"old_uuid": old_fg.uuid,
 					"action": "morph",
 					"duration": new_fg.transition_duration,
-					"z_order": new_fg.z_order,
+					"z_order": new_fg.get_render_z_order(),
 					"old_anchor_bg": old_fg.anchor_bg,
 					"old_scale": old_fg.scale,
 					"old_opacity": old_fg.opacity,
 					"old_flip_h": old_fg.flip_h,
 					"old_flip_v": old_fg.flip_v,
-					"old_z_order": old_fg.z_order,
+					"old_z_order": old_fg.get_render_z_order(),
 					"image_changed": old_fg.image != new_fg.image,
 				})
 				break
@@ -72,7 +72,7 @@ func compute_transitions(old_fgs: Array, new_fgs: Array, seen_uuids: Dictionary 
 				"uuid": fg.uuid,
 				"action": "fade_out",
 				"duration": fg.transition_duration,
-				"z_order": fg.z_order
+				"z_order": fg.get_render_z_order()
 			})
 
 	# Foregrounds ajoutés ou remplacés
@@ -87,7 +87,7 @@ func compute_transitions(old_fgs: Array, new_fgs: Array, seen_uuids: Dictionary 
 					"uuid": fg.uuid,
 					"action": "fade_in",
 					"duration": fg.transition_duration,
-					"z_order": fg.z_order
+					"z_order": fg.get_render_z_order()
 				})
 		else:
 			# Même UUID mais image différente → remplacement
@@ -98,7 +98,7 @@ func compute_transitions(old_fgs: Array, new_fgs: Array, seen_uuids: Dictionary 
 						"uuid": fg.uuid,
 						"action": "replace_fade",
 						"duration": fg.transition_duration,
-						"z_order": fg.z_order
+						"z_order": fg.get_render_z_order()
 					})
 				else:
 					# type="none" → remplacement avec ancien qui disparaît par-dessus
@@ -106,7 +106,7 @@ func compute_transitions(old_fgs: Array, new_fgs: Array, seen_uuids: Dictionary 
 						"uuid": fg.uuid,
 						"action": "replace_instant",
 						"duration": old_fg.transition_duration,
-						"z_order": fg.z_order
+						"z_order": fg.get_render_z_order()
 					})
 
 	return transitions

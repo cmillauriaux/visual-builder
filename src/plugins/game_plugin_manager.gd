@@ -20,6 +20,9 @@ var _enabled_states: Dictionary = {}
 func register_plugin(plugin: RefCounted) -> void:
 	_plugins.append(plugin)
 	var pname: String = plugin.get_plugin_name()
+	if not plugin.is_configurable():
+		_enabled_states[pname] = true
+		return
 	# Par défaut, un plugin est activé
 	if not _enabled_states.has(pname):
 		_enabled_states[pname] = true
@@ -32,11 +35,17 @@ func get_plugin_count() -> int:
 
 ## Retourne true si le plugin est activé.
 func is_plugin_enabled(plugin_name: String) -> bool:
+	var plugin = _find_plugin(plugin_name)
+	if plugin != null and not plugin.is_configurable():
+		return true
 	return _enabled_states.get(plugin_name, true)
 
 
 ## Active ou désactive un plugin.
 func set_plugin_enabled(plugin_name: String, enabled: bool) -> void:
+	var plugin = _find_plugin(plugin_name)
+	if plugin != null and not plugin.is_configurable():
+		return
 	_enabled_states[plugin_name] = enabled
 
 
@@ -52,6 +61,13 @@ func get_configurable_plugins() -> Array:
 ## Retourne tous les plugins enregistrés.
 func get_plugins() -> Array:
 	return _plugins
+
+
+func _find_plugin(plugin_name: String):
+	for plugin in _plugins:
+		if plugin.get_plugin_name() == plugin_name:
+			return plugin
+	return null
 
 
 ## Charge les états activés depuis les settings.

@@ -114,6 +114,7 @@ func _copy_foreground(fg):
 	copy.fg_name = fg.fg_name
 	copy.image = fg.image
 	copy.z_order = fg.z_order
+	copy.censored = fg.censored
 	copy.opacity = fg.opacity
 	copy.flip_h = fg.flip_h
 	copy.flip_v = fg.flip_v

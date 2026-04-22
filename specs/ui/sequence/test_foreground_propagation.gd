@@ -107,6 +107,16 @@ func test_compute_fg_changes_detects_multiple_changes():
 	assert_true(changes.has("flip_h"))
 
 
+func test_compute_fg_changes_detects_censored_change():
+	var fg = Foreground.new()
+	fg.censored = false
+	var snapshot = _ctrl._capture_fg_snapshot(fg)
+	fg.censored = true
+	var changes = _ctrl._compute_fg_changes(fg, snapshot)
+	assert_true(changes.has("censored"))
+	assert_true(changes["censored"])
+
+
 # --- on_foreground_selected / on_foreground_deselected ---
 
 func _setup_ctrl_with_visual_editor():

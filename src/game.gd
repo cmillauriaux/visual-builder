@@ -157,6 +157,8 @@ func _ready() -> void:
 	UIScale.set_user_multiplier(_settings.get_ui_scale_factor())
 
 	GameUIBuilder.build(self)
+	if _visual_editor != null:
+		_visual_editor.show_censored_foregrounds = false
 
 	# Initialiser le système de plugins in-game
 	_game_plugin_manager = Node.new()

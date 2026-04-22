@@ -17,6 +17,7 @@ func test_default_values():
 	assert_eq(fg.fg_name, "")
 	assert_eq(fg.image, "")
 	assert_eq(fg.z_order, 0)
+	assert_false(fg.censored)
 	assert_eq(fg.opacity, 1.0)
 	assert_eq(fg.flip_h, false)
 	assert_eq(fg.flip_v, false)
@@ -60,6 +61,7 @@ func test_to_dict():
 	fg.fg_name = "Héros"
 	fg.image = "personnage-a.png"
 	fg.z_order = 1
+	fg.censored = true
 	fg.opacity = 0.8
 	fg.flip_h = true
 	fg.flip_v = false
@@ -71,6 +73,7 @@ func test_to_dict():
 	assert_eq(d["name"], "Héros")
 	assert_eq(d["image"], "personnage-a.png")
 	assert_eq(d["z_order"], 1)
+	assert_true(d["censored"])
 	assert_almost_eq(d["opacity"], 0.8, 0.001)
 	assert_eq(d["flip_h"], true)
 	assert_eq(d["flip_v"], false)
@@ -86,6 +89,7 @@ func test_from_dict():
 		"name": "Héros",
 		"image": "personnage-a.png",
 		"z_order": 1,
+		"censored": true,
 		"opacity": 0.8,
 		"flip_h": true,
 		"flip_v": false,
@@ -98,6 +102,7 @@ func test_from_dict():
 	assert_eq(fg.fg_name, "Héros")
 	assert_eq(fg.image, "personnage-a.png")
 	assert_eq(fg.z_order, 1)
+	assert_true(fg.censored)
 	assert_eq(fg.opacity, 0.8)
 	assert_eq(fg.flip_h, true)
 	assert_eq(fg.flip_v, false)
@@ -111,6 +116,7 @@ func test_from_dict_with_defaults():
 	assert_eq(fg.uuid, "fg-002")
 	assert_eq(fg.fg_name, "Test")
 	assert_eq(fg.z_order, 0)
+	assert_false(fg.censored)
 	assert_eq(fg.opacity, 1.0)
 	assert_eq(fg.flip_h, false)
 	assert_eq(fg.flip_v, false)
@@ -155,6 +161,19 @@ func test_transition_duration_valid():
 	var fg = Foreground.new()
 	fg.transition_duration = 1.5
 	assert_eq(fg.transition_duration, 1.5)
+
+
+func test_get_render_z_order_regular_foreground():
+	var fg = Foreground.new()
+	fg.z_order = 12
+	assert_eq(fg.get_render_z_order(), 12)
+
+
+func test_get_render_z_order_censored_foreground():
+	var fg = Foreground.new()
+	fg.censored = true
+	fg.z_order = 12
+	assert_eq(fg.get_render_z_order(), Foreground.CENSORED_Z_BASE + 12)
 
 # --- Tests sérialisation transition ---
 

@@ -282,7 +282,7 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 
 	# 8. Préparer le fichier de sortie
 	var export_ext = _get_export_extension(platform)
-	var safe_name = _build_export_name(game_name, story.version, language, partial_export, story)
+	var safe_name = _build_export_name(game_name, story.version, language, partial_export, export_options, story)
 	var export_file = ""
 
 	if platform == "web":
@@ -360,8 +360,8 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 		return ExportResult.new(false, abs_output_path, log_path, error_reason)
 
 
-## Construit le nom de fichier d'export avec langue, plage de chapitres et version.
-func _build_export_name(game_name: String, version: String, language: String, partial_export: Dictionary, story) -> String:
+## Construit le nom de fichier d'export avec langue, plage de chapitres, censure et version.
+func _build_export_name(game_name: String, version: String, language: String, partial_export: Dictionary, export_options: Dictionary, story) -> String:
 	var safe = game_name.validate_filename().replace(" ", "_")
 	if language != "":
 		safe += "_" + language.validate_filename()
@@ -369,6 +369,8 @@ func _build_export_name(game_name: String, version: String, language: String, pa
 		var si: int = int(partial_export.get("start_idx", 0)) + 1
 		var ei: int = int(partial_export.get("end_idx", 0)) + 1
 		safe += "_ch%d_to_ch%d" % [si, ei]
+	if export_options.get("censure_enabled", false):
+		safe += "_CENSORED"
 	safe += "_v" + version.validate_filename().replace(" ", "_")
 	return safe
 

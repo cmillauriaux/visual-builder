@@ -34,6 +34,7 @@ var _zoom: float = 1.0
 var _pan_offset: Vector2 = Vector2.ZERO
 var _is_panning: bool = false
 var _auto_fit_enabled: bool = true
+var show_censored_foregrounds: bool = true
 
 # --- Grid & Snapping ---
 var _placement_grid = PlacementGridScript.new()
@@ -538,7 +539,7 @@ func _update_single_fg_visual(fg) -> void:
 	wrapper.position = fg.anchor_bg * bg_size - fg.anchor_fg * fg_size
 
 	# Z-index for correct visual layering (especially during transitions with clones)
-	wrapper.z_index = fg.z_order
+	wrapper.z_index = fg.get_render_z_order()
 
 	# Stocker les propriétés visuelles pour le matching (réutilisation des wrappers)
 	# Ne PAS mettre à jour fg_image si le chargement a échoué, pour forcer un rechargement
@@ -602,7 +603,7 @@ func _update_apng_fg_visual(wrapper: Control, fg) -> void:
 	if _bg_rect and _bg_rect.texture:
 		bg_size = _bg_rect.texture.get_size() * quality_div
 	wrapper.position = fg.anchor_bg * bg_size - fg.anchor_fg * fg_size
-	wrapper.z_index = fg.z_order
+	wrapper.z_index = fg.get_render_z_order()
 	wrapper.set_meta("fg_image", fg.image)
 	wrapper.set_meta("fg_anchor_bg", fg.anchor_bg)
 	wrapper.set_meta("fg_anchor_fg", fg.anchor_fg)
@@ -916,7 +917,7 @@ func _paste_foreground() -> void:
 
 func load_sequence(sequence) -> void:
 	_sequence = sequence
-	_display_foregrounds = _sequence.foregrounds if _sequence else []
+	_display_foregrounds = _filter_display_foregrounds(_sequence.foregrounds if _sequence else [])
 	_preload_apng_files()
 	_auto_fit_enabled = true
 	_selected_fg_uuids.clear()
@@ -970,7 +971,7 @@ func update_foregrounds() -> void:
 ## Définit la liste de foregrounds à afficher (foregrounds effectifs pour le dialogue courant).
 ## Ne modifie PAS _sequence.foregrounds — préserve l'intégrité du modèle.
 func set_display_foregrounds(fgs: Array) -> void:
-	_display_foregrounds = fgs
+	_display_foregrounds = _filter_display_foregrounds(fgs)
 	_update_foreground_visuals()
 
 func get_sequence():
@@ -1127,7 +1128,7 @@ func get_foregrounds_sorted() -> Array:
 	if _sequence == null:
 		return []
 	var sorted = _display_foregrounds.duplicate()
-	sorted.sort_custom(func(a, b): return a.z_order < b.z_order)
+	sorted.sort_custom(func(a, b): return a.get_render_z_order() < b.get_render_z_order())
 	return sorted
 
 func _reorder_fg_children() -> void:
@@ -1153,6 +1154,14 @@ func _reorder_fg_children() -> void:
 		_fg_container.move_child(wrapper, -1)
 
 func refresh_foreground_z_order() -> void:
+	for uuid in _fg_visual_map.keys():
+		var wrapper = _fg_visual_map[uuid]
+		if not is_instance_valid(wrapper):
+			continue
+		var fg = find_foreground(uuid)
+		if fg == null:
+			continue
+		wrapper.z_index = fg.get_render_z_order()
 	_reorder_fg_children()
 
 func refresh_foreground_flip() -> void:
@@ -1168,6 +1177,16 @@ func refresh_foreground_flip() -> void:
 		tex_rect.flip_v = fg.flip_v
 		wrapper.set_meta("fg_flip_h", fg.flip_h)
 		wrapper.set_meta("fg_flip_v", fg.flip_v)
+
+
+func _filter_display_foregrounds(fgs: Array) -> Array:
+	if show_censored_foregrounds:
+		return fgs
+	var filtered: Array = []
+	for fg in fgs:
+		if not fg.censored:
+			filtered.append(fg)
+	return filtered
 
 
 # --- Inherited foreground confirmation ---

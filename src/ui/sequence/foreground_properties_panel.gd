@@ -14,6 +14,7 @@ var _pos_x_spin: SpinBox
 var _pos_y_spin: SpinBox
 var _scale_spin: SpinBox
 var _z_order_spin: SpinBox
+var _censored_check: CheckButton
 var _flip_h_check: CheckButton
 var _flip_v_check: CheckButton
 var _opacity_slider: HSlider
@@ -117,6 +118,19 @@ func _ready() -> void:
 	_z_order_spin.size_flags_horizontal = SIZE_EXPAND_FILL
 	_z_order_spin.value_changed.connect(_on_property_changed)
 	z_row.add_child(_z_order_spin)
+
+	# Censure
+	var censored_row = HBoxContainer.new()
+	add_child(censored_row)
+	var censored_label = Label.new()
+	censored_label.text = tr("Censure")
+	censored_label.custom_minimum_size = Vector2(70, 0)
+	censored_row.add_child(censored_label)
+
+	_censored_check = CheckButton.new()
+	_censored_check.text = tr("Censure")
+	_censored_check.toggled.connect(_on_property_changed)
+	censored_row.add_child(_censored_check)
 
 	# Flip
 	var flip_row = HBoxContainer.new()
@@ -250,6 +264,7 @@ func show_for_foreground(fg) -> void:
 	_pos_y_spin.value = fg.anchor_bg.y
 	_scale_spin.value = fg.scale
 	_z_order_spin.value = fg.z_order
+	_censored_check.button_pressed = fg.censored
 	_flip_h_check.button_pressed = fg.flip_h
 	_flip_v_check.button_pressed = fg.flip_v
 	_opacity_slider.value = fg.opacity
@@ -281,6 +296,7 @@ func _on_property_changed(_value = null) -> void:
 	_foreground.anchor_bg = Vector2(_pos_x_spin.value, _pos_y_spin.value)
 	_foreground.scale = _scale_spin.value
 	_foreground.z_order = int(_z_order_spin.value)
+	_foreground.censored = _censored_check.button_pressed
 	_foreground.flip_h = _flip_h_check.button_pressed
 	_foreground.flip_v = _flip_v_check.button_pressed
 	_foreground.opacity = _opacity_slider.value

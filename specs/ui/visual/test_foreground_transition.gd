@@ -204,6 +204,13 @@ func test_mixed_transitions_preserve_z_order():
 		elif r["uuid"] == "new":
 			assert_eq(r["z_order"], 10, "fade_in a le z_order du nouveau FG")
 
+
+func test_censored_foreground_uses_render_z_order():
+	var fg = _make_fg("a", "img.png", "fade", 0.5, 5)
+	fg.censored = true
+	var result = _transition.compute_transitions([], [fg])
+	assert_eq(result[0]["z_order"], fg.get_render_z_order())
+
 # --- Matching visuel (UUIDs différents mais même image/position) ---
 
 func test_no_transition_when_visually_equivalent_different_uuid():

@@ -16,6 +16,7 @@ func before_each() -> void:
 	_foreground.anchor_bg = Vector2(0.3, 0.7)
 	_foreground.scale = 1.5
 	_foreground.z_order = 2
+	_foreground.censored = true
 	_foreground.flip_h = true
 	_foreground.flip_v = false
 	_foreground.opacity = 0.8
@@ -60,6 +61,11 @@ func test_show_for_foreground_populates_scale() -> void:
 func test_show_for_foreground_populates_z_order() -> void:
 	_panel.show_for_foreground(_foreground)
 	assert_eq(int(_panel._z_order_spin.value), 2)
+
+
+func test_show_for_foreground_populates_censored() -> void:
+	_panel.show_for_foreground(_foreground)
+	assert_true(_panel._censored_check.button_pressed)
 
 
 func test_show_for_foreground_populates_flip() -> void:
@@ -154,6 +160,13 @@ func test_property_change_updates_foreground_z_order() -> void:
 	assert_eq(_foreground.z_order, 10)
 
 
+func test_property_change_updates_foreground_censored() -> void:
+	_panel.show_for_foreground(_foreground)
+	_panel._censored_check.button_pressed = false
+	_panel._on_property_changed()
+	assert_false(_foreground.censored)
+
+
 func test_property_change_updates_foreground_flip() -> void:
 	_panel.show_for_foreground(_foreground)
 	_panel._flip_h_check.button_pressed = false
@@ -202,6 +215,7 @@ func test_spin_boxes_exist() -> void:
 
 
 func test_check_buttons_exist() -> void:
+	assert_not_null(_panel._censored_check)
 	assert_not_null(_panel._flip_h_check)
 	assert_not_null(_panel._flip_v_check)
 

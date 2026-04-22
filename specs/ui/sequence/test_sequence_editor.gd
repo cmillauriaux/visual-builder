@@ -793,6 +793,25 @@ func test_propagate_fg_changes_applies_absolute_for_opacity():
 	assert_almost_eq(fg1.opacity, 0.5, 0.001)
 
 
+func test_propagate_fg_changes_applies_absolute_for_censored():
+	var dlg0 = _add_dialogue("A", "Texte 0")
+	var fg0 = Foreground.new()
+	fg0.anchor_bg = Vector2(0.50, 0.60)
+	dlg0.foregrounds.append(fg0)
+
+	var dlg1 = _add_dialogue("B", "Texte 1")
+	var fg1 = Foreground.new()
+	fg1.anchor_bg = Vector2(0.50, 0.60)
+	fg1.censored = false
+	dlg1.foregrounds.append(fg1)
+
+	_editor.load_sequence(_sequence)
+	var matches = [{"dialogue_index": 1, "foreground": fg1}]
+	var changes = {"censored": true}
+	_editor.propagate_fg_changes(matches, changes, Vector2(0.50, 0.60))
+	assert_true(fg1.censored)
+
+
 func test_propagate_fg_changes_mixed_delta_and_absolute():
 	var dlg0 = _add_dialogue("A", "Texte 0")
 	var fg0 = Foreground.new()

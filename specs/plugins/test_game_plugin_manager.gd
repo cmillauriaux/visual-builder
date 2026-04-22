@@ -112,6 +112,13 @@ func test_get_configurable_plugins():
 	assert_eq(configurables[0].get_plugin_name(), "a")
 
 
+func test_non_configurable_plugin_cannot_be_disabled():
+	var p = TestPlugin.new("b", false)
+	_manager.register_plugin(p)
+	_manager.set_plugin_enabled("b", false)
+	assert_true(_manager.is_plugin_enabled("b"))
+
+
 # --- Tests dispatch hooks ---
 
 func test_dispatch_on_game_ready():

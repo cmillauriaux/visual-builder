@@ -19,6 +19,7 @@ var _fg_snapshot_uuid: String = ""
 
 const TRACKED_FG_PROPERTIES := [
 	"anchor_bg", "scale", "z_order",
+	"censored",
 	"flip_h", "flip_v", "opacity",
 	"transition_type", "transition_duration",
 	"anim_speed", "anim_reverse", "anim_loop", "anim_reverse_loop",

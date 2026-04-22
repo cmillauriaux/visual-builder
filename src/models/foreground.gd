@@ -7,6 +7,7 @@ var uuid: String = ""
 var fg_name: String = ""
 var image: String = ""
 var z_order: int = 0
+var censored: bool = false
 var _opacity: float = 1.0
 var flip_h: bool = false
 var flip_v: bool = false
@@ -21,6 +22,9 @@ var anim_loop: bool = true
 var anim_reverse_loop: bool = false
 
 const VALID_TRANSITION_TYPES = ["none", "fade"]
+const CENSORED_Z_BASE := 3000
+const CENSORED_Z_MIN := CENSORED_Z_BASE - 100
+const CENSORED_Z_MAX := CENSORED_Z_BASE + 100
 
 var transition_type: String:
 	get:
@@ -77,6 +81,7 @@ func to_dict() -> Dictionary:
 		"name": fg_name,
 		"image": image,
 		"z_order": z_order,
+		"censored": censored,
 		"opacity": opacity,
 		"flip_h": flip_h,
 		"flip_v": flip_v,
@@ -100,6 +105,7 @@ static func from_dict(d: Dictionary):
 	fg.fg_name = d.get("name", "")
 	fg.image = d.get("image", "")
 	fg.z_order = d.get("z_order", 0)
+	fg.censored = d.get("censored", false)
 	fg.opacity = d.get("opacity", 1.0)
 	fg.flip_h = d.get("flip_h", false)
 	fg.flip_v = d.get("flip_v", false)
@@ -115,3 +121,9 @@ static func from_dict(d: Dictionary):
 	fg.anim_loop = d.get("anim_loop", true)
 	fg.anim_reverse_loop = d.get("anim_reverse_loop", false)
 	return fg
+
+
+func get_render_z_order() -> int:
+	if not censored:
+		return z_order
+	return clampi(CENSORED_Z_BASE + z_order, CENSORED_Z_MIN, CENSORED_Z_MAX)

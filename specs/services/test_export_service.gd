@@ -41,6 +41,22 @@ func test_export_story_null_story():
 	assert_eq(result.error_message, "Aucune histoire chargée.")
 
 
+func test_build_export_name_adds_censored_suffix_when_enabled():
+	var service = ExportServiceScript.new()
+	assert_eq(
+		service._build_export_name("My Game", "1.0", "", {}, {"censure_enabled": true}, null),
+		"My_Game_CENSORED_v1.0"
+	)
+
+
+func test_build_export_name_omits_censored_suffix_when_disabled():
+	var service = ExportServiceScript.new()
+	assert_eq(
+		service._build_export_name("My Game", "1.0", "", {}, {"censure_enabled": false}, null),
+		"My_Game_v1.0"
+	)
+
+
 func test_generate_plugin_registry():
 	var service = ExportServiceScript.new()
 	# Créer un projet temp avec un plugin factice

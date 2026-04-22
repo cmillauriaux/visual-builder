@@ -49,6 +49,8 @@ var _skip_max_scene_index: int = -1
 var _toolbar_visible: bool = true
 var _toolbar_toggle_button: Button = null
 var _plugin_toolbar: HBoxContainer = null
+var _plugin_overlay_left: Control = null
+var _plugin_overlay_top: Control = null
 var _voice_auto_play_connected: bool = false
 
 var _game_plugin_manager: Node = null
@@ -143,6 +145,10 @@ func setup(game: Control) -> void:
 		_toolbar_toggle_button.pressed.connect(_on_toolbar_toggle_pressed)
 	if game.get("_plugin_toolbar") != null:
 		_plugin_toolbar = game._plugin_toolbar
+	if game.get("_plugin_overlay_left") != null:
+		_plugin_overlay_left = game._plugin_overlay_left
+	if game.get("_plugin_overlay_top") != null:
+		_plugin_overlay_top = game._plugin_overlay_top
 	# Voice player for dialogue voice files
 	_voice_player = AudioStreamPlayer.new()
 	_voice_player.bus = "Voice"
@@ -620,6 +626,10 @@ func _input(event: InputEvent) -> void:
 			if _toolbar_toggle_button and _toolbar_toggle_button.visible and _toolbar_toggle_button.get_global_rect().has_point(mouse_pos):
 				return
 			if _plugin_toolbar and _plugin_toolbar.visible and _plugin_toolbar.get_global_rect().has_point(mouse_pos):
+				return
+			if _plugin_overlay_left and _plugin_overlay_left.visible and _plugin_overlay_left.get_global_rect().has_point(mouse_pos):
+				return
+			if _plugin_overlay_top and _plugin_overlay_top.visible and _plugin_overlay_top.get_global_rect().has_point(mouse_pos):
 				return
 		if _auto_play:
 			_auto_play.stop_timer()

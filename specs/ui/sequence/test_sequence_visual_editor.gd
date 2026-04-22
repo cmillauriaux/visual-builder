@@ -132,6 +132,17 @@ func test_foregrounds_sorted_by_z_order():
 	assert_eq(sorted[0].fg_name, "Front")
 	assert_eq(sorted[1].fg_name, "Back")
 
+
+func test_censored_foreground_sorted_above_regular_foreground():
+	_editor.load_sequence(_sequence)
+	_editor.add_foreground("Regular", "regular.png")
+	_editor.add_foreground("Censored", "censored.png")
+	_sequence.foregrounds[0].z_order = 100
+	_sequence.foregrounds[1].z_order = -100
+	_sequence.foregrounds[1].censored = true
+	var sorted = _editor.get_foregrounds_sorted()
+	assert_eq(sorted[1].fg_name, "Censored")
+
 func test_find_foreground_by_uuid():
 	_editor.load_sequence(_sequence)
 	_editor.add_foreground("Target", "target.png")
@@ -144,6 +155,20 @@ func test_find_foreground_not_found():
 	_editor.load_sequence(_sequence)
 	var found = _editor.find_foreground("nonexistent-uuid")
 	assert_null(found)
+
+
+func test_load_sequence_filters_censored_foregrounds_when_disabled():
+	var fg_regular = Foreground.new()
+	fg_regular.fg_name = "Regular"
+	_sequence.foregrounds.append(fg_regular)
+	var fg_censored = Foreground.new()
+	fg_censored.fg_name = "Censored"
+	fg_censored.censored = true
+	_sequence.foregrounds.append(fg_censored)
+	_editor.show_censored_foregrounds = false
+	_editor.load_sequence(_sequence)
+	assert_eq(_editor.get_foreground_count(), 1)
+	assert_eq(_editor._display_foregrounds[0].fg_name, "Regular")
 
 # --- CA-17: Visual nodes and zoom ---
 

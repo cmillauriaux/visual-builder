@@ -131,10 +131,12 @@ func test_capture_fg_snapshot() -> void:
 	var fg = FgScript.new()
 	fg.anchor_bg = Vector2(0.3, 0.4)
 	fg.z_order = 2
+	fg.censored = true
 	fg.opacity = 0.8
 	var snapshot = _ctrl._capture_fg_snapshot(fg)
 	assert_eq(snapshot["anchor_bg"], Vector2(0.3, 0.4))
 	assert_eq(snapshot["z_order"], 2)
+	assert_true(snapshot["censored"])
 	assert_eq(snapshot["opacity"], 0.8)
 
 
