@@ -22,10 +22,6 @@ func test_has_background():
 	assert_not_null(_menu._background)
 	assert_is(_menu._background, TextureRect)
 
-func test_has_overlay():
-	assert_not_null(_menu._overlay)
-	assert_is(_menu._overlay, ColorRect)
-
 func test_has_title_label():
 	assert_not_null(_menu._title_label)
 	assert_is(_menu._title_label, Label)

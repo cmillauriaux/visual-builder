@@ -249,11 +249,6 @@ static func _build_loading_overlay(game: Control) -> void:
 	game._loading_overlay.add_child(bg)
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
-	var scrim := ColorRect.new()
-	scrim.color = Color(0, 0, 0, 0.7)
-	game._loading_overlay.add_child(scrim)
-	scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-
 	var center := CenterContainer.new()
 	game._loading_overlay.add_child(center)
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

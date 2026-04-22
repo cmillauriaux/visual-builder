@@ -122,8 +122,8 @@ func test_builds_loading_overlay_bg() -> void:
 	assert_not_null(_game._loading_overlay_bg, "loading_overlay_bg should be created")
 	assert_true(_game._loading_overlay_bg is TextureRect, "loading_overlay_bg should be a TextureRect")
 	assert_eq(_game._loading_overlay_bg.stretch_mode, TextureRect.STRETCH_KEEP_ASPECT_COVERED)
-	assert_true(_game._loading_overlay.get_child(0) is TextureRect, "first child should be TextureRect (image behind scrim)")
-	assert_true(_game._loading_overlay.get_child(1) is ColorRect, "second child should be ColorRect (scrim)")
+	assert_true(_game._loading_overlay.get_child(0) is TextureRect, "first child should be TextureRect")
+	assert_true(_game._loading_overlay.get_child(1) is CenterContainer, "second child should be CenterContainer")
 
 
 func test_setup_loading_overlay_image_with_null_clears_texture() -> void:

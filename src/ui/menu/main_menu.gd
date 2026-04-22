@@ -21,7 +21,6 @@ signal external_link_opened(link_type: String, context: String)
 
 # UI
 var _background: TextureRect
-var _overlay: ColorRect
 var _title_label: Label
 var _subtitle_label: Label
 var _new_game_button: Button
@@ -34,7 +33,7 @@ var _links_hbox: HBoxContainer
 var _quit_button: Button
 var _options_menu: PanelContainer
 var _options_center: MarginContainer
-var _menu_content: CenterContainer
+var _menu_content: MarginContainer
 var _loading_overlay: CenterContainer
 var _loading_label: Label
 var _banner_wrapper: CenterContainer
@@ -60,22 +59,17 @@ func build_ui() -> void:
 	_background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	add_child(_background)
 
-	# Overlay sombre
-	_overlay = ColorRect.new()
-	_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_overlay.color = Color(0, 0, 0, 0.4)
-	add_child(_overlay)
-
-	# Conteneur centré (contenu du menu : bannière + boutons)
-	_menu_content = CenterContainer.new()
+	# Conteneur de contenu (bannière + boutons)
+	_menu_content = MarginContainer.new()
 	_menu_content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_menu_content.add_theme_constant_override("margin_bottom", UIScale.scale(80))
 	add_child(_menu_content)
-	var center = _menu_content
 
 	var vbox = VBoxContainer.new()
-	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.size_flags_vertical = Control.SIZE_SHRINK_END
+	vbox.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	vbox.add_theme_constant_override("separation", 12)
-	center.add_child(vbox)
+	_menu_content.add_child(vbox)
 
 	# Bannière avec titre et sous-titre superposés
 	_banner_wrapper = CenterContainer.new()
@@ -117,11 +111,6 @@ func build_ui() -> void:
 	_subtitle_label.add_theme_font_size_override("font_size", UIScale.scale(26))
 	_subtitle_label.add_theme_color_override("font_color", Color(1, 1, 1, 0.8))
 	label_vbox.add_child(_subtitle_label)
-
-	# Spacer
-	var spacer = Control.new()
-	spacer.custom_minimum_size.y = UIScale.scale(60)
-	vbox.add_child(spacer)
 
 	# Boutons
 	_new_game_button = _create_menu_button("Nouvelle partie")
