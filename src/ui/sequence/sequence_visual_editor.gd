@@ -211,12 +211,12 @@ func compute_auto_fit() -> Dictionary:
 	var pan = (available - scaled_size) * 0.5
 	return {"zoom": fit_zoom, "pan": pan}
 
-func apply_auto_fit() -> void:
-	if not _auto_fit_enabled:
+func apply_auto_fit(force: bool = false) -> void:
+	if not _auto_fit_enabled and not force:
 		return
 	# During play, the FX player owns the canvas transform (zoom/pan effects).
 	# Resizing or reparenting can trigger apply_auto_fit and overwrite FX state.
-	if _is_preview_mode:
+	if _is_preview_mode and not force:
 		return
 	var result = compute_auto_fit()
 	_zoom = result["zoom"]

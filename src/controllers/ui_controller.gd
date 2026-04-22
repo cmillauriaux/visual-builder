@@ -130,6 +130,7 @@ func enter_fullscreen() -> void:
 	_main._visual_editor.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var viewport_size = _main.get_viewport().get_visible_rect().size
 	_main._visual_editor.size = viewport_size
+	_main._visual_editor.apply_auto_fit(true)
 
 	# Ajouter le play overlay au conteneur de superposition du visual editor
 	if _main._play_overlay.get_parent():
@@ -143,7 +144,6 @@ func enter_fullscreen() -> void:
 	fs_stop.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 	fs_stop.offset_left = -80; fs_stop.offset_right = -10; fs_stop.offset_top = 10; fs_stop.offset_bottom = 40
 	_previous_fullscreen_layer.add_child(fs_stop)
-	_main.call_deferred("_reset_visual_editor")
 
 
 func exit_fullscreen() -> void:
@@ -162,4 +162,4 @@ func exit_fullscreen() -> void:
 	_previous_fullscreen_layer.queue_free()
 	_previous_fullscreen_layer = null
 	_main._vbox.visible = true
-	_main.call_deferred("_reset_visual_editor")
+	_main._visual_editor.call_deferred("apply_auto_fit", true)

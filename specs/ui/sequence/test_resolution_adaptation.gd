@@ -193,6 +193,28 @@ func test_ui_ctrl_enter_fullscreen_adds_play_overlay():
 	assert_true(main_ctrl._play_overlay.visible, "Play overlay should be visible in fullscreen")
 	main_ctrl._ui_ctrl.exit_fullscreen()
 
+func test_ui_ctrl_enter_fullscreen_recomputes_canvas_and_overlay_in_preview_mode():
+	var main_ctrl = Control.new()
+	main_ctrl.set_script(MainScript)
+	add_child_autofree(main_ctrl)
+	await get_tree().process_frame
+	main_ctrl._visual_editor.size = Vector2(640, 360)
+	main_ctrl._visual_editor.apply_auto_fit()
+	main_ctrl._visual_editor._is_preview_mode = true
+
+	main_ctrl._ui_ctrl.enter_fullscreen()
+
+	var viewport_size = main_ctrl.get_viewport().get_visible_rect().size
+	var canvas_rect = main_ctrl._visual_editor.get_canvas_rect()
+	assert_almost_eq(main_ctrl._visual_editor.size.x, viewport_size.x, 1.0)
+	assert_almost_eq(main_ctrl._visual_editor.size.y, viewport_size.y, 1.0)
+	assert_almost_eq(main_ctrl._visual_editor._overlay_container.position.x, canvas_rect.position.x, 1.0)
+	assert_almost_eq(main_ctrl._visual_editor._overlay_container.position.y, canvas_rect.position.y, 1.0)
+	assert_almost_eq(main_ctrl._visual_editor._overlay_container.size.x, canvas_rect.size.x, 1.0)
+	assert_almost_eq(main_ctrl._visual_editor._overlay_container.size.y, canvas_rect.size.y, 1.0)
+
+	main_ctrl._ui_ctrl.exit_fullscreen()
+
 func test_ui_ctrl_exit_fullscreen_removes_play_overlay():
 	var main_ctrl = Control.new()
 	main_ctrl.set_script(MainScript)
