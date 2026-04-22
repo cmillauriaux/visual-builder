@@ -108,6 +108,19 @@ func test_on_sequence_play_requested_starts_play() -> void:
 	assert_true(_game._play_overlay.visible, "play overlay should be visible")
 
 
+func test_on_sequence_play_requested_applies_title_background_color() -> void:
+	var seq = _create_sequence_with_dialogue("Charlie", "Test")
+	seq.title = "Intro"
+	seq.background_color = "00ff00ff"
+
+	_game._play_ctrl.on_sequence_play_requested(seq)
+
+	var bg_rect := _game._play_title_overlay.get_node("TitleBackgroundRect") as ColorRect
+	assert_not_null(bg_rect)
+	assert_true(_game._play_title_overlay.visible, "title overlay should be visible")
+	assert_eq(bg_rect.color, Color(0, 1, 0, 1))
+
+
 func test_stop_current_cleans_up() -> void:
 	_game._menu_button.visible = true
 	_game._play_overlay.visible = true

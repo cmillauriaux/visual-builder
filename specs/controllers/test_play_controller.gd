@@ -126,6 +126,27 @@ func test_story_play_sequence_with_title_no_dialogues_shows_title_screen() -> vo
 	assert_true(_main._play_overlay.visible, "Dialogue overlay should be shown after title screen")
 
 
+func test_story_play_sequence_applies_title_background_color() -> void:
+	var seq = SequenceScript.new()
+	seq.title = "Test Title"
+	seq.background_color = "ff0000ff"
+
+	var story = preload("res://src/models/story.gd").new()
+	story.title = "Test Story"
+	var chapter = preload("res://src/models/chapter.gd").new()
+	var scene = preload("res://src/models/scene_data.gd").new()
+	_main._editor_main._story = story
+	_main._editor_main._current_chapter = chapter
+	_main._editor_main._current_scene = scene
+
+	_main._play_ctrl._is_story_play_mode = true
+	_main._play_ctrl.on_story_play_sequence_requested(seq)
+
+	var bg_rect := _main._play_title_overlay.get_node("TitleBackgroundRect") as ColorRect
+	assert_not_null(bg_rect)
+	assert_eq(bg_rect.color, Color(1, 0, 0, 1))
+
+
 func test_story_play_sequence_no_title_no_dialogues_skips_immediately() -> void:
 	var seq = SequenceScript.new()
 	# No title, no dialogues

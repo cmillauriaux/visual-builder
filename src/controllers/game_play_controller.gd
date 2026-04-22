@@ -300,6 +300,7 @@ func _show_title_screen(seq) -> void:
 	_is_showing_title = true
 	_game._play_title_label.text = seq.title
 	_game._play_subtitle_label.text = seq.subtitle
+	_apply_title_screen_background(seq)
 	_game._play_title_overlay.visible = true
 	if not _game._play_title_overlay.get_parent():
 		_visual_editor._overlay_container.add_child(_game._play_title_overlay)
@@ -311,6 +312,15 @@ func _hide_title_screen() -> void:
 	if _game._play_title_overlay.get_parent():
 		_game._play_title_overlay.get_parent().remove_child(_game._play_title_overlay)
 	_start_sequence_actually()
+
+
+func _apply_title_screen_background(seq) -> void:
+	if _game._play_title_overlay == null or seq == null:
+		return
+	var bg_rect := _game._play_title_overlay.get_node_or_null("TitleBackgroundRect") as ColorRect
+	if bg_rect == null:
+		return
+	bg_rect.color = Color.from_string(seq.background_color, Color(0, 0, 0, 0))
 
 
 func _on_fx_finished_start_sequence() -> void:

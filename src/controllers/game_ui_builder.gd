@@ -152,14 +152,27 @@ static func _build_play_overlay(game: Control) -> void:
 	game._choice_overlay.add_child(game._choice_panel)
 
 	# --- Play Title Overlay ---
-	game._play_title_overlay = CenterContainer.new()
+	game._play_title_overlay = Control.new()
 	game._play_title_overlay.visible = false
 	game._play_title_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
 	game._play_title_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	
+
+	var title_bg = ColorRect.new()
+	title_bg.name = "TitleBackgroundRect"
+	title_bg.color = Color(0, 0, 0, 0)
+	title_bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	title_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	game._play_title_overlay.add_child(title_bg)
+
+	var title_center = CenterContainer.new()
+	title_center.name = "TitleCenter"
+	title_center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	title_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	game._play_title_overlay.add_child(title_center)
+
 	var title_vbox = VBoxContainer.new()
-	game._play_title_overlay.add_child(title_vbox)
-	
+	title_center.add_child(title_vbox)
+
 	game._play_title_label = Label.new()
 	game._play_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	game._play_title_label.add_theme_font_size_override("font_size", UIScale.scale(64))

@@ -556,19 +556,32 @@ static func _build_play_overlay(main: Control) -> void:
 	main._toast_overlay.add_child(main._toast_label)
 
 	# --- Play Title Overlay ---
-	main._play_title_overlay = CenterContainer.new()
+	main._play_title_overlay = Control.new()
 	main._play_title_overlay.visible = false
 	main._play_title_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
 	main._play_title_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	
+
+	var title_bg = ColorRect.new()
+	title_bg.name = "TitleBackgroundRect"
+	title_bg.color = Color(0, 0, 0, 0)
+	title_bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	title_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	main._play_title_overlay.add_child(title_bg)
+
+	var title_center = CenterContainer.new()
+	title_center.name = "TitleCenter"
+	title_center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	title_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	main._play_title_overlay.add_child(title_center)
+
 	var title_vbox = VBoxContainer.new()
-	main._play_title_overlay.add_child(title_vbox)
-	
+	title_center.add_child(title_vbox)
+
 	main._play_title_label = Label.new()
 	main._play_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	main._play_title_label.add_theme_font_size_override("font_size", 48)
 	title_vbox.add_child(main._play_title_label)
-	
+
 	main._play_subtitle_label = Label.new()
 	main._play_subtitle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	main._play_subtitle_label.add_theme_font_size_override("font_size", 24)
