@@ -11,6 +11,7 @@ var uuid: String = ""
 var character: String = ""
 var text: String = ""
 var voice: String = ""  # Optional: ElevenLabs voice description with annotations ([sarcastically], [whispers], etc.)
+var voice_id_override: String = ""  # Optional: ElevenLabs voice ID override
 var voice_files: Dictionary = {}  # lang -> path (e.g. {"fr": "assets/voices/uuid_fr.mp3", "en": "assets/voices/uuid_en.mp3"})
 var voice_request_ids: Dictionary = {}  # lang -> ElevenLabs request ID for previous_request_ids continuity
 var foregrounds: Array = []  # Array[Foreground]
@@ -49,6 +50,8 @@ func to_dict() -> Dictionary:
 	}
 	if voice != "":
 		d["voice"] = voice
+	if voice_id_override != "":
+		d["voice_id_override"] = voice_id_override
 	if not voice_files.is_empty():
 		d["voice_files"] = voice_files
 	if not voice_request_ids.is_empty():
@@ -62,6 +65,7 @@ static func from_dict(d: Dictionary):
 	dlg.character = d.get("character", "")
 	dlg.text = d.get("text", "")
 	dlg.voice = d.get("voice", "")
+	dlg.voice_id_override = d.get("voice_id_override", "")
 	# Rétro-compat: ancien format voice_file (String) → migration vers voice_files (Dict)
 	if d.has("voice_files") and d["voice_files"] is Dictionary:
 		dlg.voice_files = d["voice_files"]

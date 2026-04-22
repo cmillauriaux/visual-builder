@@ -171,10 +171,12 @@ func test_voice_to_dict_includes_when_set():
 	d.character = "Narrateur"
 	d.text = "Bienvenue"
 	d.voice = "[whispers] Bienvenue dans ce monde..."
+	d.voice_id_override = "eleven_voice_id_123"
 	d.voice_files = {"fr": "assets/voices/abc_fr.mp3", "en": "assets/voices/abc_en.mp3"}
 	d.voice_request_ids = {"fr": "req-fr-123", "en": "req-en-456"}
 	var dict = d.to_dict()
 	assert_eq(dict["voice"], "[whispers] Bienvenue dans ce monde...")
+	assert_eq(dict["voice_id_override"], "eleven_voice_id_123")
 	assert_eq(dict["voice_files"]["fr"], "assets/voices/abc_fr.mp3")
 	assert_eq(dict["voice_files"]["en"], "assets/voices/abc_en.mp3")
 	assert_eq(dict["voice_request_ids"]["fr"], "req-fr-123")
@@ -185,11 +187,13 @@ func test_voice_from_dict_multilang():
 		"character": "Héros",
 		"text": "En avant !",
 		"voice": "[sarcastically] En avant...",
+		"voice_id_override": "override_id",
 		"voice_files": {"fr": "assets/voices/hero_fr.mp3", "en": "assets/voices/hero_en.mp3"},
 		"voice_request_ids": {"fr": "req-fr"}
 	}
 	var d = Dialogue.from_dict(dict)
 	assert_eq(d.voice, "[sarcastically] En avant...")
+	assert_eq(d.voice_id_override, "override_id")
 	assert_eq(d.get_voice_file("fr"), "assets/voices/hero_fr.mp3")
 	assert_eq(d.get_voice_file("en"), "assets/voices/hero_en.mp3")
 	assert_eq(d.get_voice_file("de"), "")

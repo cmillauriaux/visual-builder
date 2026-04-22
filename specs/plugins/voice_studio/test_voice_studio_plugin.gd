@@ -142,6 +142,21 @@ func test_get_available_languages_no_duplicates() -> void:
 	assert_eq(langs[0], "fr")
 
 
+# ── Configured voices ─────────────────────────────────────────────────────────
+
+func test_get_all_configured_voices() -> void:
+	var settings := {
+		"voices": [
+			{"character": "A", "language": "fr", "voice_id": "v1"},
+			{"character": "B", "language": "en", "voice_id": "v2"},
+		]
+	}
+	var voices := VoiceStudioGamePlugin.get_all_configured_voices(settings)
+	assert_eq(voices.size(), 2)
+	assert_eq(voices[0].character, "A")
+	assert_eq(voices[1].character, "B")
+
+
 # ── Editor config read/write ──────────────────────────────────────────────────
 
 func test_editor_config_creates_control() -> void:
