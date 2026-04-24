@@ -138,6 +138,7 @@ static func _build_top_bar(main: Control) -> void:
 	var cmd_ctrl = "Cmd" if OS.get_name() == "macOS" else "Ctrl"
 	histoire_popup.add_item(TranslationServer.translate("Nouvelle histoire"), 0)
 	histoire_popup.add_item(TranslationServer.translate("Charger"), 1)
+	histoire_popup.add_item(TranslationServer.translate("Recharger"), 8)
 	histoire_popup.add_separator()
 	histoire_popup.add_item(TranslationServer.translate("Sauvegarder (%s+S)") % cmd_ctrl, 2)
 	histoire_popup.add_item(TranslationServer.translate("Sauvegarder sous..."), 3)

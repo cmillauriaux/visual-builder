@@ -12,6 +12,7 @@ class MockNavCtrl extends Node:
 	var load_called := false
 	var save_called := false
 	var save_as_called := false
+	var reload_called := false
 	var verify_called := false
 	var variables_called := false
 	var menu_config_called := false
@@ -20,6 +21,7 @@ class MockNavCtrl extends Node:
 	func on_load_pressed() -> void: load_called = true
 	func on_save_pressed() -> void: save_called = true
 	func on_save_as_pressed() -> void: save_as_called = true
+	func on_reload_pressed() -> void: reload_called = true
 	func on_verify_pressed() -> void: verify_called = true
 	func on_variables_pressed() -> void: variables_called = true
 	func on_menu_config_requested() -> void: menu_config_called = true
@@ -64,9 +66,7 @@ func before_each() -> void:
 	_story = StoryScript.new()
 	_editor_main._story = _story
 
-	_export_service = Node.new()
-	_export_service.set_script(ExportServiceScript)
-	_main.add_child(_export_service)
+	_export_service = ExportServiceScript.new()
 	_main._export_service = _export_service
 
 	_ctrl = Node.new()
@@ -92,6 +92,10 @@ func test_on_histoire_menu_save() -> void:
 func test_on_histoire_menu_save_as() -> void:
 	_ctrl.on_histoire_menu_pressed(3)
 	assert_true(_nav_ctrl.save_as_called)
+
+func test_on_histoire_menu_reload() -> void:
+	_ctrl.on_histoire_menu_pressed(8)
+	assert_true(_nav_ctrl.reload_called)
 
 func test_on_histoire_menu_export() -> void:
 	_ctrl.on_histoire_menu_pressed(4)

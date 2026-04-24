@@ -30,6 +30,7 @@ func on_histoire_menu_pressed(id: int) -> void:
 		5: _main._nav_ctrl.on_verify_pressed()
 		6: on_i18n_regenerate_pressed()
 		7: on_i18n_check_pressed()
+		8: _main._nav_ctrl.on_reload_pressed()
 
 
 func on_parametres_menu_pressed(id: int) -> void:

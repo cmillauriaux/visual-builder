@@ -8,8 +8,10 @@ var StoryScript
 var ChapterScript
 var SceneDataScript
 var SequenceScript
+var StorySaver
 
 var _main
+var _test_dir: String = ""
 
 
 func before_each() -> void:
@@ -19,6 +21,8 @@ func before_each() -> void:
 	ChapterScript = load("res://src/models/chapter.gd")
 	SceneDataScript = load("res://src/models/scene_data.gd")
 	SequenceScript = load("res://src/models/sequence.gd")
+	StorySaver = load("res://src/persistence/story_saver.gd")
+	_test_dir = "user://test_nav_reload_" + str(randi())
 	
 	_main = Control.new()
 	_main.set_script(MainScript)
@@ -29,6 +33,23 @@ func after_each() -> void:
 	if _main:
 		_main.queue_free()
 		_main = null
+	_remove_dir_recursive(_test_dir)
+
+
+func _remove_dir_recursive(path: String) -> void:
+	var dir = DirAccess.open(path)
+	if dir == null:
+		return
+	dir.list_dir_begin()
+	var fname = dir.get_next()
+	while fname != "":
+		if dir.current_is_dir():
+			_remove_dir_recursive(path + "/" + fname)
+		else:
+			dir.remove(fname)
+		fname = dir.get_next()
+	dir.list_dir_end()
+	DirAccess.remove_absolute(path)
 
 
 func test_nav_controller_exists() -> void:
@@ -476,6 +497,41 @@ func test_on_load_dir_selected_invalid_path() -> void:
 	# Should create an AcceptDialog with error message
 	var last_child = _main.get_child(_main.get_child_count() - 1)
 	assert_true(last_child is AcceptDialog)
+	_free_dialog_immediately(last_child)
+
+
+func test_on_reload_pressed_without_save_path_shows_error() -> void:
+	_main._nav_ctrl.on_new_story_pressed()
+	_main._nav_ctrl.on_reload_pressed()
+	var last_child = _main.get_child(_main.get_child_count() - 1)
+	assert_true(last_child is AcceptDialog)
+	_free_dialog_immediately(last_child)
+
+
+func _free_dialog_immediately(dialog: Node) -> void:
+	dialog.hide()
+	if dialog.get_parent():
+		dialog.get_parent().remove_child(dialog)
+	dialog.free()
+
+
+func test_on_reload_pressed_reloads_current_story_after_confirmation() -> void:
+	_main._nav_ctrl.on_new_story_pressed()
+	_main._editor_main._story.title = "Titre disque initial"
+	StorySaver.save_story(_main._editor_main._story, _test_dir)
+	_main._nav_ctrl._on_load_dir_selected(_test_dir)
+
+	var disk_story = StorySaver.load_story(_test_dir)
+	disk_story.title = "Titre modifié par outil externe"
+	StorySaver.save_story(disk_story, _test_dir)
+	_main._editor_main._story.title = "Titre modifié en mémoire"
+
+	_main._nav_ctrl.on_reload_pressed()
+	var dialog = _main.get_child(_main.get_child_count() - 1)
+	assert_true(dialog is ConfirmationDialog)
+	dialog.confirmed.emit()
+
+	assert_eq(_main._editor_main._story.title, "Titre modifié par outil externe")
 
 
 # --- _on_new_target_requested ---

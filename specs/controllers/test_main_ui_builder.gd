@@ -49,6 +49,7 @@ func test_builds_histoire_menu() -> void:
 	var popup = _main._histoire_menu.get_popup()
 	assert_eq(popup.get_item_text(popup.get_item_index(0)), "Nouvelle histoire")
 	assert_eq(popup.get_item_text(popup.get_item_index(1)), "Charger")
+	assert_eq(popup.get_item_text(popup.get_item_index(8)), "Recharger")
 	assert_true(popup.get_item_text(popup.get_item_index(2)).begins_with("Sauvegarder"))
 	assert_eq(popup.get_item_text(popup.get_item_index(3)), "Sauvegarder sous...")
 	assert_eq(popup.get_item_text(popup.get_item_index(4)), "Exporter")

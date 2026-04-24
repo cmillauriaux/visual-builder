@@ -419,16 +419,88 @@ func on_load_pressed() -> void:
 func _on_load_dir_selected(path: String) -> void:
 	var loaded_story = StorySaver.load_story(path)
 	if loaded_story == null:
-		var err_dialog = AcceptDialog.new()
-		err_dialog.dialog_text = tr("Impossible de charger l'histoire : fichier story.yaml introuvable dans le dossier sélectionné.")
-		err_dialog.confirmed.connect(err_dialog.queue_free)
-		_main.add_child(err_dialog)
-		err_dialog.popup_centered()
+		_show_load_error(tr("Impossible de charger l'histoire : fichier story.yaml introuvable dans le dossier sélectionné."))
 		return
 	_last_save_path = path
 	_main._undo_redo.clear()
 	_main._editor_main.open_story(loaded_story)
 	_main.refresh_current_view()
+
+
+func on_reload_pressed() -> void:
+	if _main._editor_main._story == null:
+		return
+	if _last_save_path == "":
+		_show_load_error(tr("Impossible de recharger l'histoire : aucun dossier de sauvegarde n'est associé à l'histoire courante."))
+		return
+
+	var dialog = ConfirmationDialog.new()
+	dialog.title = tr("Recharger l'histoire")
+	dialog.dialog_text = tr("Recharger l'histoire depuis :\n%s\n\nLes modifications non sauvegardées seront perdues.") % _last_save_path
+	dialog.confirmed.connect(func():
+		_reload_current_story()
+		dialog.queue_free()
+	)
+	dialog.canceled.connect(dialog.queue_free)
+	_main.add_child(dialog)
+	dialog.get_ok_button().text = tr("Recharger")
+	dialog.popup_centered()
+
+
+func _reload_current_story() -> void:
+	var loaded_story = StorySaver.load_story(_last_save_path)
+	if loaded_story == null:
+		_show_load_error(tr("Impossible de recharger l'histoire : fichier story.yaml introuvable dans le dossier courant."))
+		return
+
+	var nav_state = _capture_navigation_state()
+	_main._undo_redo.clear()
+	_main._editor_main.open_story(loaded_story)
+	_restore_navigation_state(nav_state)
+	_main.refresh_current_view()
+
+
+func _capture_navigation_state() -> Dictionary:
+	return {
+		"level": _main._editor_main.get_current_level(),
+		"chapter_uuid": _main._editor_main._current_chapter.uuid if _main._editor_main._current_chapter else "",
+		"scene_uuid": _main._editor_main._current_scene.uuid if _main._editor_main._current_scene else "",
+		"sequence_uuid": _main._editor_main._current_sequence.uuid if _main._editor_main._current_sequence else "",
+		"condition_uuid": _main._editor_main._current_condition.uuid if _main._editor_main._current_condition else ""
+	}
+
+
+func _restore_navigation_state(state: Dictionary) -> void:
+	var level: String = state.get("level", "chapters")
+	var chapter_uuid: String = state.get("chapter_uuid", "")
+	var scene_uuid: String = state.get("scene_uuid", "")
+
+	if level in ["scenes", "sequences", "sequence_edit", "condition_edit"] and chapter_uuid != "":
+		_main._editor_main.navigate_to_chapter(chapter_uuid)
+	if level in ["sequences", "sequence_edit", "condition_edit"] and scene_uuid != "":
+		_main._editor_main.navigate_to_scene(scene_uuid)
+	if level == "sequence_edit":
+		var sequence_uuid: String = state.get("sequence_uuid", "")
+		if sequence_uuid != "":
+			_main._editor_main.navigate_to_sequence(sequence_uuid)
+			if _main._editor_main._current_sequence:
+				_main.load_sequence_editors(_main._editor_main._current_sequence)
+	elif level == "condition_edit":
+		var condition_uuid: String = state.get("condition_uuid", "")
+		if condition_uuid != "":
+			_main._editor_main.navigate_to_condition(condition_uuid)
+			if _main._editor_main._current_condition:
+				load_condition_editor(_main._editor_main._current_condition)
+	elif level == "map":
+		_main._editor_main.navigate_to_map()
+
+
+func _show_load_error(message: String) -> void:
+	var err_dialog = AcceptDialog.new()
+	err_dialog.dialog_text = message
+	err_dialog.confirmed.connect(err_dialog.queue_free)
+	_main.add_child(err_dialog)
+	err_dialog.popup_centered()
 
 
 func on_new_story_pressed() -> void:
