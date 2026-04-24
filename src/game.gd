@@ -459,6 +459,8 @@ func _apply_ui_lang() -> void:
 
 
 func _on_options_applied() -> void:
+	if _settings == null:
+		return
 	# Vérifier si l'échelle UI a changé — nécessite un rechargement de la scène
 	var new_multiplier: float = _settings.get_ui_scale_factor()
 	if not is_equal_approx(new_multiplier, UIScale.get_user_multiplier()):
@@ -474,8 +476,10 @@ func _on_options_applied() -> void:
 	_story_play_ctrl._autosave_enabled = _settings.autosave_enabled
 	_play_ctrl.set_toolbar_visible(_settings.toolbar_visible)
 	_play_ctrl.set_voice_language(_settings.voice_language)
-	if _game_plugin_manager:
+
+	if _game_plugin_manager != null:
 		var ctx = _build_game_plugin_context()
+		_game_plugin_manager.dispatch_on_settings_applied(ctx)
 		_game_plugin_manager.dispatch_on_game_event(ctx, "options_changed", {
 			"music_enabled": _settings.music_enabled,
 			"music_volume": _settings.music_volume,
@@ -1348,4 +1352,6 @@ func _apply_game_ui_theme(story: RefCounted) -> void:
 		_save_load_menu.apply_custom_theme(ui_path)
 	if _chapter_scene_menu and _chapter_scene_menu.has_method("apply_custom_theme"):
 		_chapter_scene_menu.apply_custom_theme(ui_path)
+	
+	if _settings:
 		_settings.save_settings()

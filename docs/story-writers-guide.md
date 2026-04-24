@@ -322,8 +322,6 @@ Frame Novel Studio supports an extensible plugin system. Plugins add functionali
 
 **PlayFab Analytics** (Game plugin) -- Cloud analytics and session telemetry via Microsoft PlayFab.
 
-**Premium Code** (Game plugin) -- Chapter access control via unlock codes, useful for episodic releases.
-
 **Censure** (Game plugin) -- Content filtering for age-appropriate distribution.
 
 **Walkthrough** (Game plugin) -- In-game hints system to help players navigate branching paths.

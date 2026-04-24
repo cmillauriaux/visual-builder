@@ -259,7 +259,6 @@ Plugins are separate directories at the project root, distinct from the plugin f
 plugins/
 |-- launcher/           # Splash screen and disclaimers
 |-- playfab_analytics/  # Cloud analytics via PlayFab
-|-- premium_code/       # Access control via unlock codes
 |-- censure/            # Content filtering
 +-- walkthrough/        # In-game hints and walkthrough
 ```

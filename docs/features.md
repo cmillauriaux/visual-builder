@@ -379,7 +379,6 @@ Both types are discovered automatically from the `plugins/` directory. Plugin se
 |--------|------|-------------|
 | **Launcher** | Game | Splash screens for studio logo, engine logo, and disclaimer |
 | **PlayFab Analytics** | Game | Cloud analytics and session telemetry |
-| **Premium Code** | Game | Chapter access control via unlock codes |
 | **Censure** | Game | Content filtering |
 | **Walkthrough** | Game | In-game hints system with choice color-coding |
 

@@ -10,6 +10,7 @@ const GameContributions = preload("res://src/plugins/game_contributions.gd")
 var _service: Node = null
 var _story_title: String = ""
 var _story_version: String = ""
+var _game_ctx: RefCounted = null
 
 
 func get_plugin_name() -> String:
@@ -28,11 +29,20 @@ func is_configurable() -> bool:
 func on_game_ready(ctx: RefCounted) -> void:
 	if ctx == null or ctx.story == null or ctx.game_node == null:
 		return
+	_game_ctx = ctx
 	var story = ctx.story
 	_story_title = story.title if story.get("title") != null else ""
 	_story_version = story.version if story.get("version") != null else ""
 
-	var ps: Dictionary = _get_plugin_config(story)
+	if ctx.settings != null and ctx.settings.analytics_enabled:
+		_setup_service()
+
+
+func _setup_service() -> void:
+	if _service != null or _game_ctx == null:
+		return
+	
+	var ps: Dictionary = _get_plugin_config(_game_ctx.story)
 	var title_id: String = ps.get("title_id", "")
 	var enabled: bool = ps.get("enabled", false)
 
@@ -42,7 +52,7 @@ func on_game_ready(ctx: RefCounted) -> void:
 	_service = Node.new()
 	_service.set_script(PlayFabAnalyticsServiceScript)
 	_service.name = "PlayFabAnalytics"
-	ctx.game_node.add_child(_service)
+	_game_ctx.game_node.add_child(_service)
 	_service.configure(title_id, enabled)
 	if _service.is_configured():
 		_service.login_anonymous()
@@ -53,6 +63,21 @@ func on_game_cleanup(ctx: RefCounted) -> void:
 		_service.flush()
 		_service.queue_free()
 		_service = null
+
+
+func on_settings_applied(ctx: RefCounted) -> void:
+	_game_ctx = ctx
+	if ctx.settings == null:
+		return
+		
+	if ctx.settings.analytics_enabled:
+		if _service == null:
+			_setup_service()
+	else:
+		if _service != null:
+			_service.flush()
+			_service.queue_free()
+			_service = null
 
 
 func on_before_chapter(ctx: RefCounted) -> void:
@@ -175,6 +200,14 @@ func on_main_menu_displayed(_ctx: RefCounted, platform: String, app_version: Str
 func on_game_event(_ctx: RefCounted, event_name: String, data: Dictionary) -> void:
 	if _service == null or not _service.is_active():
 		return
+	# Si l'événement est un changement d'options, on vérifie si l'utilisateur a désactivé les stats
+	if event_name == "options_changed":
+		var ctx_settings = _ctx.get("settings") if _ctx != null else null
+		if ctx_settings != null and not ctx_settings.get("analytics_enabled", true):
+			_service.flush()
+			_service.queue_free()
+			_service = null
+			return
 	_service.track_event(event_name, data)
 
 
@@ -184,24 +217,53 @@ func get_options_controls() -> Array:
 	return [def]
 
 
-func _create_options_control(_settings: RefCounted) -> Control:
+func _create_options_control(settings: RefCounted) -> Control:
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 8)
+
 	var hbox := HBoxContainer.new()
-	var label := Label.new()
-	label.text = "PlayFab Analytics"
-	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	hbox.add_child(label)
+	vbox.add_child(hbox)
+	
+	var check := CheckButton.new()
+	check.text = "Envoyer des statistiques anonymes"
+	check.button_pressed = settings.analytics_enabled if settings != null else true
+	check.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hbox.add_child(check)
+
 	var status := Label.new()
+	status.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_update_status_label(status)
+	hbox.add_child(status)
+
+	check.toggled.connect(func(pressed: bool):
+		if settings != null:
+			settings.analytics_enabled = pressed
+			settings.save_settings()
+		
+		if pressed:
+			_setup_service()
+		else:
+			if _service != null:
+				_service.flush()
+				_service.queue_free()
+				_service = null
+		
+		_update_status_label(status)
+	)
+
+	return vbox
+
+
+func _update_status_label(status: Label) -> void:
 	if _service != null and _service.is_active():
-		status.text = "Actif"
+		status.text = "Connecté"
 		status.add_theme_color_override("font_color", Color(0.2, 0.8, 0.2))
 	elif _service != null and _service.is_configured():
 		status.text = "Connexion..."
 		status.add_theme_color_override("font_color", Color(0.8, 0.8, 0.2))
 	else:
-		status.text = "Inactif"
+		status.text = "Désactivé"
 		status.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
-	hbox.add_child(status)
-	return hbox
 
 
 ## Configuration éditeur : champs Title ID et Enabled pour PlayFab.

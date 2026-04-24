@@ -174,6 +174,8 @@ func _get_active_plugins() -> Array:
 # --- Dispatch hooks événementiels ---
 
 func dispatch_on_game_ready(ctx: RefCounted) -> void:
+	if ctx == null or ctx.get("settings") == null:
+		return
 	for plugin in _get_active_plugins():
 		await plugin.on_game_ready(ctx)
 
@@ -181,6 +183,11 @@ func dispatch_on_game_ready(ctx: RefCounted) -> void:
 func dispatch_on_game_cleanup(ctx: RefCounted) -> void:
 	for plugin in _get_active_plugins():
 		plugin.on_game_cleanup(ctx)
+
+
+func dispatch_on_settings_applied(ctx: RefCounted) -> void:
+	for plugin in _get_active_plugins():
+		plugin.on_settings_applied(ctx)
 
 
 func dispatch_on_before_chapter(ctx: RefCounted) -> void:

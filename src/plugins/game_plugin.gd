@@ -36,6 +36,11 @@ func on_game_cleanup(ctx: RefCounted) -> void:
 	pass
 
 
+## Appelé quand les réglages du jeu (GameSettings) sont appliqués.
+func on_settings_applied(ctx: RefCounted) -> void:
+	pass
+
+
 # --- Hooks événementiels ---
 
 func on_before_chapter(ctx: RefCounted) -> void:

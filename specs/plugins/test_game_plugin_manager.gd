@@ -19,7 +19,13 @@ func after_each():
 
 
 func _create_context() -> RefCounted:
-	return GamePluginContextScript.new()
+	var ctx = GamePluginContextScript.new()
+	ctx.settings = _SettingsStub.new()
+	return ctx
+
+
+class _SettingsStub extends RefCounted:
+	var analytics_enabled: bool = true
 
 
 # --- Helper : plugin de test ---

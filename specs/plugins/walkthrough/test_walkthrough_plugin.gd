@@ -259,6 +259,34 @@ func test_style_applied_for_balanced():
 	btn.queue_free()
 
 
+func test_is_unlocked_standalone():
+	# Sans setting
+	assert_false(_plugin._is_unlocked(), "Ne doit pas être débloqué par défaut")
+	
+	# Simuler standalone
+	ProjectSettings.set_setting("application/config/story_path", "res://story")
+	assert_true(_plugin._is_unlocked(), "Doit être débloqué en standalone")
+	
+	# Nettoyer
+	ProjectSettings.set_setting("application/config/story_path", null)
+
+
+func test_style_applied_in_standalone_without_code():
+	ProjectSettings.set_setting("application/config/story_path", "res://story")
+	_plugin._enabled = true
+	_plugin._validated_code = ""
+	
+	var btn = Button.new()
+	var choice = Choice.new()
+	choice.nature = "positive"
+	_plugin.on_style_choice_button(null, btn, choice, 0)
+	
+	assert_true(btn.has_theme_stylebox_override("normal"), "Style doit être appliqué en standalone même sans code")
+	
+	btn.queue_free()
+	ProjectSettings.set_setting("application/config/story_path", null)
+
+
 # ── Tests get_options_controls ────────────────────────────────────────────────
 
 func test_get_options_controls_returns_one():

@@ -16,6 +16,7 @@ func _create_context(story: RefCounted = null) -> RefCounted:
 	ctx.game_node = Control.new()
 	add_child(ctx.game_node)
 	ctx.story = story
+	ctx.settings = _SettingsStub.new()
 	return ctx
 
 
@@ -23,6 +24,11 @@ class _StoryStub extends RefCounted:
 	var title: String = "Test Story"
 	var version: String = "1.0"
 	var plugin_settings: Dictionary = {}
+
+
+class _SettingsStub extends RefCounted:
+	var analytics_enabled: bool = true
+	func save_settings(): pass
 
 
 # --- Identity ---
@@ -111,6 +117,29 @@ func test_cleanup_safe_when_no_service():
 	var ctx = _create_context()
 	_plugin.on_game_cleanup(ctx)
 	assert_null(_plugin.get_service())
+	ctx.game_node.queue_free()
+
+
+func test_on_settings_applied_reactivity():
+	var story = _StoryStub.new()
+	story.plugin_settings = {"playfab_analytics": {"title_id": "TESTTITLE", "enabled": true}}
+	var ctx = _create_context(story)
+	
+	# Désactivé au départ dans settings
+	ctx.settings.analytics_enabled = false
+	_plugin.on_game_ready(ctx)
+	assert_null(_plugin.get_service())
+	
+	# Activer via settings + hook
+	ctx.settings.analytics_enabled = true
+	_plugin.on_settings_applied(ctx)
+	assert_not_null(_plugin.get_service())
+	
+	# Désactiver via settings + hook
+	ctx.settings.analytics_enabled = false
+	_plugin.on_settings_applied(ctx)
+	assert_null(_plugin.get_service())
+	
 	ctx.game_node.queue_free()
 
 
@@ -216,17 +245,21 @@ func test_options_controls_has_entry():
 
 func test_options_creates_control():
 	var ctrls = _plugin.get_options_controls()
-	var ctrl = ctrls[0].create_control.call(null)
+	var settings = _SettingsStub.new()
+	var ctrl = ctrls[0].create_control.call(settings)
 	assert_not_null(ctrl)
-	assert_true(ctrl is HBoxContainer)
+	assert_true(ctrl is VBoxContainer)
 	ctrl.queue_free()
 
 
 func test_options_shows_inactive_when_no_service():
 	var ctrls = _plugin.get_options_controls()
-	var ctrl = ctrls[0].create_control.call(null)
-	var status_label = ctrl.get_child(1) as Label
-	assert_eq(status_label.text, "Inactif")
+	var settings = _SettingsStub.new()
+	var ctrl = ctrls[0].create_control.call(settings)
+	# Le status est dans le premier HBox, 2ème enfant
+	var hbox = ctrl.get_child(0)
+	var status_label = hbox.get_child(1) as Label
+	assert_eq(status_label.text, "Désactivé")
 	ctrl.queue_free()
 
 

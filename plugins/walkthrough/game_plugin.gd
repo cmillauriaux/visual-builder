@@ -43,7 +43,7 @@ func on_game_cleanup(_ctx: RefCounted) -> void:
 # --- Hook : styliser les boutons de choix ---
 
 func on_style_choice_button(_ctx: RefCounted, btn: Button, choice: RefCounted, _index: int) -> void:
-	if not _enabled or _validated_code == "":
+	if not _enabled or not _is_unlocked():
 		return
 	if not choice.has_method("to_dict"):
 		return
@@ -127,6 +127,17 @@ func _is_code_valid(code: String) -> bool:
 	return expected != "" and code == expected
 
 
+func _is_unlocked() -> bool:
+	# Débloqué si un code valide a été saisi
+	if _validated_code != "":
+		return true
+	# Débloqué si embarqué dans un export standalone
+	# (On détecte l'export par la présence du story_path dans les settings)
+	if ProjectSettings.has_setting("application/config/story_path"):
+		return true
+	return false
+
+
 func _get_nature_color(nature: String) -> Color:
 	match nature:
 		"positive":
@@ -167,7 +178,7 @@ func _load_and_revalidate() -> void:
 		_save_player_data()
 		return
 	_validated_code = saved_code
-	_enabled = saved_enabled and saved_code != ""
+	_enabled = saved_enabled and _is_unlocked()
 
 
 func _save_player_data() -> void:
@@ -192,6 +203,8 @@ func _create_options_control(_settings: RefCounted) -> Control:
 	title_label.add_theme_font_size_override("font_size", 16)
 	vbox.add_child(title_label)
 
+	var is_standalone := ProjectSettings.has_setting("application/config/story_path")
+
 	# Checkbox activation
 	var check_hbox := HBoxContainer.new()
 	vbox.add_child(check_hbox)
@@ -201,12 +214,15 @@ func _create_options_control(_settings: RefCounted) -> Control:
 	check_hbox.add_child(check_label)
 	var check_btn := CheckButton.new()
 	check_btn.button_pressed = _enabled
-	check_btn.disabled = _validated_code == ""
+	check_btn.disabled = not _is_unlocked()
 	check_hbox.add_child(check_btn)
 
 	# Statut du code
 	var status_label := Label.new()
-	if _validated_code != "":
+	if is_standalone:
+		status_label.text = "Inclus dans le jeu (gratuit)"
+		status_label.add_theme_color_override("font_color", Color(0.3, 1.0, 0.3))
+	elif _validated_code != "":
 		status_label.text = "Code actif"
 		status_label.add_theme_color_override("font_color", Color(0.3, 1.0, 0.3))
 	else:
@@ -214,7 +230,7 @@ func _create_options_control(_settings: RefCounted) -> Control:
 		status_label.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8))
 	vbox.add_child(status_label)
 
-	# Saisie du code
+	# Saisie du code (masquée si standalone)
 	var input_hbox := HBoxContainer.new()
 	input_hbox.add_theme_constant_override("separation", 6)
 	vbox.add_child(input_hbox)
@@ -232,12 +248,15 @@ func _create_options_control(_settings: RefCounted) -> Control:
 	feedback_label.visible = false
 	vbox.add_child(feedback_label)
 
-	# Bouton supprimer (visible seulement si code validé)
+	# Bouton supprimer (visible seulement si code validé et pas standalone)
 	var remove_btn := Button.new()
 	remove_btn.text = "Supprimer le code"
-	remove_btn.visible = _validated_code != ""
+	remove_btn.visible = _validated_code != "" and not is_standalone
 	vbox.add_child(remove_btn)
 
+	if is_standalone:
+		input_hbox.visible = false
+	
 	# Logique toggle activation
 	check_btn.toggled.connect(func(pressed: bool):
 		_enabled = pressed
