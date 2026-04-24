@@ -218,40 +218,28 @@ func get_options_controls() -> Array:
 
 
 func _create_options_control(settings: RefCounted) -> Control:
-	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 8)
-
 	var hbox := HBoxContainer.new()
-	vbox.add_child(hbox)
-	
-	var check := CheckButton.new()
-	check.text = "Envoyer des statistiques anonymes"
-	check.button_pressed = settings.analytics_enabled if settings != null else true
-	check.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	hbox.add_child(check)
+	hbox.add_theme_constant_override("separation", 10)
+
+	var label := Label.new()
+	label.text = "Statut PlayFab :"
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hbox.add_child(label)
 
 	var status := Label.new()
 	status.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_update_status_label(status)
 	hbox.add_child(status)
 
-	check.toggled.connect(func(pressed: bool):
-		if settings != null:
-			settings.analytics_enabled = pressed
-			settings.save_settings()
-		
-		if pressed:
-			_setup_service()
-		else:
-			if _service != null:
-				_service.flush()
-				_service.queue_free()
-				_service = null
-		
-		_update_status_label(status)
-	)
+	# On utilise un timer ou un connect simple pour mettre à jour le statut
+	# si le réglage global change (via on_settings_applied qui est appelé par le menu)
+	var timer = Timer.new()
+	timer.wait_time = 0.5
+	timer.autostart = true
+	hbox.add_child(timer)
+	timer.timeout.connect(func(): _update_status_label(status))
 
-	return vbox
+	return hbox
 
 
 func _update_status_label(status: Label) -> void:

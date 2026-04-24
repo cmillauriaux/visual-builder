@@ -248,7 +248,7 @@ func test_options_creates_control():
 	var settings = _SettingsStub.new()
 	var ctrl = ctrls[0].create_control.call(settings)
 	assert_not_null(ctrl)
-	assert_true(ctrl is VBoxContainer)
+	assert_true(ctrl is HBoxContainer)
 	ctrl.queue_free()
 
 
@@ -256,9 +256,8 @@ func test_options_shows_inactive_when_no_service():
 	var ctrls = _plugin.get_options_controls()
 	var settings = _SettingsStub.new()
 	var ctrl = ctrls[0].create_control.call(settings)
-	# Le status est dans le premier HBox, 2ème enfant
-	var hbox = ctrl.get_child(0)
-	var status_label = hbox.get_child(1) as Label
+	# Le status est le 2ème enfant de l'HBox (après le label "Statut PlayFab :")
+	var status_label = ctrl.get_child(1) as Label
 	assert_eq(status_label.text, "Désactivé")
 	ctrl.queue_free()
 
