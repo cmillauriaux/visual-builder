@@ -42,7 +42,6 @@ var _auto_play_delay_option: OptionButton
 var _typewriter_speed_option: OptionButton
 var _dialogue_opacity_slider: HSlider
 var _autosave_enabled_check: CheckButton
-var _analytics_enabled_check: CheckButton
 var _ui_scale_option: OptionButton
 var _toolbar_visible_check: CheckButton
 var _plugins_container: VBoxContainer
@@ -97,12 +96,6 @@ func build_ui() -> void:
 	var content = VBoxContainer.new()
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(content)
-
-	# Section Général
-	_add_section_label(content, "Général")
-	_analytics_enabled_check = _add_check_row(content, "Envoyer des statistiques anonymes")
-	
-	content.add_child(HSeparator.new())
 
 	# Section Affichage
 	_resolution_option = _add_option_row(content, "Résolution", GameSettings.RESOLUTION_LABELS)
@@ -167,9 +160,6 @@ func load_from_settings(settings: RefCounted) -> void:
 		return
 	_current_settings = settings
 
-	# Général
-	_analytics_enabled_check.button_pressed = settings.analytics_enabled
-
 	# Résolution
 	var res_idx = _find_resolution_index(settings.resolution)
 	_resolution_option.selected = res_idx
@@ -226,7 +216,6 @@ func load_from_settings(settings: RefCounted) -> void:
 func apply_to_settings(settings: RefCounted, path: String = GameSettings.SETTINGS_PATH) -> void:
 	if settings == null:
 		return
-	settings.analytics_enabled = _analytics_enabled_check.button_pressed
 	var res_idx = _resolution_option.selected
 	if res_idx >= 0 and res_idx < GameSettings.AVAILABLE_RESOLUTIONS.size():
 		settings.resolution = GameSettings.AVAILABLE_RESOLUTIONS[res_idx]
