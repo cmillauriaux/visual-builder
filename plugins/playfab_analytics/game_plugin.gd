@@ -226,10 +226,17 @@ func _create_options_control(settings: RefCounted) -> Control:
 	title_label.add_theme_font_size_override("font_size", 16)
 	vbox.add_child(title_label)
 
+	var hbox := HBoxContainer.new()
+	vbox.add_child(hbox)
+
+	var label := Label.new()
+	label.text = "Envoyer des statistiques anonymes :"
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hbox.add_child(label)
+
 	var check := CheckButton.new()
-	check.text = "Envoyer des statistiques anonymes"
 	check.button_pressed = settings.analytics_enabled if settings != null else true
-	vbox.add_child(check)
+	hbox.add_child(check)
 
 	check.toggled.connect(func(pressed: bool):
 		if settings != null:

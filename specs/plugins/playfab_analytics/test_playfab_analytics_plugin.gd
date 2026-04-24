@@ -256,10 +256,12 @@ func test_options_has_checkbox():
 	var ctrls = _plugin.get_options_controls()
 	var settings = _SettingsStub.new()
 	var ctrl = ctrls[0].create_control.call(settings)
-	# Le titre est l'enfant 0, la checkbox est l'enfant 1
-	var checkbox = ctrl.get_child(1) as CheckButton
+	# Le titre est l'enfant 0, l'HBox est l'enfant 1
+	var hbox = ctrl.get_child(1) as HBoxContainer
+	assert_not_null(hbox)
+	# Dans l'HBox, le label est 0 et la checkbox est 1
+	var checkbox = hbox.get_child(1) as CheckButton
 	assert_not_null(checkbox)
-	assert_eq(checkbox.text, "Envoyer des statistiques anonymes")
 	ctrl.queue_free()
 
 
