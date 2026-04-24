@@ -353,6 +353,120 @@ func test_on_story_play_choice_requested_empty_array() -> void:
 	assert_signal_emitted(EventBus, "play_choice_requested")
 
 
+# --- Skip preview ---
+
+func test_execute_skip_stops_current_sequence_preview() -> void:
+	var seq = SequenceScript.new()
+	var dlg = DialogueScript.new()
+	dlg.character = "Alice"
+	dlg.text = "Hello"
+	seq.dialogues.append(dlg)
+	_main._sequence_editor_ctrl.load_sequence(seq)
+	_main._sequence_editor_ctrl.start_play()
+	_main._play_ctrl._current_playing_sequence = seq
+
+	_main._play_ctrl.execute_skip()
+
+	assert_false(_main._sequence_editor_ctrl.is_playing(), "skip preview should stop current sequence playback")
+
+
+func test_s_key_triggers_skip_preview() -> void:
+	var seq = SequenceScript.new()
+	var dlg = DialogueScript.new()
+	dlg.character = "Alice"
+	dlg.text = "Hello"
+	seq.dialogues.append(dlg)
+	_main._sequence_editor_ctrl.load_sequence(seq)
+	_main._sequence_editor_ctrl.start_play()
+	_main._play_ctrl._current_playing_sequence = seq
+
+	var event = InputEventKey.new()
+	event.pressed = true
+	event.keycode = KEY_S
+	_main._play_ctrl._input(event)
+
+	assert_false(_main._sequence_editor_ctrl.is_playing(), "S should skip preview to the end of the current sequence")
+
+
+func test_execute_skip_story_preview_shows_choices() -> void:
+	var seq = SequenceScript.new()
+	var dlg = DialogueScript.new()
+	dlg.character = "Alice"
+	dlg.text = "Hello"
+	seq.dialogues.append(dlg)
+	var ending = EndingScript.new()
+	ending.type = "choices"
+	var choice = ChoiceScript.new()
+	choice.text = "Continue"
+	ending.choices.append(choice)
+	seq.ending = ending
+
+	_main._sequence_editor_ctrl.load_sequence(seq)
+	_main._sequence_editor_ctrl.start_play()
+	_main._play_ctrl._is_story_play_mode = true
+	_main._play_ctrl._current_playing_sequence = seq
+	_main._story_play_ctrl._current_sequence = seq
+	_main._story_play_ctrl._autosave_enabled = false
+	_main._story_play_ctrl._state = 1 # State.PLAYING_SEQUENCE
+
+	watch_signals(EventBus)
+	_main._play_ctrl.execute_skip()
+
+	assert_signal_emitted(EventBus, "play_choice_requested")
+
+
+func test_execute_skip_story_preview_follows_auto_redirect() -> void:
+	var ConsequenceScript = preload("res://src/models/consequence.gd")
+	var StoryScript = preload("res://src/models/story.gd")
+	var ChapterScript = preload("res://src/models/chapter.gd")
+	var SceneScript = preload("res://src/models/scene_data.gd")
+
+	var story = StoryScript.new()
+	var chapter = ChapterScript.new()
+	var scene = SceneScript.new()
+	var seq_a = SequenceScript.new()
+	var seq_b = SequenceScript.new()
+	seq_a.seq_name = "A"
+	seq_b.seq_name = "B"
+
+	var dlg_a = DialogueScript.new()
+	dlg_a.text = "A"
+	seq_a.dialogues.append(dlg_a)
+	var dlg_b = DialogueScript.new()
+	dlg_b.text = "B"
+	seq_b.dialogues.append(dlg_b)
+
+	var ending = EndingScript.new()
+	ending.type = "auto_redirect"
+	var consequence = ConsequenceScript.new()
+	consequence.type = "redirect_sequence"
+	consequence.target = seq_b.uuid
+	ending.auto_consequence = consequence
+	seq_a.ending = ending
+
+	scene.sequences.append(seq_a)
+	scene.sequences.append(seq_b)
+	chapter.scenes.append(scene)
+	story.chapters.append(chapter)
+	_main._editor_main._story = story
+	_main._editor_main._current_chapter = chapter
+	_main._editor_main._current_scene = scene
+
+	_main._sequence_editor_ctrl.load_sequence(seq_a)
+	_main._sequence_editor_ctrl.start_play()
+	_main._play_ctrl._is_story_play_mode = true
+	_main._play_ctrl._current_playing_sequence = seq_a
+	_main._story_play_ctrl._current_sequence = seq_a
+	_main._story_play_ctrl._current_scene = scene
+	_main._story_play_ctrl._state = 1 # State.PLAYING_SEQUENCE
+
+	_main._play_ctrl.execute_skip()
+
+	assert_eq(_main._play_ctrl._current_playing_sequence, seq_b, "skip preview should follow auto_redirect to the next sequence")
+	assert_eq(_main._play_text_label.text, "B", "skip preview should display the first dialogue of the next sequence")
+	assert_false(_main._typewriter_timer.is_stopped(), "typewriter should restart after skip redirects to the next sequence")
+
+
 # --- _apply_sequence_audio ---
 
 func test_apply_sequence_audio_null_music_player_does_not_crash() -> void:

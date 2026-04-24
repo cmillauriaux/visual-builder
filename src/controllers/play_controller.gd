@@ -106,7 +106,9 @@ func _start_play_after_fx() -> void:
 
 func _start_sequence_actually() -> void:
 	_sequence_editor_ctrl.start_play()
-	if not _sequence_editor_ctrl.is_playing():
+	if _sequence_editor_ctrl.is_playing():
+		_main._typewriter_timer.start()
+	else:
 		_handle_play_stopped()
 
 
@@ -582,6 +584,14 @@ func on_typewriter_tick() -> void:
 	EventBus.play_typewriter_tick.emit(_sequence_editor_ctrl.get_visible_characters())
 
 
+func execute_skip() -> void:
+	if not _sequence_editor_ctrl.is_playing():
+		return
+	_main._typewriter_timer.stop()
+	_sequence_editor_ctrl.skip_to_end()
+	_handle_play_stopped()
+
+
 func _input(event: InputEvent) -> void:
 	if _is_showing_title:
 		if event is InputEventKey and event.pressed and event.keycode == KEY_SPACE:
@@ -591,7 +601,10 @@ func _input(event: InputEvent) -> void:
 
 	if not _sequence_editor_ctrl.is_playing():
 		return
-	if event is InputEventKey and event.pressed and event.keycode == KEY_SPACE:
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_S and not event.is_command_or_control_pressed() and not event.alt_pressed:
+		execute_skip()
+		get_viewport().set_input_as_handled()
+	elif event is InputEventKey and event.pressed and event.keycode == KEY_SPACE:
 		if not _sequence_editor_ctrl.is_text_fully_displayed():
 			_sequence_editor_ctrl.skip_typewriter()
 		else:
