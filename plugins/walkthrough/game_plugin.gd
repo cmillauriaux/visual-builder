@@ -220,8 +220,7 @@ func _create_options_control(_settings: RefCounted) -> Control:
 	# Statut du code
 	var status_label := Label.new()
 	if is_standalone:
-		status_label.text = "Inclus dans le jeu (gratuit)"
-		status_label.add_theme_color_override("font_color", Color(0.3, 1.0, 0.3))
+		status_label.visible = false
 	elif _validated_code != "":
 		status_label.text = "Code actif"
 		status_label.add_theme_color_override("font_color", Color(0.3, 1.0, 0.3))
