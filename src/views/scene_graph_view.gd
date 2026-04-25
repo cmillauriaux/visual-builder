@@ -18,9 +18,11 @@ signal scene_double_clicked(scene_uuid: String)
 signal scene_rename_requested(scene_uuid: String)
 signal scene_delete_requested(scene_uuid: String)
 signal entry_point_changed(uuid: String)
+signal custom_item_pressed(id: int, uuid: String)
 
 var _chapter = null
 var _node_map: Dictionary = {}  # uuid → GraphNode
+var _custom_menu_entries: Array = []
 var _connection_type_map: Dictionary = {}  # "from→to" → "transition"|"choice"|"both"
 
 var _tooltip_panel: PanelContainer
@@ -134,6 +136,9 @@ func load_chapter(chapter) -> void:
 	_build_connection_type_map()
 	_connect_all_from_map()
 	_update_node_colors()
+
+func set_custom_menu_entries(entries: Array) -> void:
+	_custom_menu_entries = entries
 
 func get_chapter():
 	return _chapter
@@ -263,11 +268,19 @@ func _create_node(uuid: String, item_name: String, pos: Vector2, subtitle: Strin
 	node.set_script(GraphNodeItem)
 	add_child(node)
 	node.setup(uuid, item_name, pos, subtitle)
+	
+	for i in range(_custom_menu_entries.size()):
+		node.add_custom_menu_item(_custom_menu_entries[i].label, 100 + i)
+		
 	node.double_clicked.connect(_on_node_double_clicked)
 	node.rename_requested.connect(_on_node_rename_requested)
 	node.delete_requested.connect(_on_node_delete_requested)
 	node.entry_point_toggled.connect(_on_entry_point_toggled)
+	node.custom_item_pressed.connect(_on_custom_item_pressed)
 	_node_map[uuid] = node
+
+func _on_custom_item_pressed(id: int, uuid: String) -> void:
+	custom_item_pressed.emit(id, uuid)
 
 func _on_node_double_clicked(uuid: String) -> void:
 	scene_double_clicked.emit(uuid)

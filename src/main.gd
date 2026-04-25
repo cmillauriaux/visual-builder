@@ -217,6 +217,44 @@ func _setup_plugins() -> void:
 	add_child(_plugin_manager)
 	_plugin_manager.scan_and_load_plugins()
 	_plugin_manager.apply_contributions(self)
+	
+	# Transmettre les contributions aux graphes
+	var custom_entries = _plugin_manager.get_graph_context_menu_entries()
+	_chapter_graph_view.set_custom_menu_entries(custom_entries)
+	_scene_graph_view.set_custom_menu_entries(custom_entries)
+	_sequence_graph_view.set_custom_menu_entries(custom_entries)
+	
+	_chapter_graph_view.custom_item_pressed.connect(_on_graph_custom_item_pressed.bind("chapter"))
+	_scene_graph_view.custom_item_pressed.connect(_on_graph_custom_item_pressed.bind("scene"))
+	_sequence_graph_view.custom_item_pressed.connect(_on_graph_custom_item_pressed.bind("sequence"))
+
+
+func _on_graph_custom_item_pressed(id: int, uuid: String, level: String) -> void:
+	var entries = _plugin_manager.get_graph_context_menu_entries()
+	var idx = id - 100
+	if idx >= 0 and idx < entries.size():
+		var entry = entries[idx]
+		var ctx = get_current_context()
+		
+		# Récupérer tous les UUIDs sélectionnés dans le graphe actif
+		var selected_uuids = []
+		var active_graph: GraphEdit = null
+		match level:
+			"chapter": active_graph = _chapter_graph_view
+			"scene": active_graph = _scene_graph_view
+			"sequence": active_graph = _sequence_graph_view
+		
+		if active_graph:
+			for node in active_graph.get_children():
+				if node is GraphNode and node.selected:
+					if node.has_method("get_item_uuid"):
+						selected_uuids.append(node.get_item_uuid())
+		
+		# Si le nœud cliqué n'est pas dans la sélection, on ne prend que lui
+		if uuid not in selected_uuids:
+			selected_uuids = [uuid]
+			
+		entry.callback.call(ctx, selected_uuids)
 
 
 func get_current_context() -> RefCounted:

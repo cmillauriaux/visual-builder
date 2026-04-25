@@ -15,6 +15,9 @@ var _next_menu_id: int = 1000
 ## Maps menu item ID → Callable for callback dispatch
 var _menu_callbacks: Dictionary = {}
 
+## Graph context menu contributions
+var _graph_context_menu_entries: Array = []
+
 ## Reference to main node — set by apply_contributions()
 var _current_main: Control = null
 
@@ -49,15 +52,27 @@ func scan_and_load_plugins(plugins_dir: String = "res://plugins/") -> void:
 ## Injects all registered plugin contributions into the editor.
 func apply_contributions(main: Control) -> void:
 	_current_main = main
+	_graph_context_menu_entries.clear()
 	for plugin in _plugins:
 		_inject_menu_entries(plugin, main)
 		_inject_toolbar_items(plugin, main)
 		_inject_dock_panels(plugin, main)
 		_inject_sequence_tabs(plugin, main)
 		_inject_background_services(plugin, main)
+		_collect_graph_context_menu_entries(plugin)
 
 
 # --- Private ---
+
+func _collect_graph_context_menu_entries(plugin: RefCounted) -> void:
+	if not plugin.has_method("get_graph_context_menu_entries"):
+		return
+	for entry in plugin.get_graph_context_menu_entries():
+		_graph_context_menu_entries.append(entry)
+
+
+func get_graph_context_menu_entries() -> Array:
+	return _graph_context_menu_entries
 
 func _try_load_plugin(path: String) -> void:
 	if not FileAccess.file_exists(path):

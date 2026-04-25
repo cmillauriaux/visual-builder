@@ -56,3 +56,10 @@ class ImagePickerTabDef extends RefCounted:
 	##   category_service, on_image_selected: Callable(path),
 	##   on_show_preview: Callable(texture, filename)
 	var create_tab: Callable
+
+
+class GraphContextMenuEntry extends RefCounted:
+	## Label shown in the menu
+	var label: String = ""
+	## Called with (ctx, selected_uuids) when the item is pressed
+	var callback: Callable

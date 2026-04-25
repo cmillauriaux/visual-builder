@@ -39,9 +39,11 @@ signal condition_delete_requested(condition_uuid: String)
 signal entry_point_changed(uuid: String)
 signal sequences_transition_requested(uuids: Array, property: String, value: String)
 signal sequence_foregrounds_paste_requested(target_uuid: String, clipboard_data: Dictionary)
+signal custom_item_pressed(id: int, uuid: String)
 
 var _scene_data = null
 var _node_map: Dictionary = {}  # uuid → GraphNode
+var _custom_menu_entries: Array = []
 var _condition_uuids: Dictionary = {}  # uuid → true (pour identifier les nœuds condition)
 var _terminal_uuids: Dictionary = {}  # uuid → terminal_type (pour les nœuds terminaux)
 var _choice_sequence_uuids: Dictionary = {}  # uuid → true (pour les nœuds séquence-choix multi-ports)
@@ -172,6 +174,9 @@ func load_scene(scene_data) -> void:
 	_build_connection_type_map()
 	_connect_all_from_map()
 	_update_node_colors()
+
+func set_custom_menu_entries(entries: Array) -> void:
+	_custom_menu_entries = entries
 
 func _has_effects(item) -> bool:
 	if item.get("rules") != null:
@@ -417,6 +422,9 @@ func _create_node(uuid: String, item_name: String, pos: Vector2, subtitle: Strin
 	else:
 		node.setup(uuid, item_name, pos, subtitle, false, _has_effects(seq_model) if seq_model else false)
 	
+	for i in range(_custom_menu_entries.size()):
+		node.add_custom_menu_item(_custom_menu_entries[i].label, 100 + i)
+	
 	node.setup_sequence_options()
 	node.double_clicked.connect(_on_node_double_clicked)
 	node.rename_requested.connect(_on_node_rename_requested)
@@ -425,8 +433,12 @@ func _create_node(uuid: String, item_name: String, pos: Vector2, subtitle: Strin
 	node.transition_selected.connect(_on_node_transition_selected)
 	node.foregrounds_copy_requested.connect(_on_foregrounds_copy_requested)
 	node.foregrounds_paste_requested.connect(_on_foregrounds_paste_requested)
+	node.custom_item_pressed.connect(_on_custom_item_pressed)
 	_update_node_fg_menu_state(node, uuid)
 	_node_map[uuid] = node
+
+func _on_custom_item_pressed(id: int, uuid: String) -> void:
+	custom_item_pressed.emit(id, uuid)
 
 func _on_node_transition_selected(uuid: String, property: String, value: String) -> void:
 	var selected_uuids = []
@@ -462,6 +474,10 @@ func _create_condition_node(uuid: String, item_name: String, pos: Vector2, subti
 			cond_model = cond
 			break
 	node.setup(uuid, item_name, pos, subtitle, false, _has_effects(cond_model) if cond_model else false)
+	
+	for i in range(_custom_menu_entries.size()):
+		node.add_custom_menu_item(_custom_menu_entries[i].label, 100 + i)
+	
 	# Couleur distincte pour les nœuds condition
 	var stylebox = StyleBoxFlat.new()
 	stylebox.bg_color = Color(0.25, 0.2, 0.45)
@@ -475,6 +491,7 @@ func _create_condition_node(uuid: String, item_name: String, pos: Vector2, subti
 	node.rename_requested.connect(_on_condition_rename_requested)
 	node.delete_requested.connect(_on_condition_delete_requested)
 	node.entry_point_toggled.connect(_on_entry_point_toggled)
+	node.custom_item_pressed.connect(_on_custom_item_pressed)
 	_node_map[uuid] = node
 	_condition_uuids[uuid] = true
 

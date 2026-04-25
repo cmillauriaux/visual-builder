@@ -12,6 +12,7 @@ signal entry_point_toggled(uuid: String, checked: bool)
 signal transition_selected(uuid: String, property: String, value: String)
 signal foregrounds_copy_requested(uuid: String)
 signal foregrounds_paste_requested(uuid: String)
+signal custom_item_pressed(id: int, uuid: String)
 
 var _uuid: String = ""
 var _item_name: String = ""
@@ -232,6 +233,11 @@ func set_paste_foregrounds_enabled(enabled: bool) -> void:
 	if idx >= 0:
 		_popup_menu.set_item_disabled(idx, not enabled)
 
+func add_custom_menu_item(label: String, id: int) -> void:
+	if _popup_menu == null:
+		return
+	_popup_menu.add_item(label, id)
+
 func _on_popup_id_pressed(id: int) -> void:
 	if id == 0:
 		rename_requested.emit(_uuid)
@@ -247,3 +253,5 @@ func _on_popup_id_pressed(id: int) -> void:
 		foregrounds_paste_requested.emit(_uuid)
 	elif id == 5:
 		DisplayServer.clipboard_set(_uuid)
+	elif id >= 100:
+		custom_item_pressed.emit(id, _uuid)
