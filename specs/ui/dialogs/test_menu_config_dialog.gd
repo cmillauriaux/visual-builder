@@ -484,6 +484,9 @@ func test_has_ios_bundle_id_edit() -> void:
 func test_has_android_package_edit() -> void:
 	assert_not_null(_dialog._android_package_edit)
 
+func test_has_android_sdk_path_edit() -> void:
+	assert_not_null(_dialog._android_sdk_path_edit)
+
 func test_setup_fills_platform_settings_ios() -> void:
 	var story = _make_story()
 	story.platform_settings = {"ios": {"team_id": "TEAM123", "bundle_identifier": "com.test.app"}}
@@ -493,9 +496,10 @@ func test_setup_fills_platform_settings_ios() -> void:
 
 func test_setup_fills_platform_settings_android() -> void:
 	var story = _make_story()
-	story.platform_settings = {"android": {"package_name": "com.test.app"}}
+	story.platform_settings = {"android": {"package_name": "com.test.app", "sdk_path": "/path/to/sdk"}}
 	_dialog.setup(story, "/tmp/test_story")
 	assert_eq(_dialog._android_package_edit.text, "com.test.app")
+	assert_eq(_dialog._android_sdk_path_edit.text, "/path/to/sdk")
 
 func test_get_platform_settings_empty() -> void:
 	var result = _dialog.get_platform_settings()
@@ -510,5 +514,7 @@ func test_get_platform_settings_ios() -> void:
 
 func test_get_platform_settings_android() -> void:
 	_dialog._android_package_edit.text = "com.my.game"
+	_dialog._android_sdk_path_edit.text = "/path/to/sdk"
 	var result = _dialog.get_platform_settings()
 	assert_eq(result["android"]["package_name"], "com.my.game")
+	assert_eq(result["android"]["sdk_path"], "/path/to/sdk")

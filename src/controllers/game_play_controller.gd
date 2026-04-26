@@ -277,9 +277,13 @@ func _start_sequence_actually() -> void:
 		_sequence_editor_ctrl.start_play()
 	if _sequence_editor_ctrl.is_playing():
 		_play_overlay.visible = true
-		_menu_button.visible = true
 		if not _play_overlay.get_parent():
 			_game.add_child(_play_overlay)
+		
+		if not _play_overlay.resized.is_connected(_update_floating_ui_positions):
+			_play_overlay.resized.connect(_update_floating_ui_positions)
+		_update_floating_ui_positions()
+		
 		_game.move_child(_play_overlay, _game.get_child_count() - 1)
 		if _play_buttons_bar:
 			_play_buttons_bar.visible = _toolbar_visible
@@ -295,6 +299,22 @@ func _start_sequence_actually() -> void:
 			_typewriter_timer.start()
 	else:
 		_handle_play_stopped()
+
+
+func _update_floating_ui_positions() -> void:
+	if not _play_overlay: return
+	var h = _play_overlay.size.y
+	var s = UIScale.get_scale()
+	
+	if _play_buttons_bar:
+		_play_buttons_bar.offset_bottom = -h
+		_play_buttons_bar.offset_top = -h - roundi(38 * s)
+	
+	if _toolbar_toggle_button:
+		var pad_top = roundi(10 * s)
+		var toggle_s = roundi(24 * s)
+		_toolbar_toggle_button.offset_top = -h + pad_top
+		_toolbar_toggle_button.offset_bottom = -h + pad_top + toggle_s
 
 
 func _show_title_screen(seq) -> void:

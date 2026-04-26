@@ -52,6 +52,10 @@ var _game_plugins: Array = []  # loaded VBGamePlugin instances for editor config
 var _ios_team_id_edit: LineEdit
 var _ios_bundle_id_edit: LineEdit
 var _android_package_edit: LineEdit
+var _android_sdk_path_edit: LineEdit
+var _android_sdk_browse_btn: Button
+var _android_jdk_path_edit: LineEdit
+var _android_jdk_browse_btn: Button
 var _story = null
 var _story_base_path: String = ""
 var _current_menu_music: String = ""
@@ -275,6 +279,46 @@ func _init():
 	_android_package_edit.name = "AndroidPackageEdit"
 	_android_package_edit.placeholder_text = "com.example.mygame"
 	plat_vbox.add_child(_android_package_edit)
+
+	var android_sdk_lbl = Label.new()
+	android_sdk_lbl.text = tr("Chemin du SDK Android")
+	plat_vbox.add_child(android_sdk_lbl)
+
+	var android_sdk_hbox = HBoxContainer.new()
+	android_sdk_hbox.name = "AndroidSdkHBox"
+	_android_sdk_path_edit = LineEdit.new()
+	_android_sdk_path_edit.name = "AndroidSdkPathEdit"
+	_android_sdk_path_edit.placeholder_text = tr("Chemin vers le SDK Android (ex: /Users/name/Library/Android/sdk)")
+	_android_sdk_path_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	android_sdk_hbox.add_child(_android_sdk_path_edit)
+
+	_android_sdk_browse_btn = Button.new()
+	_android_sdk_browse_btn.name = "AndroidSdkBrowseButton"
+	_android_sdk_browse_btn.text = tr("Parcourir...")
+	_android_sdk_browse_btn.pressed.connect(_on_android_sdk_browse_pressed)
+	android_sdk_hbox.add_child(_android_sdk_browse_btn)
+
+	plat_vbox.add_child(android_sdk_hbox)
+
+	var android_jdk_lbl = Label.new()
+	android_jdk_lbl.text = tr("Chemin du JDK Java")
+	plat_vbox.add_child(android_jdk_lbl)
+
+	var android_jdk_hbox = HBoxContainer.new()
+	android_jdk_hbox.name = "AndroidJdkHBox"
+	_android_jdk_path_edit = LineEdit.new()
+	_android_jdk_path_edit.name = "AndroidJdkPathEdit"
+	_android_jdk_path_edit.placeholder_text = tr("Chemin vers le JDK (ex: /opt/homebrew/opt/openjdk)")
+	_android_jdk_path_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	android_jdk_hbox.add_child(_android_jdk_path_edit)
+
+	_android_jdk_browse_btn = Button.new()
+	_android_jdk_browse_btn.name = "AndroidJdkBrowseButton"
+	_android_jdk_browse_btn.text = tr("Parcourir...")
+	_android_jdk_browse_btn.pressed.connect(_on_android_jdk_browse_pressed)
+	android_jdk_hbox.add_child(_android_jdk_browse_btn)
+
+	plat_vbox.add_child(android_jdk_hbox)
 
 	plat_scroll.add_child(plat_vbox)
 	tabs.add_child(plat_scroll)
@@ -536,6 +580,8 @@ func setup(story, story_base_path: String = "") -> void:
 	_ios_bundle_id_edit.text = ios_settings.get("bundle_identifier", "")
 	var android_settings: Dictionary = story.platform_settings.get("android", {}) if story.get("platform_settings") != null else {}
 	_android_package_edit.text = android_settings.get("package_name", "")
+	_android_sdk_path_edit.text = android_settings.get("sdk_path", "")
+	_android_jdk_path_edit.text = android_settings.get("jdk_path", "")
 	_update_preview()
 	_update_game_over_preview()
 	_update_tbc_preview()
@@ -600,6 +646,10 @@ func get_platform_settings() -> Dictionary:
 	var android: Dictionary = {}
 	if _android_package_edit.text.strip_edges() != "":
 		android["package_name"] = _android_package_edit.text.strip_edges()
+	if _android_sdk_path_edit.text.strip_edges() != "":
+		android["sdk_path"] = _android_sdk_path_edit.text.strip_edges()
+	if _android_jdk_path_edit.text.strip_edges() != "":
+		android["jdk_path"] = _android_jdk_path_edit.text.strip_edges()
 	if not android.is_empty():
 		result["android"] = android
 	return result
@@ -767,6 +817,30 @@ func _on_icon_clear_pressed() -> void:
 	_app_icon_edit.text = ""
 	_app_icon_preview.texture = null
 	_app_icon_warning.visible = false
+
+# ── Handlers Android ─────────────────────────────────────────────────────────
+
+func _on_android_sdk_browse_pressed() -> void:
+	var picker = FileDialog.new()
+	picker.file_mode = FileDialog.FILE_MODE_OPEN_DIR
+	picker.access = FileDialog.ACCESS_FILESYSTEM
+	picker.dir_selected.connect(_on_android_sdk_selected)
+	add_child(picker)
+	picker.popup_centered(Vector2i(800, 600))
+
+func _on_android_sdk_selected(path: String) -> void:
+	_android_sdk_path_edit.text = path
+
+func _on_android_jdk_browse_pressed() -> void:
+	var picker = FileDialog.new()
+	picker.file_mode = FileDialog.FILE_MODE_OPEN_DIR
+	picker.access = FileDialog.ACCESS_FILESYSTEM
+	picker.dir_selected.connect(_on_android_jdk_selected)
+	add_child(picker)
+	picker.popup_centered(Vector2i(800, 600))
+
+func _on_android_jdk_selected(path: String) -> void:
+	_android_jdk_path_edit.text = path
 
 func _update_icon_preview() -> void:
 	if _app_icon_edit.text == "":

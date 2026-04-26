@@ -33,6 +33,25 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 	if godot_bin == "":
 		return ExportResult.new(false, output_path, "", "Binaire Godot introuvable. Veuillez définir GODOT_PATH dans .env.")
 
+	var plat_cfg: Dictionary = story.platform_settings.get(platform, {}) if story.get("platform_settings") != null else {}
+	
+	# Préparer le dossier de sortie et le log tôt pour permettre le logging de la configuration
+	var abs_output_path = ProjectSettings.globalize_path(output_path)
+	if not DirAccess.dir_exists_absolute(abs_output_path):
+		DirAccess.make_dir_recursive_absolute(abs_output_path)
+	
+	var log_path = abs_output_path + "/export.log"
+	
+	# Configuration spécifique à Android
+	if platform == "android":
+		_ensure_android_config(plat_cfg, log_path)
+		if plat_cfg.get("sdk_path", "") != "":
+			var sdk_path = plat_cfg["sdk_path"]
+			OS.set_environment("ANDROID_HOME", sdk_path)
+			OS.set_environment("ANDROID_SDK_ROOT", sdk_path)
+			var sep = ":" if OS.get_name() != "Windows" else ";"
+			OS.set_environment("PATH", sdk_path + "/platform-tools" + sep + OS.get_environment("PATH"))
+
 	var game_name = story.menu_title if story.menu_title != "" else story.title
 	# iOS/Xcode ne supporte pas certains caractères dans le nom de projet
 	if platform == "ios":
@@ -40,12 +59,6 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 	if story_path == "":
 		return ExportResult.new(false, output_path, "", "Veuillez sauvegarder l'histoire avant de l'exporter.")
 
-	# Préparer le dossier de sortie
-	var abs_output_path = ProjectSettings.globalize_path(output_path)
-	if not DirAccess.dir_exists_absolute(abs_output_path):
-		DirAccess.make_dir_recursive_absolute(abs_output_path)
-	
-	var log_path = abs_output_path + "/export.log"
 	var log_file = FileAccess.open(log_path, FileAccess.WRITE)
 	if log_file:
 		log_file.store_line("=========================================")
@@ -265,7 +278,6 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 		else:
 			preset_content = preset_content.replace("[preset.0]", "[preset.0]\ninclude_filter=\"*.yaml,*.json,*.webp,*.png,*.jpg\"")
 		# Injecter les platform_settings de la story dans le preset
-		var plat_cfg: Dictionary = story.platform_settings.get(platform, {}) if story.get("platform_settings") != null else {}
 		if platform == "ios":
 			if plat_cfg.get("team_id", "") != "":
 				preset_content = preset_content.replace("application/app_store_team_id=\"\"", "application/app_store_team_id=\"" + plat_cfg["team_id"] + "\"")
@@ -274,6 +286,12 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 		elif platform == "android":
 			if plat_cfg.get("package_name", "") != "":
 				preset_content = preset_content.replace("package/unique_name=\"com.visualnovel.game\"", "package/unique_name=\"" + plat_cfg["package_name"] + "\"")
+			
+			# Utiliser la clé de debug pour signer l'APK release par défaut si aucune clé release n'est fournie
+			var home = OS.get_environment("HOME") if OS.get_name() != "Windows" else OS.get_environment("USERPROFILE")
+			var debug_keystore = home + "/.android/debug.keystore"
+			if FileAccess.file_exists(debug_keystore):
+				preset_content = preset_content.replace("package/signed=true", "package/signed=true\nkeystore/release=\"" + debug_keystore + "\"\nkeystore/release_user=\"androiddebugkey\"\nkeystore/release_password=\"android\"")
 
 		var f_preset = FileAccess.open(preset_dst, FileAccess.WRITE)
 		if f_preset:
@@ -300,11 +318,27 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 	var output = []
 
 	# Import d'abord (nécessaire pour générer .godot/)
+	_append_log(log_path, "→ Importation des ressources...")
 	OS.execute(godot_bin, ["--path", abs_temp_project, "--headless", "--import"], output, true)
 
 	# Export release
 	var export_args = ["--path", abs_temp_project, "--headless", "--export-release", preset_name, export_file]
+	
+	# Injection dynamique du SDK Android via argument CLI si présent
+	if platform == "android":
+		if plat_cfg.get("sdk_path", "") != "":
+			export_args.append("--set-setting")
+			export_args.append("export/android/android_sdk_path=" + plat_cfg["sdk_path"])
+			_append_log(log_path, "→ Utilisation du SDK Android : " + plat_cfg["sdk_path"])
+		if plat_cfg.get("jdk_path", "") != "":
+			export_args.append("--set-setting")
+			export_args.append("export/android/jdk_path=" + plat_cfg["jdk_path"])
+			_append_log(log_path, "→ Utilisation du JDK Java : " + plat_cfg["jdk_path"])
+
+	_append_log(log_path, "→ Lancement de l'exportation (%s) vers %s..." % [preset_name, export_file])
+	_append_log(log_path, "  Commande : %s %s" % [godot_bin, " ".join(export_args)])
 	var exit_code = OS.execute(godot_bin, export_args, output, true)
+	_append_log(log_path, "→ Exportation terminée avec le code : %d" % exit_code)
 
 	# 9a. iOS : patcher le projet Xcode (SwiftUICore) et builder le .ipa
 	# Godot génère le .xcodeproj à plat dans abs_output_path avec son propre nom
@@ -1674,3 +1708,66 @@ func _build_ios_ipa(xcode_dir: String, ipa_path: String, log_path: String) -> in
 	if exit_code != 0:
 		_append_log(log_path, "ERREUR: build iOS échoué (code " + str(exit_code) + ")")
 	return exit_code
+
+
+## S'assure que les chemins SDK/JDK sont présents dans les EditorSettings globaux.
+## Godot 4 valide ces chemins AVANT l'exportation et refuse de continuer s'ils manquent.
+func _ensure_android_config(plat_cfg: Dictionary, log_path: String) -> void:
+	var sdk_path = plat_cfg.get("sdk_path", "")
+	var jdk_path = plat_cfg.get("jdk_path", "")
+	if sdk_path == "" and jdk_path == "":
+		return
+
+	var settings_path = ""
+	if OS.get_name() == "macOS":
+		settings_path = "~/Library/Application Support/Godot/editor_settings-4.6.tres"
+	elif OS.get_name() == "Windows":
+		settings_path = "~/AppData/Roaming/Godot/editor_settings-4.6.tres"
+	else:
+		settings_path = "~/.config/godot/editor_settings-4.6.tres"
+	
+	settings_path = settings_path.replace("~", OS.get_environment("HOME") if OS.get_name() != "Windows" else OS.get_environment("USERPROFILE"))
+	var home = OS.get_environment("HOME") if OS.get_name() != "Windows" else OS.get_environment("USERPROFILE")
+	
+	if not FileAccess.file_exists(settings_path):
+		_append_log(log_path, "⚠ EditorSettings non trouvé à: " + settings_path)
+		return
+
+	var content = FileAccess.get_file_as_string(settings_path)
+	var original = content
+	
+	# Fixer le chemin de la clé de debug
+	var debug_keystore = home + "/.android/debug.keystore"
+	if FileAccess.file_exists(debug_keystore):
+		if content.find("export/android/debug_keystore") != -1:
+			var regex = RegEx.new()
+			regex.compile("export/android/debug_keystore\\s*=\\s*\".*\"")
+			content = regex.sub(content, "export/android/debug_keystore = \"" + debug_keystore + "\"", true)
+		else:
+			content = content.replace("[resource]", "[resource]\nexport/android/debug_keystore = \"" + debug_keystore + "\"")
+	
+	if sdk_path != "":
+		if content.find("export/android/android_sdk_path") != -1:
+			var regex = RegEx.new()
+			regex.compile("export/android/android_sdk_path\\s*=\\s*\".*\"")
+			content = regex.sub(content, "export/android/android_sdk_path = \"" + sdk_path + "\"", true)
+		else:
+			content = content.replace("[resource]", "[resource]\nexport/android/android_sdk_path = \"" + sdk_path + "\"")
+	
+	if jdk_path != "":
+		# Godot 4 utilise java_sdk_path
+		if content.find("export/android/java_sdk_path") != -1:
+			var regex = RegEx.new()
+			regex.compile("export/android/java_sdk_path\\s*=\\s*\".*\"")
+			content = regex.sub(content, "export/android/java_sdk_path = \"" + jdk_path + "\"", true)
+		else:
+			content = content.replace("[resource]", "[resource]\nexport/android/java_sdk_path = \"" + jdk_path + "\"")
+
+	if content != original:
+		var f = FileAccess.open(settings_path, FileAccess.WRITE)
+		if f:
+			f.store_string(content)
+			f.close()
+			_append_log(log_path, "→ EditorSettings mis à jour avec les chemins SDK/JDK")
+		else:
+			_append_log(log_path, "⚠ Impossible d'écrire dans EditorSettings")
