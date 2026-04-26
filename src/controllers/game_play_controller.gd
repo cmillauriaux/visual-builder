@@ -307,12 +307,16 @@ func _update_floating_ui_positions() -> void:
 	var s = UIScale.get_scale()
 	
 	if _play_buttons_bar:
+		# Place buttons above the whole dialogue overlay (name box + panel)
 		_play_buttons_bar.offset_bottom = -h
 		_play_buttons_bar.offset_top = -h - roundi(38 * s)
 	
 	if _toolbar_toggle_button:
+		# Toggle button stays inside the dialogue area, top-right
 		var pad_top = roundi(10 * s)
 		var toggle_s = roundi(24 * s)
+		# Since _play_overlay is BOTTOM_WIDE, offset_top is relative to bottom.
+		# -h is the top of the whole overlay.
 		_toolbar_toggle_button.offset_top = -h + pad_top
 		_toolbar_toggle_button.offset_bottom = -h + pad_top + toggle_s
 

@@ -53,13 +53,38 @@ static func _build_visual_editor(game: Control) -> void:
 
 static func _build_play_overlay(game: Control) -> void:
 	var s := UIScale.get_scale()
-	game._play_overlay = PanelContainer.new()
+	game._play_overlay = VBoxContainer.new()
 	game._play_overlay.visible = false
 	game._play_overlay.z_index = SequenceVisualEditorScript.UI_OVERLAY_Z
 	game._play_overlay.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	game._play_overlay.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	game._play_overlay.mouse_filter = Control.MOUSE_FILTER_PASS
-	game._play_overlay.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	game._play_overlay.add_theme_constant_override("separation", 0)
+
+	# Character name box — container to allow horizontal offset
+	var char_container = MarginContainer.new()
+	char_container.mouse_filter = Control.MOUSE_FILTER_PASS
+	char_container.add_theme_constant_override("margin_left", roundi(24 * s))
+	game._play_overlay.add_child(char_container)
+
+	game._play_character_box = PanelContainer.new()
+	game._play_character_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	game._play_character_box.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	var btn_tex = load(GameTheme.ASSETS_PATH + "button_brown.png")
+	if btn_tex:
+		game._play_character_box.add_theme_stylebox_override("panel",
+			GameTheme._make_button_stylebox(btn_tex, Color(1, 1, 1, 1)))
+	char_container.add_child(game._play_character_box)
+
+	game._play_character_label = Label.new()
+	game._play_character_label.add_theme_font_size_override("font_size", UIScale.scale(20))
+	game._play_character_label.add_theme_color_override("font_color", GameTheme.COLOR_BUTTON_TEXT)
+	game._play_character_box.add_child(game._play_character_label)
+
+	# Overlap spacer — negative separation between char box and dialogue panel
+	var spacer = Control.new()
+	spacer.custom_minimum_size = Vector2(0, -roundi(8 * s))
+	game._play_overlay.add_child(spacer)
 
 	# Dialogue panel — brown background
 	game._play_dialogue_panel = PanelContainer.new()
@@ -81,27 +106,6 @@ static func _build_play_overlay(game: Control) -> void:
 	game._play_text_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	game._play_text_label.custom_minimum_size = Vector2(0, roundi(24 * s))
 	play_vbox.add_child(game._play_text_label)
-
-	# Character name box — floats above the dialogue panel top border
-	game._play_character_box = PanelContainer.new()
-	game._play_character_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var btn_tex = load(GameTheme.ASSETS_PATH + "button_brown.png")
-	if btn_tex:
-		game._play_character_box.add_theme_stylebox_override("panel",
-			GameTheme._make_button_stylebox(btn_tex, Color(1, 1, 1, 1)))
-	
-	game._play_overlay.add_child(game._play_character_box)
-	game._play_character_box.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	var char_left = roundi(24 * s)
-	game._play_character_box.offset_left = char_left
-	game._play_character_box.offset_top = -roundi(28 * s)
-	game._play_character_box.grow_horizontal = Control.GROW_DIRECTION_END
-	game._play_character_box.grow_vertical = Control.GROW_DIRECTION_END
-
-	game._play_character_label = Label.new()
-	game._play_character_label.add_theme_font_size_override("font_size", UIScale.scale(20))
-	game._play_character_label.add_theme_color_override("font_color", GameTheme.COLOR_BUTTON_TEXT)
-	game._play_character_box.add_child(game._play_character_label)
 
 	# Boutons de jeu — créés ici, ajoutés dans _build_play_buttons_bar() à la fin
 	var btn_size := Vector2(UIScale.scale(120), UIScale.scale(30))
@@ -203,7 +207,7 @@ static func _build_play_buttons_bar(game: Control) -> void:
 	game._play_buttons_bar.add_child(game._history_button)
 	game.add_child(game._play_buttons_bar)
 
-	# Toggle button — inside the dialogue panel, top-right aligned with panel border
+	# Toggle button — inside the dialogue area, top-right aligned
 	game._toolbar_toggle_button = Button.new()
 	game._toolbar_toggle_button.icon = GameTheme.create_arrow_icon(roundi(14 * s), GameTheme.COLOR_BUTTON_TEXT, true)
 	game._toolbar_toggle_button.text = ""
@@ -212,13 +216,9 @@ static func _build_play_buttons_bar(game: Control) -> void:
 	game._toolbar_toggle_button.mouse_filter = Control.MOUSE_FILTER_STOP
 	game._toolbar_toggle_button.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	var toggle_s := roundi(24 * s)
-	var pad_inside := roundi(GameTheme.PANEL_CONTENT_MARGIN * s)  # inside the panel border
-	var pad_top := roundi(10 * s)
+	var pad_inside := roundi(GameTheme.PANEL_CONTENT_MARGIN * s)
 	game._toolbar_toggle_button.offset_left = -toggle_s - pad_inside
 	game._toolbar_toggle_button.offset_right = -pad_inside
-	# _play_overlay.offset_top = -150*s; place button inside with padding from top border
-	game._toolbar_toggle_button.offset_top = -roundi(150 * s) + pad_top
-	game._toolbar_toggle_button.offset_bottom = -roundi(150 * s) + pad_top + toggle_s
 	game.add_child(game._toolbar_toggle_button)
 
 
