@@ -81,13 +81,9 @@ static func _build_play_overlay(game: Control) -> void:
 	game._play_character_label.add_theme_color_override("font_color", GameTheme.COLOR_BUTTON_TEXT)
 	game._play_character_box.add_child(game._play_character_label)
 
-	# Overlap spacer — negative separation between char box and dialogue panel
-	var spacer = Control.new()
-	spacer.custom_minimum_size = Vector2(0, -roundi(8 * s))
-	game._play_overlay.add_child(spacer)
-
 	# Dialogue panel — brown background
 	game._play_dialogue_panel = PanelContainer.new()
+	game._play_dialogue_panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	game._play_overlay.add_child(game._play_dialogue_panel)
 
 	var margin = MarginContainer.new()
