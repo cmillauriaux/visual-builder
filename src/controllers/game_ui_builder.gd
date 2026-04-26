@@ -65,6 +65,7 @@ static func _build_play_overlay(game: Control) -> void:
 	var char_container = MarginContainer.new()
 	char_container.mouse_filter = Control.MOUSE_FILTER_PASS
 	char_container.add_theme_constant_override("margin_left", roundi(24 * s))
+	char_container.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	game._play_overlay.add_child(char_container)
 
 	game._play_character_box = PanelContainer.new()
@@ -84,6 +85,7 @@ static func _build_play_overlay(game: Control) -> void:
 	# Dialogue panel — brown background
 	game._play_dialogue_panel = PanelContainer.new()
 	game._play_dialogue_panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	game._play_dialogue_panel.custom_minimum_size = Vector2(0, roundi(100 * s))
 	game._play_overlay.add_child(game._play_dialogue_panel)
 
 	var margin = MarginContainer.new()
