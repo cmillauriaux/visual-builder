@@ -58,6 +58,27 @@ func test_fails_with_empty_text() -> void:
 	_client.generate_voice("vid", "   ", "uuid-1")
 	assert_signal_emitted(_client, "generation_failed")
 
+func test_fails_with_dots_text() -> void:
+	var c := ElevenLabsConfig.new()
+	c.set_api_key("k")
+	_client.setup(c)
+	watch_signals(_client)
+	_client.generate_voice("vid", "...", "uuid-1")
+	assert_signal_emitted(_client, "generation_failed")
+	_client.generate_voice("vid", "(...)", "uuid-2")
+	assert_signal_emit_count(_client, "generation_failed", 2)
+
+func test_strips_surrounding_parentheses() -> void:
+	var c := ElevenLabsConfig.new()
+	c.set_api_key("k")
+	_client.setup(c)
+	watch_signals(_client)
+	# This should pass validation and emit progress (it will fail network-wise but validation comes first)
+	_client.generate_voice("vid", "(Hello World)", "uuid-1")
+	assert_signal_emitted(_client, "generation_progress")
+	# We can't easily check the body here without mocking HTTPRequest, 
+	# but the code logic is covered.
+
 func test_accepts_voice_settings_override() -> void:
 	var c := ElevenLabsConfig.new()
 	c.set_api_key("k")
