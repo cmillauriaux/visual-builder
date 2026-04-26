@@ -277,6 +277,7 @@ func _start_sequence_actually() -> void:
 		_sequence_editor_ctrl.start_play()
 	if _sequence_editor_ctrl.is_playing():
 		_play_overlay.visible = true
+		_menu_button.visible = true
 		if not _play_overlay.get_parent():
 			_game.add_child(_play_overlay)
 		_game.move_child(_play_overlay, _game.get_child_count() - 1)

@@ -898,6 +898,7 @@ func _on_save_slot(slot_index: int) -> void:
 			state.get("sequence_name", ""),
 		)
 	_save_load_menu.hide_menu()
+	_restore_play_ui_after_menu()
 	get_tree().paused = false
 
 
