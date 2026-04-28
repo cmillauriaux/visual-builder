@@ -8,7 +8,7 @@ extends RefCounted
 const ConsequenceScript = preload("res://src/models/consequence.gd")
 
 const CONSEQUENCE_TYPES = ConsequenceScript.VALID_TYPES
-const CONSEQUENCE_LABELS = ["Séquence", "Condition", "Scène", "Chapitre", "Game Over", "To be continued"]
+const CONSEQUENCE_LABELS = ["Séquence", "Condition", "Scène", "Chapitre", "Game Over", "To be continued", "The End"]
 const REDIRECT_TYPES = ConsequenceScript.REDIRECT_TYPES
 
 const NEW_TARGET_META = "__new__"

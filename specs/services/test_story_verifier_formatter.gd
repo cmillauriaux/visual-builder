@@ -44,12 +44,12 @@ func test_empty_report_does_not_crash():
 func test_total_timings_section_present_when_non_empty():
 	var report := _make_success_report()
 	report["total_timings"] = {
-		"continuation": {"min_seconds": 600.0, "max_seconds": 1200.0},
+		"to_be_continued": {"min_seconds": 600.0, "max_seconds": 1200.0},
 		"game_over": {"min_seconds": 300.0, "max_seconds": 600.0},
 	}
 	var text: String = _formatter.format(report)
 	assert_true(text.contains("--- DUREE TOTALE ESTIMEE ---"), "Section total timings doit etre presente")
-	assert_true(text.contains("Histoire (Suite) : de 10 min a 20 min"), "Format total continuation incorrect")
+	assert_true(text.contains("Histoire (Suite) : de 10 min a 20 min"), "Format total to_be_continued incorrect")
 	assert_true(text.contains("Histoire (Game Over) : de 5 min a 10 min"), "Format total game_over incorrect")
 
 func test_total_timings_section_absent_when_empty():
@@ -67,10 +67,10 @@ func test_timings_section_absent_when_empty():
 	var text: String = _formatter.format(report)
 	assert_false(text.contains("--- DUREE ESTIMEE PAR CHAPITRE ---"), "Section timings ne doit pas etre presente si vide")
 
-func test_timings_continuation_format():
+func test_timings_to_be_continued_format():
 	var text: String = _formatter.format(_make_success_report())
-	# continuation : min=150s=2min30sec, max=315s=5min15sec
-	assert_true(text.contains("(Suite) : de 2 min 30 sec a 5 min 15 sec"), "Format continuation incorrect")
+	# to_be_continued : min=150s=2min30sec, max=315s=5min15sec
+	assert_true(text.contains("(Suite) : de 2 min 30 sec a 5 min 15 sec"), "Format to_be_continued incorrect")
 
 func test_timings_game_over_format():
 	var text: String = _formatter.format(_make_success_report())
@@ -166,7 +166,7 @@ func test_format_duration_seconds_only():
 	report["chapter_timings"] = [
 		{
 			"chapter_name": "Chapitre court",
-			"continuation": {"min_seconds": 30.0, "max_seconds": 45.0},
+			"to_be_continued": {"min_seconds": 30.0, "max_seconds": 45.0},
 		},
 	]
 	var text: String = _formatter.format(report)
@@ -179,15 +179,15 @@ func test_format_duration_seconds_only():
 func test_total_timings_audio_present_when_non_zero():
 	var report := _make_success_report()
 	report["total_timings"] = {
-		"continuation": {"min_seconds": 600.0, "max_seconds": 1200.0, "audio_min_seconds": 300.0, "audio_max_seconds": 900.0},
+		"to_be_continued": {"min_seconds": 600.0, "max_seconds": 1200.0, "audio_min_seconds": 300.0, "audio_max_seconds": 900.0},
 	}
 	var text: String = _formatter.format(report)
-	assert_true(text.contains("Histoire (Suite) audio : de 5 min a 15 min"), "Audio total continuation doit apparaitre")
+	assert_true(text.contains("Histoire (Suite) audio : de 5 min a 15 min"), "Audio total to_be_continued doit apparaitre")
 
 func test_total_timings_audio_absent_when_zero():
 	var report := _make_success_report()
 	report["total_timings"] = {
-		"continuation": {"min_seconds": 600.0, "max_seconds": 1200.0, "audio_min_seconds": 0.0, "audio_max_seconds": 0.0},
+		"to_be_continued": {"min_seconds": 600.0, "max_seconds": 1200.0, "audio_min_seconds": 0.0, "audio_max_seconds": 0.0},
 	}
 	var text: String = _formatter.format(report)
 	assert_false(text.contains("audio"), "Audio total ne doit pas apparaitre si duree = 0")
@@ -205,18 +205,18 @@ func test_chapter_timings_audio_present_when_non_zero():
 	report["chapter_timings"] = [
 		{
 			"chapter_name": "Chapitre 1",
-			"continuation": {"min_seconds": 150.0, "max_seconds": 315.0, "audio_min_seconds": 60.0, "audio_max_seconds": 200.0},
+			"to_be_continued": {"min_seconds": 150.0, "max_seconds": 315.0, "audio_min_seconds": 60.0, "audio_max_seconds": 200.0},
 		},
 	]
 	var text: String = _formatter.format(report)
-	assert_true(text.contains("Chapitre 1 (Suite) audio : de 1 min a 3 min 20 sec"), "Audio chapitre continuation doit apparaitre")
+	assert_true(text.contains("Chapitre 1 (Suite) audio : de 1 min a 3 min 20 sec"), "Audio chapitre to_be_continued doit apparaitre")
 
 func test_chapter_timings_audio_absent_when_zero():
 	var report := _make_success_report()
 	report["chapter_timings"] = [
 		{
 			"chapter_name": "Chapitre 1",
-			"continuation": {"min_seconds": 150.0, "max_seconds": 315.0, "audio_min_seconds": 0.0, "audio_max_seconds": 0.0},
+			"to_be_continued": {"min_seconds": 150.0, "max_seconds": 315.0, "audio_min_seconds": 0.0, "audio_max_seconds": 0.0},
 		},
 	]
 	var text: String = _formatter.format(report)
@@ -228,7 +228,7 @@ func test_chapter_timings_audio_absent_when_keys_missing():
 	report["chapter_timings"] = [
 		{
 			"chapter_name": "Chapitre 1",
-			"continuation": {"min_seconds": 150.0, "max_seconds": 315.0},
+			"to_be_continued": {"min_seconds": 150.0, "max_seconds": 315.0},
 		},
 	]
 	var text: String = _formatter.format(report)
@@ -258,7 +258,7 @@ func _make_success_report() -> Dictionary:
 		"chapter_timings": [
 			{
 				"chapter_name": "Chapitre 1",
-				"continuation": {"min_seconds": 150.0, "max_seconds": 315.0},
+				"to_be_continued": {"min_seconds": 150.0, "max_seconds": 315.0},
 				"game_over": {"min_seconds": 60.0, "max_seconds": 120.0},
 			},
 		],

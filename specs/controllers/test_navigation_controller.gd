@@ -480,12 +480,16 @@ func test_on_menu_config_confirmed_updates_story() -> void:
 		"https://patreon.com/x", "https://game.itch.io",
 		"Game Over", "Go Sub", "go_bg.png",
 		"To Be Continued", "TBC Sub", "tbc_bg.png",
+		"The End", "The End Sub", "te_bg.png",
 		"icon.png", false, "dark",
 		{"playfab_analytics": {"title_id": "playfab123", "enabled": true}}
 	)
 	assert_eq(_main._editor_main._story.menu_title, "Test Menu Title")
 	assert_eq(_main._editor_main._story.menu_subtitle, "Test Subtitle")
 	assert_eq(_main._editor_main._story.menu_background, "bg.png")
+	assert_eq(_main._editor_main._story.the_end_title, "The End")
+	assert_eq(_main._editor_main._story.the_end_subtitle, "The End Sub")
+	assert_eq(_main._editor_main._story.the_end_background, "te_bg.png")
 	assert_eq(_main._editor_main._story.ui_theme_mode, "dark")
 	assert_false(_main._editor_main._story.show_title_banner)
 

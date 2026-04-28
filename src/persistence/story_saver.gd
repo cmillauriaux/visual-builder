@@ -134,6 +134,8 @@ static func _relocate_assets(story, base_path: String) -> void:
 	story.game_over_background = _relocate_image(story.game_over_background, base_path, "backgrounds")
 	# To be continued background
 	story.to_be_continued_background = _relocate_image(story.to_be_continued_background, base_path, "backgrounds")
+	# The end background
+	story.the_end_background = _relocate_image(story.the_end_background, base_path, "backgrounds")
 
 	# Images des variables
 	for var_def in story.variables:

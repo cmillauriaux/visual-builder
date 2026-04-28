@@ -6,7 +6,7 @@ extends RefCounted
 const VariableEffectScript = preload("res://src/models/variable_effect.gd")
 
 ## Types de conséquence valides
-const VALID_TYPES := ["redirect_sequence", "redirect_condition", "redirect_scene", "redirect_chapter", "game_over", "to_be_continued"]
+const VALID_TYPES := ["redirect_sequence", "redirect_condition", "redirect_scene", "redirect_chapter", "game_over", "to_be_continued", "the_end"]
 const REDIRECT_TYPES := ["redirect_sequence", "redirect_condition", "redirect_scene", "redirect_chapter"]
 
 var type: String = ""

@@ -1,14 +1,14 @@
-# 055 — Écrans de fin : Game Over et To Be Continued
+# 055 — Écrans de fin : Game Over, To Be Continued et The End
 
 ## Résumé
 
-Remplace les `AcceptDialog` génériques affichés en fin de partie (`game_over`, `to_be_continued`) par des écrans plein-écran configurables : background, titre, sous-titre, et boutons Patreon / itch.io / Retour au menu principal. La configuration se fait dans `MenuConfigDialog`, au même titre que le menu principal.
+Remplace les `AcceptDialog` génériques affichés en fin de partie (`game_over`, `to_be_continued`, `the_end`) par des écrans plein-écran configurables : background, titre, sous-titre, et boutons Patreon / itch.io / Retour au menu principal. La configuration se fait dans `MenuConfigDialog`, au même titre que le menu principal.
 
 ## Comportement attendu
 
 ### Nouveaux champs du modèle Story
 
-Six nouveaux champs, sérialisés dans un bloc `"screens"` dans le YAML :
+Neuf champs, sérialisés dans un bloc `"screens"` dans le YAML :
 
 | Champ | Type | Défaut |
 |-------|------|--------|
@@ -18,6 +18,9 @@ Six nouveaux champs, sérialisés dans un bloc `"screens"` dans le YAML :
 | `to_be_continued_title` | `String` | `""` |
 | `to_be_continued_subtitle` | `String` | `""` |
 | `to_be_continued_background` | `String` | `""` |
+| `the_end_title` | `String` | `""` |
+| `the_end_subtitle` | `String` | `""` |
+| `the_end_background` | `String` | `""` |
 
 Sérialisation dans `story.yaml` :
 
@@ -31,13 +34,17 @@ screens:
     title: ""
     subtitle: ""
     background: ""
+  the_end:
+    title: ""
+    subtitle: ""
+    background: ""
 ```
 
 `from_dict()` tolère l'absence du bloc `"screens"` (rétrocompatibilité — valeurs vides par défaut).
 
 ### Configuration dans MenuConfigDialog
 
-Deux nouvelles sections après la section "Liens externes", chacune séparée par un `HSeparator` :
+Trois nouvelles sections (Game Over, À suivre, The End) :
 
 **Section "Écran Game Over"** :
 - `LineEdit` (read-only) pour le background + bouton `Parcourir...` + bouton `✕`
@@ -49,91 +56,55 @@ Deux nouvelles sections après la section "Liens externes", chacune séparée pa
 - Même structure que Game Over
 - Placeholder titre : `"À suivre..."`
 
+**Section "Écran The End"** :
+- Même structure que Game Over
+- Placeholder titre : `"The End"`
+
 Le bouton `Parcourir...` ouvre un `ImagePickerDialog` en mode `BACKGROUND`.
 
-Le signal `menu_config_confirmed` est étendu avec 6 paramètres supplémentaires :
+Le signal `menu_config_confirmed` est étendu avec les paramètres supplémentaires :
 ```
 game_over_title, game_over_subtitle, game_over_background,
-to_be_continued_title, to_be_continued_subtitle, to_be_continued_background
+to_be_continued_title, to_be_continued_subtitle, to_be_continued_background,
+the_end_title, the_end_subtitle, the_end_background
 ```
 
 `setup()` pré-remplit les champs depuis la story.
 
 ### Composant EndingScreen (`src/ui/menu/ending_screen.gd`)
-
-Nouvelle scène `Control` plein-écran, construite par code (pas de `.tscn`), suivant le pattern de `main_menu.gd` :
-
-```
-EndingScreen (Control, plein écran)
-├── Background (TextureRect)          ← image configurée ou fond noir
-├── Overlay (ColorRect, semi-transparent #000 @ 0.5)
-└── CenterContainer (plein écran)
-    └── VBoxContainer (centré)
-        ├── TitleLabel (Label, font_size 64)
-        ├── SubtitleLabel (Label, font_size 24)
-        ├── Spacer (60px)
-        ├── LoadAutosaveButton ("Charger la dernière sauvegarde", masqué par défaut)
-        ├── PatreonButton (masqué si URL vide, couleur #FF424D)
-        ├── ItchioButton (masqué si URL vide, couleur #FA5C5C)
-        └── BackToMenuButton ("Retour au menu principal")
-```
-
-**Méthodes** :
-- `build_ui()` — construit l'arborescence (appelé par `GameUIBuilder`)
-- `setup(title: String, subtitle: String, background: String, base_path: String, patreon_url: String, itchio_url: String)` — configure l'écran
-- `show_screen()` / `hide_screen()` — affiche/masque
-- `set_load_autosave_visible(visible: bool)` — affiche/masque le bouton "Charger la dernière sauvegarde"
-
-**Signaux** :
-- `back_to_menu_pressed` — émis au clic sur "Retour au menu principal"
-- `load_last_autosave_pressed` — émis au clic sur "Charger la dernière sauvegarde"
-
-**Note** : Le bouton `LoadAutosaveButton` est présent dans les deux écrans mais n'est activé (via `set_load_autosave_visible`) que pour l'écran Game Over.
-
-**Comportement des titres** :
-- Si `title` est vide : affiche `"Game Over"` (resp. `"À suivre..."`) selon le type d'écran
-- Le type est fixé à la construction ou via un paramètre de `setup()`
-
-**Chargement du background** :
-- Utilise `TextureLoader.load_texture(base_path.path_join(background))` comme `main_menu.gd`
-- Si vide ou introuvable : fond noir (`texture = null`)
+... (inchangé, sauf ajout du type "The End")
 
 ### Intégration dans GameUIBuilder
 
-`game_ui_builder.gd` construit deux `EndingScreen` :
+`game_ui_builder.gd` construit trois `EndingScreen` :
 - `game._game_over_screen` — titre par défaut `"Game Over"`
 - `game._to_be_continued_screen` — titre par défaut `"À suivre..."`
+- `game._the_end_screen` — titre par défaut `"The End"`
 
 Ajoutés après `_build_main_menu()`.
 
 ### Intégration dans GamePlayController
 
 `on_play_finished(reason: String)` modifié :
-- `"game_over"` → `_game._game_over_screen.show_screen()` (au lieu de l'AcceptDialog)
+- `"game_over"` → `_game._game_over_screen.show_screen()`
 - `"to_be_continued"` → `_game._to_be_continued_screen.show_screen()`
+- `"the_end"` → `_game._the_end_screen.show_screen()`
 - Autres raisons → comportement inchangé (AcceptDialog générique)
 
 ### Intégration dans game.gd
 
 **Setup des écrans** (dans `_show_main_menu()` ou `_load_story_and_show_menu()`) :
 ```gdscript
-_game_over_screen.setup(
-    story.game_over_title, story.game_over_subtitle,
-    story.game_over_background, _current_story_path,
-    story.patreon_url, story.itchio_url
-)
-_to_be_continued_screen.setup(
-    story.to_be_continued_title, story.to_be_continued_subtitle,
-    story.to_be_continued_background, _current_story_path,
-    story.patreon_url, story.itchio_url
-)
+_game_over_screen.setup(...)
+_to_be_continued_screen.setup(...)
+_the_end_screen.setup(...)
 ```
 
 **Connexion des signaux** :
 ```gdscript
 _game_over_screen.back_to_menu_pressed.connect(_on_play_finished_return)
 _to_be_continued_screen.back_to_menu_pressed.connect(_on_play_finished_return)
-_game_over_screen.load_last_autosave_pressed.connect(_on_game_over_load_autosave)
+_the_end_screen.back_to_menu_pressed.connect(_on_play_finished_return)
 ```
 
 `_on_play_finished_return()` cache les deux écrans avant d'afficher le menu (via `hide_screen()`).

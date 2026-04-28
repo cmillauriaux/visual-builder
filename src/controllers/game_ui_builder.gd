@@ -431,6 +431,11 @@ static func _build_ending_screens(game: Control) -> void:
 	game._to_be_continued_screen.build_ui("À suivre...")
 	game.add_child(game._to_be_continued_screen)
 
+	game._the_end_screen = Control.new()
+	game._the_end_screen.set_script(EndingScreenScript)
+	game._the_end_screen.build_ui("The End")
+	game.add_child(game._the_end_screen)
+
 
 static func _build_save_load_menu(game: Control) -> void:
 	game._save_load_menu = Control.new()

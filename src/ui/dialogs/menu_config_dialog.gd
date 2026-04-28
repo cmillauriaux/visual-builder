@@ -5,7 +5,7 @@ extends ConfirmationDialog
 
 ## Dialogue de configuration du jeu (menu, analytics, liens, écrans de fin).
 
-signal menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_background: String, menu_music: String, patreon_url: String, itchio_url: String, game_over_title: String, game_over_subtitle: String, game_over_background: String, to_be_continued_title: String, to_be_continued_subtitle: String, to_be_continued_background: String, app_icon: String, show_title_banner: bool, ui_theme_mode: String, plugin_settings: Dictionary, platform_settings: Dictionary)
+signal menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_background: String, menu_music: String, patreon_url: String, itchio_url: String, game_over_title: String, game_over_subtitle: String, game_over_background: String, to_be_continued_title: String, to_be_continued_subtitle: String, to_be_continued_background: String, the_end_title: String, the_end_subtitle: String, the_end_background: String, app_icon: String, show_title_banner: bool, ui_theme_mode: String, plugin_settings: Dictionary, platform_settings: Dictionary)
 
 const ImagePickerDialogScript = preload("res://src/ui/dialogs/image_picker_dialog.gd")
 const AudioPickerDialogScript = preload("res://src/ui/dialogs/audio_picker_dialog.gd")
@@ -34,6 +34,10 @@ var _to_be_continued_bg_edit: LineEdit
 var _to_be_continued_bg_preview: TextureRect
 var _to_be_continued_title_edit: LineEdit
 var _to_be_continued_subtitle_edit: LineEdit
+var _the_end_bg_edit: LineEdit
+var _the_end_bg_preview: TextureRect
+var _the_end_title_edit: LineEdit
+var _the_end_subtitle_edit: LineEdit
 var _app_icon_edit: LineEdit
 var _app_icon_preview: TextureRect
 var _app_icon_warning: Label
@@ -464,6 +468,64 @@ func _init():
 
 	tabs.add_child(tbc_vbox)
 
+	# ── Onglet The End ────────────────────────────────────────────────────────
+	var te_vbox = VBoxContainer.new()
+	te_vbox.name = "TheEnd"
+	te_vbox.add_theme_constant_override("separation", 4)
+
+	var te_bg_lbl = Label.new()
+	te_bg_lbl.text = tr("Image de fond")
+	te_vbox.add_child(te_bg_lbl)
+
+	var te_bg_hbox = HBoxContainer.new()
+	te_bg_hbox.name = "TheEndBgHBox"
+
+	_the_end_bg_edit = LineEdit.new()
+	_the_end_bg_edit.name = "TheEndBgEdit"
+	_the_end_bg_edit.editable = false
+	_the_end_bg_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	te_bg_hbox.add_child(_the_end_bg_edit)
+
+	var te_browse_btn = Button.new()
+	te_browse_btn.name = "TheEndBrowseButton"
+	te_browse_btn.text = tr("Parcourir...")
+	te_browse_btn.pressed.connect(_on_the_end_browse_pressed)
+	te_bg_hbox.add_child(te_browse_btn)
+
+	var te_clear_btn = Button.new()
+	te_clear_btn.name = "TheEndClearBgButton"
+	te_clear_btn.text = "✕"
+	te_clear_btn.pressed.connect(_on_the_end_clear_bg_pressed)
+	te_bg_hbox.add_child(te_clear_btn)
+
+	te_vbox.add_child(te_bg_hbox)
+
+	_the_end_bg_preview = TextureRect.new()
+	_the_end_bg_preview.name = "TheEndBgPreview"
+	_the_end_bg_preview.custom_minimum_size = Vector2(200, 112)
+	_the_end_bg_preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_the_end_bg_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	te_vbox.add_child(_the_end_bg_preview)
+
+	var te_title_lbl = Label.new()
+	te_title_lbl.text = tr("Titre")
+	te_vbox.add_child(te_title_lbl)
+
+	_the_end_title_edit = LineEdit.new()
+	_the_end_title_edit.name = "TheEndTitleEdit"
+	_the_end_title_edit.placeholder_text = tr("The End")
+	te_vbox.add_child(_the_end_title_edit)
+
+	var te_subtitle_lbl = Label.new()
+	te_subtitle_lbl.text = tr("Sous-titre")
+	te_vbox.add_child(te_subtitle_lbl)
+
+	_the_end_subtitle_edit = LineEdit.new()
+	_the_end_subtitle_edit.name = "TheEndSubtitleEdit"
+	te_vbox.add_child(_the_end_subtitle_edit)
+
+	tabs.add_child(te_vbox)
+
 	# ── Onglet Thème UI ──────────────────────────────────────────────────────────
 	var ui_theme_vbox = VBoxContainer.new()
 	ui_theme_vbox.name = "ThemeUI"
@@ -543,7 +605,8 @@ func _init():
 	tabs.set_tab_title(3, tr("Liens"))
 	tabs.set_tab_title(4, tr("Game Over"))
 	tabs.set_tab_title(5, tr("À suivre"))
-	tabs.set_tab_title(6, tr("Thème UI"))
+	tabs.set_tab_title(6, tr("The End"))
+	tabs.set_tab_title(7, tr("Thème UI"))
 
 	add_child(tabs)
 	confirmed.connect(_on_confirmed)
@@ -561,6 +624,9 @@ func setup(story, story_base_path: String = "") -> void:
 	_to_be_continued_bg_edit.text = story.to_be_continued_background if story.get("to_be_continued_background") != null else ""
 	_to_be_continued_title_edit.text = story.to_be_continued_title if story.get("to_be_continued_title") != null else ""
 	_to_be_continued_subtitle_edit.text = story.to_be_continued_subtitle if story.get("to_be_continued_subtitle") != null else ""
+	_the_end_bg_edit.text = story.the_end_background if story.get("the_end_background") != null else ""
+	_the_end_title_edit.text = story.the_end_title if story.get("the_end_title") != null else ""
+	_the_end_subtitle_edit.text = story.the_end_subtitle if story.get("the_end_subtitle") != null else ""
 	_app_icon_edit.text = story.app_icon if story.get("app_icon") != null else ""
 	_show_title_banner_check.button_pressed = story.show_title_banner if story.get("show_title_banner") != null else true
 	_story = story
@@ -585,6 +651,7 @@ func setup(story, story_base_path: String = "") -> void:
 	_update_preview()
 	_update_game_over_preview()
 	_update_tbc_preview()
+	_update_the_end_preview()
 	_update_icon_preview()
 	_rebuild_plugins_tab()
 
@@ -624,6 +691,15 @@ func get_to_be_continued_subtitle() -> String:
 
 func get_to_be_continued_background() -> String:
 	return _to_be_continued_bg_edit.text
+
+func get_the_end_title() -> String:
+	return _the_end_title_edit.text
+
+func get_the_end_subtitle() -> String:
+	return _the_end_subtitle_edit.text
+
+func get_the_end_background() -> String:
+	return _the_end_bg_edit.text
 
 func get_app_icon() -> String:
 	return _app_icon_edit.text
@@ -799,6 +875,39 @@ func _update_tbc_preview() -> void:
 		_to_be_continued_bg_preview.texture = null
 
 
+# ── Handlers The End ─────────────────────────────────────────────────────────
+
+func _on_the_end_browse_pressed() -> void:
+	var picker = Window.new()
+	picker.set_script(ImagePickerDialogScript)
+	add_child(picker)
+	picker.setup(ImagePickerDialogScript.Mode.BACKGROUND, _story_base_path, _story)
+	picker.image_selected.connect(_on_the_end_bg_selected)
+	picker.popup_centered()
+
+func _on_the_end_bg_selected(path: String) -> void:
+	_the_end_bg_edit.text = _to_relative_path(path)
+	_update_the_end_preview()
+
+func _on_the_end_clear_bg_pressed() -> void:
+	_the_end_bg_edit.text = ""
+	_the_end_bg_preview.texture = null
+
+func _update_the_end_preview() -> void:
+	if _the_end_bg_edit.text == "":
+		_the_end_bg_preview.texture = null
+		return
+	var resolved := _resolve_path(_the_end_bg_edit.text)
+	if not FileAccess.file_exists(resolved):
+		_the_end_bg_preview.texture = null
+		return
+	var img = Image.new()
+	if img.load(resolved) == OK:
+		_the_end_bg_preview.texture = ImageTexture.create_from_image(img)
+	else:
+		_the_end_bg_preview.texture = null
+
+
 # ── Handlers Icône ───────────────────────────────────────────────────────────
 
 func _on_icon_browse_pressed() -> void:
@@ -878,6 +987,7 @@ func _on_confirmed() -> void:
 		_validate_url(_patreon_url_edit.text), _validate_url(_itchio_url_edit.text),
 		_game_over_title_edit.text, _game_over_subtitle_edit.text, _game_over_bg_edit.text,
 		_to_be_continued_title_edit.text, _to_be_continued_subtitle_edit.text, _to_be_continued_bg_edit.text,
+		_the_end_title_edit.text, _the_end_subtitle_edit.text, _the_end_bg_edit.text,
 		_app_icon_edit.text, _show_title_banner_check.button_pressed,
 		_ui_theme_mode, _collect_plugin_settings(), get_platform_settings()
 	)

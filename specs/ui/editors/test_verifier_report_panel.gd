@@ -102,18 +102,18 @@ func test_show_chapter_timings_list_has_correct_count():
 	_panel.show_report(report)
 	var timing_list = _panel._report_content.get_node_or_null("ChapterTimingsList")
 	assert_not_null(timing_list, "La liste des timings doit exister")
-	# 1 chapitre avec continuation + game_over = 2 lignes
+	# 1 chapitre avec to_be_continued + game_over = 2 lignes
 	assert_eq(timing_list.get_child_count(), 2)
 
-func test_show_chapter_timings_continuation_label_text():
+func test_show_chapter_timings_to_be_continued_label_text():
 	var report = _make_success_report()
 	_panel.show_report(report)
 	var timing_list = _panel._report_content.get_node_or_null("ChapterTimingsList")
 	assert_not_null(timing_list)
 	var label: Label = timing_list.get_child(0)
-	# continuation : 150 sec = 2 min 30 sec, 315 sec = 5 min 15 sec
+	# to_be_continued : 150 sec = 2 min 30 sec, 315 sec = 5 min 15 sec
 	assert_true(label.text.contains("Chapitre 1"), "Le nom du chapitre doit apparaître")
-	assert_true(label.text.contains("(Suite)"), "La ligne continuation doit avoir le label (Suite)")
+	assert_true(label.text.contains("(Suite)"), "La ligne to_be_continued doit avoir le label (Suite)")
 	assert_true(label.text.contains("2 min 30 sec"), "Le min doit être formaté")
 	assert_true(label.text.contains("5 min 15 sec"), "Le max doit être formaté")
 
@@ -173,7 +173,7 @@ func test_copy_button_does_not_crash_without_show_report():
 func test_show_total_audio_timings_when_non_zero():
 	var report = _make_success_report()
 	report["total_timings"] = {
-		"continuation": {"min_seconds": 600.0, "max_seconds": 1200.0, "audio_min_seconds": 300.0, "audio_max_seconds": 900.0},
+		"to_be_continued": {"min_seconds": 600.0, "max_seconds": 1200.0, "audio_min_seconds": 300.0, "audio_max_seconds": 900.0},
 	}
 	_panel.show_report(report)
 	var total_list = _panel._report_content.get_node_or_null("TotalTimingsList")
@@ -186,7 +186,7 @@ func test_show_total_audio_timings_when_non_zero():
 func test_hide_total_audio_timings_when_zero():
 	var report = _make_success_report()
 	report["total_timings"] = {
-		"continuation": {"min_seconds": 600.0, "max_seconds": 1200.0, "audio_min_seconds": 0.0, "audio_max_seconds": 0.0},
+		"to_be_continued": {"min_seconds": 600.0, "max_seconds": 1200.0, "audio_min_seconds": 0.0, "audio_max_seconds": 0.0},
 	}
 	_panel.show_report(report)
 	var total_list = _panel._report_content.get_node_or_null("TotalTimingsList")
@@ -199,7 +199,7 @@ func test_show_chapter_audio_timings_when_non_zero():
 	report["chapter_timings"] = [
 		{
 			"chapter_name": "Chapitre 1",
-			"continuation": {"min_seconds": 150.0, "max_seconds": 315.0, "audio_min_seconds": 60.0, "audio_max_seconds": 200.0},
+			"to_be_continued": {"min_seconds": 150.0, "max_seconds": 315.0, "audio_min_seconds": 60.0, "audio_max_seconds": 200.0},
 		},
 	]
 	_panel.show_report(report)
@@ -215,7 +215,7 @@ func test_hide_chapter_audio_timings_when_zero():
 	report["chapter_timings"] = [
 		{
 			"chapter_name": "Chapitre 1",
-			"continuation": {"min_seconds": 150.0, "max_seconds": 315.0, "audio_min_seconds": 0.0, "audio_max_seconds": 0.0},
+			"to_be_continued": {"min_seconds": 150.0, "max_seconds": 315.0, "audio_min_seconds": 0.0, "audio_max_seconds": 0.0},
 		},
 	]
 	_panel.show_report(report)
@@ -226,7 +226,7 @@ func test_hide_chapter_audio_timings_when_zero():
 func test_audio_label_color_is_light_blue():
 	var report = _make_success_report()
 	report["total_timings"] = {
-		"continuation": {"min_seconds": 600.0, "max_seconds": 1200.0, "audio_min_seconds": 300.0, "audio_max_seconds": 900.0},
+		"to_be_continued": {"min_seconds": 600.0, "max_seconds": 1200.0, "audio_min_seconds": 300.0, "audio_max_seconds": 900.0},
 	}
 	_panel.show_report(report)
 	var total_list = _panel._report_content.get_node_or_null("TotalTimingsList")
@@ -260,7 +260,7 @@ func _make_success_report() -> Dictionary:
 		"chapter_timings": [
 			{
 				"chapter_name": "Chapitre 1",
-				"continuation": {"min_seconds": 150.0, "max_seconds": 315.0},
+				"to_be_continued": {"min_seconds": 150.0, "max_seconds": 315.0},
 				"game_over": {"min_seconds": 60.0, "max_seconds": 120.0},
 			},
 		],

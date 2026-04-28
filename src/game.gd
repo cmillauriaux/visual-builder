@@ -95,6 +95,7 @@ var _main_menu: Control
 # UI — Écrans de fin
 var _game_over_screen: Control
 var _to_be_continued_screen: Control
+var _the_end_screen: Control
 
 # UI — Options menu (pause context)
 var _pause_options_center: MarginContainer
@@ -243,11 +244,13 @@ func _ready() -> void:
 	# Connecter les signaux des écrans de fin
 	_game_over_screen.back_to_menu_pressed.connect(_on_play_finished_return)
 	_to_be_continued_screen.back_to_menu_pressed.connect(_on_play_finished_return)
+	_the_end_screen.back_to_menu_pressed.connect(_on_play_finished_return)
 	_game_over_screen.load_last_autosave_pressed.connect(_on_game_over_load_autosave)
 	_main_menu.external_link_opened.connect(_on_external_link_opened)
 	_pause_menu.external_link_opened.connect(_on_external_link_opened)
 	_game_over_screen.external_link_opened.connect(_on_external_link_opened)
 	_to_be_continued_screen.external_link_opened.connect(_on_external_link_opened)
+	_the_end_screen.external_link_opened.connect(_on_external_link_opened)
 
 	# Connecter les signaux du menu pause
 	_pause_menu.resume_pressed.connect(_on_pause_resume)
@@ -440,6 +443,7 @@ func _apply_ui_lang() -> void:
 	_chapter_scene_menu.apply_ui_translations(_i18n_dict)
 	_game_over_screen.apply_ui_translations(_i18n_dict)
 	_to_be_continued_screen.apply_ui_translations(_i18n_dict)
+	_the_end_screen.apply_ui_translations(_i18n_dict)
 	_play_ctrl.set_i18n(_i18n_dict)
 	# Play buttons bar
 	_quicksave_button.text = StoryI18nService.get_ui_string("Save (F5)", _i18n_dict)
@@ -510,6 +514,7 @@ func _show_main_menu(story) -> void:
 	_menu_button.visible = false
 	_game_over_screen.hide_screen()
 	_to_be_continued_screen.hide_screen()
+	_the_end_screen.hide_screen()
 	_main_menu.setup(story, _current_story_path)
 	_main_menu.set_voice_languages(_get_story_voice_languages(story))
 	_main_menu.show_menu()
@@ -529,6 +534,14 @@ func _show_main_menu(story) -> void:
 		story.to_be_continued_title if story.get("to_be_continued_title") != null else "",
 		story.to_be_continued_subtitle if story.get("to_be_continued_subtitle") != null else "",
 		story.to_be_continued_background if story.get("to_be_continued_background") != null else "",
+		_current_story_path,
+		patreon_url,
+		itchio_url
+	)
+	_the_end_screen.setup(
+		story.the_end_title if story.get("the_end_title") != null else "",
+		story.the_end_subtitle if story.get("the_end_subtitle") != null else "",
+		story.the_end_background if story.get("the_end_background") != null else "",
 		_current_story_path,
 		patreon_url,
 		itchio_url
@@ -599,6 +612,8 @@ func _on_play_finished_return() -> void:
 			ending_type = "game_over"
 		elif _to_be_continued_screen.visible:
 			ending_type = "to_be_continued"
+		elif _the_end_screen.visible:
+			ending_type = "the_end"
 		if ending_type != "":
 			var ctx = _build_game_plugin_context()
 			_game_plugin_manager.dispatch_on_game_event(ctx, "ending_screen_action", {
@@ -607,6 +622,7 @@ func _on_play_finished_return() -> void:
 			})
 	_game_over_screen.hide_screen()
 	_to_be_continued_screen.hide_screen()
+	_the_end_screen.hide_screen()
 	if _current_story:
 		_show_main_menu(_current_story)
 	else:
@@ -1223,7 +1239,7 @@ func _on_analytics_story_finished(reason: String) -> void:
 	if _game_plugin_manager:
 		var ctx = _build_game_plugin_context()
 		_game_plugin_manager.dispatch_on_story_finished(ctx, reason)
-		if reason == "game_over" or reason == "to_be_continued":
+		if reason == "game_over" or reason == "to_be_continued" or reason == "the_end":
 			_game_plugin_manager.dispatch_on_game_event(ctx, "ending_screen_displayed", {
 				"type": reason,
 			})

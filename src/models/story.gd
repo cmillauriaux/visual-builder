@@ -34,6 +34,9 @@ var game_over_background: String = ""
 var to_be_continued_title: String = ""
 var to_be_continued_subtitle: String = ""
 var to_be_continued_background: String = ""
+var the_end_title: String = ""
+var the_end_subtitle: String = ""
+var the_end_background: String = ""
 var app_icon: String = ""
 var show_title_banner: bool = true
 var ui_theme_mode: String = "default"
@@ -136,6 +139,11 @@ func to_dict() -> Dictionary:
 				"subtitle": to_be_continued_subtitle,
 				"background": to_be_continued_background,
 			},
+			"the_end": {
+				"title": the_end_title,
+				"subtitle": the_end_subtitle,
+				"background": the_end_background,
+			},
 		},
 		"app_icon": app_icon,
 		"show_title_banner": show_title_banner,
@@ -204,6 +212,11 @@ static func from_dict(d: Dictionary):
 			story.to_be_continued_title = tbc.get("title", "")
 			story.to_be_continued_subtitle = tbc.get("subtitle", "")
 			story.to_be_continued_background = tbc.get("background", "")
+		if screens.has("the_end"):
+			var te = screens["the_end"]
+			story.the_end_title = te.get("title", "")
+			story.the_end_subtitle = te.get("subtitle", "")
+			story.the_end_background = te.get("background", "")
 
 	story.app_icon = d.get("app_icon", "")
 	story.show_title_banner = d.get("show_title_banner", true)

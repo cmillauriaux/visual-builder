@@ -69,10 +69,12 @@ func test_setup_with_empty_fields():
 	assert_eq(_dialog.get_menu_background(), "")
 
 # --- Signal ---
-# Note : le signal a 17 paramètres. On utilise une connexion directe avec lambda.
+# Note : le signal a 20 paramètres. On utilise une connexion directe avec lambda.
 # Ordre : menu_title, menu_subtitle, menu_background, menu_music,
 #          patreon_url, itchio_url, go_title, go_subtitle, go_bg,
-#          tbc_title, tbc_subtitle, tbc_bg, app_icon, show_banner,
+#          tbc_title, tbc_subtitle, tbc_bg,
+#          te_title, te_subtitle, te_bg,
+#          app_icon, show_banner,
 #          ui_theme_mode, plugin_settings, platform_settings
 
 func test_menu_config_confirmed_signal_exists():
@@ -82,7 +84,7 @@ func test_confirmed_emits_signal():
 	var story = _make_story("Mon Titre", "Mon Sous-titre", "bg.png")
 	_dialog.setup(story, "/tmp/test_story")
 	var emitted := [false]
-	_dialog.menu_config_confirmed.connect(func(_a,_b,_c,_d,_e,_f,_g,_h,_i,_j,_k,_l,_m,_n,_o,_p,_q): emitted[0] = true)
+	_dialog.menu_config_confirmed.connect(func(_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20): emitted[0] = true)
 	_dialog._on_confirmed()
 	assert_true(emitted[0], "Le signal menu_config_confirmed doit être émis")
 
@@ -90,7 +92,7 @@ func test_confirmed_signal_params():
 	var story = _make_story("T", "S", "B")
 	_dialog.setup(story, "/tmp/test_story")
 	var captured := []
-	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q]))
+	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t]))
 	_dialog._on_confirmed()
 	assert_eq(captured[0], "T")
 	assert_eq(captured[1], "S")
@@ -155,7 +157,7 @@ func test_confirmed_signal_includes_links():
 	story.itchio_url = "https://test.itch.io/game"
 	_dialog.setup(story, "/tmp/test_story")
 	var captured := []
-	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q]))
+	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t]))
 	_dialog._on_confirmed()
 	assert_eq(captured[4], "https://www.patreon.com/test")
 	assert_eq(captured[5], "https://test.itch.io/game")
@@ -166,7 +168,7 @@ func test_validate_url_rejects_invalid():
 	_dialog._patreon_url_edit.text = "not-a-url"
 	_dialog._itchio_url_edit.text = "ftp://invalid.com"
 	var captured := []
-	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q]))
+	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t]))
 	_dialog._on_confirmed()
 	assert_eq(captured[4], "", "URL invalide doit être traitée comme vide")
 	assert_eq(captured[5], "", "URL invalide doit être traitée comme vide")
@@ -176,7 +178,7 @@ func test_validate_url_accepts_https():
 	_dialog.setup(story, "/tmp/test_story")
 	_dialog._patreon_url_edit.text = "https://www.patreon.com/test"
 	var captured := []
-	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q]))
+	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t]))
 	_dialog._on_confirmed()
 	assert_eq(captured[4], "https://www.patreon.com/test")
 
@@ -185,7 +187,7 @@ func test_validate_url_accepts_http():
 	_dialog.setup(story, "/tmp/test_story")
 	_dialog._patreon_url_edit.text = "http://www.patreon.com/test"
 	var captured := []
-	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q]))
+	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t]))
 	_dialog._on_confirmed()
 	assert_eq(captured[4], "http://www.patreon.com/test")
 
@@ -270,6 +272,45 @@ func test_clear_to_be_continued_bg():
 	assert_eq(_dialog.get_to_be_continued_background(), "")
 	assert_null(_dialog._to_be_continued_bg_preview.texture)
 
+
+# --- Écran The End ---
+
+func test_has_the_end_bg_edit():
+	assert_true(_dialog.has_node("TabContainer/TheEnd/TheEndBgHBox/TheEndBgEdit"))
+
+func test_has_the_end_browse_button():
+	assert_true(_dialog.has_node("TabContainer/TheEnd/TheEndBgHBox/TheEndBrowseButton"))
+
+func test_has_the_end_clear_button():
+	assert_true(_dialog.has_node("TabContainer/TheEnd/TheEndBgHBox/TheEndClearBgButton"))
+
+func test_has_the_end_bg_preview():
+	assert_true(_dialog.has_node("TabContainer/TheEnd/TheEndBgPreview"))
+
+func test_has_the_end_title_edit():
+	assert_true(_dialog.has_node("TabContainer/TheEnd/TheEndTitleEdit"))
+
+func test_has_the_end_subtitle_edit():
+	assert_true(_dialog.has_node("TabContainer/TheEnd/TheEndSubtitleEdit"))
+
+func test_setup_fills_the_end_fields():
+	var story = _make_story()
+	story.the_end_title = "The End"
+	story.the_end_subtitle = "Merci d'avoir joué"
+	story.the_end_background = "end.png"
+	_dialog.setup(story, "/tmp")
+	assert_eq(_dialog.get_the_end_title(), "The End")
+	assert_eq(_dialog.get_the_end_subtitle(), "Merci d'avoir joué")
+	assert_eq(_dialog.get_the_end_background(), "end.png")
+
+func test_clear_the_end_bg():
+	var story = _make_story()
+	story.the_end_background = "end.png"
+	_dialog.setup(story, "/tmp")
+	_dialog._on_the_end_clear_bg_pressed()
+	assert_eq(_dialog.get_the_end_background(), "")
+	assert_null(_dialog._the_end_bg_preview.texture)
+
 func test_confirmed_signal_includes_ending_screen_params():
 	var story = _make_story("T", "S", "B")
 	story.game_over_title = "GO"
@@ -278,9 +319,12 @@ func test_confirmed_signal_includes_ending_screen_params():
 	story.to_be_continued_title = "TBC"
 	story.to_be_continued_subtitle = "TBCS"
 	story.to_be_continued_background = "tbcbg.png"
+	story.the_end_title = "END"
+	story.the_end_subtitle = "ENDS"
+	story.the_end_background = "endbg.png"
 	_dialog.setup(story, "/tmp")
 	var captured := []
-	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q]))
+	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t]))
 	_dialog._on_confirmed()
 	assert_eq(captured[6], "GO")
 	assert_eq(captured[7], "GOS")
@@ -288,6 +332,9 @@ func test_confirmed_signal_includes_ending_screen_params():
 	assert_eq(captured[9], "TBC")
 	assert_eq(captured[10], "TBCS")
 	assert_eq(captured[11], "tbcbg.png")
+	assert_eq(captured[12], "END")
+	assert_eq(captured[13], "ENDS")
+	assert_eq(captured[14], "endbg.png")
 
 
 # --- Section Icône (dans l'onglet Menu) ---
@@ -341,9 +388,9 @@ func test_confirmed_signal_includes_app_icon():
 	story.app_icon = "myicon.png"
 	_dialog.setup(story, "/tmp")
 	var captured := []
-	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q]))
+	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t]))
 	_dialog._on_confirmed()
-	assert_eq(captured[12], "myicon.png")
+	assert_eq(captured[15], "myicon.png")
 
 
 # --- Bandeau titre ---
@@ -375,9 +422,9 @@ func test_confirmed_signal_includes_show_title_banner():
 	story.show_title_banner = false
 	_dialog.setup(story, "/tmp")
 	var captured := []
-	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q]))
+	_dialog.menu_config_confirmed.connect(func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t): captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t]))
 	_dialog._on_confirmed()
-	assert_false(captured[13])
+	assert_false(captured[16])
 
 
 # --- Onglet Thème UI ---
@@ -409,11 +456,11 @@ func test_confirmed_signal_includes_ui_theme_mode() -> void:
 	_dialog.setup(story, "/tmp/test_story")
 	var captured := []
 	_dialog.menu_config_confirmed.connect(
-		func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q):
-			captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q])
+		func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t):
+			captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t])
 	)
 	_dialog._on_confirmed()
-	assert_eq(captured[14], "custom", "Signal should include ui_theme_mode")
+	assert_eq(captured[17], "custom", "Signal should include ui_theme_mode")
 
 func test_confirmed_signal_ui_theme_mode_default() -> void:
 	var story = _make_story()
@@ -421,11 +468,11 @@ func test_confirmed_signal_ui_theme_mode_default() -> void:
 	_dialog.setup(story, "/tmp/test_story")
 	var captured := []
 	_dialog.menu_config_confirmed.connect(
-		func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q):
-			captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q])
+		func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t):
+			captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t])
 	)
 	_dialog._on_confirmed()
-	assert_eq(captured[14], "default")
+	assert_eq(captured[17], "default")
 
 
 # --- Onglet Plugins ---
@@ -444,11 +491,11 @@ func test_confirmed_signal_includes_plugin_settings() -> void:
 	_dialog.setup(story, "/tmp/test_story")
 	var captured := []
 	_dialog.menu_config_confirmed.connect(
-		func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q):
-			captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q])
+		func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t):
+			captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t])
 	)
 	_dialog._on_confirmed()
-	assert_true(captured[15] is Dictionary, "Le paramètre 16 doit être un Dictionary (plugin_settings)")
+	assert_true(captured[18] is Dictionary, "Le paramètre 19 doit être un Dictionary (plugin_settings)")
 
 func test_confirmed_signal_includes_platform_settings() -> void:
 	var story = _make_story()
@@ -456,12 +503,12 @@ func test_confirmed_signal_includes_platform_settings() -> void:
 	_dialog.setup(story, "/tmp/test_story")
 	var captured := []
 	_dialog.menu_config_confirmed.connect(
-		func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q):
-			captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q])
+		func(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t):
+			captured.append_array([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t])
 	)
 	_dialog._on_confirmed()
-	assert_true(captured[16] is Dictionary, "Le paramètre 17 doit être un Dictionary (platform_settings)")
-	assert_eq(captured[16].get("ios", {}).get("team_id", ""), "ABC123")
+	assert_true(captured[19] is Dictionary, "Le paramètre 20 doit être un Dictionary (platform_settings)")
+	assert_eq(captured[19].get("ios", {}).get("team_id", ""), "ABC123")
 
 
 # --- Onglet Plateformes ---

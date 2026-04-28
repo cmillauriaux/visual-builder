@@ -216,7 +216,7 @@ func _simulate_run(story: RefCounted, global_coverage: Dictionary, game_over_cho
 				chapter = result["chapter"]
 				scene = result["scene"]
 				current_node = result["node"]
-			elif current_node.ending.type in ["game_over", "to_be_continued"]:
+			elif current_node.ending.type in ["game_over", "to_be_continued", "the_end"]:
 				return _make_run_result(run_index, path, current_node.ending.type)
 			else:
 				return _make_run_result(run_index, path, "no_ending")
@@ -229,7 +229,7 @@ func _make_run_result(run_index: int, path: Array, ending_reason: String) -> Dic
 		"run_index": run_index,
 		"path": path,
 		"ending_reason": ending_reason,
-		"is_valid": ending_reason in ["game_over", "to_be_continued"],
+		"is_valid": ending_reason in ["game_over", "to_be_continued", "the_end"],
 	}
 
 
@@ -271,6 +271,8 @@ func _resolve_consequence(consequence: RefCounted, story: RefCounted, chapter: R
 			return {"finished": true, "reason": "game_over"}
 		"to_be_continued":
 			return {"finished": true, "reason": "to_be_continued"}
+		"the_end":
+			return {"finished": true, "reason": "the_end"}
 		_:
 			return {"finished": true, "reason": "error"}
 
@@ -523,16 +525,22 @@ func _compute_sequence_audio_duration(seq: RefCounted, story_base_path: String) 
 
 
 func _compute_timings(runs: Array) -> Dictionary:
-	var chapter_data: Dictionary = {}  # chapter_name -> { "game_over": [], "continuation": [], "audio_game_over": [], "audio_continuation": [] }
-	var total_data: Dictionary = {"game_over": [], "continuation": [], "audio_game_over": [], "audio_continuation": []}
+	var chapter_data: Dictionary = {}  # chapter_name -> { reason -> [seconds] }
+	var total_data: Dictionary = {} # reason -> [seconds]
 	var chapter_order: Array = []
+	var valid_reasons = ["game_over", "to_be_continued", "the_end"]
 
 	for run in runs:
 		var reason: String = run.get("ending_reason", "")
-		if reason in ["error", "loop_detected"]:
+		if not reason in valid_reasons:
 			continue
-		var bucket: String = "game_over" if reason == "game_over" else "continuation"
+		
+		var bucket: String = reason
 		var audio_bucket: String = "audio_" + bucket
+
+		if not total_data.has(bucket):
+			total_data[bucket] = []
+			total_data[audio_bucket] = []
 
 		var run_total_time := 0.0
 		var run_total_audio := 0.0
@@ -561,45 +569,50 @@ func _compute_timings(runs: Array) -> Dictionary:
 
 		for ch in run_totals:
 			if not chapter_data.has(ch):
-				chapter_data[ch] = {"game_over": [], "continuation": [], "audio_game_over": [], "audio_continuation": []}
+				chapter_data[ch] = {}
 				chapter_order.append(ch)
+			if not chapter_data[ch].has(bucket):
+				chapter_data[ch][bucket] = []
+				chapter_data[ch][audio_bucket] = []
 			chapter_data[ch][bucket].append(run_totals[ch])
 			chapter_data[ch][audio_bucket].append(run_audio_totals[ch])
 
 	var result_chapters: Array = []
 	for ch in chapter_order:
 		var entry: Dictionary = {"chapter_name": ch}
-		for bucket in ["game_over", "continuation"]:
-			var times: Array = chapter_data[ch][bucket]
-			if times.size() > 0:
-				var sorted_t := times.duplicate()
-				sorted_t.sort()
-				var audio_times: Array = chapter_data[ch]["audio_" + bucket]
-				var sorted_a := audio_times.duplicate()
-				sorted_a.sort()
-				entry[bucket] = {
-					"min_seconds": sorted_t[0],
-					"max_seconds": sorted_t[-1],
-					"audio_min_seconds": sorted_a[0],
-					"audio_max_seconds": sorted_a[-1],
-				}
+		for bucket in valid_reasons:
+			if chapter_data[ch].has(bucket):
+				var times: Array = chapter_data[ch][bucket]
+				if times.size() > 0:
+					var sorted_t := times.duplicate()
+					sorted_t.sort()
+					var audio_times: Array = chapter_data[ch]["audio_" + bucket]
+					var sorted_a := audio_times.duplicate()
+					sorted_a.sort()
+					entry[bucket] = {
+						"min_seconds": sorted_t[0],
+						"max_seconds": sorted_t[-1],
+						"audio_min_seconds": sorted_a[0],
+						"audio_max_seconds": sorted_a[-1],
+					}
 		result_chapters.append(entry)
 
 	var result_total: Dictionary = {}
-	for bucket in ["game_over", "continuation"]:
-		var times: Array = total_data[bucket]
-		if times.size() > 0:
-			var sorted_times := times.duplicate()
-			sorted_times.sort()
-			var audio_times: Array = total_data["audio_" + bucket]
-			var sorted_audio := audio_times.duplicate()
-			sorted_audio.sort()
-			result_total[bucket] = {
-				"min_seconds": sorted_times[0],
-				"max_seconds": sorted_times[-1],
-				"audio_min_seconds": sorted_audio[0],
-				"audio_max_seconds": sorted_audio[-1],
-			}
+	for bucket in valid_reasons:
+		if total_data.has(bucket):
+			var times: Array = total_data[bucket]
+			if times.size() > 0:
+				var sorted_times := times.duplicate()
+				sorted_times.sort()
+				var audio_times: Array = total_data["audio_" + bucket]
+				var sorted_audio := audio_times.duplicate()
+				sorted_audio.sort()
+				result_total[bucket] = {
+					"min_seconds": sorted_times[0],
+					"max_seconds": sorted_times[-1],
+					"audio_min_seconds": sorted_audio[0],
+					"audio_max_seconds": sorted_audio[-1],
+				}
 
 	return {
 		"chapters": result_chapters,

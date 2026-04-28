@@ -784,7 +784,7 @@ func test_compute_timings_direct_single_chapter():
 	assert_eq(timings.size(), 1)
 	assert_eq(timings[0]["chapter_name"], "Ch1")
 	assert_true(timings[0].has("game_over"), "game_over doit etre present")
-	assert_false(timings[0].has("continuation"), "continuation ne doit pas etre present")
+	assert_false(timings[0].has("to_be_continued"), "to_be_continued ne doit pas etre present")
 	assert_almost_eq(timings[0]["game_over"]["min_seconds"], 4.4, 0.01)
 	assert_almost_eq(timings[0]["game_over"]["max_seconds"], 4.4, 0.01)
 
@@ -807,11 +807,11 @@ func test_compute_timings_direct_two_runs_min_max():
 	assert_true(timings[0].has("game_over"), "game_over doit etre present")
 	assert_almost_eq(timings[0]["game_over"]["min_seconds"], 1.0, 0.01)
 	assert_almost_eq(timings[0]["game_over"]["max_seconds"], 1.0, 0.01)
-	assert_true(timings[0].has("continuation"), "continuation doit etre present")
-	assert_almost_eq(timings[0]["continuation"]["min_seconds"], 50.0, 0.01)
-	assert_almost_eq(timings[0]["continuation"]["max_seconds"], 50.0, 0.01)
+	assert_true(timings[0].has("to_be_continued"), "to_be_continued doit etre present")
+	assert_almost_eq(timings[0]["to_be_continued"]["min_seconds"], 50.0, 0.01)
+	assert_almost_eq(timings[0]["to_be_continued"]["max_seconds"], 50.0, 0.01)
 
-func test_compute_timings_separates_game_over_from_continuation():
+func test_compute_timings_separates_game_over_from_to_be_continued():
 	# Plusieurs runs game_over et to_be_continued : min/max separes
 	var runs = [
 		{"ending_reason": "game_over", "path": [{"chapter_name": "Ch1", "word_count": 0, "dialogue_count": 1, "type": "sequence"}]},
@@ -825,9 +825,9 @@ func test_compute_timings_separates_game_over_from_continuation():
 	# game_over : 1.0 sec et 48.0 sec -> min=1.0, max=48.0
 	assert_almost_eq(timings[0]["game_over"]["min_seconds"], 1.0, 0.01)
 	assert_almost_eq(timings[0]["game_over"]["max_seconds"], 48.0, 0.01)
-	# continuation : 2.0 sec et 24.0 sec -> min=2.0, max=24.0
-	assert_almost_eq(timings[0]["continuation"]["min_seconds"], 2.0, 0.01)
-	assert_almost_eq(timings[0]["continuation"]["max_seconds"], 24.0, 0.01)
+	# to_be_continued : 2.0 sec et 24.0 sec -> min=2.0, max=24.0
+	assert_almost_eq(timings[0]["to_be_continued"]["min_seconds"], 2.0, 0.01)
+	assert_almost_eq(timings[0]["to_be_continued"]["max_seconds"], 24.0, 0.01)
 
 func test_compute_timings_with_choices():
 	# Test specifique pour verifier que les choix ajoutent 5 secondes
@@ -858,7 +858,7 @@ func test_compute_timings_excludes_error_runs():
 	# Seul le run game_over compte : (100/250)*60 + 3*1.0 = 24 + 3 = 27 sec
 	assert_eq(timings.size(), 1)
 	assert_true(timings[0].has("game_over"))
-	assert_false(timings[0].has("continuation"))
+	assert_false(timings[0].has("to_be_continued"))
 	assert_almost_eq(timings[0]["game_over"]["min_seconds"], 27.0, 0.01)
 	assert_almost_eq(timings[0]["game_over"]["max_seconds"], 27.0, 0.01)
 
@@ -877,10 +877,10 @@ func test_compute_timings_excludes_loop_detected_runs():
 	var timings = result["chapters"]
 	assert_eq(timings.size(), 1)
 	# Seul to_be_continued compte : (10/250)*60 + 1*1.0 = 2.4 + 1.0 = 3.4 sec
-	assert_true(timings[0].has("continuation"))
+	assert_true(timings[0].has("to_be_continued"))
 	assert_false(timings[0].has("game_over"))
-	assert_almost_eq(timings[0]["continuation"]["min_seconds"], 3.4, 0.01)
-	assert_almost_eq(timings[0]["continuation"]["max_seconds"], 3.4, 0.01)
+	assert_almost_eq(timings[0]["to_be_continued"]["min_seconds"], 3.4, 0.01)
+	assert_almost_eq(timings[0]["to_be_continued"]["max_seconds"], 3.4, 0.01)
 
 func test_compute_timings_two_chapters_preserved_order():
 	var runs = [

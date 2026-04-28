@@ -411,6 +411,10 @@ func on_play_finished(reason: String) -> void:
 		if _game.get("_to_be_continued_screen") != null:
 			_game._to_be_continued_screen.show_screen()
 			return
+	elif reason == "the_end":
+		if _game.get("_the_end_screen") != null:
+			_game._the_end_screen.show_screen()
+			return
 	var messages = {
 		"no_ending": StoryI18nService.get_ui_string("Fin (aucune terminaison configurée)", _i18n),
 		"error": StoryI18nService.get_ui_string("Erreur (cible introuvable ou contenu vide)", _i18n),

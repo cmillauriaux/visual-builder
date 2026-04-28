@@ -138,37 +138,32 @@ func show_report(report: Dictionary) -> void:
 		total_list.name = "TotalTimingsList"
 		_report_content.add_child(total_list)
 
-		if total_timings.has("continuation"):
-			var sub: Dictionary = total_timings["continuation"]
-			var item = Label.new()
-			var min_str := _format_duration(sub.get("min_seconds", 0.0))
-			var max_str := _format_duration(sub.get("max_seconds", 0.0))
-			item.text = tr("  Histoire (Suite)    de %s  a  %s") % [min_str, max_str]
-			total_list.add_child(item)
-			var audio_max_cont: float = sub.get("audio_max_seconds", 0.0)
-			if audio_max_cont > 0.0:
-				var audio_item = Label.new()
-				var audio_min_str := _format_duration(sub.get("audio_min_seconds", 0.0))
-				var audio_max_str := _format_duration(sub.get("audio_max_seconds", 0.0))
-				audio_item.text = tr("  Histoire (Suite) audio    de %s  a  %s") % [audio_min_str, audio_max_str]
-				audio_item.add_theme_color_override("font_color", Color(0.6, 0.85, 1.0))
-				total_list.add_child(audio_item)
-		if total_timings.has("game_over"):
-			var sub: Dictionary = total_timings["game_over"]
-			var item = Label.new()
-			var min_str := _format_duration(sub.get("min_seconds", 0.0))
-			var max_str := _format_duration(sub.get("max_seconds", 0.0))
-			item.text = tr("  Histoire (Game Over)    de %s  a  %s") % [min_str, max_str]
-			item.add_theme_color_override("font_color", Color(1.0, 0.5, 0.5))
-			total_list.add_child(item)
-			var audio_max_go: float = sub.get("audio_max_seconds", 0.0)
-			if audio_max_go > 0.0:
-				var audio_item = Label.new()
-				var audio_min_str := _format_duration(sub.get("audio_min_seconds", 0.0))
-				var audio_max_str := _format_duration(sub.get("audio_max_seconds", 0.0))
-				audio_item.text = tr("  Histoire (Game Over) audio    de %s  a  %s") % [audio_min_str, audio_max_str]
-				audio_item.add_theme_color_override("font_color", Color(0.6, 0.85, 1.0))
-				total_list.add_child(audio_item)
+		var total_buckets = {
+			"to_be_continued": {"label": tr("  Histoire (Suite)    de %s  a  %s"), "color": Color.WHITE},
+			"the_end": {"label": tr("  Histoire (The End)    de %s  a  %s"), "color": Color.WHITE},
+			"game_over": {"label": tr("  Histoire (Game Over)    de %s  a  %s"), "color": Color(1.0, 0.5, 0.5)}
+		}
+
+		for bucket in total_buckets:
+			if total_timings.has(bucket):
+				var cfg = total_buckets[bucket]
+				var sub: Dictionary = total_timings[bucket]
+				var item = Label.new()
+				var min_str := _format_duration(sub.get("min_seconds", 0.0))
+				var max_str := _format_duration(sub.get("max_seconds", 0.0))
+				item.text = cfg["label"] % [min_str, max_str]
+				item.add_theme_color_override("font_color", cfg["color"])
+				total_list.add_child(item)
+				
+				var audio_max: float = sub.get("audio_max_seconds", 0.0)
+				if audio_max > 0.0:
+					var audio_item = Label.new()
+					var audio_min_str := _format_duration(sub.get("audio_min_seconds", 0.0))
+					var audio_max_str := _format_duration(sub.get("audio_max_seconds", 0.0))
+					var audio_lbl_base = cfg["label"].replace("    de", " audio    de")
+					audio_item.text = audio_lbl_base % [audio_min_str, audio_max_str]
+					audio_item.add_theme_color_override("font_color", Color(0.6, 0.85, 1.0))
+					total_list.add_child(audio_item)
 
 		_report_content.add_child(HSeparator.new())
 
@@ -187,39 +182,34 @@ func show_report(report: Dictionary) -> void:
 		timings_list.name = "ChapterTimingsList"
 		_report_content.add_child(timings_list)
 
+		var chapter_buckets = {
+			"to_be_continued": {"label": tr("  %s  (Suite)    de %s  a  %s"), "color": Color.WHITE},
+			"the_end": {"label": tr("  %s  (The End)    de %s  a  %s"), "color": Color.WHITE},
+			"game_over": {"label": tr("  %s  (Game Over)    de %s  a  %s"), "color": Color(1.0, 0.5, 0.5)}
+		}
+
 		for timing in chapter_timings:
 			var ch_name: String = timing.get("chapter_name", "")
-			if timing.has("continuation"):
-				var sub: Dictionary = timing["continuation"]
-				var item = Label.new()
-				var min_str := _format_duration(sub.get("min_seconds", 0.0))
-				var max_str := _format_duration(sub.get("max_seconds", 0.0))
-				item.text = tr("  %s  (Suite)    de %s  a  %s") % [ch_name, min_str, max_str]
-				timings_list.add_child(item)
-				var audio_max_cont: float = sub.get("audio_max_seconds", 0.0)
-				if audio_max_cont > 0.0:
-					var audio_item = Label.new()
-					var audio_min_str := _format_duration(sub.get("audio_min_seconds", 0.0))
-					var audio_max_str := _format_duration(sub.get("audio_max_seconds", 0.0))
-					audio_item.text = tr("  %s  (Suite) audio    de %s  a  %s") % [ch_name, audio_min_str, audio_max_str]
-					audio_item.add_theme_color_override("font_color", Color(0.6, 0.85, 1.0))
-					timings_list.add_child(audio_item)
-			if timing.has("game_over"):
-				var sub: Dictionary = timing["game_over"]
-				var item = Label.new()
-				var min_str := _format_duration(sub.get("min_seconds", 0.0))
-				var max_str := _format_duration(sub.get("max_seconds", 0.0))
-				item.text = tr("  %s  (Game Over)    de %s  a  %s") % [ch_name, min_str, max_str]
-				item.add_theme_color_override("font_color", Color(1.0, 0.5, 0.5))
-				timings_list.add_child(item)
-				var audio_max_go: float = sub.get("audio_max_seconds", 0.0)
-				if audio_max_go > 0.0:
-					var audio_item = Label.new()
-					var audio_min_str := _format_duration(sub.get("audio_min_seconds", 0.0))
-					var audio_max_str := _format_duration(sub.get("audio_max_seconds", 0.0))
-					audio_item.text = tr("  %s  (Game Over) audio    de %s  a  %s") % [ch_name, audio_min_str, audio_max_str]
-					audio_item.add_theme_color_override("font_color", Color(0.6, 0.85, 1.0))
-					timings_list.add_child(audio_item)
+			for bucket in chapter_buckets:
+				if timing.has(bucket):
+					var cfg = chapter_buckets[bucket]
+					var sub: Dictionary = timing[bucket]
+					var item = Label.new()
+					var min_str := _format_duration(sub.get("min_seconds", 0.0))
+					var max_str := _format_duration(sub.get("max_seconds", 0.0))
+					item.text = cfg["label"] % [ch_name, min_str, max_str]
+					item.add_theme_color_override("font_color", cfg["color"])
+					timings_list.add_child(item)
+					
+					var audio_max: float = sub.get("audio_max_seconds", 0.0)
+					if audio_max > 0.0:
+						var audio_item = Label.new()
+						var audio_min_str := _format_duration(sub.get("audio_min_seconds", 0.0))
+						var audio_max_str := _format_duration(sub.get("audio_max_seconds", 0.0))
+						var audio_lbl_base = cfg["label"].replace("    de", " audio    de")
+						audio_item.text = audio_lbl_base % [ch_name, audio_min_str, audio_max_str]
+						audio_item.add_theme_color_override("font_color", Color(0.6, 0.85, 1.0))
+						timings_list.add_child(audio_item)
 
 		_report_content.add_child(HSeparator.new())
 
