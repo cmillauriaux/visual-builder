@@ -273,8 +273,6 @@ func _connect_signals() -> void:
 	# Top bar
 	_back_button.pressed.connect(_nav_ctrl.on_back_pressed)
 	_breadcrumb.level_clicked.connect(_nav_ctrl.on_breadcrumb_clicked)
-	_breadcrumb.story_rename_requested.connect(_nav_ctrl.on_story_rename_requested)
-	_breadcrumb.menu_config_requested.connect(_nav_ctrl.on_menu_config_requested)
 	_create_button.pressed.connect(_nav_ctrl.on_create_pressed)
 	_create_condition_button.pressed.connect(_nav_ctrl.on_create_condition_pressed)
 	_histoire_menu.get_popup().id_pressed.connect(_menu_ctrl.on_histoire_menu_pressed)

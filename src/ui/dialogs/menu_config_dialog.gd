@@ -6,6 +6,7 @@ extends ConfirmationDialog
 ## Dialogue de configuration du jeu (menu, analytics, liens, écrans de fin).
 
 signal menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_background: String, menu_music: String, patreon_url: String, itchio_url: String, game_over_title: String, game_over_subtitle: String, game_over_background: String, to_be_continued_title: String, to_be_continued_subtitle: String, to_be_continued_background: String, the_end_title: String, the_end_subtitle: String, the_end_background: String, app_icon: String, show_title_banner: bool, ui_theme_mode: String, plugin_settings: Dictionary, platform_settings: Dictionary)
+signal story_rename_requested(new_name: String)
 signal variables_changed
 signal languages_changed
 
@@ -24,6 +25,7 @@ const UI_THEME_ASSETS = [
 var _variable_panel: Control
 var _notification_panel: Control
 var _language_panel: Control
+var _story_title_edit: LineEdit
 var _menu_title_edit: LineEdit
 var _menu_subtitle_edit: LineEdit
 var _menu_bg_edit: LineEdit
@@ -104,6 +106,26 @@ func _init():
 	var menu_vbox = VBoxContainer.new()
 	menu_vbox.name = "Menu"
 	menu_vbox.add_theme_constant_override("separation", 4)
+
+	var story_title_lbl = Label.new()
+	story_title_lbl.text = tr("Identité de l'histoire")
+	story_title_lbl.add_theme_font_size_override("font_size", 16)
+	menu_vbox.add_child(story_title_lbl)
+
+	var st_lbl = Label.new()
+	st_lbl.text = tr("Titre de l'histoire")
+	menu_vbox.add_child(st_lbl)
+
+	_story_title_edit = LineEdit.new()
+	_story_title_edit.name = "StoryTitleEdit"
+	menu_vbox.add_child(_story_title_edit)
+
+	menu_vbox.add_child(HSeparator.new())
+
+	var menu_title_lbl = Label.new()
+	menu_title_lbl.text = tr("Affichage du menu principal")
+	menu_title_lbl.add_theme_font_size_override("font_size", 16)
+	menu_vbox.add_child(menu_title_lbl)
 
 	var title_lbl = Label.new()
 	title_lbl.text = tr("Titre du menu")
@@ -650,6 +672,7 @@ func setup(story, story_base_path: String = "") -> void:
 	_notification_panel.setup(story)
 	_language_panel.setup(story_base_path)
 
+	_story_title_edit.text = story.title
 	_menu_title_edit.text = story.menu_title
 	_menu_subtitle_edit.text = story.menu_subtitle
 	_menu_bg_edit.text = story.menu_background
@@ -1018,6 +1041,9 @@ static func _validate_url(url: String) -> String:
 	return ""
 
 func _on_confirmed() -> void:
+	if _story.title != _story_title_edit.text:
+		story_rename_requested.emit(_story_title_edit.text)
+
 	menu_config_confirmed.emit(
 		_menu_title_edit.text, _menu_subtitle_edit.text, _menu_bg_edit.text,
 		_current_menu_music,

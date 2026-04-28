@@ -335,10 +335,10 @@ func test_on_condition_double_clicked() -> void:
 
 # --- Rename (null-guard tests) ---
 
-func test_on_story_rename_requested_null_story() -> void:
+func test_on_story_rename_confirmed_null_story() -> void:
 	# No story → returns early
-	_main._nav_ctrl.on_story_rename_requested()
-	pass_test("on_story_rename_requested with null story should not crash")
+	_main._nav_ctrl.on_story_rename_confirmed("New Name")
+	pass_test("on_story_rename_confirmed with null story should not crash")
 
 func test_on_chapter_rename_requested_invalid_uuid() -> void:
 	_main._nav_ctrl.on_new_story_pressed()
