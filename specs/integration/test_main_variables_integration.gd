@@ -19,49 +19,6 @@ func before_each():
 func after_each():
 	_main.queue_free()
 
-# --- Menu Paramètres ---
-
-func test_parametres_menu_exists():
-	assert_not_null(_main._parametres_menu)
-	assert_eq(_main._parametres_menu.text, "Paramètres")
-
-func test_parametres_menu_visible_at_chapters():
-	var story = _make_story()
-	_main._editor_main.open_story(story)
-	_main.refresh_current_view()
-	assert_true(_main._parametres_menu.visible, "Visible au niveau chapters")
-
-func test_parametres_menu_visible_at_scenes():
-	var story = _make_story()
-	_main._editor_main.open_story(story)
-	_main._editor_main.navigate_to_chapter(story.chapters[0].uuid)
-	_main.refresh_current_view()
-	assert_true(_main._parametres_menu.visible, "Visible au niveau scenes")
-
-func test_parametres_menu_visible_at_sequences():
-	var story = _make_story()
-	_main._editor_main.open_story(story)
-	_main._editor_main.navigate_to_chapter(story.chapters[0].uuid)
-	_main._editor_main.navigate_to_scene(story.chapters[0].scenes[0].uuid)
-	_main.refresh_current_view()
-	assert_true(_main._parametres_menu.visible, "Visible au niveau sequences")
-
-func test_parametres_menu_hidden_at_sequence_edit():
-	var story = _make_story()
-	_main._editor_main.open_story(story)
-	_main._editor_main.navigate_to_chapter(story.chapters[0].uuid)
-	_main._editor_main.navigate_to_scene(story.chapters[0].scenes[0].uuid)
-	_main._editor_main.navigate_to_sequence(story.chapters[0].scenes[0].sequences[0].uuid)
-	_main.refresh_current_view()
-	assert_false(_main._parametres_menu.visible, "Caché au niveau sequence_edit")
-
-# --- Panneau Variables ---
-
-func test_variable_panel_popup_exists():
-	assert_not_null(_main._variable_panel_popup)
-
-func test_variable_panel_exists():
-	assert_not_null(_main._variable_panel)
 
 # --- Intégration variable names → ending editor ---
 

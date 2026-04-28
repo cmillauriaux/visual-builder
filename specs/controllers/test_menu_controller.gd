@@ -106,6 +106,15 @@ func test_on_histoire_menu_verify() -> void:
 	_ctrl.on_histoire_menu_pressed(5)
 	assert_true(_nav_ctrl.verify_called)
 
+func test_on_histoire_menu_config() -> void:
+	_ctrl.on_histoire_menu_pressed(9)
+	assert_true(_nav_ctrl.menu_config_called)
+
+func test_on_histoire_menu_gallery() -> void:
+	_ctrl.on_histoire_menu_pressed(10)
+	var dialog = _main.get_child(_main.get_child_count() - 1)
+	assert_true(dialog is Window)
+
 func test_on_histoire_menu_i18n_regenerate_creates_dialog() -> void:
 	_ctrl.on_histoire_menu_pressed(6)
 	var dialog = _main.get_child(_main.get_child_count() - 1)
@@ -113,32 +122,6 @@ func test_on_histoire_menu_i18n_regenerate_creates_dialog() -> void:
 
 func test_on_histoire_menu_i18n_check_creates_dialog() -> void:
 	_ctrl.on_histoire_menu_pressed(7)
-	var dialog = _main.get_child(_main.get_child_count() - 1)
-	assert_true(dialog is AcceptDialog)
-
-
-# --- on_parametres_menu_pressed ---
-
-func test_on_parametres_menu_variables() -> void:
-	_ctrl.on_parametres_menu_pressed(0)
-	assert_true(_nav_ctrl.variables_called)
-
-func test_on_parametres_menu_menu_config() -> void:
-	_ctrl.on_parametres_menu_pressed(1)
-	assert_true(_nav_ctrl.menu_config_called)
-
-func test_on_parametres_menu_gallery() -> void:
-	_ctrl.on_parametres_menu_pressed(2)
-	var dialog = _main.get_child(_main.get_child_count() - 1)
-	assert_true(dialog is Window)
-
-func test_on_parametres_menu_notifications() -> void:
-	_ctrl.on_parametres_menu_pressed(3)
-	var dialog = _main.get_child(_main.get_child_count() - 1)
-	assert_true(dialog is AcceptDialog)
-
-func test_on_parametres_menu_languages() -> void:
-	_ctrl.on_parametres_menu_pressed(4)
 	var dialog = _main.get_child(_main.get_child_count() - 1)
 	assert_true(dialog is AcceptDialog)
 
@@ -170,15 +153,6 @@ func test_on_gallery_pressed_null_story_no_crash() -> void:
 	_ctrl.on_gallery_pressed()
 	pass_test("on_gallery_pressed with null story should not crash")
 
-func test_on_notifications_pressed_null_story_no_crash() -> void:
-	_editor_main._story = null
-	_ctrl.on_notifications_pressed()
-	pass_test("on_notifications_pressed with null story should not crash")
-
-func test_on_languages_pressed_null_story_no_crash() -> void:
-	_editor_main._story = null
-	_ctrl.on_languages_pressed()
-	pass_test("on_languages_pressed with null story should not crash")
 
 func test_on_i18n_regenerate_pressed_null_story_no_crash() -> void:
 	_editor_main._story = null

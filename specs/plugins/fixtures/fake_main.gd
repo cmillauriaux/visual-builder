@@ -1,7 +1,6 @@
 extends Control
 ## Minimal fake main node for PluginManager tests.
 
-var _parametres_menu: MenuButton
 var _histoire_menu: MenuButton
 var _sequence_toolbar: HBoxContainer
 var _chapter_plugin_toolbar: HBoxContainer

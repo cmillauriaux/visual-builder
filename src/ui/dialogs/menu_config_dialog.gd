@@ -6,9 +6,14 @@ extends ConfirmationDialog
 ## Dialogue de configuration du jeu (menu, analytics, liens, écrans de fin).
 
 signal menu_config_confirmed(menu_title: String, menu_subtitle: String, menu_background: String, menu_music: String, patreon_url: String, itchio_url: String, game_over_title: String, game_over_subtitle: String, game_over_background: String, to_be_continued_title: String, to_be_continued_subtitle: String, to_be_continued_background: String, the_end_title: String, the_end_subtitle: String, the_end_background: String, app_icon: String, show_title_banner: bool, ui_theme_mode: String, plugin_settings: Dictionary, platform_settings: Dictionary)
+signal variables_changed
+signal languages_changed
 
 const ImagePickerDialogScript = preload("res://src/ui/dialogs/image_picker_dialog.gd")
 const AudioPickerDialogScript = preload("res://src/ui/dialogs/audio_picker_dialog.gd")
+const VariablePanelScene = preload("res://src/ui/editors/variable_panel.tscn")
+const NotificationPanelScript = preload("res://src/ui/editors/notification_panel.gd")
+const LanguageManagerPanelScript = preload("res://src/ui/editors/language_manager_panel.gd")
 
 const UI_THEME_ASSETS = [
 	"button_brown.png", "button_red.png", "button_red_close.png",
@@ -16,6 +21,9 @@ const UI_THEME_ASSETS = [
 	"checkbox_brown_empty.png", "checkbox_brown_checked.png"
 ]
 
+var _variable_panel: Control
+var _notification_panel: Control
+var _language_panel: Control
 var _menu_title_edit: LineEdit
 var _menu_subtitle_edit: LineEdit
 var _menu_bg_edit: LineEdit
@@ -72,6 +80,25 @@ func _init():
 	var tabs = TabContainer.new()
 	tabs.name = "TabContainer"
 	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
+
+	# ── Onglet Variables ──────────────────────────────────────────────────────
+	_variable_panel = VariablePanelScene.instantiate()
+	_variable_panel.name = "Variables"
+	_variable_panel.variables_changed.connect(func(): variables_changed.emit())
+	tabs.add_child(_variable_panel)
+
+	# ── Onglet Notifications ──────────────────────────────────────────────────
+	_notification_panel = VBoxContainer.new()
+	_notification_panel.set_script(NotificationPanelScript)
+	_notification_panel.name = "Notifications"
+	tabs.add_child(_notification_panel)
+
+	# ── Onglet Langues ────────────────────────────────────────────────────────
+	_language_panel = VBoxContainer.new()
+	_language_panel.set_script(LanguageManagerPanelScript)
+	_language_panel.name = "Langues"
+	_language_panel.languages_changed.connect(func(): languages_changed.emit())
+	tabs.add_child(_language_panel)
 
 	# ── Onglet Menu ──────────────────────────────────────────────────────────
 	var menu_vbox = VBoxContainer.new()
@@ -599,20 +626,30 @@ func _init():
 	_ui_theme_custom_btn.toggled.connect(_on_ui_theme_mode_toggled.bind("custom"))
 
 	# Titres des onglets (après ajout des enfants)
-	tabs.set_tab_title(0, tr("Menu"))
-	tabs.set_tab_title(1, tr("Plugins"))
-	tabs.set_tab_title(2, tr("Plateformes"))
-	tabs.set_tab_title(3, tr("Liens"))
-	tabs.set_tab_title(4, tr("Game Over"))
-	tabs.set_tab_title(5, tr("À suivre"))
-	tabs.set_tab_title(6, tr("The End"))
-	tabs.set_tab_title(7, tr("Thème UI"))
+	tabs.set_tab_title(0, tr("Variables"))
+	tabs.set_tab_title(1, tr("Notifications"))
+	tabs.set_tab_title(2, tr("Langues"))
+	tabs.set_tab_title(3, tr("Menu"))
+	tabs.set_tab_title(4, tr("Plugins"))
+	tabs.set_tab_title(5, tr("Plateformes"))
+	tabs.set_tab_title(6, tr("Liens"))
+	tabs.set_tab_title(7, tr("Game Over"))
+	tabs.set_tab_title(8, tr("À suivre"))
+	tabs.set_tab_title(9, tr("The End"))
+	tabs.set_tab_title(10, tr("Thème UI"))
 
 	add_child(tabs)
 	confirmed.connect(_on_confirmed)
 
 
 func setup(story, story_base_path: String = "") -> void:
+	_story = story
+	_story_base_path = story_base_path
+	
+	_variable_panel.load_story(story, story_base_path)
+	_notification_panel.setup(story)
+	_language_panel.setup(story_base_path)
+
 	_menu_title_edit.text = story.menu_title
 	_menu_subtitle_edit.text = story.menu_subtitle
 	_menu_bg_edit.text = story.menu_background

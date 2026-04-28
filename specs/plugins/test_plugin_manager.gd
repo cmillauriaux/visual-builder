@@ -8,7 +8,6 @@ const FakeMain = preload("res://specs/plugins/fixtures/fake_main.gd")
 
 var _manager: Node
 var _main: Control
-var _parametres_popup: PopupMenu
 var _histoire_popup: PopupMenu
 
 
@@ -20,7 +19,6 @@ func before_each() -> void:
 	add_child_autofree(_main)
 
 	# Setup minimal main structure expected by PluginManager
-	var parametres_menu := MenuButton.new()
 	var histoire_menu := MenuButton.new()
 	var seq_toolbar := HBoxContainer.new()
 	var chapter_toolbar := HBoxContainer.new()
@@ -29,7 +27,6 @@ func before_each() -> void:
 	var dock_right := PanelContainer.new()
 	var dock_bottom := PanelContainer.new()
 
-	_main._parametres_menu = parametres_menu
 	_main._histoire_menu = histoire_menu
 	_main._sequence_toolbar = seq_toolbar
 	_main._chapter_plugin_toolbar = chapter_toolbar
@@ -38,7 +35,6 @@ func before_each() -> void:
 	_main._dock_right = dock_right
 	_main._dock_bottom = dock_bottom
 
-	add_child_autofree(parametres_menu)
 	add_child_autofree(histoire_menu)
 	add_child_autofree(seq_toolbar)
 	add_child_autofree(chapter_toolbar)
@@ -47,7 +43,6 @@ func before_each() -> void:
 	add_child_autofree(dock_right)
 	add_child_autofree(dock_bottom)
 
-	_parametres_popup = parametres_menu.get_popup()
 	_histoire_popup = histoire_menu.get_popup()
 
 
@@ -67,14 +62,14 @@ func test_register_multiple_plugins() -> void:
 
 # --- Menu injection ---
 
-func test_menu_entry_added_to_parametres_popup() -> void:
+func test_menu_entry_added_to_histoire_popup_from_parametres_id() -> void:
 	var plugin := _PluginWithMenu.new()
 	plugin.menu_id = "parametres"
 	plugin.menu_label = "Test Item"
 	_manager.register_plugin(plugin)
 	_manager.apply_contributions(_main)
 
-	assert_true(_popup_has_item(_parametres_popup, "Test Item"), "Item should be in parametres popup")
+	assert_true(_popup_has_item(_histoire_popup, "Test Item"), "Item should be in histoire popup (redirected from parametres)")
 
 
 func test_menu_entry_added_to_histoire_popup() -> void:
@@ -89,28 +84,28 @@ func test_menu_entry_added_to_histoire_popup() -> void:
 
 func test_menu_item_id_is_at_least_1000() -> void:
 	var plugin := _PluginWithMenu.new()
-	plugin.menu_id = "parametres"
+	plugin.menu_id = "histoire"
 	plugin.menu_label = "Test"
 	_manager.register_plugin(plugin)
 	_manager.apply_contributions(_main)
 
-	var id := _get_popup_item_id(_parametres_popup, "Test")
+	var id := _get_popup_item_id(_histoire_popup, "Test")
 	assert_gte(id, 1000, "Plugin menu IDs must be >= 1000")
 
 
 func test_two_plugins_get_different_menu_ids() -> void:
 	var plugin1 := _PluginWithMenu.new()
-	plugin1.menu_id = "parametres"
+	plugin1.menu_id = "histoire"
 	plugin1.menu_label = "Item A"
 	var plugin2 := _PluginWithMenu.new()
-	plugin2.menu_id = "parametres"
+	plugin2.menu_id = "histoire"
 	plugin2.menu_label = "Item B"
 	_manager.register_plugin(plugin1)
 	_manager.register_plugin(plugin2)
 	_manager.apply_contributions(_main)
 
-	var id_a := _get_popup_item_id(_parametres_popup, "Item A")
-	var id_b := _get_popup_item_id(_parametres_popup, "Item B")
+	var id_a := _get_popup_item_id(_histoire_popup, "Item A")
+	var id_b := _get_popup_item_id(_histoire_popup, "Item B")
 	assert_ne(id_a, -1, "Item A should exist")
 	assert_ne(id_b, -1, "Item B should exist")
 	assert_ne(id_a, id_b, "Two items must have different IDs")
@@ -215,16 +210,16 @@ func test_menu_callback_is_invoked_on_id_pressed() -> void:
 	# Use an Array as a mutable ref to avoid GDScript closure capture issues
 	var calls := []
 	var plugin := _PluginWithMenu.new()
-	plugin.menu_id = "parametres"
+	plugin.menu_id = "histoire"
 	plugin.menu_label = "Callback Test"
 	plugin.on_activated = func(_ctx): calls.append(true)
 	_manager.register_plugin(plugin)
 	_manager.apply_contributions(_main)
 
-	var target_id := _get_popup_item_id(_parametres_popup, "Callback Test")
+	var target_id := _get_popup_item_id(_histoire_popup, "Callback Test")
 	assert_ne(target_id, -1, "Item must exist")
 
-	_parametres_popup.id_pressed.emit(target_id)
+	_histoire_popup.id_pressed.emit(target_id)
 
 	assert_eq(calls.size(), 1, "Callback should have been invoked once")
 

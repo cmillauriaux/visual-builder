@@ -105,9 +105,7 @@ func _inject_menu_entries(plugin: RefCounted, main: Control) -> void:
 func _get_popup_for_menu(menu_id: String, main: Control) -> PopupMenu:
 	var menu_btn: MenuButton
 	match menu_id:
-		"parametres":
-			menu_btn = main.get("_parametres_menu")
-		"histoire":
+		"parametres", "histoire":
 			menu_btn = main.get("_histoire_menu")
 	if menu_btn == null:
 		return null

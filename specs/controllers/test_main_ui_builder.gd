@@ -54,6 +54,8 @@ func test_builds_histoire_menu() -> void:
 	assert_eq(popup.get_item_text(popup.get_item_index(3)), "Sauvegarder sous...")
 	assert_eq(popup.get_item_text(popup.get_item_index(4)), "Exporter")
 	assert_eq(popup.get_item_text(popup.get_item_index(5)), "Vérifier l'histoire")
+	assert_eq(popup.get_item_text(popup.get_item_index(9)), "Configurer le jeu")
+	assert_eq(popup.get_item_text(popup.get_item_index(10)), "Galerie")
 
 
 func test_builds_graph_views() -> void:
@@ -104,16 +106,6 @@ func test_builds_tab_container_with_expected_tabs() -> void:
 
 func test_builds_ending_editor() -> void:
 	assert_not_null(_main._ending_editor)
-
-
-func test_builds_parametres_menu() -> void:
-	assert_not_null(_main._parametres_menu)
-	assert_eq(_main._parametres_menu.text, "Paramètres")
-	var popup = _main._parametres_menu.get_popup()
-	assert_eq(popup.get_item_text(popup.get_item_index(0)), "Variables")
-	assert_eq(popup.get_item_text(popup.get_item_index(1)), "Configurer le jeu")
-	assert_eq(popup.get_item_text(popup.get_item_index(2)), "Galerie")
-	assert_eq(popup.get_item_text(popup.get_item_index(3)), "Notifications")
 
 
 func test_builds_top_play_stop_buttons() -> void:

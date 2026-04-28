@@ -538,11 +538,8 @@ func on_new_story_pressed() -> void:
 
 # --- Variables ---
 
-func on_variables_pressed() -> void:
-	if _main._editor_main._story == null:
-		return
-	_main._variable_panel.load_story(_main._editor_main._story, _main._get_story_base_path())
-	_main._variable_panel_popup.popup_centered()
+func _on_languages_changed() -> void:
+	EventBus.story_modified.emit()
 
 
 func on_menu_config_requested() -> void:
@@ -555,6 +552,8 @@ func on_menu_config_requested() -> void:
 	_main.add_child(_menu_config_dialog)
 	_menu_config_dialog.setup(_main._editor_main._story, _last_save_path)
 	_menu_config_dialog.menu_config_confirmed.connect(_on_menu_config_confirmed)
+	_menu_config_dialog.variables_changed.connect(on_variables_changed)
+	_menu_config_dialog.languages_changed.connect(_on_languages_changed)
 	_menu_config_dialog.popup_centered_ratio(0.85)
 
 

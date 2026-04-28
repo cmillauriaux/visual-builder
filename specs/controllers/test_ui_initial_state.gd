@@ -16,7 +16,6 @@ func test_initial_ui_state_hides_top_bar():
 	
 	assert_false(main._back_button.visible, "Le bouton retour devrait être masqué")
 	assert_false(main._create_condition_button.visible, "Le bouton nouvelle condition devrait être masqué")
-	assert_false(main._parametres_menu.visible, "Le menu paramètres devrait être masqué")
 	assert_false(main._histoire_menu.visible, "Le menu histoire devrait être masqué")
 	assert_false(main._breadcrumb.visible, "Le fil d'Ariane devrait être masqué")
 

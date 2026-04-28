@@ -69,7 +69,6 @@ func _on_editor_mode_changed(mode: int, context: Dictionary) -> void:
 		_main._create_button.text = _main._editor_main.get_create_button_label()
 	
 	_main._create_condition_button.visible = (mode == EditorState.Mode.SEQUENCE_VIEW)
-	_main._parametres_menu.visible = (mode in [EditorState.Mode.CHAPTER_VIEW, EditorState.Mode.SCENE_VIEW, EditorState.Mode.SEQUENCE_VIEW])
 	_main._histoire_menu.visible = (mode != EditorState.Mode.NONE)
 	
 	_main._breadcrumb.set_current_level(level)

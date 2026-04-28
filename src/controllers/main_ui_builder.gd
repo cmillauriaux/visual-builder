@@ -24,7 +24,6 @@ const AudioPanelScript = preload("res://src/ui/sequence/audio_panel.gd")
 const DialogueEditorScript = preload("res://src/ui/editors/dialogue_editor.gd")
 const StoryPlayControllerScript = preload("res://src/ui/play/story_play_controller.gd")
 const ConditionEditorScene = preload("res://src/ui/editors/condition_editor.tscn")
-const VariablePanelScene = preload("res://src/ui/editors/variable_panel.tscn")
 const VerifierReportPanelScript = preload("res://src/ui/editors/verifier_report_panel.gd")
 const VariableSidebarScript = preload("res://src/ui/play/variable_sidebar.gd")
 const VariableDetailsOverlayScript = preload("res://src/ui/play/variable_details_overlay.gd")
@@ -119,18 +118,6 @@ static func _build_top_bar(main: Control) -> void:
 	main._create_condition_button.visible = false
 	main._top_bar.add_child(main._create_condition_button)
 
-	main._parametres_menu = MenuButton.new()
-	main._parametres_menu.text = TranslationServer.translate("Paramètres")
-	main._parametres_menu.visible = false
-	var parametres_popup = main._parametres_menu.get_popup()
-	parametres_popup.add_item(TranslationServer.translate("Variables"), 0)
-	parametres_popup.add_item(TranslationServer.translate("Configurer le jeu"), 1)
-	parametres_popup.add_item(TranslationServer.translate("Galerie"), 2)
-	parametres_popup.add_item(TranslationServer.translate("Notifications"), 3)
-	parametres_popup.add_separator()
-	parametres_popup.add_item(TranslationServer.translate("Langues"), 4)
-	main._top_bar.add_child(main._parametres_menu)
-
 	main._histoire_menu = MenuButton.new()
 	main._histoire_menu.text = TranslationServer.translate("Histoire")
 	main._histoire_menu.visible = false
@@ -147,17 +134,9 @@ static func _build_top_bar(main: Control) -> void:
 	histoire_popup.add_separator()
 	histoire_popup.add_item(TranslationServer.translate("Vérifier l'histoire"), 5)
 	histoire_popup.add_separator()
-	histoire_popup.add_item(TranslationServer.translate("Traductions — Regénérer les clés"), 6)
-	histoire_popup.add_item(TranslationServer.translate("Traductions — Vérifier"), 7)
+	histoire_popup.add_item(TranslationServer.translate("Configurer le jeu"), 9)
+	histoire_popup.add_item(TranslationServer.translate("Galerie"), 10)
 	main._top_bar.add_child(main._histoire_menu)
-
-	# Variable panel popup
-	main._variable_panel_popup = PopupPanel.new()
-	main._variable_panel_popup.size = Vector2i(400, 350)
-	main.add_child(main._variable_panel_popup)
-
-	main._variable_panel = VariablePanelScene.instantiate()
-	main._variable_panel_popup.add_child(main._variable_panel)
 
 
 static func _build_content_area(main: Control) -> void:

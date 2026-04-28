@@ -404,10 +404,6 @@ func test_on_verifier_close() -> void:
 
 # --- Variables ---
 
-func test_on_variables_pressed_null_story() -> void:
-	_main._nav_ctrl.on_variables_pressed()
-	pass_test("on_variables_pressed with null story should not crash")
-
 func test_on_variables_changed() -> void:
 	_main._nav_ctrl.on_variables_changed()
 	pass_test("on_variables_changed should not crash")
