@@ -20,7 +20,7 @@ static func dict_to_yaml(d: Dictionary, indent: int = 0) -> String:
 static func _key_to_yaml(key: String) -> String:
 	if key.contains(":") or key.contains("#") or key.contains('"') or \
 			key.contains("\n") or key.contains("\r") or key.contains("\t") or \
-			key.begins_with(" ") or key.ends_with(" ") or key == "":
+			key.begins_with(" ") or key.ends_with(" ") or key.begins_with("- ") or key == "":
 		return '"%s"' % _escape_string(key)
 	return key
 
