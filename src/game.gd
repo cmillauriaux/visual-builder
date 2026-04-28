@@ -779,6 +779,12 @@ func _hide_play_ui_for_menu() -> void:
 		"play_buttons_bar": _play_buttons_bar.visible if _play_buttons_bar else false,
 		"menu_button": _menu_button.visible,
 		"toolbar_toggle": _toolbar_toggle_button.visible if _toolbar_toggle_button else false,
+		"plugin_toolbar": _plugin_toolbar.visible if _plugin_toolbar else false,
+		"plugin_overlay_left": _plugin_overlay_left.visible if _plugin_overlay_left else false,
+		"plugin_overlay_right": _plugin_overlay_right.visible if _plugin_overlay_right else false,
+		"plugin_overlay_top": _plugin_overlay_top.visible if _plugin_overlay_top else false,
+		"variable_sidebar": _variable_sidebar_scroll.visible if _variable_sidebar_scroll else false,
+		"show_censored_foregrounds": _visual_editor.show_censored_foregrounds if _visual_editor else false,
 	}
 	_play_overlay.visible = false
 	_choice_overlay.visible = false
@@ -787,6 +793,19 @@ func _hide_play_ui_for_menu() -> void:
 	if _toolbar_toggle_button:
 		_toolbar_toggle_button.visible = false
 	_menu_button.visible = false
+	if _plugin_toolbar:
+		_plugin_toolbar.visible = false
+	if _plugin_overlay_left:
+		_plugin_overlay_left.visible = false
+	if _plugin_overlay_right:
+		_plugin_overlay_right.visible = false
+	if _plugin_overlay_top:
+		_plugin_overlay_top.visible = false
+	if _variable_sidebar_scroll:
+		_variable_sidebar_scroll.visible = false
+	if _visual_editor:
+		_visual_editor.show_censored_foregrounds = false
+		_visual_editor.refresh_foregrounds()
 
 
 func _restore_play_ui_after_menu() -> void:
@@ -797,6 +816,19 @@ func _restore_play_ui_after_menu() -> void:
 	_menu_button.visible = _play_ui_state_before_menu.get("menu_button", false)
 	if _toolbar_toggle_button:
 		_toolbar_toggle_button.visible = _play_ui_state_before_menu.get("toolbar_toggle", false)
+	if _plugin_toolbar:
+		_plugin_toolbar.visible = _play_ui_state_before_menu.get("plugin_toolbar", false)
+	if _plugin_overlay_left:
+		_plugin_overlay_left.visible = _play_ui_state_before_menu.get("plugin_overlay_left", false)
+	if _plugin_overlay_right:
+		_plugin_overlay_right.visible = _play_ui_state_before_menu.get("plugin_overlay_right", false)
+	if _plugin_overlay_top:
+		_plugin_overlay_top.visible = _play_ui_state_before_menu.get("plugin_overlay_top", false)
+	if _variable_sidebar_scroll:
+		_variable_sidebar_scroll.visible = _play_ui_state_before_menu.get("variable_sidebar", false)
+	if _visual_editor:
+		_visual_editor.show_censored_foregrounds = _play_ui_state_before_menu.get("show_censored_foregrounds", false)
+		_visual_editor.refresh_foregrounds()
 	_play_ui_state_before_menu = {}
 
 

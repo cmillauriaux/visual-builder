@@ -51,6 +51,7 @@ var _blink_manifest_loaded: bool = false
 # --- Foreground interaction ---
 var _fg_visual_map: Dictionary = {}   # uuid → Control wrapper
 var _display_foregrounds: Array = []  # Foregrounds à afficher (dialogue courant, peut être un sous-ensemble de _sequence.foregrounds)
+var _last_unfiltered_fgs: Array = []  # Mémorise la liste non filtrée pour rafraîchir la visibilité
 var _selected_fg_uuids: Array = []
 var _hidden_fg_uuids: Array = []      # UUIDs temporairement cachés (reset au changement de dialogue)
 var _dragging_fg: bool = false
@@ -917,7 +918,8 @@ func _paste_foreground() -> void:
 
 func load_sequence(sequence) -> void:
 	_sequence = sequence
-	_display_foregrounds = _filter_display_foregrounds(_sequence.foregrounds if _sequence else [])
+	_last_unfiltered_fgs = _sequence.foregrounds if _sequence else []
+	_display_foregrounds = _filter_display_foregrounds(_last_unfiltered_fgs)
 	_preload_apng_files()
 	_auto_fit_enabled = true
 	_selected_fg_uuids.clear()
@@ -968,9 +970,16 @@ func _preload_apng_files() -> void:
 func update_foregrounds() -> void:
 	_update_foreground_visuals()
 
+## Force le rafraîchissement complet des foregrounds (re-filtrage compris).
+## Utile lors du changement de show_censored_foregrounds.
+func refresh_foregrounds() -> void:
+	_display_foregrounds = _filter_display_foregrounds(_last_unfiltered_fgs)
+	_update_foreground_visuals()
+
 ## Définit la liste de foregrounds à afficher (foregrounds effectifs pour le dialogue courant).
 ## Ne modifie PAS _sequence.foregrounds — préserve l'intégrité du modèle.
 func set_display_foregrounds(fgs: Array) -> void:
+	_last_unfiltered_fgs = fgs
 	_display_foregrounds = _filter_display_foregrounds(fgs)
 	_update_foreground_visuals()
 

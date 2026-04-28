@@ -483,6 +483,7 @@ static func _build_game_plugin_containers(game: Control) -> void:
 
 	# Overlay gauche (VBoxContainer, bord gauche)
 	game._plugin_overlay_left = VBoxContainer.new()
+	game._plugin_overlay_left.z_index = SequenceVisualEditorScript.UI_OVERLAY_Z
 	game._plugin_overlay_left.set_anchors_preset(Control.PRESET_LEFT_WIDE)
 	game._plugin_overlay_left.offset_left = roundi(10 * s)
 	game._plugin_overlay_left.offset_right = roundi(200 * s)
@@ -494,6 +495,7 @@ static func _build_game_plugin_containers(game: Control) -> void:
 
 	# Overlay droit (VBoxContainer, bord droit)
 	game._plugin_overlay_right = VBoxContainer.new()
+	game._plugin_overlay_right.z_index = SequenceVisualEditorScript.UI_OVERLAY_Z
 	game._plugin_overlay_right.set_anchors_preset(Control.PRESET_RIGHT_WIDE)
 	game._plugin_overlay_right.offset_left = -roundi(200 * s)
 	game._plugin_overlay_right.offset_right = -roundi(10 * s)
@@ -505,6 +507,7 @@ static func _build_game_plugin_containers(game: Control) -> void:
 
 	# Overlay top (HBoxContainer, sous le bouton menu)
 	game._plugin_overlay_top = HBoxContainer.new()
+	game._plugin_overlay_top.z_index = SequenceVisualEditorScript.UI_OVERLAY_Z
 	game._plugin_overlay_top.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	game._plugin_overlay_top.offset_top = roundi(50 * s)
 	game._plugin_overlay_top.offset_bottom = roundi(90 * s)
