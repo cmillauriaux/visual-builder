@@ -81,12 +81,13 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 	if project_root.ends_with("/") or project_root.ends_with("\\"):
 		project_root = project_root.left(project_root.length() - 1)
 	
-	var base_excludes = [".godot", ".git", "build", ".claude", "specs", "addons", "stories", "docs", "tools", "proof", "assets", "extracted_dialog"]
+	var base_excludes = [".godot", ".git", "build", ".claude", "specs", "addons", "stories", "docs", "tools", "proof", "extracted_dialog"]
 
 	_copy_dir_recursive(project_root, abs_temp_project, base_excludes)
-	
+
 	# Suppression manuelle forcée des dossiers lourds pour être CERTAIN qu'ils ne sont pas dans le PCK
-	var manual_prune = ["addons", "specs", "docs", "tools", "proof", ".godot", ".git", "assets", "stories", "extracted_dialog"]
+	var manual_prune = ["addons", "specs", "docs", "tools", "proof", ".godot", ".git", "stories", "extracted_dialog"]
+
 	for folder in manual_prune:
 		var prune_path = abs_temp_project + "/" + folder
 		if DirAccess.dir_exists_absolute(prune_path):
@@ -321,7 +322,7 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 			"src/controllers/main_ui_builder.gd", "src/views/*",
 			"plugins/ai_studio/*", "plugins-pro/*",
 			"addons/*", "specs/*", "scripts/*", "docs/*", "tools/*", "proof/*", ".claude/*", ".superpowers/*", ".godot/*", ".git/*",
-			"*.png", "*.jpg", "*.jpeg", # On a converti en WebP, on exclut les originaux
+			"story/assets/*.png", "story/assets/*.jpg", "story/assets/*.jpeg", # On a converti en WebP, on exclut les originaux
 		]
 		
 		# On injecte les filtres dans [preset.0]
