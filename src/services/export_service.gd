@@ -81,17 +81,38 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 	if project_root.ends_with("/") or project_root.ends_with("\\"):
 		project_root = project_root.left(project_root.length() - 1)
 	
-	var base_excludes = [".godot", ".git", "build", ".claude", "specs", "addons", "stories", "docs", "scripts", "tools", "proof", "assets", "extracted_dialog"]
+	var base_excludes = [".godot", ".git", "build", ".claude", "specs", "addons", "stories", "docs", "tools", "proof", "assets", "extracted_dialog"]
 
 	_copy_dir_recursive(project_root, abs_temp_project, base_excludes)
 	
 	# Suppression manuelle forcée des dossiers lourds pour être CERTAIN qu'ils ne sont pas dans le PCK
-	var manual_prune = ["addons", "specs", "scripts", "docs", "tools", "proof", ".godot", ".git", "assets", "stories", "extracted_dialog"]
+	var manual_prune = ["addons", "specs", "docs", "tools", "proof", ".godot", ".git", "assets", "stories", "extracted_dialog"]
 	for folder in manual_prune:
 		var prune_path = abs_temp_project + "/" + folder
 		if DirAccess.dir_exists_absolute(prune_path):
 			_remove_dir_recursive(prune_path)
 			_append_log(log_path, "→ Pruning forcé : " + folder)
+
+	# Cas particulier pour 'scripts' : on veut garder export_templates pour le Web
+	var scripts_dir = abs_temp_project + "/scripts"
+	if DirAccess.dir_exists_absolute(scripts_dir):
+		var templates_dir = scripts_dir + "/export_templates"
+		if DirAccess.dir_exists_absolute(templates_dir):
+			# On garde les templates mais on peut supprimer les .gd et dossiers inutiles dans scripts/
+			var dir = DirAccess.open(scripts_dir)
+			dir.list_dir_begin()
+			var entry = dir.get_next()
+			while entry != "":
+				var full_entry = scripts_dir + "/" + entry
+				if not dir.current_is_dir() and entry.ends_with(".gd"):
+					DirAccess.remove_absolute(full_entry)
+				elif dir.current_is_dir() and entry != "export_templates" and entry != "." and entry != "..":
+					_remove_dir_recursive(full_entry)
+				entry = dir.get_next()
+			_append_log(log_path, "→ Pruning partiel : scripts (templates conservés)")
+		else:
+			_remove_dir_recursive(scripts_dir)
+			_append_log(log_path, "→ Pruning forcé : scripts")
 
 	# Supprimer les dossiers de plugins désactivés à l'export
 	var excluded_plugins := _get_excluded_plugin_folders(export_options)
