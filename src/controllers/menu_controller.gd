@@ -9,6 +9,8 @@ const ImagePickerDialogScript = preload("res://src/ui/dialogs/image_picker_dialo
 const ExportDialogScript = preload("res://src/ui/dialogs/export_dialog.gd")
 const GalleryDialogScript = preload("res://src/ui/dialogs/gallery_dialog.gd")
 const I18nDialogScript = preload("res://src/ui/dialogs/i18n_dialog.gd")
+const NotificationDialogScript = preload("res://src/ui/dialogs/notification_dialog.gd")
+const LanguageManagerDialogScript = preload("res://src/ui/dialogs/language_manager_dialog.gd")
 const StoryI18nService = preload("res://src/services/story_i18n_service.gd")
 
 var _main: Control
@@ -31,6 +33,12 @@ func on_histoire_menu_pressed(id: int) -> void:
 		8: _main._nav_ctrl.on_reload_pressed()
 		9: _main._nav_ctrl.on_menu_config_requested()
 		10: on_gallery_pressed()
+
+
+func on_parametres_menu_pressed(id: int) -> void:
+	match id:
+		0: on_notifications_pressed()
+		1: on_languages_pressed()
 
 
 func on_export_pressed() -> void:
@@ -85,6 +93,30 @@ func on_gallery_pressed() -> void:
 	dialog.close_requested.connect(dialog.queue_free)
 	_main.add_child(dialog)
 	dialog.setup(_main._editor_main._story, _main._get_story_base_path())
+	dialog.popup_centered()
+
+
+func on_notifications_pressed() -> void:
+	if _main._editor_main._story == null:
+		return
+	var dialog = AcceptDialog.new()
+	dialog.set_script(NotificationDialogScript)
+	dialog.confirmed.connect(dialog.queue_free)
+	_main.add_child(dialog)
+	dialog.setup(_main._editor_main._story)
+	dialog.popup_centered()
+
+
+func on_languages_pressed() -> void:
+	var base_path = _main._get_story_base_path()
+	if base_path == "":
+		return
+	var dialog = AcceptDialog.new()
+	dialog.set_script(LanguageManagerDialogScript)
+	dialog.confirmed.connect(dialog.queue_free)
+	dialog.languages_changed.connect(func(): _main._nav_ctrl.on_variables_changed())
+	_main.add_child(dialog)
+	dialog.setup(base_path)
 	dialog.popup_centered()
 
 

@@ -58,6 +58,7 @@ var _top_stop_button: Button
 var _create_button: Button
 var _create_condition_button: Button
 var _histoire_menu: MenuButton
+var _parametres_menu: MenuButton
 
 # UI — Content area
 var _content_area: Control
@@ -276,6 +277,7 @@ func _connect_signals() -> void:
 	_create_button.pressed.connect(_nav_ctrl.on_create_pressed)
 	_create_condition_button.pressed.connect(_nav_ctrl.on_create_condition_pressed)
 	_histoire_menu.get_popup().id_pressed.connect(_menu_ctrl.on_histoire_menu_pressed)
+	_parametres_menu.get_popup().id_pressed.connect(_menu_ctrl.on_parametres_menu_pressed)
 	_verifier_report_panel.close_requested.connect(_nav_ctrl.on_verifier_close)
 
 	# Welcome Screen

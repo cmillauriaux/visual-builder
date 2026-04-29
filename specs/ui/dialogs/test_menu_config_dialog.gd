@@ -565,3 +565,35 @@ func test_get_platform_settings_android() -> void:
 	var result = _dialog.get_platform_settings()
 	assert_eq(result["android"]["package_name"], "com.my.game")
 	assert_eq(result["android"]["sdk_path"], "/path/to/sdk")
+
+func test_has_android_keystore_path_edit() -> void:
+	assert_not_null(_dialog._android_keystore_path_edit)
+
+func test_has_android_keystore_user_edit() -> void:
+	assert_not_null(_dialog._android_keystore_user_edit)
+
+func test_has_android_keystore_password_edit() -> void:
+	assert_not_null(_dialog._android_keystore_password_edit)
+
+func test_setup_fills_platform_settings_android_keystore() -> void:
+	var story = _make_story()
+	story.platform_settings = {
+		"android": {
+			"keystore_path": "/path/to/my.keystore",
+			"keystore_user": "myuser",
+			"keystore_password": "mypassword"
+		}
+	}
+	_dialog.setup(story, "/tmp/test_story")
+	assert_eq(_dialog._android_keystore_path_edit.text, "/path/to/my.keystore")
+	assert_eq(_dialog._android_keystore_user_edit.text, "myuser")
+	assert_eq(_dialog._android_keystore_password_edit.text, "mypassword")
+
+func test_get_platform_settings_android_keystore() -> void:
+	_dialog._android_keystore_path_edit.text = "/path/to/my.keystore"
+	_dialog._android_keystore_user_edit.text = "myuser"
+	_dialog._android_keystore_password_edit.text = "mypassword"
+	var result = _dialog.get_platform_settings()
+	assert_eq(result["android"]["keystore_path"], "/path/to/my.keystore")
+	assert_eq(result["android"]["keystore_user"], "myuser")
+	assert_eq(result["android"]["keystore_password"], "mypassword")

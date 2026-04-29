@@ -78,9 +78,20 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 	
 	# 2. Copier le projet (sans .godot, .git, build, .claude, specs)
 	var project_root = ProjectSettings.globalize_path("res://")
-	var excludes = [".godot", ".git", "build", ".claude", "specs", "addons/gut", "stories"]
+	if project_root.ends_with("/") or project_root.ends_with("\\"):
+		project_root = project_root.left(project_root.length() - 1)
+	
+	var base_excludes = [".godot", ".git", "build", ".claude", "specs", "addons", "stories", "docs", "scripts", "tools", "proof", "assets", "extracted_dialog"]
 
-	_copy_dir_recursive(project_root, abs_temp_project, excludes)
+	_copy_dir_recursive(project_root, abs_temp_project, base_excludes)
+	
+	# Suppression manuelle forcée des dossiers lourds pour être CERTAIN qu'ils ne sont pas dans le PCK
+	var manual_prune = ["addons", "specs", "scripts", "docs", "tools", "proof", ".godot", ".git", "assets", "stories", "extracted_dialog"]
+	for folder in manual_prune:
+		var prune_path = abs_temp_project + "/" + folder
+		if DirAccess.dir_exists_absolute(prune_path):
+			_remove_dir_recursive(prune_path)
+			_append_log(log_path, "→ Pruning forcé : " + folder)
 
 	# Supprimer les dossiers de plugins désactivés à l'export
 	var excluded_plugins := _get_excluded_plugin_folders(export_options)
@@ -164,10 +175,10 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 	_append_log(log_path, "→ Import minimal du projet temporaire...")
 	OS.execute(godot_bin, ["--path", abs_temp_project, "--headless", "--import"], [], true)
 
-	# 4b. Remplacer les .import/.ctex des images par importer="keep" pour inclure
-	# les fichiers bruts dans le PCK (les .ctex sont 4-7x plus lourds).
+	# 4b. Remplacer les .import/.ctex des images et audio par importer="keep" pour inclure
+	# les fichiers bruts dans le PCK (les versions importées sont beaucoup plus lourdes).
 	if webp_enabled:
-		_strip_image_imports(abs_temp_story, abs_temp_project, log_path)
+		_strip_asset_imports(abs_temp_story, abs_temp_project, log_path)
 
 	_append_log(log_path, "→ Réécriture des chemins assets...")
 	var rewrite_args = ["--path", abs_temp_project, "--headless", "--script", "res://src/export/rewrite_runner.gd", "--", "--story-folder", "res://story", "--new-base", "res://story"]
@@ -268,15 +279,66 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 	if FileAccess.file_exists(preset_src):
 		var preset_content = FileAccess.get_file_as_string(preset_src)
 
-		# Forcer l'export de toutes les ressources ET des fichiers .yaml
-		preset_content = preset_content.replace("export_filter=\"selected_scenes\"", "export_filter=\"all_resources\"")
+		# Forcer l'export de toutes les ressources (nécessaire pour que les imports 'keep' soient inclus)
+		# mais avec une exclusion très agressive de tout ce qui n'est pas nécessaire au runtime.
+		preset_content = preset_content.replace("\nexport_filter=\"selected_files\"", "\nexport_filter=\"all_resources\"")
+		preset_content = preset_content.replace("\nexport_filter=\"selected_scenes\"", "\nexport_filter=\"all_resources\"")
+		
+		# Réinitialiser export_files (inutile en all_resources)
+		if preset_content.find("\nexport_files=PackedStringArray(") != -1:
+			var start_idx = preset_content.find("\nexport_files=PackedStringArray(")
+			var end_idx = preset_content.find(")", start_idx)
+			preset_content = preset_content.erase(start_idx, end_idx - start_idx + 1)
+			preset_content = preset_content.insert(start_idx, "\nexport_files=PackedStringArray()")
 
-		if preset_content.find("include_filter=\"") != -1:
-			for ext in ["*.yaml", "*.json", "*.webp", "*.png", "*.jpg"]:
-				if preset_content.find(ext) == -1:
-					preset_content = preset_content.replace("include_filter=\"", "include_filter=\"" + ext + ",")
-		else:
-			preset_content = preset_content.replace("[preset.0]", "[preset.0]\ninclude_filter=\"*.yaml,*.json,*.webp,*.png,*.jpg\"")
+		# Exclusion chirurgicale pour réduire la taille
+		var export_excludes = [
+			"src/main.tscn", "src/main.gd", 
+			"src/ui/editors/*", "src/ui/navigation/*", "src/ui/dialogs/*",
+			"src/services/comfyui_*", "src/services/image_normalizer_*", "src/services/apng_builder.gd",
+			"src/services/story_verifier*", "src/services/gallery_cleaner*",
+			"src/controllers/main_ui_builder.gd", "src/views/*",
+			"plugins/ai_studio/*", "plugins-pro/*",
+			"addons/*", "specs/*", "scripts/*", "docs/*", "tools/*", "proof/*", ".claude/*", ".superpowers/*", ".godot/*", ".git/*",
+			"*.png", "*.jpg", "*.jpeg", # On a converti en WebP, on exclut les originaux
+		]
+		
+		# On injecte les filtres dans [preset.0]
+		var lines = preset_content.split("\n")
+		var new_lines = []
+		var in_preset0 = false
+		var has_include = false
+		var has_exclude = false
+		
+		for line in lines:
+			if line.begins_with("[preset.0]"):
+				in_preset0 = true
+				new_lines.append(line)
+				continue
+			
+			if in_preset0 and line.begins_with("["):
+				# Fin du preset.0, on injecte les filtres manquants
+				if not has_include:
+					new_lines.append("include_filter=\"*.yaml, *.json\"")
+				if not has_exclude:
+					new_lines.append("exclude_filter=\"" + ", ".join(export_excludes) + "\"")
+				in_preset0 = false
+				new_lines.append(line)
+				continue
+				
+			if in_preset0:
+				if line.begins_with("include_filter="):
+					new_lines.append("include_filter=\"*.yaml, *.json\"")
+					has_include = true
+					continue
+				if line.begins_with("exclude_filter="):
+					new_lines.append("exclude_filter=\"" + ", ".join(export_excludes) + "\"")
+					has_exclude = true
+					continue
+			
+			new_lines.append(line)
+			
+		preset_content = "\n".join(new_lines)
 		# Injecter les platform_settings de la story dans le preset
 		if platform == "ios":
 			if plat_cfg.get("team_id", "") != "":
@@ -287,11 +349,23 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 			if plat_cfg.get("package_name", "") != "":
 				preset_content = preset_content.replace("package/unique_name=\"com.visualnovel.game\"", "package/unique_name=\"" + plat_cfg["package_name"] + "\"")
 			
-			# Utiliser la clé de debug pour signer l'APK release par défaut si aucune clé release n'est fournie
-			var home = OS.get_environment("HOME") if OS.get_name() != "Windows" else OS.get_environment("USERPROFILE")
-			var debug_keystore = home + "/.android/debug.keystore"
-			if FileAccess.file_exists(debug_keystore):
-				preset_content = preset_content.replace("package/signed=true", "package/signed=true\nkeystore/release=\"" + debug_keystore + "\"\nkeystore/release_user=\"androiddebugkey\"\nkeystore/release_password=\"android\"")
+			var ks_path = plat_cfg.get("keystore_path", "")
+			var ks_user = plat_cfg.get("keystore_user", "androiddebugkey")
+			var ks_pass = plat_cfg.get("keystore_password", "android")
+			
+			if ks_path != "" and FileAccess.file_exists(ks_path):
+				preset_content = preset_content.replace("package/signed=true", "package/signed=true\nkeystore/release=\"" + ks_path + "\"\nkeystore/release_user=\"" + ks_user + "\"\nkeystore/release_password=\"" + ks_pass + "\"")
+			else:
+				# Utiliser la clé de debug pour signer l'APK release par défaut si aucune clé release n'est fournie
+				var home = OS.get_environment("HOME") if OS.get_name() != "Windows" else OS.get_environment("USERPROFILE")
+				var debug_keystore = home + "/.android/debug.keystore"
+				if FileAccess.file_exists(debug_keystore):
+					preset_content = preset_content.replace("package/signed=true", "package/signed=true\nkeystore/release=\"" + debug_keystore + "\"\nkeystore/release_user=\"androiddebugkey\"\nkeystore/release_password=\"android\"")
+			
+			# Option pour réduire la taille en ne gardant que l'architecture 64 bits
+			if export_options.get("android_64_only", false):
+				preset_content = preset_content.replace("architectures/armeabi-v7a=true", "architectures/armeabi-v7a=false")
+				_append_log(log_path, "→ Export Android 64 bits uniquement (économie ~25 Mo)")
 
 		var f_preset = FileAccess.open(preset_dst, FileAccess.WRITE)
 		if f_preset:
@@ -386,6 +460,7 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 
 	# 10. Nettoyage
 	_remove_dir_recursive(abs_temp_base)
+
 
 	if exit_code == 0 and FileAccess.file_exists(export_file):
 		return ExportResult.new(true, abs_output_path, log_path)
@@ -810,22 +885,12 @@ func _copy_dir_recursive(from: String, to: String, exclude: Array = []) -> void:
 		dir.list_dir_begin()
 		var file_name = dir.get_next()
 		while file_name != "":
-			if file_name == "." or file_name == "..":
+			if file_name == "." or file_name == ".." or file_name in exclude:
 				file_name = dir.get_next()
 				continue
-				
-			var skip = false
-			for ex in exclude:
-				if file_name == ex:
-					skip = true
-					break
-			if skip:
-				file_name = dir.get_next()
-				continue
-				
+
 			var from_path = from + "/" + file_name
 			var to_path = to + "/" + file_name
-			
 			if dir.current_is_dir():
 				if not DirAccess.dir_exists_absolute(to_path):
 					DirAccess.make_dir_recursive_absolute(to_path)
@@ -1145,17 +1210,19 @@ func _replace_filenames_in_yaml(story_dir: String, conversions: Dictionary, log_
 		_append_log(log_path, "  → %d fichier(s) YAML mis à jour (.png/.jpg → .webp)" % modified_count)
 
 
-## Remplace les .import des images story par des stubs "keep" et supprime les .ctex.
+## Remplace les .import des images et audio story par des stubs "keep" et supprime les fichiers importés (.ctex, .mp3str, etc.).
 ## Godot avec importer="keep" inclut le fichier source tel quel dans le PCK,
-## ce qui est 4-7x plus léger que les .ctex générés par l'import standard.
-func _strip_image_imports(story_dir: String, project_dir: String, log_path: String) -> void:
+## ce qui est souvent beaucoup plus léger que les versions importées par défaut.
+func _strip_asset_imports(story_dir: String, project_dir: String, log_path: String) -> void:
 	var image_files := _find_image_files_recursive(story_dir)
+	var audio_files := _find_audio_files(story_dir)
+	var all_assets := image_files + audio_files
 	var stripped := 0
 
-	for img_path in image_files:
-		var import_path = img_path + ".import"
+	for asset_path in all_assets:
+		var import_path = asset_path + ".import"
 		if FileAccess.file_exists(import_path):
-			# Supprimer le .ctex référencé dans le .import
+			# Supprimer le fichier importé (.ctex, .mp3str, etc.) référencé dans le .import
 			var fa = FileAccess.open(import_path, FileAccess.READ)
 			if fa:
 				var text = fa.get_as_text()
@@ -1167,9 +1234,9 @@ func _strip_image_imports(story_dir: String, project_dir: String, log_path: Stri
 						if val.begins_with("\"") and val.ends_with("\""):
 							val = val.substr(1, val.length() - 2)
 						if val.begins_with("res://"):
-							var abs_ctex = project_dir + "/" + val.substr("res://".length())
-							if FileAccess.file_exists(abs_ctex):
-								DirAccess.remove_absolute(abs_ctex)
+							var abs_imported = project_dir + "/" + val.substr("res://".length())
+							if FileAccess.file_exists(abs_imported):
+								DirAccess.remove_absolute(abs_imported)
 						break
 
 			# Réécrire le .import avec importer="keep" pour empêcher la ré-import
@@ -1180,7 +1247,7 @@ func _strip_image_imports(story_dir: String, project_dir: String, log_path: Stri
 			stripped += 1
 
 	if stripped > 0:
-		_append_log(log_path, "→ %d images converties en import 'keep' (inclusion brute, .ctex supprimés)" % stripped)
+		_append_log(log_path, "→ %d images/audio convertis en import 'keep' (inclusion brute, fichiers importés supprimés)" % stripped)
 
 
 func _find_image_files_recursive(dir_path: String) -> Array:
@@ -1330,11 +1397,39 @@ func _find_yaml_files_recursive(dir_path: String) -> Array:
 func _remove_unused_assets(story_dir: String, log_path: String) -> void:
 	var yaml_files := _find_yaml_files_recursive(story_dir)
 	var all_yaml_content: Array = []
+	var blink_manifest_path := ""
+	
 	for yaml_path in yaml_files:
+		if yaml_path.ends_with("blink_manifest.yaml"):
+			blink_manifest_path = yaml_path
+			continue
 		all_yaml_content.append(FileAccess.get_file_as_string(yaml_path))
+	
 	var combined_yaml := "\n".join(PackedStringArray(all_yaml_content))
 
-	var asset_extensions := ["png", "jpg", "jpeg", "mp3", "ogg", "wav", "webp"]
+	# Gérer le blink manifest chirurgicalement pour éviter les fuites d'assets orphelins
+	if blink_manifest_path != "" and FileAccess.file_exists(blink_manifest_path):
+		var YamlParser = load("res://src/persistence/yaml_parser.gd")
+		if YamlParser != null:
+			var manifest_content = FileAccess.get_file_as_string(blink_manifest_path)
+			var manifest = YamlParser.yaml_to_dict(manifest_content)
+			if manifest != null and manifest.has("blinks"):
+				var blinks = manifest["blinks"]
+				var required_blinks := []
+				for source_name in blinks:
+					# Si l'image source est utilisée, on doit garder son blink
+					if combined_yaml.contains(str(source_name)):
+						required_blinks.append(str(blinks[source_name]))
+						# On s'assure aussi que le blink_manifest.yaml lui-même ne sera pas 
+						# considéré comme "inutilisé" (même s'il n'est pas dans asset_extensions)
+						# et que ses entrées nécessaires sont dans le flow.
+						combined_yaml += "\n" + str(source_name) + ": " + str(blinks[source_name])
+				
+				# Ajouter les noms des fichiers blink requis au contenu global
+				if not required_blinks.is_empty():
+					combined_yaml += "\n" + "\n".join(PackedStringArray(required_blinks))
+
+	var asset_extensions := ["png", "jpg", "jpeg", "mp3", "ogg", "wav", "webp", "apng", "ttf", "otf", "woff", "woff2"]
 	var removed := 0
 
 	var assets_dir := story_dir + "/assets"

@@ -70,6 +70,7 @@ func _on_editor_mode_changed(mode: int, context: Dictionary) -> void:
 	
 	_main._create_condition_button.visible = (mode == EditorState.Mode.SEQUENCE_VIEW)
 	_main._histoire_menu.visible = (mode != EditorState.Mode.NONE)
+	_main._parametres_menu.visible = (mode != EditorState.Mode.NONE)
 	
 	_main._breadcrumb.set_current_level(level)
 	_main._breadcrumb.set_path(_main._editor_main.get_breadcrumb_path())

@@ -9,6 +9,7 @@ const FakeMain = preload("res://specs/plugins/fixtures/fake_main.gd")
 var _manager: Node
 var _main: Control
 var _histoire_popup: PopupMenu
+var _parametres_popup: PopupMenu
 
 
 func before_each() -> void:
@@ -20,6 +21,7 @@ func before_each() -> void:
 
 	# Setup minimal main structure expected by PluginManager
 	var histoire_menu := MenuButton.new()
+	var parametres_menu := MenuButton.new()
 	var seq_toolbar := HBoxContainer.new()
 	var chapter_toolbar := HBoxContainer.new()
 	var scene_toolbar := HBoxContainer.new()
@@ -28,6 +30,7 @@ func before_each() -> void:
 	var dock_bottom := PanelContainer.new()
 
 	_main._histoire_menu = histoire_menu
+	_main._parametres_menu = parametres_menu
 	_main._sequence_toolbar = seq_toolbar
 	_main._chapter_plugin_toolbar = chapter_toolbar
 	_main._scene_plugin_toolbar = scene_toolbar
@@ -36,6 +39,7 @@ func before_each() -> void:
 	_main._dock_bottom = dock_bottom
 
 	add_child_autofree(histoire_menu)
+	add_child_autofree(parametres_menu)
 	add_child_autofree(seq_toolbar)
 	add_child_autofree(chapter_toolbar)
 	add_child_autofree(scene_toolbar)
@@ -44,6 +48,7 @@ func before_each() -> void:
 	add_child_autofree(dock_bottom)
 
 	_histoire_popup = histoire_menu.get_popup()
+	_parametres_popup = parametres_menu.get_popup()
 
 
 # --- Plugin registration ---
@@ -62,14 +67,14 @@ func test_register_multiple_plugins() -> void:
 
 # --- Menu injection ---
 
-func test_menu_entry_added_to_histoire_popup_from_parametres_id() -> void:
+func test_menu_entry_added_to_parametres_popup() -> void:
 	var plugin := _PluginWithMenu.new()
 	plugin.menu_id = "parametres"
-	plugin.menu_label = "Test Item"
+	plugin.menu_label = "Test Param Item"
 	_manager.register_plugin(plugin)
 	_manager.apply_contributions(_main)
 
-	assert_true(_popup_has_item(_histoire_popup, "Test Item"), "Item should be in histoire popup (redirected from parametres)")
+	assert_true(_popup_has_item(_parametres_popup, "Test Param Item"), "Item should be in parametres popup")
 
 
 func test_menu_entry_added_to_histoire_popup() -> void:

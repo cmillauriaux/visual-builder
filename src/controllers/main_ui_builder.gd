@@ -134,9 +134,20 @@ static func _build_top_bar(main: Control) -> void:
 	histoire_popup.add_separator()
 	histoire_popup.add_item(TranslationServer.translate("Vérifier l'histoire"), 5)
 	histoire_popup.add_separator()
+	histoire_popup.add_item(TranslationServer.translate("Traductions — Regénérer les clés"), 6)
+	histoire_popup.add_item(TranslationServer.translate("Traductions — Vérifier"), 7)
+	histoire_popup.add_separator()
 	histoire_popup.add_item(TranslationServer.translate("Configurer le jeu"), 9)
 	histoire_popup.add_item(TranslationServer.translate("Galerie"), 10)
 	main._top_bar.add_child(main._histoire_menu)
+
+	main._parametres_menu = MenuButton.new()
+	main._parametres_menu.text = TranslationServer.translate("Paramètres")
+	main._parametres_menu.visible = false
+	var parametres_popup = main._parametres_menu.get_popup()
+	parametres_popup.add_item(TranslationServer.translate("Notifications"), 0)
+	parametres_popup.add_item(TranslationServer.translate("Langues"), 1)
+	main._top_bar.add_child(main._parametres_menu)
 
 
 static func _build_content_area(main: Control) -> void:
