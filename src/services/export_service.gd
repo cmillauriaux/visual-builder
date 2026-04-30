@@ -257,6 +257,11 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 		f_ov.store_line("config/version=\"" + story.version + "\"")
 		f_ov.store_line("config/release_date=\"" + release_date + "\"")
 		f_ov.store_line("config/image_quality_divisor=" + str(image_quality_divisor))
+		f_ov.store_line("config/censure_enabled=" + str(export_options.get("censure_enabled", false)).to_lower())
+		if not partial_export.is_empty():
+			var si: int = int(partial_export.get("start_idx", 0)) + 1
+			var ei: int = int(partial_export.get("end_idx", 0)) + 1
+			f_ov.store_line("config/partial_range=\"ch%d_to_ch%d\"" % [si, ei])
 		f_ov.close()
 
 	# 6. (Anciennement modification de game.tscn, maintenant inutile avec override.cfg)

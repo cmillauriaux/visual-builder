@@ -171,6 +171,14 @@ func _get_active_plugins() -> Array:
 	return result
 
 
+## Retourne les noms des plugins actifs.
+func get_active_plugin_names() -> Array:
+	var result: Array = []
+	for plugin in _get_active_plugins():
+		result.append(plugin.get_plugin_name())
+	return result
+
+
 # --- Dispatch hooks événementiels ---
 
 func dispatch_on_game_ready(ctx: RefCounted) -> void:

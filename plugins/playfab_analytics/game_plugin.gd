@@ -56,6 +56,49 @@ func _setup_service() -> void:
 	_service.configure(title_id, enabled)
 	if _service.is_configured():
 		_service.login_anonymous()
+		_service.set_common_metadata(_gather_common_metadata(_game_ctx))
+
+
+func _gather_common_metadata(ctx: RefCounted) -> Dictionary:
+	var meta = {}
+	meta["platform"] = _get_platform_string()
+	meta["game_version"] = ProjectSettings.get_setting("application/config/version", "")
+	
+	var censure = ProjectSettings.get_setting("application/config/censure_enabled", false)
+	var partial = ProjectSettings.get_setting("application/config/partial_range", "")
+	var specificity = ""
+	if censure:
+		specificity = "CENSORED"
+	if partial != "":
+		if specificity != "":
+			specificity += "_"
+		specificity += partial
+	
+	if specificity != "":
+		meta["generation_specificity"] = specificity
+
+	if ctx.game_node != null and ctx.game_node.get("_game_plugin_manager") != null:
+		meta["active_plugins"] = ctx.game_node._game_plugin_manager.get_active_plugin_names()
+	
+	return meta
+
+
+func _get_platform_string() -> String:
+	var os_name := OS.get_name()
+	if os_name == "Web":
+		var is_mobile = false
+		if ClassDB.class_exists(&"JavaScriptBridge"):
+			var bridge = Engine.get_singleton(&"JavaScriptBridge")
+			if bridge:
+				var result = bridge.call(&"eval", "navigator.userAgent || \"\"")
+				if result != null:
+					var ua: String = str(result).to_lower()
+					is_mobile = ua.contains("mobile") or ua.contains("android") or ua.contains("iphone") or ua.contains("ipad")
+		
+		if is_mobile:
+			return "Web_mobile"
+		return "Web_desktop"
+	return os_name
 
 
 func on_game_cleanup(ctx: RefCounted) -> void:
@@ -73,6 +116,8 @@ func on_settings_applied(ctx: RefCounted) -> void:
 	if ctx.settings.analytics_enabled:
 		if _service == null:
 			_setup_service()
+		else:
+			_service.set_common_metadata(_gather_common_metadata(_game_ctx))
 	else:
 		if _service != null:
 			_service.flush()

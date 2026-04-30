@@ -100,6 +100,18 @@ func test_service_is_child_of_game_node():
 	ctx.game_node.queue_free()
 
 
+func test_on_game_ready_sets_common_metadata():
+	var story = _StoryStub.new()
+	story.plugin_settings = {"playfab_analytics": {"title_id": "TESTTITLE", "enabled": true}}
+	var ctx = _create_context(story)
+	_plugin.on_game_ready(ctx)
+	var service = _plugin.get_service()
+	assert_not_null(service._common_metadata)
+	assert_true(service._common_metadata.has("platform"))
+	assert_true(service._common_metadata.has("game_version"))
+	ctx.game_node.queue_free()
+
+
 # --- on_game_cleanup ---
 
 func test_cleanup_nullifies_service():

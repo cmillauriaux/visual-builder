@@ -22,11 +22,16 @@ var _flush_timer: float = 0.0
 var _http_login: HTTPRequest
 var _pending_login: bool = false
 var _pending_events: int = 0
+var _common_metadata: Dictionary = {}
 
 
 func configure(title_id: String, enabled: bool) -> void:
 	_title_id = title_id
 	_enabled = enabled
+
+
+func set_common_metadata(metadata: Dictionary) -> void:
+	_common_metadata = metadata
 
 
 func is_active() -> bool:
@@ -62,10 +67,15 @@ func login_anonymous() -> void:
 func track_event(event_name: String, body: Dictionary = {}) -> void:
 	if not is_active():
 		return
+	
+	# Enrichir avec les métadonnées communes
+	var full_body = _common_metadata.duplicate()
+	full_body.merge(body, true)
+
 	_event_queue.append({
 		"EventNamespace": "custom.visualbuilder",
 		"Name": event_name,
-		"Payload": body,
+		"Payload": full_body,
 		"Entity": {
 			"Id": _entity_id,
 			"Type": _entity_type,

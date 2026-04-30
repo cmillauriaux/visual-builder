@@ -79,6 +79,23 @@ func test_track_event_when_active():
 	assert_eq(svc.get_event_queue().size(), 1)
 
 
+func test_track_event_enriches_with_common_metadata():
+	var svc = PlayFabAnalyticsServiceScript.new()
+	svc._title_id = "ABCD"
+	svc._enabled = true
+	svc._logged_in = true
+	svc.set_common_metadata({"platform": "macOS", "version": "1.0"})
+	
+	svc.track_event("test_event", {"extra": "data"})
+	
+	var queue = svc.get_event_queue()
+	assert_eq(queue.size(), 1)
+	var payload = queue[0].Payload
+	assert_eq(payload.get("platform"), "macOS")
+	assert_eq(payload.get("version"), "1.0")
+	assert_eq(payload.get("extra"), "data")
+
+
 func test_track_event_flush_on_batch_threshold():
 	var svc = PlayFabAnalyticsServiceScript.new()
 	svc._title_id = "ABCD"
