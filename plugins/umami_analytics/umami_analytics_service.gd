@@ -92,6 +92,7 @@ func _build_base_payload() -> Dictionary:
 
 
 func _queue_request(payload: Dictionary) -> void:
+	_log("Queueing request: %s" % payload.get("name", payload.get("url", "unknown")))
 	_request_queue.append(payload)
 	_process_queue()
 

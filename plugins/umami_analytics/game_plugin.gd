@@ -27,7 +27,9 @@ func is_configurable() -> bool:
 
 
 func on_game_ready(ctx: RefCounted) -> void:
+	print("[Umami] Plugin loaded (on_game_ready)")
 	if ctx == null or ctx.story == null or ctx.game_node == null:
+		print("[Umami] Erreur: Contexte invalide dans on_game_ready")
 		return
 	_game_ctx = ctx
 	var story = ctx.story
@@ -39,15 +41,31 @@ func on_game_ready(ctx: RefCounted) -> void:
 
 
 func _setup_service() -> void:
-	if _service != null or _game_ctx == null:
+	if _service != null:
+		return
+	if _game_ctx == null:
+		print("[Umami] Erreur: Contexte de jeu nul dans _setup_service")
 		return
 	
+	print("[Umami] Tentative de démarrage du service...")
 	var ps: Dictionary = _get_plugin_config(_game_ctx.story)
+	
+	if ps.is_empty():
+		print("[Umami] Erreur: Configuration manquante dans story.plugin_settings")
+		return
+		
 	var website_id: String = ps.get("website_id", "")
 	var umami_url: String = ps.get("umami_url", "")
 	var enabled: bool = ps.get("enabled", false)
 
-	if website_id == "" or not enabled:
+	print("[Umami] Config trouvée: website_id=%s, enabled=%s" % [website_id, str(enabled)])
+
+	if website_id == "":
+		print("[Umami] Erreur: website_id vide")
+		return
+		
+	if not enabled:
+		print("[Umami] Info: Plugin désactivé dans la configuration de la story")
 		return
 
 	_service = Node.new()
@@ -57,6 +75,9 @@ func _setup_service() -> void:
 	_service.configure(website_id, umami_url, enabled)
 	if _service.is_configured():
 		_service.set_common_metadata(_gather_common_metadata(_game_ctx))
+		print("[Umami] Service démarré avec succès")
+	else:
+		print("[Umami] Erreur: Service non configuré après appel à configure()")
 
 
 func _gather_common_metadata(ctx: RefCounted) -> Dictionary:
@@ -389,9 +410,17 @@ func get_service() -> Node:
 
 
 ## Extrait la config du plugin depuis la story.
-static func _get_plugin_config(story: RefCounted) -> Dictionary:
+static func _get_plugin_config(story) -> Dictionary:
 	if story == null:
 		return {}
-	if story.get("plugin_settings") != null and story.plugin_settings.has("umami_analytics"):
-		return story.plugin_settings["umami_analytics"]
+	
+	var settings = {}
+	if story is Dictionary:
+		settings = story.get("plugin_settings", {})
+	elif story.get("plugin_settings") != null:
+		settings = story.plugin_settings
+		
+	if settings.has("umami_analytics") and settings["umami_analytics"] is Dictionary:
+		return settings["umami_analytics"]
+	
 	return {}
