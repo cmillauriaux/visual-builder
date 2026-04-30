@@ -127,8 +127,12 @@ func on_before_chapter(ctx: RefCounted) -> void:
 	if _service == null or not _service.is_active():
 		return
 	var chapter = ctx.current_chapter if ctx != null else null
+	var chapter_name = chapter.chapter_name if chapter else "Unknown Chapter"
+	
+	_service.track_screen("Chapter: " + chapter_name, _story_title)
+	
 	_service.track_event("chapter_entered", {
-		"chapter_name": chapter.chapter_name if chapter else "",
+		"chapter_name": chapter_name,
 		"chapter_uuid": chapter.uuid if chapter else "",
 	})
 
@@ -137,8 +141,12 @@ func on_before_scene(ctx: RefCounted) -> void:
 	if _service == null or not _service.is_active():
 		return
 	var scene = ctx.current_scene if ctx != null else null
+	var scene_name = scene.scene_name if scene else "Unknown Scene"
+	
+	_service.track_screen("Scene: " + scene_name, _story_title)
+	
 	_service.track_event("scene_entered", {
-		"scene_name": scene.scene_name if scene else "",
+		"scene_name": scene_name,
 		"scene_uuid": scene.uuid if scene else "",
 	})
 
@@ -167,6 +175,10 @@ func on_after_choice(ctx: RefCounted, choice_index: int, choice_text: String) ->
 func on_story_started(_ctx: RefCounted, story_title: String, story_version: String) -> void:
 	if _service == null or not _service.is_active():
 		return
+	
+	# Initialiser la session avec une "vue" (pageview)
+	_service.track_screen("Story Start", story_title)
+	
 	_service.track_event("story_started", {
 		"story_title": story_title,
 		"story_version": story_version,
@@ -230,6 +242,9 @@ func on_quickload(_ctx: RefCounted, story_title: String) -> void:
 func on_main_menu_displayed(_ctx: RefCounted, platform: String, app_version: String, story_version: String) -> void:
 	if _service == null or not _service.is_active():
 		return
+	
+	_service.track_screen("Main Menu", _story_title)
+	
 	_service.track_event("main_menu_displayed", {
 		"platform": platform,
 		"app_version": app_version,

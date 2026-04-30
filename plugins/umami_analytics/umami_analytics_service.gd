@@ -15,16 +15,20 @@ var _common_metadata: Dictionary = {}
 var _user_agent: String = ""
 
 func configure(website_id: String, umami_url: String, enabled: bool) -> void:
-	_website_id = website_id
-	_umami_url = umami_url
-	if not _umami_url.ends_with("/api/send"):
+	_website_id = website_id.strip_edges()
+	_umami_url = umami_url.strip_edges()
+	if _umami_url != "" and not _umami_url.ends_with("/api/send"):
 		if _umami_url.ends_with("/"):
 			_umami_url += "api/send"
 		else:
 			_umami_url += "/api/send"
+	
 	_enabled = enabled
 	_device_id = _load_or_create_device_id()
 	_user_agent = _build_user_agent()
+	
+	if _enabled:
+		print("[Umami] Configuré avec Website ID: %s, URL: %s" % [_website_id, _umami_url])
 
 
 func set_common_metadata(metadata: Dictionary) -> void:
@@ -39,6 +43,22 @@ func is_configured() -> bool:
 	return _enabled and _website_id != ""
 
 
+## Traque une "vue" (équivalent pageview). Utile au démarrage.
+func track_screen(screen_name: String, title: String = "") -> void:
+	if not is_active():
+		return
+	
+	var payload = _build_base_payload()
+	payload["url"] = "/" + screen_name.replace(" ", "_").to_lower()
+	if title != "":
+		payload["title"] = title
+	else:
+		payload["title"] = screen_name
+		
+	_send_to_umami(payload)
+
+
+## Traque un événement personnalisé.
 func track_event(event_name: String, body: Dictionary = {}) -> void:
 	if not is_active():
 		return
@@ -47,17 +67,21 @@ func track_event(event_name: String, body: Dictionary = {}) -> void:
 	var event_data = _common_metadata.duplicate()
 	event_data.merge(body, true)
 
-	var payload = {
+	var payload = _build_base_payload()
+	payload["name"] = event_name
+	payload["data"] = event_data
+	
+	_send_to_umami(payload)
+
+
+func _build_base_payload() -> Dictionary:
+	return {
 		"website": _website_id,
 		"hostname": OS.get_name(),
 		"language": OS.get_locale(),
 		"screen": "%dx%d" % [DisplayServer.window_get_size().x, DisplayServer.window_get_size().y],
-		"url": "/game", # Umami nécessite une URL même pour les événements
-		"name": event_name,
-		"data": event_data
+		"url": "/game", # Défaut
 	}
-	
-	_send_to_umami(payload)
 
 
 func _send_to_umami(payload: Dictionary) -> void:
@@ -75,22 +99,43 @@ func _send_to_umami(payload: Dictionary) -> void:
 	]
 	
 	var json_body = JSON.stringify(full_payload)
-	http.request_completed.connect(func(_result, response_code, _headers, _body):
-		if response_code != 200:
-			push_warning("Umami error: Server returned code %d" % response_code)
+	
+	# Debug log
+	# print("[Umami] Sending: ", json_body)
+	
+	http.request_completed.connect(func(result, response_code, _headers, _body):
+		if result != HTTPRequest.RESULT_SUCCESS:
+			push_warning("[Umami] Erreur de requête HTTP : %d" % result)
+		elif response_code < 200 or response_code >= 300:
+			var error_msg = _body.get_string_from_utf8()
+			push_warning("[Umami] Le serveur a retourné une erreur %d : %s" % [response_code, error_msg])
+		else:
+			# Succès silencieux en prod, mais log en debug
+			# print("[Umami] Événement envoyé avec succès (code %d)" % response_code)
+			pass
 		http.queue_free()
 	)
 	
 	var error = http.request(_umami_url, headers, HTTPClient.METHOD_POST, json_body)
 	if error != OK:
-		push_warning("Umami: Failed to start HTTP request")
+		push_warning("[Umami] Impossible de démarrer la requête HTTP : %d" % error)
 		http.queue_free()
 
 
 func _build_user_agent() -> String:
+	# Utiliser un User-Agent plus "standard" pour éviter d'être filtré comme bot
 	var os_name = OS.get_name()
-	var app_version = ProjectSettings.get_setting("application/config/version", "1.0.0")
-	return "VisualBuilder/%s (%s)" % [app_version, os_name]
+	var platform = "Unknown"
+	match os_name:
+		"macOS": platform = "Macintosh; Intel Mac OS X 10_15_7"
+		"Windows": platform = "Windows NT 10.0; Win64; x64"
+		"Android": platform = "Linux; Android 10"
+		"iOS": platform = "iPhone; CPU iPhone OS 14_4 like Mac OS X"
+	
+	return "Mozilla/5.0 (%s) AppleWebKit/537.36 (KHTML, like Gecko) VisualBuilder/%s" % [
+		platform, 
+		ProjectSettings.get_setting("application/config/version", "1.0.0")
+	]
 
 
 # --- Device ID (pour la cohérence des sessions si nécessaire, 
