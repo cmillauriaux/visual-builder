@@ -83,12 +83,17 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 	_copy_dir_recursive(project_root, abs_temp_project, excludes)
 
 	# Supprimer les dossiers de plugins désactivés à l'export
-	var excluded_plugins := _get_excluded_plugin_folders(export_options)
+	var excluded_plugins := _get_excluded_plugin_folders(story, export_options)
 	for folder in excluded_plugins:
 		var excluded_path: String = abs_temp_project + "/plugins/" + str(folder)
 		if DirAccess.dir_exists_absolute(excluded_path):
 			_remove_dir_recursive(excluded_path)
 			_append_log(log_path, "→ Plugin exclu de l'export : " + str(folder))
+		
+		var excluded_path_game: String = abs_temp_project + "/game_plugins/" + str(folder)
+		if DirAccess.dir_exists_absolute(excluded_path_game):
+			_remove_dir_recursive(excluded_path_game)
+			_append_log(log_path, "→ Plugin (game) exclu de l'export : " + str(folder))
 
 	# Générer le registre des plugins restants (nécessaire car DirAccess
 	# ne peut pas lister les répertoires dans un PCK exporté)
@@ -1554,9 +1559,11 @@ func _generate_plugin_registry(abs_temp_project: String, log_path: String) -> vo
 			_append_log(log_path, "ERREUR: Impossible d'écrire le registre dans " + registry_path)
 
 
-## Scanne les plugins et retourne les dossiers à exclure en fonction des export_options.
-func _get_excluded_plugin_folders(export_options: Dictionary) -> Array:
+## Scanne les plugins et retourne les dossiers à exclure en fonction de la config story et des export_options.
+func _get_excluded_plugin_folders(story: RefCounted, export_options: Dictionary) -> Array:
 	var excluded: Array = []
+	var plugin_settings: Dictionary = story.plugin_settings if story != null and story.get("plugin_settings") != null else {}
+
 	for dir_path in ["res://plugins/", "res://game_plugins/"]:
 		var dir := DirAccess.open(dir_path)
 		if dir == null:
@@ -1570,10 +1577,21 @@ func _get_excluded_plugin_folders(export_options: Dictionary) -> Array:
 					var script = load(path)
 					if script:
 						var instance = script.new()
-						if instance.has_method("get_export_options") and instance.has_method("get_plugin_folder"):
-							var folder: String = instance.get_plugin_folder()
-							if folder == "":
-								folder = entry
+						var plugin_name = instance.get_plugin_name() if instance.has_method("get_plugin_name") else ""
+						var folder: String = instance.get_plugin_folder() if instance.has_method("get_plugin_folder") else entry
+						if folder == "":
+							folder = entry
+						
+						# 1. Vérifier si le plugin est désactivé dans la configuration de la story
+						if plugin_name != "" and plugin_settings.has(plugin_name):
+							var config = plugin_settings[plugin_name]
+							if config is Dictionary and config.has("enabled") and not config["enabled"]:
+								excluded.append(folder)
+								entry = dir.get_next()
+								continue
+						
+						# 2. Vérifier si une option d'export spécifique est décochée
+						if instance.has_method("get_export_options"):
 							for opt in instance.get_export_options():
 								var key: String = opt.key
 								# Si l'option est explicitement décochée → exclure

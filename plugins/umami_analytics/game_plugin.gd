@@ -393,14 +393,6 @@ func read_editor_config(control: Control) -> Dictionary:
 	}
 
 
-func get_export_options() -> Array:
-	var opt := GameContributions.ExportOptionDef.new()
-	opt.key = "include_umami_analytics"
-	opt.label = "Inclure Umami Analytics"
-	opt.default_value = true
-	return [opt]
-
-
 func get_plugin_folder() -> String:
 	return "umami_analytics"
 
