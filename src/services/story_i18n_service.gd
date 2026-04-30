@@ -38,6 +38,7 @@ const UI_STRINGS: Array[String] = [
 	"itch.io",
 	"Chapitres / Scènes",
 	"Chargement...",
+	"Téléchargement...",
 	# Menu pause
 	"Pause",
 	"Reprendre",
@@ -425,9 +426,8 @@ static func _add(d: Dictionary, s: String) -> void:
 static func _tr(source: String, i18n_dict: Dictionary) -> String:
 	if source == "":
 		return source
-	if not i18n_dict.has(source):
-		return source
-	var translation: String = i18n_dict[source]
-	if translation == "":
-		return source
-	return translation
+	if i18n_dict.has(source):
+		var translation: String = i18n_dict[source]
+		if translation != "":
+			return translation
+	return TranslationServer.translate(source)

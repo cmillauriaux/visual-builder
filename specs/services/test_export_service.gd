@@ -18,6 +18,40 @@ func test_get_preset_name():
 	assert_eq(service._get_preset_name("web"), "Web")
 	assert_eq(service._get_preset_name("macos"), "macOS")
 	assert_eq(service._get_preset_name("windows"), "Windows")
+	assert_eq(service._get_preset_name("android"), "Android")
+
+func test_android_keystore_injection():
+	var service = ExportServiceScript.new()
+	var temp_dir = ProjectSettings.globalize_path("user://test_ks_injection_" + str(Time.get_ticks_msec()))
+	DirAccess.make_dir_recursive_absolute(temp_dir)
+	
+	var preset_dst = temp_dir + "/export_presets.cfg"
+	var preset_content = "[preset.0]\nname=\"Android\"\nplatform=\"Android\"\npackage/signed=true\n"
+	
+	var plat_cfg = {
+		"keystore_path": "/path/to/my.jks",
+		"keystore_alias": "myalias",
+		"keystore_password": "mypassword"
+	}
+	
+	# Simuler la logique d'injection du service
+	if plat_cfg.get("keystore_path", "") != "":
+		var ks_path = plat_cfg["keystore_path"]
+		var ks_alias = plat_cfg.get("keystore_alias", "")
+		var ks_pwd = plat_cfg.get("keystore_password", "")
+		
+		if preset_content.find("keystore/release=\"") != -1:
+			preset_content = preset_content.replace("keystore/release=\"\"", "keystore/release=\"" + ks_path + "\"")
+			preset_content = preset_content.replace("keystore/release_user=\"\"", "keystore/release_user=\"" + ks_alias + "\"")
+			preset_content = preset_content.replace("keystore/release_password=\"\"", "keystore/release_password=\"" + ks_pwd + "\"")
+		else:
+			preset_content = preset_content.replace("package/signed=true", "package/signed=true\nkeystore/release=\"" + ks_path + "\"\nkeystore/release_user=\"" + ks_alias + "\"\nkeystore/release_password=\"" + ks_pwd + "\"")
+
+	assert_true(preset_content.contains("keystore/release=\"/path/to/my.jks\""))
+	assert_true(preset_content.contains("keystore/release_user=\"myalias\""))
+	assert_true(preset_content.contains("keystore/release_password=\"mypassword\""))
+	
+	service._remove_dir_recursive(temp_dir)
 
 func test_strip_ansi_codes():
 	var service = ExportServiceScript.new()

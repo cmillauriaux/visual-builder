@@ -54,6 +54,8 @@ func test_builds_histoire_menu() -> void:
 	assert_eq(popup.get_item_text(popup.get_item_index(3)), "Sauvegarder sous...")
 	assert_eq(popup.get_item_text(popup.get_item_index(4)), "Exporter")
 	assert_eq(popup.get_item_text(popup.get_item_index(5)), "Vérifier l'histoire")
+	assert_eq(popup.get_item_text(popup.get_item_index(6)), "Générer les clés de traduction")
+	assert_eq(popup.get_item_text(popup.get_item_index(7)), "Vérifier les traductions")
 	assert_eq(popup.get_item_text(popup.get_item_index(9)), "Configurer le jeu")
 	assert_eq(popup.get_item_text(popup.get_item_index(10)), "Galerie")
 

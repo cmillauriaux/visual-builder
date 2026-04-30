@@ -287,11 +287,25 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 			if plat_cfg.get("package_name", "") != "":
 				preset_content = preset_content.replace("package/unique_name=\"com.visualnovel.game\"", "package/unique_name=\"" + plat_cfg["package_name"] + "\"")
 			
-			# Utiliser la clé de debug pour signer l'APK release par défaut si aucune clé release n'est fournie
-			var home = OS.get_environment("HOME") if OS.get_name() != "Windows" else OS.get_environment("USERPROFILE")
-			var debug_keystore = home + "/.android/debug.keystore"
-			if FileAccess.file_exists(debug_keystore):
-				preset_content = preset_content.replace("package/signed=true", "package/signed=true\nkeystore/release=\"" + debug_keystore + "\"\nkeystore/release_user=\"androiddebugkey\"\nkeystore/release_password=\"android\"")
+			# Injecter les paramètres de keystore si fournis
+			if plat_cfg.get("keystore_path", "") != "":
+				var ks_path = plat_cfg["keystore_path"]
+				var ks_alias = plat_cfg.get("keystore_alias", "")
+				var ks_pwd = plat_cfg.get("keystore_password", "")
+				
+				# Remplacer ou ajouter les paramètres de keystore release
+				if preset_content.find("keystore/release=\"") != -1:
+					preset_content = preset_content.replace("keystore/release=\"\"", "keystore/release=\"" + ks_path + "\"")
+					preset_content = preset_content.replace("keystore/release_user=\"\"", "keystore/release_user=\"" + ks_alias + "\"")
+					preset_content = preset_content.replace("keystore/release_password=\"\"", "keystore/release_password=\"" + ks_pwd + "\"")
+				else:
+					preset_content = preset_content.replace("package/signed=true", "package/signed=true\nkeystore/release=\"" + ks_path + "\"\nkeystore/release_user=\"" + ks_alias + "\"\nkeystore/release_password=\"" + ks_pwd + "\"")
+			else:
+				# Utiliser la clé de debug pour signer l'APK release par défaut si aucune clé release n'est fournie
+				var home = OS.get_environment("HOME") if OS.get_name() != "Windows" else OS.get_environment("USERPROFILE")
+				var debug_keystore = home + "/.android/debug.keystore"
+				if FileAccess.file_exists(debug_keystore):
+					preset_content = preset_content.replace("package/signed=true", "package/signed=true\nkeystore/release=\"" + debug_keystore + "\"\nkeystore/release_user=\"androiddebugkey\"\nkeystore/release_password=\"android\"")
 
 		var f_preset = FileAccess.open(preset_dst, FileAccess.WRITE)
 		if f_preset:

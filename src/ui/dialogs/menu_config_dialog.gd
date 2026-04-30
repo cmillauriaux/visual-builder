@@ -70,6 +70,10 @@ var _android_sdk_path_edit: LineEdit
 var _android_sdk_browse_btn: Button
 var _android_jdk_path_edit: LineEdit
 var _android_jdk_browse_btn: Button
+var _android_keystore_path_edit: LineEdit
+var _android_keystore_browse_btn: Button
+var _android_keystore_alias_edit: LineEdit
+var _android_keystore_password_edit: LineEdit
 var _story = null
 var _story_base_path: String = ""
 var _current_menu_music: String = ""
@@ -372,6 +376,43 @@ func _init():
 	android_jdk_hbox.add_child(_android_jdk_browse_btn)
 
 	plat_vbox.add_child(android_jdk_hbox)
+
+	var android_keystore_lbl = Label.new()
+	android_keystore_lbl.text = tr("Fichier Keystore (.jks / .keystore)")
+	plat_vbox.add_child(android_keystore_lbl)
+
+	var android_keystore_hbox = HBoxContainer.new()
+	android_keystore_hbox.name = "AndroidKeystoreHBox"
+	_android_keystore_path_edit = LineEdit.new()
+	_android_keystore_path_edit.name = "AndroidKeystorePathEdit"
+	_android_keystore_path_edit.placeholder_text = tr("Chemin vers le fichier keystore")
+	_android_keystore_path_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	android_keystore_hbox.add_child(_android_keystore_path_edit)
+
+	_android_keystore_browse_btn = Button.new()
+	_android_keystore_browse_btn.name = "AndroidKeystoreBrowseButton"
+	_android_keystore_browse_btn.text = tr("Parcourir...")
+	_android_keystore_browse_btn.pressed.connect(_on_android_keystore_browse_pressed)
+	android_keystore_hbox.add_child(_android_keystore_browse_btn)
+
+	plat_vbox.add_child(android_keystore_hbox)
+
+	var android_alias_lbl = Label.new()
+	android_alias_lbl.text = tr("Alias de la clé")
+	plat_vbox.add_child(android_alias_lbl)
+
+	_android_keystore_alias_edit = LineEdit.new()
+	_android_keystore_alias_edit.name = "AndroidKeystoreAliasEdit"
+	plat_vbox.add_child(_android_keystore_alias_edit)
+
+	var android_password_lbl = Label.new()
+	android_password_lbl.text = tr("Mot de passe de la clé")
+	plat_vbox.add_child(android_password_lbl)
+
+	_android_keystore_password_edit = LineEdit.new()
+	_android_keystore_password_edit.name = "AndroidKeystorePasswordEdit"
+	_android_keystore_password_edit.secret = true
+	plat_vbox.add_child(_android_keystore_password_edit)
 
 	plat_scroll.add_child(plat_vbox)
 	tabs.add_child(plat_scroll)
@@ -708,6 +749,9 @@ func setup(story, story_base_path: String = "") -> void:
 	_android_package_edit.text = android_settings.get("package_name", "")
 	_android_sdk_path_edit.text = android_settings.get("sdk_path", "")
 	_android_jdk_path_edit.text = android_settings.get("jdk_path", "")
+	_android_keystore_path_edit.text = android_settings.get("keystore_path", "")
+	_android_keystore_alias_edit.text = android_settings.get("keystore_alias", "")
+	_android_keystore_password_edit.text = android_settings.get("keystore_password", "")
 	_update_preview()
 	_update_game_over_preview()
 	_update_tbc_preview()
@@ -786,6 +830,12 @@ func get_platform_settings() -> Dictionary:
 		android["sdk_path"] = _android_sdk_path_edit.text.strip_edges()
 	if _android_jdk_path_edit.text.strip_edges() != "":
 		android["jdk_path"] = _android_jdk_path_edit.text.strip_edges()
+	if _android_keystore_path_edit.text.strip_edges() != "":
+		android["keystore_path"] = _android_keystore_path_edit.text.strip_edges()
+	if _android_keystore_alias_edit.text.strip_edges() != "":
+		android["keystore_alias"] = _android_keystore_alias_edit.text.strip_edges()
+	if _android_keystore_password_edit.text.strip_edges() != "":
+		android["keystore_password"] = _android_keystore_password_edit.text.strip_edges()
 	if not android.is_empty():
 		result["android"] = android
 	return result
@@ -1010,6 +1060,18 @@ func _on_android_jdk_browse_pressed() -> void:
 
 func _on_android_jdk_selected(path: String) -> void:
 	_android_jdk_path_edit.text = path
+
+func _on_android_keystore_browse_pressed() -> void:
+	var picker = FileDialog.new()
+	picker.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+	picker.access = FileDialog.ACCESS_FILESYSTEM
+	picker.filters = PackedStringArray(["*.jks, *.keystore ; Android Keystore"])
+	picker.file_selected.connect(_on_android_keystore_selected)
+	add_child(picker)
+	picker.popup_centered(Vector2i(800, 600))
+
+func _on_android_keystore_selected(path: String) -> void:
+	_android_keystore_path_edit.text = path
 
 func _update_icon_preview() -> void:
 	if _app_icon_edit.text == "":
