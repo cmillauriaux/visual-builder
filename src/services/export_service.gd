@@ -1510,21 +1510,19 @@ func _cache_bust_web_export(export_dir: String, log_path: String) -> void:
 func _generate_plugin_registry(abs_temp_project: String, log_path: String) -> void:
 	var plugin_paths: Array = []
 	var plugins_dir := abs_temp_project + "/plugins"
-	if not DirAccess.dir_exists_absolute(plugins_dir):
-		return
-	var dir := DirAccess.open(plugins_dir)
-	if dir == null:
-		return
-	dir.list_dir_begin()
-	var entry := dir.get_next()
-	while entry != "":
-		if dir.current_is_dir() and not entry.begins_with("."):
-			var gd_path := plugins_dir + "/" + entry + "/game_plugin.gd"
-			if FileAccess.file_exists(gd_path):
-				plugin_paths.append("res://plugins/" + entry + "/game_plugin.gd")
-		entry = dir.get_next()
-	dir.list_dir_end()
-	# Faire de même pour game_plugins/
+	if DirAccess.dir_exists_absolute(plugins_dir):
+		var dir := DirAccess.open(plugins_dir)
+		if dir:
+			dir.list_dir_begin()
+			var entry := dir.get_next()
+			while entry != "":
+				if dir.current_is_dir() and not entry.begins_with("."):
+					var gd_path := plugins_dir + "/" + entry + "/game_plugin.gd"
+					if FileAccess.file_exists(gd_path):
+						plugin_paths.append("res://plugins/" + entry + "/game_plugin.gd")
+				entry = dir.get_next()
+			dir.list_dir_end()
+	
 	var game_plugins_dir := abs_temp_project + "/game_plugins"
 	if DirAccess.dir_exists_absolute(game_plugins_dir):
 		var dir2 := DirAccess.open(game_plugins_dir)
@@ -1538,14 +1536,22 @@ func _generate_plugin_registry(abs_temp_project: String, log_path: String) -> vo
 						plugin_paths.append("res://game_plugins/" + entry2 + "/game_plugin.gd")
 				entry2 = dir2.get_next()
 			dir2.list_dir_end()
-	if plugin_paths.is_empty():
-		return
-	var registry_path := plugins_dir + "/_registry.json"
-	var file := FileAccess.open(registry_path, FileAccess.WRITE)
-	if file:
-		file.store_string(JSON.stringify(plugin_paths))
-		file.close()
-		_append_log(log_path, "→ Registre plugins généré : %d plugin(s) [%s]" % [plugin_paths.size(), ", ".join(plugin_paths)])
+
+	# Même s'il n'y a pas de plugins, on crée un fichier vide ou vide-ish
+	# Mais dans notre cas, il y a forcément des plugins
+	if not plugin_paths.is_empty():
+		# On s'assure que le dossier plugins existe
+		if not DirAccess.dir_exists_absolute(plugins_dir):
+			DirAccess.make_dir_recursive_absolute(plugins_dir)
+			
+		var registry_path := plugins_dir + "/_registry.json"
+		var file := FileAccess.open(registry_path, FileAccess.WRITE)
+		if file:
+			file.store_string(JSON.stringify(plugin_paths))
+			file.close()
+			_append_log(log_path, "→ Registre plugins généré : %d plugin(s) [%s]" % [plugin_paths.size(), ", ".join(plugin_paths)])
+		else:
+			_append_log(log_path, "ERREUR: Impossible d'écrire le registre dans " + registry_path)
 
 
 ## Scanne les plugins et retourne les dossiers à exclure en fonction des export_options.
