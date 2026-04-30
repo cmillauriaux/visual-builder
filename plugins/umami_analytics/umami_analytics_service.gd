@@ -75,9 +75,14 @@ func track_event(event_name: String, body: Dictionary = {}) -> void:
 
 
 func _build_base_payload() -> Dictionary:
+	# Umami peut rejeter les requêtes si le hostname est trop générique ou invalide.
+	# On utilise le nom de l'OS mais on s'assure qu'il ressemble à un hostname.
+	var os_name = OS.get_name().to_lower().replace(" ", "-")
+	var host = "%s.visual-builder.app" % os_name
+	
 	return {
 		"website": _website_id,
-		"hostname": OS.get_name(),
+		"hostname": host,
 		"language": OS.get_locale(),
 		"screen": "%dx%d" % [DisplayServer.window_get_size().x, DisplayServer.window_get_size().y],
 		"url": "/game", # Défaut
