@@ -14,6 +14,8 @@ const QUICKSAVE_DIR: String = "user://saves/quicksave"
 const NUM_AUTOSAVE_SLOTS: int = 10
 const AUTOSAVE_INDEX_PATH: String = "user://saves/autosave_index.dat"
 
+static var _autosave_mutex: Mutex = Mutex.new()
+
 
 static func get_autosave_dir(slot_index: int) -> String:
 	return "%s/autosave_%d" % [SAVE_DIR, slot_index]
@@ -55,29 +57,30 @@ static func _save_autosave_index(index: int) -> void:
 ## Sauvegarde automatique avec rotation sur NUM_AUTOSAVE_SLOTS slots.
 ## Retourne true si la sauvegarde a réussi.
 static func autosave(state: Dictionary, screenshot: Image) -> bool:
+	_autosave_mutex.lock()
 	var index := _get_current_autosave_index()
 	var slot := index % NUM_AUTOSAVE_SLOTS
 	var dir_path := get_autosave_dir(slot)
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(dir_path))
 
 	var save_path := get_autosave_save_path(slot)
-	var file := FileAccess.open(save_path, FileAccess.WRITE)
-	if file == null:
+	var data := _prepare_save_data(state)
+	if not _write_json_atomic(save_path, data):
+		_autosave_mutex.unlock()
 		return false
-	var data := state.duplicate()
-	data["version"] = SAVE_VERSION
-	file.store_string(JSON.stringify(data, "\t"))
-	file.close()
 
 	if screenshot != null:
 		screenshot.save_png(get_autosave_screenshot_path(slot))
 
 	_save_autosave_index((index + 1) % NUM_AUTOSAVE_SLOTS)
+	_autosave_mutex.unlock()
 	return true
 
 
 ## Charge les données d'un slot autosave. Retourne {} si le slot est vide ou invalide.
 static func load_autosave(slot_index: int) -> Dictionary:
+	if slot_index < 0 or slot_index >= NUM_AUTOSAVE_SLOTS:
+		return {}
 	var save_path := get_autosave_save_path(slot_index)
 	if not FileAccess.file_exists(save_path):
 		return {}
@@ -95,12 +98,10 @@ static func load_autosave(slot_index: int) -> Dictionary:
 ## Retourne la liste de toutes les auto-saves existantes, triées de la plus récente à la plus ancienne.
 ## Chaque entrée : { slot_index, data, has_screenshot }
 static func list_autosaves() -> Array:
-	var current := _get_current_autosave_index()
 	var result: Array = []
 
-	# Parcourir les slots dans l'ordre inverse de la rotation (le plus récent en premier)
 	for i in range(NUM_AUTOSAVE_SLOTS):
-		var slot := (current - 1 - i + NUM_AUTOSAVE_SLOTS * 2) % NUM_AUTOSAVE_SLOTS
+		var slot := i
 		var save_path := get_autosave_save_path(slot)
 		if not FileAccess.file_exists(save_path):
 			continue
@@ -111,8 +112,12 @@ static func list_autosaves() -> Array:
 			"slot_index": slot,
 			"data": data,
 			"has_screenshot": FileAccess.file_exists(get_autosave_screenshot_path(slot)),
+			"_sort_time": data.get("_saved_at_unix", FileAccess.get_modified_time(save_path)),
 		})
 
+	result.sort_custom(func(a, b): return float(a.get("_sort_time", 0.0)) > float(b.get("_sort_time", 0.0)))
+	for entry in result:
+		entry.erase("_sort_time")
 	return result
 
 
@@ -139,15 +144,10 @@ static func save_game_state(slot_index: int, state: Dictionary, screenshot: Imag
 	var dir_path := get_slot_dir(slot_index)
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(dir_path))
 
-	# Écrire save.json
 	var save_path := get_save_path(slot_index)
-	var file := FileAccess.open(save_path, FileAccess.WRITE)
-	if file == null:
+	var data := _prepare_save_data(state)
+	if not _write_json_atomic(save_path, data):
 		return false
-	var data := state.duplicate()
-	data["version"] = SAVE_VERSION
-	file.store_string(JSON.stringify(data, "\t"))
-	file.close()
 
 	# Écrire screenshot.png
 	if screenshot != null:
@@ -216,13 +216,9 @@ static func quicksave_exists() -> bool:
 static func quicksave(state: Dictionary, screenshot: Image) -> bool:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(QUICKSAVE_DIR))
 	var save_path := "%s/save.json" % QUICKSAVE_DIR
-	var file := FileAccess.open(save_path, FileAccess.WRITE)
-	if file == null:
+	var data := _prepare_save_data(state)
+	if not _write_json_atomic(save_path, data):
 		return false
-	var data := state.duplicate()
-	data["version"] = SAVE_VERSION
-	file.store_string(JSON.stringify(data, "\t"))
-	file.close()
 	if screenshot != null:
 		screenshot.save_png("%s/screenshot.png" % QUICKSAVE_DIR)
 	return true
@@ -252,6 +248,51 @@ static func delete_quicksave() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(save_path))
 	if FileAccess.file_exists(png_path):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(png_path))
+
+
+static func _prepare_save_data(state: Dictionary) -> Dictionary:
+	var data := state.duplicate(true)
+	data["version"] = SAVE_VERSION
+	data["_saved_at_unix"] = Time.get_unix_time_from_system()
+	return data
+
+
+static func _write_json_atomic(path: String, data: Dictionary) -> bool:
+	var tmp_path := path + ".tmp"
+	var backup_path := path + ".bak"
+	var tmp_global := ProjectSettings.globalize_path(tmp_path)
+	var path_global := ProjectSettings.globalize_path(path)
+	var backup_global := ProjectSettings.globalize_path(backup_path)
+
+	if FileAccess.file_exists(tmp_path):
+		DirAccess.remove_absolute(tmp_global)
+	if FileAccess.file_exists(backup_path):
+		DirAccess.remove_absolute(backup_global)
+
+	var file := FileAccess.open(tmp_path, FileAccess.WRITE)
+	if file == null:
+		return false
+	file.store_string(JSON.stringify(data, "\t"))
+	file.close()
+
+	var had_existing := FileAccess.file_exists(path)
+	if had_existing:
+		var backup_err := DirAccess.rename_absolute(path_global, backup_global)
+		if backup_err != OK:
+			DirAccess.remove_absolute(tmp_global)
+			return false
+
+	var replace_err := DirAccess.rename_absolute(tmp_global, path_global)
+	if replace_err != OK:
+		if had_existing:
+			DirAccess.rename_absolute(backup_global, path_global)
+		if FileAccess.file_exists(tmp_path):
+			DirAccess.remove_absolute(tmp_global)
+		return false
+
+	if had_existing and FileAccess.file_exists(backup_path):
+		DirAccess.remove_absolute(backup_global)
+	return true
 
 
 ## Vérifie si la story_path pointe vers un fichier de story existant.

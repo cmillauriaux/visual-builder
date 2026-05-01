@@ -24,6 +24,10 @@ enum Mode { SAVE, LOAD }
 var _mode: int = Mode.LOAD
 var _title_label: Label
 var _tab_container: TabContainer
+var _panel: PanelContainer
+var _manual_scroll: ScrollContainer
+var _auto_scroll: ScrollContainer
+var _quick_scroll: ScrollContainer
 var _grid: GridContainer
 var _auto_content: GridContainer
 var _quick_content: GridContainer
@@ -43,18 +47,24 @@ func build_ui() -> void:
 	_overlay.color = Color(0, 0, 0, 0.75)
 	add_child(_overlay)
 
-	# Conteneur global (centré verticalement)
-	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(center)
+	var margin := MarginContainer.new()
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var panel_margin := UIScale.scale(20)
+	margin.add_theme_constant_override("margin_top", panel_margin)
+	margin.add_theme_constant_override("margin_bottom", panel_margin)
+	margin.add_theme_constant_override("margin_left", panel_margin)
+	margin.add_theme_constant_override("margin_right", panel_margin)
+	add_child(margin)
 
-	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(UIScale.scale(960), UIScale.scale(600))
-	center.add_child(panel)
+	_panel = PanelContainer.new()
+	_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	margin.add_child(_panel)
 
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", UIScale.scale(16))
-	panel.add_child(vbox)
+	vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_panel.add_child(vbox)
 
 	# En-tête : titre + bouton fermer
 	var header := HBoxContainer.new()
@@ -81,46 +91,40 @@ func build_ui() -> void:
 	vbox.add_child(_tab_container)
 
 	# --- Onglet 0 : Sauvegardes manuelles ---
-	var manual_scroll := ScrollContainer.new()
-	manual_scroll.name = "ManualSaves"
-	manual_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	manual_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_tab_container.add_child(manual_scroll)
+	_manual_scroll = ScrollContainer.new()
+	_configure_save_scroll(_manual_scroll, "ManualSaves")
+	_tab_container.add_child(_manual_scroll)
 
 	_grid = GridContainer.new()
 	_grid.columns = 3
 	_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_grid.add_theme_constant_override("h_separation", UIScale.scale(16))
 	_grid.add_theme_constant_override("v_separation", UIScale.scale(16))
-	manual_scroll.add_child(_grid)
+	_manual_scroll.add_child(_grid)
 
 	# --- Onglet 1 : Sauvegardes automatiques ---
-	var auto_scroll := ScrollContainer.new()
-	auto_scroll.name = "AutoSaves"
-	auto_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	auto_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_tab_container.add_child(auto_scroll)
+	_auto_scroll = ScrollContainer.new()
+	_configure_save_scroll(_auto_scroll, "AutoSaves")
+	_tab_container.add_child(_auto_scroll)
 
 	_auto_content = GridContainer.new()
 	_auto_content.columns = 3
 	_auto_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_auto_content.add_theme_constant_override("h_separation", UIScale.scale(16))
 	_auto_content.add_theme_constant_override("v_separation", UIScale.scale(16))
-	auto_scroll.add_child(_auto_content)
+	_auto_scroll.add_child(_auto_content)
 
 	# --- Onglet 2 : Sauvegarde rapide ---
-	var quick_scroll := ScrollContainer.new()
-	quick_scroll.name = "QuickSaves"
-	quick_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	quick_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_tab_container.add_child(quick_scroll)
+	_quick_scroll = ScrollContainer.new()
+	_configure_save_scroll(_quick_scroll, "QuickSaves")
+	_tab_container.add_child(_quick_scroll)
 
 	_quick_content = GridContainer.new()
 	_quick_content.columns = 3
 	_quick_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_quick_content.add_theme_constant_override("h_separation", UIScale.scale(16))
 	_quick_content.add_theme_constant_override("v_separation", UIScale.scale(16))
-	quick_scroll.add_child(_quick_content)
+	_quick_scroll.add_child(_quick_content)
 
 	# Appliquer les titres d'onglets (traductibles)
 	_tab_container.set_tab_title(0, StoryI18nService.get_ui_string("Sauvegardes", _i18n_dict))
@@ -174,6 +178,16 @@ func get_title_text() -> String:
 func apply_custom_theme(story_ui_path: String) -> void:
 	if _close_btn:
 		GameTheme.apply_close_style(_close_btn, story_ui_path)
+
+
+func _configure_save_scroll(scroll: ScrollContainer, tab_name: String) -> void:
+	scroll.name = tab_name
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	scroll.follow_focus = true
+	scroll.scroll_deadzone = UIScale.scale(6)
 
 
 func _refresh_manual_saves() -> void:
@@ -245,6 +259,7 @@ func _build_card(entry: Dictionary, type: String) -> Control:
 	var display_index: int = entry.get("display_index", slot_index)
 
 	var card := PanelContainer.new()
+	card.mouse_filter = Control.MOUSE_FILTER_PASS
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	# On utilise une largeur minimum raisonnable mais on laisse expand
 	card.custom_minimum_size = Vector2(UIScale.scale(200), 0)
@@ -262,6 +277,7 @@ func _build_card(entry: Dictionary, type: String) -> Control:
 
 	# Thumbnail screenshot
 	var thumb := TextureRect.new()
+	thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	thumb.custom_minimum_size = Vector2(0, UIScale.scale(150))
 	thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
@@ -293,6 +309,7 @@ func _build_card(entry: Dictionary, type: String) -> Control:
 		vbox.add_child(info_vbox)
 
 		var chap_label := Label.new()
+		chap_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		chap_label.text = data.get("chapter_name", "")
 		chap_label.add_theme_font_size_override("font_size", UIScale.scale(18))
 		chap_label.add_theme_color_override("font_color", Color("#E8D5B5"))
@@ -302,6 +319,7 @@ func _build_card(entry: Dictionary, type: String) -> Control:
 		info_vbox.add_child(chap_label)
 
 		var scene_label := Label.new()
+		scene_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		scene_label.text = data.get("scene_name", "")
 		scene_label.add_theme_font_size_override("font_size", UIScale.scale(16))
 		scene_label.add_theme_color_override("font_color", Color("#C4A882"))
@@ -311,6 +329,7 @@ func _build_card(entry: Dictionary, type: String) -> Control:
 		info_vbox.add_child(scene_label)
 
 		var date_label := Label.new()
+		date_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		date_label.text = data.get("timestamp", "")
 		date_label.add_theme_font_size_override("font_size", UIScale.scale(14))
 		date_label.add_theme_color_override("font_color", Color("#A08060"))
@@ -328,21 +347,21 @@ func _build_card(entry: Dictionary, type: String) -> Control:
 			if _mode == Mode.SAVE:
 				var save_btn := Button.new()
 				save_btn.text = StoryI18nService.get_ui_string("Écraser", _i18n_dict)
-				save_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				_configure_action_button(save_btn)
 				save_btn.pressed.connect(func(): _on_save_occupied_slot(slot_index))
 				btn_row.add_child(save_btn)
 			else:
 				var load_btn := Button.new()
 				load_btn.text = StoryI18nService.get_ui_string("Charger", _i18n_dict)
 				load_btn.name = "LoadButton"
-				load_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				_configure_action_button(load_btn)
 				load_btn.pressed.connect(func(): load_slot_pressed.emit(slot_index))
 				btn_row.add_child(load_btn)
 
 			var del_btn := Button.new()
 			del_btn.text = StoryI18nService.get_ui_string("Supprimer", _i18n_dict)
 			del_btn.name = "DeleteButton"
-			del_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			_configure_action_button(del_btn)
 			del_btn.pressed.connect(func(): _on_delete_slot(slot_index))
 			GameTheme.apply_danger_style(del_btn)
 			btn_row.add_child(del_btn)
@@ -351,7 +370,7 @@ func _build_card(entry: Dictionary, type: String) -> Control:
 			var load_btn := Button.new()
 			load_btn.text = StoryI18nService.get_ui_string("Charger", _i18n_dict)
 			load_btn.name = "AutoLoadButton_%d" % display_index
-			load_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			_configure_action_button(load_btn)
 			var load_index := -(slot_index + 2)
 			load_btn.pressed.connect(func(): load_slot_pressed.emit(load_index))
 			btn_row.add_child(load_btn)
@@ -360,13 +379,14 @@ func _build_card(entry: Dictionary, type: String) -> Control:
 			var load_btn := Button.new()
 			load_btn.text = StoryI18nService.get_ui_string("Charger", _i18n_dict)
 			load_btn.name = "QuickLoadButton"
-			load_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			_configure_action_button(load_btn)
 			load_btn.pressed.connect(func(): load_slot_pressed.emit(-1))
 			btn_row.add_child(load_btn)
 
 	else:
 		# Slot vide (uniquement pour manual)
 		var empty_label := Label.new()
+		empty_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		empty_label.text = StoryI18nService.get_ui_string("+ Vide", _i18n_dict)
 		empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		empty_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -380,10 +400,16 @@ func _build_card(entry: Dictionary, type: String) -> Control:
 			var save_btn := Button.new()
 			save_btn.text = StoryI18nService.get_ui_string("Sauvegarder ici", _i18n_dict)
 			save_btn.name = "SaveButton"
+			_configure_action_button(save_btn)
 			save_btn.pressed.connect(func(): save_slot_pressed.emit(slot_index))
 			vbox.add_child(save_btn)
 
 	return card
+
+
+func _configure_action_button(button: Button) -> void:
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.mouse_filter = Control.MOUSE_FILTER_PASS
 
 
 func _on_save_occupied_slot(slot_index: int) -> void:

@@ -223,6 +223,42 @@ func test_remove_unused_assets_deletes_orphans():
 	service._remove_dir_recursive(temp_dir)
 
 
+func test_normalize_asset_reference_case_keeps_mismatched_foregrounds():
+	var service = ExportServiceScript.new()
+	var temp_dir = ProjectSettings.globalize_path("user://test_asset_case_" + str(Time.get_ticks_msec()))
+	DirAccess.make_dir_recursive_absolute(temp_dir + "/assets/foregrounds")
+	DirAccess.make_dir_recursive_absolute(temp_dir + "/chapters/ch1/scenes")
+
+	var f = FileAccess.open(temp_dir + "/story.yaml", FileAccess.WRITE)
+	f.store_string('title: "Test"\nchapters:\n  - uuid: "ch1"\n')
+	f.close()
+
+	f = FileAccess.open(temp_dir + "/chapters/ch1/scenes/s1.yaml", FileAccess.WRITE)
+	f.store_string('sequences:\n  - foregrounds:\n      - image: "assets/foregrounds/Alice_base_calm.png"\n')
+	f.close()
+
+	var af = FileAccess.open(temp_dir + "/assets/foregrounds/alice_base_calm.png", FileAccess.WRITE)
+	af.store_string("fake image")
+	af.close()
+	af = FileAccess.open(temp_dir + "/assets/foregrounds/unused.png", FileAccess.WRITE)
+	af.store_string("orphan")
+	af.close()
+
+	var log_path = temp_dir + "/test.log"
+	f = FileAccess.open(log_path, FileAccess.WRITE)
+	f.close()
+
+	service._normalize_asset_reference_case(temp_dir, log_path)
+	service._remove_unused_assets(temp_dir, log_path)
+
+	var content = FileAccess.get_file_as_string(temp_dir + "/chapters/ch1/scenes/s1.yaml")
+	assert_true(content.contains("assets/foregrounds/alice_base_calm.png"), "YAML should use actual file casing")
+	assert_true(FileAccess.file_exists(temp_dir + "/assets/foregrounds/alice_base_calm.png"), "case-mismatched referenced foreground should be kept")
+	assert_false(FileAccess.file_exists(temp_dir + "/assets/foregrounds/unused.png"), "unreferenced foreground should still be removed")
+
+	service._remove_dir_recursive(temp_dir)
+
+
 func test_remove_unused_assets_partial_export_scenario():
 	var service = ExportServiceScript.new()
 	var temp_dir = ProjectSettings.globalize_path("user://test_partial_assets_" + str(Time.get_ticks_msec()))

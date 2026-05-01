@@ -25,6 +25,12 @@ func _cleanup_all_autosaves() -> void:
 		var path := GameSaveManager.get_autosave_save_path(i)
 		if FileAccess.file_exists(path):
 			DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+		var tmp_path := path + ".tmp"
+		if FileAccess.file_exists(tmp_path):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(tmp_path))
+		var bak_path := path + ".bak"
+		if FileAccess.file_exists(bak_path):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(bak_path))
 	var idx := GameSaveManager.AUTOSAVE_INDEX_PATH
 	if FileAccess.file_exists(idx):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(idx))
@@ -39,6 +45,14 @@ func test_build_ui():
 
 func test_has_three_tabs():
 	assert_eq(_menu._tab_container.get_tab_count(), 3)
+
+func test_save_tabs_are_scrollable():
+	assert_eq(_menu._manual_scroll.vertical_scroll_mode, ScrollContainer.SCROLL_MODE_AUTO)
+	assert_eq(_menu._auto_scroll.vertical_scroll_mode, ScrollContainer.SCROLL_MODE_AUTO)
+	assert_eq(_menu._quick_scroll.vertical_scroll_mode, ScrollContainer.SCROLL_MODE_AUTO)
+	assert_true(_menu._manual_scroll.follow_focus)
+	assert_true(_menu._auto_scroll.follow_focus)
+	assert_true(_menu._quick_scroll.follow_focus)
 
 func test_confirm_overlay_hidden_by_default():
 	assert_false(_menu._confirm_overlay.visible)
@@ -249,6 +263,16 @@ func test_refresh_auto_saves_empty_shows_label():
 	var lbl = auto_content.get_child(0)
 	assert_true(lbl is Label)
 	assert_true(lbl.text.contains("Aucune"), "Doit afficher le message vide")
+
+func test_autosave_load_button_emits_encoded_slot_signal():
+	GameSaveManager.autosave({"chapter_name": "Auto 0", "story_path": ""}, null)
+	watch_signals(_menu)
+	_menu.show_as_load_mode()
+	var load_btn = _menu._auto_content.find_child("AutoLoadButton_0", true, false)
+	assert_not_null(load_btn)
+	load_btn.pressed.emit()
+	assert_signal_emitted(_menu, "load_slot_pressed")
+	assert_eq(get_signal_parameters(_menu, "load_slot_pressed")[0], -2)
 
 
 # --- _refresh_quick_saves (aucune quicksave) ---

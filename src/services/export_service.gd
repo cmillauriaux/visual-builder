@@ -116,6 +116,10 @@ func export_story(story: RefCounted, platform: String, output_path: String, stor
 	if not partial_export.is_empty():
 		_filter_partial_chapters(story, abs_temp_story, partial_export, log_path)
 
+	# 3b-extra. Corriger la casse des références avant tout nettoyage/conversion.
+	# macOS peut charger "Alice.png" depuis "alice.png", mais pas les PCK exportés.
+	_normalize_asset_reference_case(abs_temp_story, log_path)
+
 	# 3b-extra. Supprimer les assets non référencés (évite d'embarquer des fichiers inutilisés)
 	if platform != "web":
 		_remove_unused_assets(abs_temp_story, log_path)
@@ -1167,6 +1171,88 @@ func _replace_filenames_in_yaml(story_dir: String, conversions: Dictionary, log_
 
 	if modified_count > 0:
 		_append_log(log_path, "  → %d fichier(s) YAML mis à jour (.png/.jpg → .webp)" % modified_count)
+
+
+## Aligne les références YAML sur la casse réelle des fichiers dans story/assets/.
+## Sans ça, un fichier "alice.png" référencé comme "Alice.png" est supprimé comme
+## non référencé, ou exporté avec un chemin qui ne charge pas sur Android/PCK.
+func _normalize_asset_reference_case(story_dir: String, log_path: String) -> void:
+	var assets_dir := story_dir + "/assets"
+	if not DirAccess.dir_exists_absolute(assets_dir):
+		return
+
+	var extensions := ["png", "jpg", "jpeg", "mp3", "ogg", "wav", "webp", "apng"]
+	var case_map: Dictionary = {}
+	_collect_asset_case_map(assets_dir, story_dir, extensions, case_map)
+	if case_map.is_empty():
+		return
+
+	var yaml_files := _find_yaml_files_recursive(story_dir)
+	var modified_files := 0
+	var replacement_count := 0
+
+	for yaml_path in yaml_files:
+		var content := FileAccess.get_file_as_string(yaml_path)
+		var original := content
+		var lower_content := content.to_lower()
+
+		for lower_path in case_map:
+			if not lower_content.contains(lower_path):
+				continue
+			var result := _replace_case_insensitive(content, lower_path, case_map[lower_path])
+			content = result["text"]
+			replacement_count += result["count"]
+
+		if content != original:
+			var f := FileAccess.open(yaml_path, FileAccess.WRITE)
+			if f:
+				f.store_string(content)
+				f.close()
+				modified_files += 1
+
+	if replacement_count > 0:
+		_append_log(log_path, "→ %d référence(s) asset corrigée(s) pour la casse dans %d YAML" % [replacement_count, modified_files])
+
+
+func _collect_asset_case_map(dir_path: String, story_dir: String, extensions: Array, case_map: Dictionary) -> void:
+	var dir := DirAccess.open(dir_path)
+	if dir == null:
+		return
+
+	dir.list_dir_begin()
+	var file_name := dir.get_next()
+	while file_name != "":
+		if file_name != "." and file_name != ".." and not file_name.begins_with("."):
+			var full_path := dir_path + "/" + file_name
+			if dir.current_is_dir():
+				_collect_asset_case_map(full_path, story_dir, extensions, case_map)
+			else:
+				var ext := file_name.get_extension().to_lower()
+				if ext in extensions:
+					var relative_path := full_path.substr(story_dir.length() + 1)
+					case_map[relative_path.to_lower()] = relative_path
+		file_name = dir.get_next()
+	dir.list_dir_end()
+
+
+func _replace_case_insensitive(text: String, needle_lower: String, replacement: String) -> Dictionary:
+	var lower_text := text.to_lower()
+	var start := 0
+	var found := lower_text.find(needle_lower, start)
+	if found == -1:
+		return {"text": text, "count": 0}
+
+	var output := ""
+	var count := 0
+	while found != -1:
+		output += text.substr(start, found - start)
+		output += replacement
+		start = found + needle_lower.length()
+		count += 1
+		found = lower_text.find(needle_lower, start)
+
+	output += text.substr(start)
+	return {"text": output, "count": count}
 
 
 ## Remplace les .import des images story par des stubs "keep" et supprime les .ctex.

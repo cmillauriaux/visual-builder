@@ -4,10 +4,33 @@ const GameSaveManager = preload("res://src/persistence/game_save_manager.gd")
 
 var _test_slot := 5  # Dernier slot dans NUM_SLOTS (0-5)
 
+func before_each():
+	_cleanup_all_autosaves()
+
+
 func after_each():
 	# Nettoyer les fichiers créés pendant les tests
 	GameSaveManager.delete_save(_test_slot)
 	GameSaveManager.delete_quicksave()
+	_cleanup_all_autosaves()
+
+
+func _cleanup_all_autosaves() -> void:
+	for i in range(GameSaveManager.NUM_AUTOSAVE_SLOTS):
+		var save_path := GameSaveManager.get_autosave_save_path(i)
+		var png_path := GameSaveManager.get_autosave_screenshot_path(i)
+		if FileAccess.file_exists(save_path):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(save_path))
+		var tmp_path := save_path + ".tmp"
+		if FileAccess.file_exists(tmp_path):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(tmp_path))
+		var bak_path := save_path + ".bak"
+		if FileAccess.file_exists(bak_path):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(bak_path))
+		if FileAccess.file_exists(png_path):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(png_path))
+	if FileAccess.file_exists(GameSaveManager.AUTOSAVE_INDEX_PATH):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(GameSaveManager.AUTOSAVE_INDEX_PATH))
 
 
 # --- Instance API (déjà couverte partiellement) ---
@@ -126,6 +149,11 @@ func test_quicksave_and_quickload_roundtrip():
 	assert_eq(loaded.get("chapter_name", ""), "Quick Chapter")
 	assert_eq(loaded.get("scene_name", ""), "Quick Scene")
 
+func test_quicksave_writes_to_user_filesystem():
+	GameSaveManager.quicksave({"chapter_name": "Quick Disk"}, null)
+	assert_true(FileAccess.file_exists(GameSaveManager.QUICKSAVE_DIR + "/save.json"))
+	assert_eq(GameSaveManager.quickload().get("chapter_name", ""), "Quick Disk")
+
 
 # --- save_game_state / load_game roundtrip ---
 
@@ -194,6 +222,10 @@ func test_autosave_and_load_roundtrip():
 	assert_gt(autosaves.size(), 0, "Doit avoir au moins 1 autosave après autosave()")
 	var latest = autosaves[0]
 	assert_eq(latest.get("data", {}).get("chapter_name", ""), "Auto Chapter")
+
+func test_load_autosave_rejects_negative_encoded_indices():
+	GameSaveManager.autosave({"chapter_name": "Auto Chapter", "story_path": ""}, null)
+	assert_eq(GameSaveManager.load_autosave(-2), {})
 
 
 # --- list_autosaves ---
