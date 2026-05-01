@@ -239,6 +239,18 @@ func test_on_game_ready_enables_censored_foregrounds_in_visual_editor():
 	ctx.game_node.queue_free()
 
 
+func test_on_before_sequence_enables_censored_foregrounds_in_visual_editor():
+	var ctx = _create_context()
+	var visual_script := GDScript.new()
+	visual_script.source_code = "extends RefCounted\nvar show_censored_foregrounds = false\n"
+	visual_script.reload()
+	var fake_visual_editor = visual_script.new()
+	ctx.game_node._visual_editor = fake_visual_editor
+	_plugin.on_before_sequence(ctx)
+	assert_true(fake_visual_editor.show_censored_foregrounds)
+	ctx.game_node.queue_free()
+
+
 # --- Static helpers ---
 
 func test_contains_ignore_case():

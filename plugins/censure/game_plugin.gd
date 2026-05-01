@@ -41,6 +41,14 @@ func get_export_options() -> Array:
 
 
 func on_game_ready(ctx: RefCounted) -> void:
+	_enable_censored_foregrounds(ctx)
+
+
+func on_before_sequence(ctx: RefCounted) -> void:
+	_enable_censored_foregrounds(ctx)
+
+
+func _enable_censored_foregrounds(ctx: RefCounted) -> void:
 	if ctx == null or ctx.game_node == null:
 		return
 	var visual_editor = ctx.game_node.get("_visual_editor")

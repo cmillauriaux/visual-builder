@@ -6,6 +6,7 @@ const GameScript = preload("res://src/game.gd")
 const GamePlayControllerScript = preload("res://src/controllers/game_play_controller.gd")
 const SequenceVisualEditorScript = preload("res://src/ui/sequence/sequence_visual_editor.gd")
 const StoryPlayControllerScript = preload("res://src/ui/play/story_play_controller.gd")
+const StoryScript = preload("res://src/models/story.gd")
 
 var _game: Control
 
@@ -102,6 +103,15 @@ func test_pause_menu_signals_connected() -> void:
 	assert_true(_game._pause_menu.load_pressed.is_connected(_game._on_pause_load))
 	assert_true(_game._pause_menu.new_game_pressed.is_connected(_game._on_pause_new_game))
 	assert_true(_game._pause_menu.quit_pressed.is_connected(_game._on_pause_quit))
+
+
+func test_prepare_game_plugins_for_playback_restores_plugin_overlay_after_pause_hide() -> void:
+	_game._current_story = StoryScript.new()
+	_game._plugin_overlay_left.visible = false
+
+	_game._prepare_game_plugins_for_playback()
+
+	assert_true(_game._plugin_overlay_left.visible)
 
 
 # --- Helpers ---

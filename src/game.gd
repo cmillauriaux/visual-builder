@@ -589,6 +589,7 @@ func _on_new_game() -> void:
 	if _game_plugin_manager:
 		var ctx = _build_game_plugin_context()
 		_game_plugin_manager.dispatch_on_story_started(ctx, _current_story.title, _current_story.version)
+	_prepare_game_plugins_for_playback()
 	_play_ctrl.start_story(_current_story, _current_story_path)
 
 
@@ -709,6 +710,7 @@ func _handle_pending_restore() -> void:
 		return
 	_main_menu.hide_menu()
 	_story_selector.visible = false
+	_prepare_game_plugins_for_playback()
 	_play_ctrl.start_from_save(_current_story, save_data, _current_story_path)
 
 
@@ -760,6 +762,7 @@ func _on_chapter_scene_selected(chapter_uuid: String, scene_uuid: String) -> voi
 	if chapter == null or scene == null:
 		return
 	await _preload_chapter_with_ui(chapter_uuid)
+	_prepare_game_plugins_for_playback()
 	_play_ctrl.stop_current()
 	_story_play_ctrl.start_play_scene(_current_story, chapter, scene)
 
@@ -1000,6 +1003,7 @@ func _on_load_slot(slot_index: int) -> void:
 	if _game_plugin_manager:
 		var ctx = _build_game_plugin_context()
 		_game_plugin_manager.dispatch_on_story_loaded(ctx, _current_story.title if _current_story else "", slot_index)
+	_prepare_game_plugins_for_playback()
 	_play_ctrl.start_from_save(_current_story, save_data, _current_story_path)
 
 
@@ -1039,6 +1043,7 @@ func _on_pause_new_game() -> void:
 			_current_story.title if _current_story else "",
 			_current_story.version if _current_story else "",
 		)
+	_prepare_game_plugins_for_playback()
 	_play_ctrl.stop_and_restart(_current_story, _current_story_path)
 
 
@@ -1192,6 +1197,18 @@ func _setup_game_plugins() -> void:
 	var ctx = _build_game_plugin_context()
 	_play_ctrl._plugin_ctx = ctx
 	await _game_plugin_manager.dispatch_on_game_ready(ctx)
+	_inject_game_plugin_ui(ctx)
+
+
+func _prepare_game_plugins_for_playback() -> void:
+	if _game_plugin_manager == null or _current_story == null:
+		return
+	var ctx = _build_game_plugin_context()
+	_play_ctrl._plugin_ctx = ctx
+	_inject_game_plugin_ui(ctx)
+
+
+func _inject_game_plugin_ui(ctx: RefCounted) -> void:
 	_game_plugin_manager.inject_toolbar_buttons(_plugin_toolbar, ctx)
 	_game_plugin_manager.inject_overlay_panels(
 		_plugin_overlay_left, _plugin_overlay_right, _plugin_overlay_top, ctx)
@@ -1342,6 +1359,7 @@ func _do_quickload() -> void:
 	if _game_plugin_manager:
 		var ctx = _build_game_plugin_context()
 		_game_plugin_manager.dispatch_on_quickload(ctx, _current_story.title if _current_story else "")
+	_prepare_game_plugins_for_playback()
 	_play_ctrl.start_from_save(_current_story, save_data, _current_story_path)
 
 
