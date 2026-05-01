@@ -44,6 +44,11 @@ func test_has_overlay() -> void:
 	assert_eq(_menu._overlay.color, Color(0, 0, 0, 0.6))
 
 
+func test_title_spacing_is_compact() -> void:
+	assert_not_null(_menu._title_spacer, "should have title spacer")
+	assert_eq(_menu._title_spacer.custom_minimum_size.y, 12)
+
+
 func test_has_resume_button() -> void:
 	assert_not_null(_menu._resume_button, "should have resume button")
 	assert_eq(_menu._resume_button.text, "Reprendre")

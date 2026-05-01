@@ -9,6 +9,8 @@ const StoryI18nService = preload("res://src/services/story_i18n_service.gd")
 const GameTheme = preload("res://src/ui/themes/game_theme.gd")
 const UIScale = preload("res://src/ui/themes/ui_scale.gd")
 
+const TITLE_BUTTON_SPACING := 12
+
 var _patreon_url: String = ""
 var _itchio_url: String = ""
 
@@ -24,6 +26,7 @@ signal external_link_opened(link_type: String, context: String)
 # UI
 var _overlay: ColorRect
 var _title_label: Label
+var _title_spacer: Control
 var _resume_button: Button
 var _save_button: Button
 var _load_button: Button
@@ -69,9 +72,9 @@ func build_ui() -> void:
 	vbox.add_child(_title_label)
 
 	# Spacer
-	var spacer = Control.new()
-	spacer.custom_minimum_size.y = UIScale.scale(40)
-	vbox.add_child(spacer)
+	_title_spacer = Control.new()
+	_title_spacer.custom_minimum_size.y = UIScale.scale(TITLE_BUTTON_SPACING)
+	vbox.add_child(_title_spacer)
 
 	# Boutons
 	_resume_button = _create_menu_button("Reprendre")
