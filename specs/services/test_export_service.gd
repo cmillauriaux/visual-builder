@@ -20,6 +20,11 @@ func test_get_preset_name():
 	assert_eq(service._get_preset_name("windows"), "Windows")
 	assert_eq(service._get_preset_name("android"), "Android")
 
+func test_android_preset_enables_internet_permission_for_analytics():
+	var preset_path = ProjectSettings.globalize_path("res://scripts/export_presets/android.cfg")
+	var preset_content = FileAccess.get_file_as_string(preset_path)
+	assert_true(preset_content.contains("permissions/internet=true"))
+
 func test_android_keystore_injection():
 	var service = ExportServiceScript.new()
 	var temp_dir = ProjectSettings.globalize_path("user://test_ks_injection_" + str(Time.get_ticks_msec()))
